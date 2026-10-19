@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencias nativas (MariaDB Connector/C)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmariadb-dev
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.22"
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run --frozen ruff format --check .
+      - run: uv run --frozen ruff check .
+      - run: uv run --frozen mypy
+      - run: uv run --frozen pytest
+      - name: Contrato OpenAPI al día
+        run: uv run --frozen python scripts/export_openapi.py --check
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Cliente generado al día
+        run: npm run gen:api && git diff --exit-code src/api/schema.d.ts
+      - run: npm run build
+
+  image:
+    runs-on: ubuntu-24.04
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build de la imagen runtime
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime
+          tags: util_bbdd_web:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Arranque y /api/health
+        run: |
+          mkdir -p secrets
+          python3 scripts/generate_secrets.py
+          UBW_TAG=ci docker compose up -d --no-build
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/api/health; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
