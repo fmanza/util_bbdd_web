@@ -1,0 +1,54 @@
+# Despliegue
+
+## Servidor interno con Docker Compose
+
+```bash
+python scripts/generate_secrets.py
+docker compose up -d --build
+docker compose --profile worker up -d     # a partir de la Fase 3
+```
+
+Por defecto el puerto se publica solo en `127.0.0.1:8080`. Para acceso desde la red, pon delante un **proxy
+inverso con TLS** (nginx, Caddy, Traefik) y no expongas el contenedor directamente:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name util-bbdd.example.internal;
+    # ssl_certificate / ssl_certificate_key …
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;              # SSE de progreso (Fase 3)
+    }
+}
+```
+
+## Variantes de imagen
+
+| Variante | Comando |
+|---|---|
+| Con HSQLDB (JRE + jaydebeapi) | `WITH_HSQLDB=true docker compose build` |
+| Con ODBC para SQL Server (`pyodbc`) | `WITH_ODBC=true docker compose build` |
+
+## Copias de seguridad
+
+| Qué | Cómo |
+|---|---|
+| `config.db` | `docker compose exec web python -c "import sqlite3; s=sqlite3.connect('/data/config.db'); d=sqlite3.connect('/data/backup.db'); s.backup(d)"` y copiar `backup.db` fuera del volumen. **No copiar solo `config.db`**: con WAL se perderían escrituras recientes |
+| Workspace | Copia del volumen `workspace` |
+| Secretos | `secrets/fernet_keys.txt` y `secrets/app_secret_key.txt` en un gestor seguro; sin `fernet_keys` no se pueden descifrar las conexiones |
+
+## Actualizar
+
+```bash
+git pull
+docker compose build
+docker compose up -d        # entrypoint aplica alembic upgrade head
+```
+
+Rollback: volver a la imagen anterior y, si hubo migraciones, `docker compose run --rm web alembic downgrade <rev>`
+antes de arrancarla (o restaurar el backup de `config.db`).
