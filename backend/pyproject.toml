@@ -1,0 +1,80 @@
+[project]
+name = "util_bbdd_web"
+version = "0.1.0"
+description = "Aplicación web multiusuario sobre util_bbdd: conexiones, proyectos y ejecuciones agrupadas."
+readme = "../README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+authors = [{ name = "Paco Manzano", email = "fmanzano.trabajo@gmail.com" }]
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic>=2.11",
+    "pydantic-settings>=2.10",
+    "sqlalchemy>=2.1",
+    "alembic>=1.16",
+    # util_bbdd fijado por versión (ADR-006): wheel vendorizado en vendor/wheels, ver [tool.uv.sources].
+    "util_bbdd[oracle,mariadb,mysql,postgresql,migrate,analysis]==4.0.0",
+    # Drivers sin extra en util_bbdd (UTIL_BBDD_GAPS.md G3).
+    "pymssql>=2.3",
+    "aiosqlite>=0.21",
+]
+
+[project.optional-dependencies]
+# Imagen variante WITH_HSQLDB=true (necesita JRE y el JAR de HSQLDB).
+hsqldb = ["jaydebeapi>=1.2"]
+# Imagen variante WITH_ODBC=true: SQL Server con sql_server_driver="pyodbc" (necesita msodbcsql18).
+odbc = ["pyodbc>=5.2", "aioodbc>=0.5"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "pytest-cov>=6.2",
+    "httpx>=0.28",
+    "ruff>=0.12",
+    "mypy>=1.17",
+]
+
+[tool.uv]
+package = false
+# Cadena de suministro: solo versiones publicadas antes de esta fecha (≥ 2 semanas). Se adelanta a mano al actualizar.
+exclude-newer = "2026-10-05T00:00:00Z"
+# Excepciones justificadas: util_bbdd 4.0.0 exige asyncpg>=0.32, publicado después del corte.
+exclude-newer-package = { asyncpg = "2026-10-19T00:00:00Z" }
+
+[tool.uv.sources]
+util_bbdd = { path = "../vendor/wheels/util_bbdd-4.0.0-py3-none-any.whl" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "S", "ASYNC"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+# backend/alembic/ es la carpeta de migraciones; sin esto ruff toma el paquete alembic por first-party.
+known-third-party = ["alembic"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "."
+packages = ["app"]
+
+[[tool.mypy.overrides]]
+module = ["util_bbdd", "util_bbdd.*"]
+follow_imports = "silent"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = ["integration: requiere bases de datos reales (no se ejecuta en CI)"]
