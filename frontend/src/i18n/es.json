@@ -1,0 +1,32 @@
+{
+  "app": { "title": "util_bbdd web" },
+  "nav": {
+    "label": "Navegación principal",
+    "home": "Inicio",
+    "engines": "Motores",
+    "connections": "Conexiones",
+    "projects": "Proyectos",
+    "runs": "Ejecuciones",
+    "phase": "Fase {{phase}}"
+  },
+  "home": {
+    "title": "Inicio",
+    "intro": "Conexiones, proyectos y ejecuciones de util_bbdd para varios usuarios. Las secciones se habilitan fase a fase según el ROADMAP."
+  },
+  "health": {
+    "loading": "Comprobando el servicio…",
+    "ok": "Servicio operativo",
+    "degraded": "Servicio degradado",
+    "unreachable": "No se puede contactar con la API",
+    "unreachableBody": "Comprueba que el backend está en marcha.",
+    "appVersion": "Versión de la aplicación",
+    "libVersion": "Versión de util_bbdd",
+    "notInstalled": "no instalada",
+    "database": "Base de datos de configuración"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "body": "La dirección no corresponde a ninguna sección.",
+    "back": "Volver al inicio"
+  }
+}
