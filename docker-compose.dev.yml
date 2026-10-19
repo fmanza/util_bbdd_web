@@ -1,0 +1,16 @@
+# Desarrollo: API con recarga en caliente sobre el código montado; el frontend corre en el host con `npm run dev`
+# (Vite hace de proxy de /api a http://127.0.0.1:8000).
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build web
+
+services:
+  web:
+    environment:
+      UBW_ENVIRONMENT: development
+      UBW_LOG_LEVEL: DEBUG
+    read_only: false
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/alembic:/app/alembic:ro
+    ports: !override
+      - "127.0.0.1:8000:8080"
+    command: ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080", "--reload", "--reload-dir", "/app/app"]

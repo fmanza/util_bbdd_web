@@ -1,0 +1,57 @@
+# util_bbdd_web — despliegue local o en servidor interno.
+#   python scripts/generate_secrets.py   # una vez: crea secrets/*.txt (git-ignored)
+#   docker compose up -d --build
+#   http://127.0.0.1:8080
+# El worker (Fase 3) se arranca con: docker compose --profile worker up -d
+
+x-app: &app
+  image: util_bbdd_web:${UBW_TAG:-dev}
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+    args:
+      WITH_HSQLDB: ${WITH_HSQLDB:-false}
+      WITH_ODBC: ${WITH_ODBC:-false}
+  environment:
+    UBW_LOG_LEVEL: ${UBW_LOG_LEVEL:-INFO}
+  volumes:
+    - data:/data
+    - workspace:/workspace
+  secrets:
+    - ubw_app_secret_key
+    - ubw_fernet_keys
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  restart: unless-stopped
+
+services:
+  web:
+    <<: *app
+    ports:
+      # Solo localhost por defecto; detrás de un proxy inverso con TLS en servidor (docs/guides/deployment.md).
+      - "127.0.0.1:${UBW_PORT:-8080}:8080"
+
+  worker:
+    <<: *app
+    profiles: ["worker"]
+    command: ["python", "-m", "app.jobs.worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  data:
+  workspace:
+
+secrets:
+  ubw_app_secret_key:
+    file: ./secrets/app_secret_key.txt
+  ubw_fernet_keys:
+    file: ./secrets/fernet_keys.txt
