@@ -26,7 +26,16 @@ docker compose up -d --build
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build web
 ```
 
-o en local con uv: `cd backend && uv sync && uv run uvicorn app.main:create_app --factory --reload --port 8000`.
+o en local con uv: `cd backend && uv sync && uv run alembic upgrade head && uv run uvicorn app.main:create_app --factory --reload --port 8000`.
+
+Crea un administrador para entrar (no hay credenciales por defecto):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec web python -m app.cli create-admin --username admin
+# o en local: cd backend && uv run python -m app.cli create-admin --username admin
+```
+
+En `development` las cookies no llevan `Secure` (HTTP local); en `test` y `production` sí.
 
 **Frontend** (proxy de `/api` a `127.0.0.1:8000`):
 

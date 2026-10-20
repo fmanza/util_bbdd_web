@@ -12,6 +12,11 @@
 | Build de la imagen falla compilando `mariadb` | Falta `libmariadb-dev` en la etapa de build | Ya incluido en `backend-build`; en CI o local, instalar `libmariadb-dev` |
 | SQL Server con `pyodbc` falla al conectar | Imagen sin ODBC | `WITH_ODBC=true docker compose build` o usar `pymssql` (por defecto) |
 | HSQLDB no disponible | Imagen sin JRE | `WITH_HSQLDB=true docker compose build` |
+| El contenedor `web` no arranca: `MissingSecretKeyError` | Producción sin `ubw_app_secret_key` | `python scripts/generate_secrets.py` y comprobar `secrets:` en compose |
+| El login no persiste (vuelve a `/login`) | Cookie `Secure` sobre HTTP en un host que no es `localhost`/`127.0.0.1` | Acceder por el proxy TLS; solo en desarrollo `UBW_ENVIRONMENT=development` quita `Secure` |
+| «Token CSRF ausente o no válido» (403) | Cookie `ubw_csrf` borrada o de otra sesión | Recargar la página; el login pide un token nuevo con `GET /api/v1/auth/csrf` |
+| Un usuario no puede entrar con la contraseña correcta | Bloqueo temporal tras 5 fallos (`UBW_LOGIN_*`) | Esperar el bloqueo, o que un admin le restablezca la contraseña (quita el bloqueo) |
+| Se ha perdido la contraseña del único admin | — | `docker compose exec web python -m app.cli create-admin --username otro-admin` y reactivar o restablecer desde la web |
 | `/api/docs` da 404 | Desactivado en producción | `UBW_ENVIRONMENT=development` (compose dev) |
 | Aviso `StarletteDeprecationWarning … httpx2` en pytest | Starlette 1.x depreca `httpx` en `TestClient` | Informativo; seguimiento en la deuda técnica |
 

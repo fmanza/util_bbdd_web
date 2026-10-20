@@ -1,6 +1,6 @@
 [project]
 name = "util_bbdd_web"
-version = "0.1.0"
+version = "0.2.0"
 description = "Aplicación web multiusuario sobre util_bbdd: conexiones, proyectos y ejecuciones agrupadas."
 readme = "../README.md"
 requires-python = ">=3.12,<3.13"
@@ -19,6 +19,7 @@ dependencies = [
     # Drivers sin extra en util_bbdd (UTIL_BBDD_GAPS.md G3).
     "pymssql>=2.3",
     "aiosqlite>=0.21",
+    "pwdlib[argon2]>=0.3",  # Argon2id para contraseñas (ADR-003)
 ]
 
 [project.optional-dependencies]

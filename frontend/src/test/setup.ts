@@ -26,6 +26,9 @@ class ResizeObserverStub {
 }
 window.ResizeObserver = ResizeObserverStub;
 
+// Combobox de Mantine (Select) desplaza la opción activa; jsdom no implementa scrollIntoView.
+Element.prototype.scrollIntoView = vi.fn();
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

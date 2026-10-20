@@ -7,6 +7,7 @@ conexión con la contraseña. El detalle va al log, saneado (ver ``security.inst
 from __future__ import annotations
 
 import logging
+from typing import ClassVar
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -16,6 +17,23 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 PROBLEM_JSON = "application/problem+json"
 
 logger = logging.getLogger(__name__)
+
+
+class AppError(Exception):
+    """Error de negocio con estado HTTP; las capas de dominio lo especializan sin depender de FastAPI.
+
+    Attributes:
+        status: Código HTTP de la respuesta.
+        title: Título del *problem details*.
+        detail: Explicación para el usuario (nunca texto de excepciones de terceros).
+    """
+
+    status: ClassVar[int] = 400
+    title: ClassVar[str] = "Petición no válida"
+
+    def __init__(self, detail: str | None = None) -> None:
+        super().__init__(detail or self.title)
+        self.detail = detail
 
 
 def problem(status: int, title: str, detail: str | None = None, **extra: object) -> JSONResponse:
@@ -29,6 +47,10 @@ def problem(status: int, title: str, detail: str | None = None, **extra: object)
 
 def install_error_handlers(app: FastAPI) -> None:
     """Registra los handlers que convierten cualquier error en *problem details*."""
+
+    @app.exception_handler(AppError)
+    async def _app(_: Request, exc: AppError) -> JSONResponse:
+        return problem(exc.status, exc.title, exc.detail)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:

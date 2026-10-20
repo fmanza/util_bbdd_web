@@ -8,6 +8,20 @@ docker compose up -d --build
 docker compose --profile worker up -d     # a partir de la Fase 3
 ```
 
+### Primer administrador
+
+No hay credenciales por defecto. Tras el primer arranque, crea el administrador con el CLI (pide la contraseña dos
+veces, mínimo 12 caracteres):
+
+```bash
+docker compose exec web python -m app.cli create-admin --username admin --display-name "Administración"
+```
+
+Para automatizarlo, `--password-stdin` lee la contraseña de la entrada estándar
+(`printf '%s
+' "$PASS" | docker compose exec -T web python -m app.cli create-admin --username admin --password-stdin`).
+El resto de usuarios se gestiona desde **Administración → Usuarios** ([guía](usuarios_y_sesiones.md)).
+
 Por defecto el puerto se publica solo en `127.0.0.1:8080`. Para acceso desde la red, pon delante un **proxy
 inverso con TLS** (nginx, Caddy, Traefik) y no expongas el contenedor directamente:
 

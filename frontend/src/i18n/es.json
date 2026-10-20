@@ -1,5 +1,17 @@
 {
   "app": { "title": "util_bbdd web" },
+  "common": {
+    "loading": "Cargando…",
+    "error": "Se ha producido un error",
+    "errorBody": "Inténtalo de nuevo más tarde.",
+    "noPermission": "Sin permiso",
+    "noPermissionBody": "Esta sección es solo para administradores.",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "edit": "Editar",
+    "actions": "Acciones"
+  },
+  "roles": { "admin": "Administrador", "user": "Usuario" },
   "nav": {
     "label": "Navegación principal",
     "home": "Inicio",
@@ -7,7 +19,105 @@
     "connections": "Conexiones",
     "projects": "Proyectos",
     "runs": "Ejecuciones",
-    "phase": "Fase {{phase}}"
+    "phase": "Fase {{phase}}",
+    "admin": "Administración",
+    "users": "Usuarios",
+    "sessions": "Sesiones",
+    "audit": "Auditoría"
+  },
+  "auth": {
+    "loginIntro": "Inicia sesión con tu usuario.",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "userMenu": "Menú de usuario de {{name}}",
+    "required": "Campo obligatorio",
+    "changePassword": "Cambiar contraseña",
+    "changePasswordIntro": "Al cambiarla se cierran tus sesiones abiertas en otros navegadores.",
+    "currentPassword": "Contraseña actual",
+    "newPassword": "Contraseña nueva",
+    "confirmPassword": "Repite la contraseña nueva",
+    "passwordHint": "Mínimo {{min}} caracteres. Mejor una frase larga que una palabra compleja.",
+    "passwordTooShort": "Debe tener al menos {{min}} caracteres",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "passwordChanged": "Contraseña cambiada",
+    "passwordChangedBody": "Las demás sesiones se han cerrado."
+  },
+  "admin": {
+    "users": {
+      "title": "Usuarios",
+      "new": "Nuevo usuario",
+      "create": "Crear usuario",
+      "createTitle": "Nuevo usuario",
+      "editTitle": "Editar usuario {{username}}",
+      "editLabel": "Editar {{username}}",
+      "search": "Buscar por usuario o nombre",
+      "empty": "No hay usuarios que coincidan.",
+      "displayName": "Nombre visible",
+      "role": "Rol",
+      "status": "Estado",
+      "createdAt": "Alta",
+      "active": "Cuenta activa",
+      "activeHint": "Al desactivarla se cierran sus sesiones; puede reactivarse después.",
+      "activeBadge": "Activo",
+      "inactive": "Desactivado",
+      "locked": "Bloqueado",
+      "usernameRule": "De 3 a 64 caracteres: letras, números, punto, guion o guion bajo",
+      "resetPassword": "Restablecer contraseña",
+      "resetPasswordHint": "Déjalo vacío para no cambiarla. Si la cambias, se cierran sus sesiones."
+    },
+    "sessions": {
+      "title": "Sesiones activas",
+      "intro": "Sesiones abiertas de todos los usuarios. Revocar una cierra esa sesión de inmediato.",
+      "empty": "No hay sesiones activas.",
+      "ip": "IP",
+      "userAgent": "Navegador",
+      "createdAt": "Inicio",
+      "lastSeen": "Última actividad",
+      "expiresAt": "Caduca",
+      "current": "Esta sesión",
+      "revoke": "Revocar",
+      "revokeLabel": "Revocar sesión de {{username}}",
+      "confirmTitle": "Revocar sesión",
+      "confirmBody": "Se cerrará la sesión de {{username}} desde {{ip}}.",
+      "confirmCurrent": "Es tu sesión actual: tendrás que volver a iniciar sesión."
+    },
+    "audit": {
+      "title": "Auditoría",
+      "filter": "Tipo de acción",
+      "filters": {
+        "all": "Todas",
+        "auth": "Autenticación",
+        "user": "Usuarios",
+        "session": "Sesiones"
+      },
+      "empty": "No hay eventos.",
+      "ts": "Fecha",
+      "action": "Acción",
+      "outcome": "Resultado",
+      "actor": "Quién",
+      "target": "Objeto",
+      "details": "Detalles",
+      "system": "Sistema",
+      "outcomes": { "success": "Correcto", "failure": "Fallido" },
+      "actions": {
+        "auth": {
+          "login": "Inicio de sesión",
+          "lockout": "Bloqueo de cuenta",
+          "logout": "Cierre de sesión",
+          "password_change": "Cambio de contraseña"
+        },
+        "user": {
+          "create": "Alta de usuario",
+          "update": "Edición de usuario",
+          "deactivate": "Desactivación",
+          "reactivate": "Reactivación",
+          "password_reset": "Contraseña restablecida"
+        },
+        "session": { "revoke": "Sesión revocada" }
+      }
+    }
   },
   "home": {
     "title": "Inicio",

@@ -9,7 +9,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | Fase | Nombre | Versión | Estado |
 |---|---|---|---|
 | 0 | Fundaciones | 0.1.0 | ✅ Cerrada (2026-10-19) |
-| 1 | Identidad y multiusuario | 0.2.0 | Pendiente |
+| 1 | Identidad y multiusuario | 0.2.0 | ✅ Cerrada (2026-10-20) |
 | 2 | Catálogo de motores y conexiones | 0.3.0 | Pendiente |
 | 3 | Proyectos y motor de ejecuciones | 0.4.0 | Pendiente |
 | 4 | Explorador de metadatos | 0.5.0 | Pendiente |
@@ -35,7 +35,7 @@ regenerado, migración Alembic con `downgrade`, tests de autorización (401/404)
 - CI (backend, frontend, imagen + health), Dependabot con *cooldown* de 14 días.
 - Configuración IA (Claude Code + Copilot), ADR-001…006, este ROADMAP y `UTIL_BBDD_GAPS.md`.
 
-## Fase 1 — Identidad y multiusuario
+## Fase 1 — Identidad y multiusuario ✅
 
 **Historias**
 - Como admin, creo, desactivo y reactivo usuarios y asigno el rol `admin` o `user`.

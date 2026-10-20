@@ -38,11 +38,12 @@ flowchart TB
 
 | Paquete | Responsabilidad | Fase |
 |---|---|---|
-| `core/` | Ajustes `UBW_*` y Docker secrets, logging JSON, errores RFC 9457 | 0 |
-| `db/` | Engine SQLite con PRAGMA, base declarativa, Alembic | 0 |
+| `core/` | Ajustes `UBW_*` y Docker secrets, logging JSON, errores RFC 9457, tokens de sesión y CSRF | 0 → 1 |
+| `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic | 0 → |
 | `api/` | `/api/health`; `api/v1/` con los routers de negocio | 0 → |
 | `integrations/util_bbdd/` | Único importador de util_bbdd | 0 → |
-| `domain/` | Usuarios, conexiones, proyectos, ejecuciones | 1 → 3 |
+| `domain/` | `identity/` (usuarios, contraseñas, sesiones, auditoría), conexiones, proyectos, ejecuciones | 1 → 3 |
+| `cli.py` | `python -m app.cli create-admin` (primer administrador) | 1 |
 | `jobs/` | Worker, cola, subprocesos, progreso | 0 (esqueleto) → 3 |
 | `workspace/` | Carpetas por ejecución, `run.json`, ZIP, retención | 3 |
 
@@ -54,7 +55,8 @@ src/
   api/        # client.ts (openapi-fetch) + schema.d.ts (generado)
   features/   # una carpeta por funcionalidad (health, auth, connections, projects, runs…)
   i18n/       # es.json
-  test/       # setup de Vitest y utilidades de render
+  components/ # UI compartida (ErrorAlert, NoPermission, formato de fechas)
+  test/       # setup de Vitest, render y stub de la API por ruta
 ```
 
 ## Configuración
@@ -66,7 +68,12 @@ src/
 | `UBW_WORKSPACE_DIR` | `/workspace` | Salidas por ejecución |
 | `UBW_STATIC_DIR` | `/app/static` | Build del frontend |
 | `UBW_LOG_LEVEL` | `INFO` | Nivel de log |
-| Secret `ubw_app_secret_key` | — | Sesiones y CSRF (Fase 1) |
+| `UBW_SESSION_IDLE_MINUTES` | `60` | Caducidad de la sesión por inactividad |
+| `UBW_SESSION_ABSOLUTE_HOURS` | `12` | Caducidad absoluta de la sesión |
+| `UBW_LOGIN_MAX_ATTEMPTS` | `5` | Fallos seguidos que bloquean la cuenta |
+| `UBW_LOGIN_LOCKOUT_MINUTES` | `15` | Duración del bloqueo |
+| `UBW_PASSWORD_MIN_LENGTH` | `12` | Longitud mínima de contraseña (máximo fijo: 128) |
+| Secret `ubw_app_secret_key` | — | Firma del token CSRF; **obligatorio** en producción (sin él la API no arranca) |
 | Secret `ubw_fernet_keys` | — | Cifrado de conexiones (Fase 2) |
 
 Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·

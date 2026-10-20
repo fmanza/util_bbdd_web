@@ -14,6 +14,7 @@ from app.api.v1 import router as v1_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers, problem
 from app.core.logging import configure_logging
+from app.core.security import require_secret_key
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -24,9 +25,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     Returns:
         Aplicación con ``/api/health``, ``/api/v1`` y, si existe ``static_dir``, la SPA.
+
+    Raises:
+        MissingSecretKeyError: Producción sin ``UBW_APP_SECRET_KEY``.
     """
     settings = settings or get_settings()
     configure_logging(settings.log_level)
+    require_secret_key(settings)
 
     app = FastAPI(
         title="util_bbdd_web",
