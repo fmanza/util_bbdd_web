@@ -1,0 +1,134 @@
+import type { ConnectionInfo } from '../features/connections/useConnections';
+import type { EngineDetail } from '../features/engines/useEngines';
+
+const capabilities = { async_supported: true, migrate_source: true, migrate_target: true, readiness: true };
+
+export const PG_ENGINE: EngineDetail = {
+  db_type: 'postgresql',
+  name: 'PostgreSQL',
+  description: 'Sistema objeto-relacional',
+  version_range: '9.6+',
+  default_port: 5432,
+  drivers: [
+    { name: 'psycopg', installed: true },
+    { name: 'asyncpg', installed: true },
+  ],
+  capabilities,
+  url_docs: 'https://www.postgresql.org/docs/',
+  features: ['Vistas', 'Triggers'],
+  driver_package: 'psycopg[binary,pool]',
+  install_command: 'pip install psycopg',
+  system_requirements: [],
+  params: [
+    {
+      name: 'host',
+      type: 'string',
+      required: true,
+      default: null,
+      options: null,
+      description: 'Servidor',
+      kind: 'host',
+    },
+    {
+      name: 'user',
+      type: 'string',
+      required: true,
+      default: null,
+      options: null,
+      description: 'Usuario',
+      kind: 'plain',
+    },
+    {
+      name: 'password',
+      type: 'string',
+      required: true,
+      default: null,
+      options: null,
+      description: '',
+      kind: 'secret',
+    },
+    {
+      name: 'database',
+      type: 'string',
+      required: true,
+      default: null,
+      options: null,
+      description: 'BD',
+      kind: 'plain',
+    },
+    {
+      name: 'port',
+      type: 'integer',
+      required: false,
+      default: 5432,
+      options: null,
+      description: 'Puerto',
+      kind: 'plain',
+    },
+    {
+      name: 'sslmode',
+      type: 'string',
+      required: false,
+      default: null,
+      options: ['disable', 'require'],
+      description: 'SSL',
+      kind: 'plain',
+    },
+    {
+      name: 'application_name',
+      type: 'string',
+      required: false,
+      default: null,
+      options: null,
+      description: 'Nombre de la aplicación',
+      kind: 'plain',
+    },
+  ],
+};
+
+export const SQLITE_ENGINE: EngineDetail = {
+  ...PG_ENGINE,
+  db_type: 'sqlite',
+  name: 'SQLite',
+  default_port: null,
+  drivers: [{ name: 'sqlite3', installed: true }],
+  capabilities: { ...capabilities, migrate_source: false, migrate_target: false },
+  params: [
+    {
+      name: 'database',
+      type: 'string',
+      required: true,
+      default: null,
+      options: null,
+      description: 'Fichero',
+      kind: 'path',
+    },
+  ],
+};
+
+export const HSQLDB_ENGINE: EngineDetail = {
+  ...PG_ENGINE,
+  db_type: 'hsqldb',
+  name: 'HSQLDB',
+  drivers: [{ name: 'jaydebeapi', installed: false }],
+  capabilities: { async_supported: false, migrate_source: false, migrate_target: false, readiness: false },
+};
+
+export const CONNECTION: ConnectionInfo = {
+  id: 7,
+  name: 'Ventas',
+  db_type: 'postgresql',
+  description: '',
+  params: { host: 'db.corp', user: 'lector', database: 'ventas', port: 5432 },
+  has_password: true,
+  read_only: true,
+  visibility: 'private',
+  owner_id: 1,
+  owner_username: 'admin',
+  editable: true,
+  last_test_at: null,
+  last_test_ok: null,
+  last_test_error: null,
+  created_at: '2026-10-20T08:00:00Z',
+  updated_at: '2026-10-20T08:00:00Z',
+};

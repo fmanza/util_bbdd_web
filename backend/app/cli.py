@@ -3,6 +3,7 @@
 Uso::
 
     python -m app.cli create-admin --username admin [--display-name "Administración"] [--password-stdin]
+    python -m app.cli rotate-secrets
 
 Sin ``--password-stdin`` la contraseña se pide dos veces por terminal (``getpass``). En Docker::
 
@@ -61,6 +62,26 @@ def create_admin(username: str, display_name: str | None, *, password_stdin: boo
     return 0
 
 
+def rotate_secrets() -> int:
+    """Re-cifra los secretos de conexión con la primera clave de ``UBW_FERNET_KEYS``; devuelve el código de salida."""
+    from app.domain.connections.crypto import SecretDecryptError
+    from app.domain.connections.service import rotate_secrets as rotate
+
+    factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
+    with factory() as db:
+        try:
+            count = rotate(db, get_settings())
+        except SecretDecryptError:
+            db.rollback()
+            print(
+                "Error: algún secreto no se descifra con las claves configuradas; no se ha cambiado nada.",
+                file=sys.stderr,
+            )
+            return 1
+    print(f"Secretos re-cifrados con la clave principal: {count}. Ya puedes retirar la clave antigua.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="Administración de util_bbdd_web")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -68,11 +89,14 @@ def main(argv: list[str] | None = None) -> int:
     admin.add_argument("--username", required=True)
     admin.add_argument("--display-name")
     admin.add_argument("--password-stdin", action="store_true", help="lee la contraseña de la entrada estándar")
+    commands.add_parser("rotate-secrets", help="re-cifra los secretos de conexión con la clave Fernet principal")
     args = parser.parse_args(argv)
 
     configure_logging(get_settings().log_level)
     if args.command == "create-admin":
         return create_admin(args.username, args.display_name, password_stdin=args.password_stdin)
+    if args.command == "rotate-secrets":
+        return rotate_secrets()
     return 2  # pragma: no cover - argparse exige un comando
 
 

@@ -24,6 +24,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/allowlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar destinos permitidos
+         * @description Redes CIDR y nombres de host a los que se puede conectar. Vacía: ningún destino permitido.
+         */
+        get: operations["list_allowlist_api_v1_admin_allowlist_get"];
+        put?: never;
+        /**
+         * Añadir destino permitido
+         * @description Añade una red CIDR (``10.0.0.0/8``), IP, nombre de host o comodín (``*.empresa.local``).
+         */
+        post: operations["add_allowlist_entry_api_v1_admin_allowlist_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/allowlist/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quitar destino permitido
+         * @description Quita un destino; las conexiones que lo usen dejarán de poder probarse.
+         */
+        delete: operations["delete_allowlist_entry_api_v1_admin_allowlist__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit": {
         parameters: {
             query?: never;
@@ -146,6 +190,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar conexiones
+         * @description Conexiones propias y compartidas.
+         */
+        get: operations["list_connections_api_v1_connections_get"];
+        put?: never;
+        /**
+         * Crear conexión
+         * @description Crea una conexión; la contraseña se guarda cifrada.
+         */
+        post: operations["create_connection_api_v1_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ver conexión
+         * @description Detalle de una conexión visible (nunca incluye la contraseña).
+         */
+        get: operations["get_connection_api_v1_connections__connection_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Borrar conexión
+         * @description Borra una conexión propia (o compartida, si eres admin).
+         */
+        delete: operations["delete_connection_api_v1_connections__connection_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Editar conexión
+         * @description Edita nombre, descripción, parámetros, contraseña, solo lectura o visibilidad.
+         */
+        patch: operations["update_connection_api_v1_connections__connection_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Readiness del motor
+         * @description Condiciones de ejecución del motor (``EngineReadinessAdvisor`` de util_bbdd) sobre esta conexión.
+         */
+        get: operations["readiness_api_v1_connections__connection_id__readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Probar conexión
+         * @description Conecta en un subproceso con timeout. El error es un código estable con un mensaje sin datos del driver.
+         */
+        post: operations["test_connection_api_v1_connections__connection_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/engines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar motores
+         * @description Motores soportados por util_bbdd, drivers instalados y capacidades verificadas.
+         */
+        get: operations["list_engines_api_v1_engines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/engines/{db_type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ficha de un motor
+         * @description Descripción, versiones, drivers, características y parámetros de conexión del motor.
+         */
+        get: operations["get_engine_api_v1_engines__db_type__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions": {
         parameters: {
             query?: never;
@@ -239,6 +415,36 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AllowlistEntryIn
+         * @description Destino permitido: red CIDR, IP, nombre de host o comodín ``*.dominio``.
+         */
+        AllowlistEntryIn: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Pattern */
+            pattern: string;
+        };
+        /**
+         * AllowlistEntryOut
+         * @description Destino permitido.
+         */
+        AllowlistEntryOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: number;
+            /** Pattern */
+            pattern: string;
+        };
+        /**
          * AuditEntryOut
          * @description Evento de auditoría.
          */
@@ -280,12 +486,215 @@ export interface components {
             total: number;
         };
         /**
+         * CapabilitiesOut
+         * @description Matriz de capacidades verificadas del motor.
+         */
+        CapabilitiesOut: {
+            /** Async Supported */
+            async_supported: boolean;
+            /** Migrate Source */
+            migrate_source: boolean;
+            /** Migrate Target */
+            migrate_target: boolean;
+            /** Readiness */
+            readiness: boolean;
+        };
+        /**
+         * ConnectionCreate
+         * @description Alta de conexión. ``password`` solo se escribe: se cifra y nunca se devuelve.
+         */
+        ConnectionCreate: {
+            /** Db Type */
+            db_type: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Name */
+            name: string;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            };
+            /** Password */
+            password?: string | null;
+            /**
+             * Read Only
+             * @default true
+             */
+            read_only: boolean;
+            /**
+             * Visibility
+             * @default private
+             * @enum {string}
+             */
+            visibility: "private" | "shared";
+        };
+        /**
+         * ConnectionOut
+         * @description Conexión sin secretos; ``has_password`` indica si hay contraseña guardada.
+         */
+        ConnectionOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Db Type */
+            db_type: string;
+            /** Description */
+            description: string;
+            /** Editable */
+            editable: boolean;
+            /** Has Password */
+            has_password: boolean;
+            /** Id */
+            id: number;
+            /** Last Test At */
+            last_test_at: string | null;
+            /** Last Test Error */
+            last_test_error: string | null;
+            /** Last Test Ok */
+            last_test_ok: boolean | null;
+            /** Name */
+            name: string;
+            /** Owner Id */
+            owner_id: number;
+            /** Owner Username */
+            owner_username: string;
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Read Only */
+            read_only: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "private" | "shared";
+        };
+        /**
+         * ConnectionPage
+         * @description Página de conexiones.
+         */
+        ConnectionPage: {
+            /** Items */
+            items: components["schemas"]["ConnectionOut"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * ConnectionTestOut
+         * @description Resultado de una prueba de conexión.
+         */
+        ConnectionTestOut: {
+            /** Duration Ms */
+            duration_ms: number;
+            error: components["schemas"]["ProbeErrorOut"] | null;
+            /** Ok */
+            ok: boolean;
+            /** Server Version */
+            server_version: string | null;
+            /**
+             * Tested At
+             * Format: date-time
+             */
+            tested_at: string;
+        };
+        /**
+         * ConnectionUpdate
+         * @description Edición parcial. ``params`` sustituye a todos los parámetros; sin ``password`` se conserva la guardada.
+         */
+        ConnectionUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            } | null;
+            /** Password */
+            password?: string | null;
+            /** Read Only */
+            read_only?: boolean | null;
+            /** Visibility */
+            visibility?: ("private" | "shared") | null;
+        };
+        /**
          * CsrfToken
          * @description Token CSRF para la cabecera ``X-CSRF-Token``.
          */
         CsrfToken: {
             /** Csrf Token */
             csrf_token: string;
+        };
+        /**
+         * DriverOut
+         * @description Driver del motor y si está instalado en el servidor.
+         */
+        DriverOut: {
+            /** Installed */
+            installed: boolean;
+            /** Name */
+            name: string;
+        };
+        /**
+         * EngineDetailOut
+         * @description Ficha completa de un motor.
+         */
+        EngineDetailOut: {
+            capabilities: components["schemas"]["CapabilitiesOut"];
+            /** Db Type */
+            db_type: string;
+            /** Default Port */
+            default_port: number | null;
+            /** Description */
+            description: string;
+            /** Driver Package */
+            driver_package: string | null;
+            /** Drivers */
+            drivers: components["schemas"]["DriverOut"][];
+            /** Features */
+            features: string[];
+            /** Install Command */
+            install_command: string | null;
+            /** Name */
+            name: string;
+            /** Params */
+            params: components["schemas"]["ParamOut"][];
+            /** System Requirements */
+            system_requirements: string[];
+            /** Url Docs */
+            url_docs: string | null;
+            /** Version Range */
+            version_range: string;
+        };
+        /**
+         * EngineOut
+         * @description Motor del catálogo.
+         */
+        EngineOut: {
+            capabilities: components["schemas"]["CapabilitiesOut"];
+            /** Db Type */
+            db_type: string;
+            /** Default Port */
+            default_port: number | null;
+            /** Description */
+            description: string;
+            /** Drivers */
+            drivers: components["schemas"]["DriverOut"][];
+            /** Name */
+            name: string;
+            /** Version Range */
+            version_range: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -349,6 +758,32 @@ export interface components {
             username: string;
         };
         /**
+         * ParamOut
+         * @description Parámetro de conexión del motor; ``kind`` indica cómo lo trata la aplicación.
+         */
+        ParamOut: {
+            /** Default */
+            default?: unknown;
+            /** Description */
+            description: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "plain" | "secret" | "host" | "path" | "blocked";
+            /** Name */
+            name: string;
+            /** Options */
+            options: string[] | null;
+            /** Required */
+            required: boolean;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "string" | "integer" | "float" | "boolean" | "object";
+        };
+        /**
          * PasswordChange
          * @description Cambio de la propia contraseña.
          */
@@ -363,6 +798,47 @@ export interface components {
              * Format: password
              */
             new_password: string;
+        };
+        /**
+         * ProbeErrorOut
+         * @description Error saneado de una prueba: código estable y mensaje para el usuario (nunca el texto del driver).
+         */
+        ProbeErrorOut: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * ReadinessFindingOut
+         * @description Hallazgo de readiness.
+         */
+        ReadinessFindingOut: {
+            /** Current */
+            current: string;
+            /** Level */
+            level: string;
+            /** Param */
+            param: string;
+            /** Recommendation */
+            recommendation: string;
+        };
+        /**
+         * ReadinessOut
+         * @description Informe de readiness; ``detail`` explica por qué no hubo checks dinámicos (solo el tipo de error).
+         */
+        ReadinessOut: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Detail */
+            detail: string | null;
+            /** Dynamic */
+            dynamic: boolean;
+            error: components["schemas"]["ProbeErrorOut"] | null;
+            /** Findings */
+            findings: components["schemas"]["ReadinessFindingOut"][];
+            /** Supported */
+            supported: boolean;
         };
         /**
          * SessionOut
@@ -526,6 +1002,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthStatus"];
+                };
+            };
+        };
+    };
+    list_allowlist_api_v1_admin_allowlist_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowlistEntryOut"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    add_allowlist_entry_api_v1_admin_allowlist_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllowlistEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowlistEntryOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Patrón no válido */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_allowlist_entry_api_v1_admin_allowlist__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -741,6 +1353,439 @@ export interface operations {
             };
             /** @description Token CSRF ausente o no válido */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_connections_api_v1_connections_get: {
+        parameters: {
+            query?: {
+                db_type?: string | null;
+                /** @description Texto en nombre o descripción */
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionPage"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_connection_api_v1_connections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión compartida ajena, visibilidad shared sin ser admin o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Motor no soportado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe una conexión con ese nombre */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parámetros no válidos para el motor */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_connection_api_v1_connections__connection_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_connection_api_v1_connections__connection_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión compartida ajena, visibilidad shared sin ser admin o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_connection_api_v1_connections__connection_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión compartida ajena, visibilidad shared sin ser admin o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe una conexión con ese nombre */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parámetros no válidos para el motor */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    readiness_api_v1_connections__connection_id__readiness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Demasiadas pruebas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    test_connection_api_v1_connections__connection_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionTestOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no es visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Demasiadas pruebas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_engines_api_v1_engines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngineOut"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_engine_api_v1_engines__db_type__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                db_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngineDetailOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Motor no soportado */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

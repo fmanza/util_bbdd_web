@@ -17,13 +17,17 @@ _EPHEMERAL_KEY = secrets.token_bytes(32)
 
 
 class MissingSecretKeyError(RuntimeError):
-    """``UBW_APP_SECRET_KEY`` no está definida en producción."""
+    """Falta un secreto obligatorio en producción (``UBW_APP_SECRET_KEY`` o ``UBW_FERNET_KEYS``)."""
 
 
 def require_secret_key(settings: Settings) -> None:
-    """Falla al arrancar si producción no tiene clave de firma."""
-    if settings.environment == "production" and settings.app_secret_key is None:
+    """Falla al arrancar si producción no tiene clave de firma ni claves Fernet (ADR-003, ADR-004)."""
+    if settings.environment != "production":
+        return
+    if settings.app_secret_key is None:
         raise MissingSecretKeyError("UBW_APP_SECRET_KEY (secret ubw_app_secret_key) es obligatoria en producción")
+    if settings.fernet_keys is None or not settings.fernet_keys.get_secret_value().strip():
+        raise MissingSecretKeyError("UBW_FERNET_KEYS (secret ubw_fernet_keys) es obligatoria en producción")
 
 
 def _signing_key(settings: Settings) -> bytes:

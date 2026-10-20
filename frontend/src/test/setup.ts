@@ -29,6 +29,12 @@ window.ResizeObserver = ResizeObserverStub;
 // Combobox de Mantine (Select) desplaza la opción activa; jsdom no implementa scrollIntoView.
 Element.prototype.scrollIntoView = vi.fn();
 
+// Textarea con autosize de Mantine escucha la carga de fuentes; jsdom no implementa document.fonts.
+Object.defineProperty(document, 'fonts', {
+  configurable: true,
+  value: { addEventListener: vi.fn(), removeEventListener: vi.fn(), ready: Promise.resolve() },
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

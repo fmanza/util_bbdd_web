@@ -21,6 +21,40 @@ export const routes: RouteObject[] = [
           { index: true, element: <HomePage /> },
           { path: 'account/password', element: <ChangePasswordPage /> },
           {
+            path: 'engines',
+            lazy: async () => ({ Component: (await import('../features/engines/EnginesPage')).EnginesPage }),
+          },
+          {
+            path: 'engines/:dbType',
+            lazy: async () => ({
+              Component: (await import('../features/engines/EngineDetailPage')).EngineDetailPage,
+            }),
+          },
+          {
+            path: 'connections',
+            lazy: async () => ({
+              Component: (await import('../features/connections/ConnectionsPage')).ConnectionsPage,
+            }),
+          },
+          {
+            path: 'connections/new',
+            lazy: async () => ({
+              Component: (await import('../features/connections/ConnectionFormPage')).NewConnectionPage,
+            }),
+          },
+          {
+            path: 'connections/:connectionId',
+            lazy: async () => ({
+              Component: (await import('../features/connections/ConnectionDetailPage')).ConnectionDetailPage,
+            }),
+          },
+          {
+            path: 'connections/:connectionId/edit',
+            lazy: async () => ({
+              Component: (await import('../features/connections/ConnectionFormPage')).EditConnectionPage,
+            }),
+          },
+          {
             path: 'admin',
             element: <RequireAdmin />,
             children: [
@@ -32,6 +66,12 @@ export const routes: RouteObject[] = [
                 path: 'sessions',
                 lazy: async () => ({
                   Component: (await import('../features/admin/SessionsPage')).SessionsPage,
+                }),
+              },
+              {
+                path: 'allowlist',
+                lazy: async () => ({
+                  Component: (await import('../features/admin/AllowlistPage')).AllowlistPage,
                 }),
               },
               {

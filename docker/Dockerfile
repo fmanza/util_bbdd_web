@@ -72,6 +72,7 @@ ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     UBW_ENVIRONMENT=production \
     UBW_DATA_DIR=/data \
+    UBW_FILES_DIR=/data/files \
     UBW_WORKSPACE_DIR=/workspace \
     UBW_STATIC_DIR=/app/static
 

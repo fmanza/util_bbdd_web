@@ -3,6 +3,46 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.3.0] - 2026-10-20
+
+Fase 2 — Catálogo de motores y conexiones.
+
+### Added
+
+- **Catálogo de motores** (`GET /api/v1/engines`, `GET /engines/{db_type}`): los 7 motores de util_bbdd con
+  versiones, puerto, drivers (y si están instalados en el servidor), características, parámetros de conexión
+  clasificados (secreto, destino, ruta, bloqueado) y matriz de capacidades verificadas: async, migración origen y
+  destino, readiness (GAPS G4/G5).
+- **Conexiones** (`/api/v1/connections`): CRUD con visibilidad privada o compartida (solo admin), `read_only` por
+  defecto, contraseña cifrada con MultiFernet (ADR-004) que nunca se devuelve; validación de parámetros contra el
+  catálogo y con `build_conn_params` de util_bbdd; rutas confinadas en `UBW_FILES_DIR`; `init_command` bloqueado.
+- **Prueba de conexión y readiness** (`POST /connections/{id}/test`, `GET /connections/{id}/readiness`) en un
+  subproceso con timeout (`UBW_CONNECTION_TEST_TIMEOUT`), máximo 4 simultáneas (429), errores saneados con código
+  estable; `last_test_*` en la conexión.
+- **Allowlist anti-SSRF** (`/api/v1/admin/allowlist`): deniega por defecto; CIDR, IP, host o `*.dominio`;
+  link-local, multicast y reservadas siempre denegadas; loopback solo con red explícita.
+- **CLI** `python -m app.cli rotate-secrets`.
+- **Frontend**: catálogo con matriz y ficha, lista y detalle de conexiones (prueba, readiness, borrado con
+  confirmación), formulario dinámico generado desde la ficha del motor con React Hook Form + Zod (*resolver* propio),
+  administración de destinos permitidos; secciones *Motores* y *Conexiones* habilitadas.
+- **Tests**: 78 nuevos en backend (151 en total) más 11 de integración contra los contenedores bench de util_bbdd
+  (PostgreSQL, MySQL, MariaDB, SQL Server, Oracle; `-m integration`); 20 nuevos en Vitest (39); E2E de catálogo,
+  conexiones, allowlist y prueba real contra el bench PostgreSQL desde el contenedor.
+- **Documentación**: guía [Motores y conexiones](docs/guides/conexiones.md); destinos y ficheros en despliegue;
+  notas de implementación en ADR-004; huecos G10–G16 en `UTIL_BBDD_GAPS.md`.
+
+### Changed
+
+- La API no arranca en producción sin `ubw_fernet_keys` (además de `ubw_app_secret_key`).
+- La imagen fija `UBW_FILES_DIR=/data/files` y el *entrypoint* crea la carpeta.
+- Los *problem details* de errores de dominio pueden llevar `errors` por campo (como los 422 de validación).
+
+### Dependencias
+
+- Python: `cryptography` como dependencia directa (50.0.2, ya presente como transitiva).
+- npm: `react-hook-form` 7.89.0 y `zod` 4.6.5 (este ya estaba como transitiva de desarrollo), publicadas antes del
+  corte de 2026-10-05.
+
 ## [0.2.0] - 2026-10-20
 
 Fase 1 — Identidad y multiusuario.

@@ -41,9 +41,9 @@ flowchart TB
 | `core/` | Ajustes `UBW_*` y Docker secrets, logging JSON, errores RFC 9457, tokens de sesión y CSRF | 0 → 1 |
 | `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic | 0 → |
 | `api/` | `/api/health`; `api/v1/` con los routers de negocio | 0 → |
-| `integrations/util_bbdd/` | Único importador de util_bbdd | 0 → |
-| `domain/` | `identity/` (usuarios, contraseñas, sesiones, auditoría), conexiones, proyectos, ejecuciones | 1 → 3 |
-| `cli.py` | `python -m app.cli create-admin` (primer administrador) | 1 |
+| `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py` (fichas, matriz, clasificación de parámetros) y `probe.py` (prueba y readiness en subproceso) | 0 → 2 |
+| `domain/` | `identity/` (usuarios, contraseñas, sesiones, auditoría), `engines/`, `connections/` (cifrado, allowlist, parámetros, servicio), proyectos, ejecuciones | 1 → 3 |
+| `cli.py` | `create-admin` (primer administrador) y `rotate-secrets` (rotación Fernet) | 1 → 2 |
 | `jobs/` | Worker, cola, subprocesos, progreso | 0 (esqueleto) → 3 |
 | `workspace/` | Carpetas por ejecución, `run.json`, ZIP, retención | 3 |
 
@@ -74,7 +74,9 @@ src/
 | `UBW_LOGIN_LOCKOUT_MINUTES` | `15` | Duración del bloqueo |
 | `UBW_PASSWORD_MIN_LENGTH` | `12` | Longitud mínima de contraseña (máximo fijo: 128) |
 | Secret `ubw_app_secret_key` | — | Firma del token CSRF; **obligatorio** en producción (sin él la API no arranca) |
-| Secret `ubw_fernet_keys` | — | Cifrado de conexiones (Fase 2) |
+| `UBW_FILES_DIR` | `/data/files` | Única carpeta a la que pueden apuntar los parámetros de ruta (SQLite, JAR, certificados) |
+| `UBW_CONNECTION_TEST_TIMEOUT` | `15` | Segundos máximos de una prueba o readiness (se mata el subproceso) |
+| Secret `ubw_fernet_keys` | — | Cifrado de conexiones (ADR-004); **obligatorio** en producción |
 
 Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·
 [ADR-002](adr/ADR-002-ejecucion-de-jobs.md) · [ADR-003](adr/ADR-003-autenticacion-sesiones.md) ·

@@ -28,6 +28,9 @@ class Settings(BaseSettings):
         login_max_attempts: Intentos fallidos seguidos que bloquean la cuenta.
         login_lockout_minutes: Duración del bloqueo temporal.
         password_min_length: Longitud mínima de contraseña (la máxima es fija, 128).
+        files_dir: Única carpeta del servidor a la que pueden apuntar los parámetros de ruta de las conexiones
+            (fichero SQLite, JAR de HSQLDB, certificados TLS…). Evita leer ficheros arbitrarios como ``config.db``.
+        connection_test_timeout: Segundos máximos de una prueba de conexión o readiness (se mata el subproceso).
     """
 
     model_config = SettingsConfigDict(env_prefix="UBW_", secrets_dir=None, extra="ignore")
@@ -44,6 +47,8 @@ class Settings(BaseSettings):
     login_max_attempts: int = Field(default=5, ge=1, le=100)
     login_lockout_minutes: int = Field(default=15, ge=1, le=24 * 60)
     password_min_length: int = Field(default=12, ge=8, le=128)
+    files_dir: Path = Path("data/files")
+    connection_test_timeout: float = Field(default=15.0, gt=0, le=120)
 
     @property
     def cookie_secure(self) -> bool:

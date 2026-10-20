@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -21,6 +22,7 @@ from app.main import create_app
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 ADMIN_PASSWORD = "admin-password-1234"
 USER_PASSWORD = "user-password-1234"
+TEST_FERNET_KEY = Fernet.generate_key().decode("ascii")
 
 LoginFn = Callable[[TestClient, str, str], None]
 
@@ -32,6 +34,9 @@ def settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Settin
     monkeypatch.setenv("UBW_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("UBW_WORKSPACE_DIR", str(tmp_path / "workspace"))
     monkeypatch.setenv("UBW_STATIC_DIR", str(tmp_path / "static"))
+    monkeypatch.setenv("UBW_FILES_DIR", str(tmp_path / "files"))
+    monkeypatch.setenv("UBW_FERNET_KEYS", TEST_FERNET_KEY)
+    (tmp_path / "files").mkdir()
     get_settings.cache_clear()
     get_engine.cache_clear()
     yield get_settings()

@@ -10,7 +10,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 |---|---|---|---|
 | 0 | Fundaciones | 0.1.0 | ✅ Cerrada (2026-10-19) |
 | 1 | Identidad y multiusuario | 0.2.0 | ✅ Cerrada (2026-10-20) |
-| 2 | Catálogo de motores y conexiones | 0.3.0 | Pendiente |
+| 2 | Catálogo de motores y conexiones | 0.3.0 | ✅ Cerrada (2026-10-20) |
 | 3 | Proyectos y motor de ejecuciones | 0.4.0 | Pendiente |
 | 4 | Explorador de metadatos | 0.5.0 | Pendiente |
 | 5 | Documentación y grafos | 0.6.0 | Pendiente |
@@ -49,7 +49,7 @@ bloqueo por intentos; comando `python -m app.cli create-admin`; dependencia `cur
 **Frontend**: pantalla de login, guardas de ruta, menú de usuario, administración de usuarios y sesiones.
 **Tests**: hash y verificación, bloqueo, CSRF obligatorio, cookie con flags, IDOR, E2E de login.
 
-## Fase 2 — Catálogo de motores y conexiones
+## Fase 2 — Catálogo de motores y conexiones ✅
 
 **Historias**
 - Veo la ficha de cada motor: nombre, descripción, rango de versiones, puerto por defecto, drivers (y si están

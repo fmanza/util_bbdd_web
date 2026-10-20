@@ -17,6 +17,11 @@
 | «Token CSRF ausente o no válido» (403) | Cookie `ubw_csrf` borrada o de otra sesión | Recargar la página; el login pide un token nuevo con `GET /api/v1/auth/csrf` |
 | Un usuario no puede entrar con la contraseña correcta | Bloqueo temporal tras 5 fallos (`UBW_LOGIN_*`) | Esperar el bloqueo, o que un admin le restablezca la contraseña (quita el bloqueo) |
 | Se ha perdido la contraseña del único admin | — | `docker compose exec web python -m app.cli create-admin --username otro-admin` y reactivar o restablecer desde la web |
+| Prueba de conexión: «El destino no está en la lista de destinos permitidos» | Allowlist vacía o sin ese host | Un admin añade el host o la red en *Destinos permitidos* |
+| Prueba de conexión: «El driver del motor no está instalado» | Imagen sin el driver (p. ej. HSQLDB o `pyodbc`) | Ver la ficha del motor; imagen `WITH_HSQLDB=true` o `WITH_ODBC=true` |
+| «No se puede descifrar la contraseña guardada» | Se retiró una clave de `fernet_keys.txt` sin `rotate-secrets` | Restaurar la clave antigua, ejecutar `rotate-secrets` y retirarla después; o reintroducir la contraseña |
+| La API no arranca: `UBW_FERNET_KEYS … obligatoria` | Producción sin el secret `ubw_fernet_keys` | `python scripts/generate_secrets.py` |
+| Desde Docker no conecta con una BD en `127.0.0.1` del host | Dentro del contenedor, `127.0.0.1` es el propio contenedor | Usar `host.docker.internal` (Docker Desktop) o la IP del host, y añadirlo a la allowlist |
 | `/api/docs` da 404 | Desactivado en producción | `UBW_ENVIRONMENT=development` (compose dev) |
 | Aviso `StarletteDeprecationWarning … httpx2` en pytest | Starlette 1.x depreca `httpx` en `TestClient` | Informativo; seguimiento en la deuda técnica |
 

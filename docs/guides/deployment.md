@@ -22,6 +22,16 @@ Para automatizarlo, `--password-stdin` lee la contraseña de la entrada estánda
 ' "$PASS" | docker compose exec -T web python -m app.cli create-admin --username admin --password-stdin`).
 El resto de usuarios se gestiona desde **Administración → Usuarios** ([guía](usuarios_y_sesiones.md)).
 
+### Destinos y ficheros de las conexiones
+
+- **Allowlist**: ninguna conexión de red funciona hasta que un admin añade sus destinos en *Administración →
+  Destinos permitidos* (red CIDR, host o `*.dominio`). Las IP de metadatos cloud se bloquean siempre; loopback solo
+  con una red explícita (`127.0.0.1/32`). Para alcanzar una BD del propio equipo con Docker Desktop, usa el host
+  `host.docker.internal` y añádelo a la lista.
+- **Ficheros** (SQLite, JAR de HSQLDB, certificados TLS): deben estar en `UBW_FILES_DIR` (`/data/files`, en el
+  volumen `data`). Para copiarlos: `docker compose cp ./ventas.db web:/data/files/ventas.db` y, en la conexión,
+  `database = ventas.db`.
+
 Por defecto el puerto se publica solo en `127.0.0.1:8080`. Para acceso desde la red, pon delante un **proxy
 inverso con TLS** (nginx, Caddy, Traefik) y no expongas el contenedor directamente:
 

@@ -23,6 +23,8 @@ const ACTION_FILTERS = [
   { value: 'auth.', key: 'auth' },
   { value: 'user.', key: 'user' },
   { value: 'session.', key: 'session' },
+  { value: 'connection.', key: 'connection' },
+  { value: 'allowlist.', key: 'allowlist' },
 ] as const;
 
 export function AuditPage() {

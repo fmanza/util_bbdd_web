@@ -37,10 +37,18 @@ export const api = createClient<paths>({
 });
 api.use(csrfMiddleware);
 
+export interface ProblemFieldError {
+  loc: (string | number)[];
+  msg: string;
+  type?: string;
+}
+
 export interface Problem {
   title: string;
   status: number;
   detail?: string;
+  /** Errores por campo (422): `loc` como en FastAPI, p. ej. `["body", "params", "host"]`. */
+  errors?: ProblemFieldError[];
 }
 
 export class ApiError extends Error {

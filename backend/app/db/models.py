@@ -1,6 +1,7 @@
 """Modelos SQLAlchemy de ``config.db``.
 
 Fase 1: identidad (``users``, ``sessions``, ``audit_log``).
+Fase 2: conexiones (``connections``) y allowlist de destinos (``allowlist_entries``).
 """
 
 from __future__ import annotations
@@ -8,7 +9,18 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, TypeDecorator
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    TypeDecorator,
+    UniqueConstraint,
+)
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +28,7 @@ from app.db.base import Base
 
 Role = Literal["admin", "user"]
 ROLES: tuple[Role, ...] = ("admin", "user")
+Visibility = Literal["private", "shared"]
 
 
 def utcnow() -> datetime:
@@ -100,3 +113,46 @@ class AuditEntry(Base):
     def actor_username(self) -> str | None:
         """Usuario que hizo la acción, si lo hay."""
         return self.actor.username if self.actor else None
+
+
+class Connection(Base):
+    """Conexión a una BD destino.
+
+    ``params`` no contiene secretos; la contraseña va cifrada con Fernet en ``secret_enc`` (ADR-004). Las privadas
+    solo las ve su propietario; las compartidas (``shared``, creadas por un admin) las usan todos sin ver el secreto.
+    """
+
+    __tablename__ = "connections"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "name", name="uq_connections_owner_id_name"),
+        CheckConstraint("visibility IN ('private', 'shared')", name="visibility"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    db_type: Mapped[str] = mapped_column(String(32))
+    description: Mapped[str] = mapped_column(String(500), default="")
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    secret_enc: Mapped[str | None] = mapped_column(Text, default=None)
+    visibility: Mapped[str] = mapped_column(String(16), default="private")
+    read_only: Mapped[bool] = mapped_column(default=True)
+    last_test_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    last_test_ok: Mapped[bool | None] = mapped_column(default=None)
+    last_test_error: Mapped[str | None] = mapped_column(String(32), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
+
+    owner: Mapped[User] = relationship(lazy="joined")
+
+
+class AllowlistEntry(Base):
+    """Destino permitido para las conexiones salientes (anti-SSRF): red CIDR o nombre de host (``*.dominio``)."""
+
+    __tablename__ = "allowlist_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pattern: Mapped[str] = mapped_column(String(255), unique=True)
+    description: Mapped[str] = mapped_column(String(255), default="")
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)

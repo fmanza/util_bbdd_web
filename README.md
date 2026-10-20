@@ -4,7 +4,7 @@ Aplicación web multiusuario sobre [util_bbdd](vendor/wheels/): catálogo de mot
 cifradas, proyectos por usuario y ejecuciones de util_bbdd (documentación, grafos, comparación de esquemas,
 migración DDL, volcado y carga bulk) con los resultados guardados y **agrupados por ejecución**.
 
-> Estado: **0.2.0 — Fase 1 (identidad y multiusuario)**. El plan completo está en [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
+> Estado: **0.3.0 — Fase 2 (catálogo de motores y conexiones)**. El plan completo está en [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
 
 ## Arranque rápido
 
@@ -36,7 +36,8 @@ Abre <http://127.0.0.1:8080> e inicia sesión. Estado del servicio: <http://127.
 - [Arquitectura](docs/architecture.md) · [Decisiones (ADR)](docs/adr/) · [ROADMAP](docs/plan/ROADMAP.md)
 - [Incorporación de desarrolladores](docs/guides/onboarding_dev.md) · [Despliegue](docs/guides/deployment.md) ·
   [Solución de problemas](docs/guides/troubleshooting.md)
-- Uso: [Usuarios, sesiones y auditoría](docs/guides/usuarios_y_sesiones.md)
+- Uso: [Usuarios, sesiones y auditoría](docs/guides/usuarios_y_sesiones.md) ·
+  [Motores y conexiones](docs/guides/conexiones.md)
 - Asistentes IA: [CLAUDE.md](CLAUDE.md), [.github/copilot-instructions.md](.github/copilot-instructions.md),
   [.github/SHARED_INSTRUCTIONS.md](.github/SHARED_INSTRUCTIONS.md)
 

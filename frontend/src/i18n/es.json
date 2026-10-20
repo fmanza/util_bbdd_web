@@ -1,5 +1,7 @@
 {
-  "app": { "title": "util_bbdd web" },
+  "app": {
+    "title": "util_bbdd web"
+  },
   "common": {
     "loading": "Cargando…",
     "error": "Se ha producido un error",
@@ -9,9 +11,15 @@
     "cancel": "Cancelar",
     "save": "Guardar",
     "edit": "Editar",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "yes": "Sí",
+    "no": "No",
+    "delete": "Borrar"
   },
-  "roles": { "admin": "Administrador", "user": "Usuario" },
+  "roles": {
+    "admin": "Administrador",
+    "user": "Usuario"
+  },
   "nav": {
     "label": "Navegación principal",
     "home": "Inicio",
@@ -23,7 +31,8 @@
     "admin": "Administración",
     "users": "Usuarios",
     "sessions": "Sesiones",
-    "audit": "Auditoría"
+    "audit": "Auditoría",
+    "allowlist": "Destinos permitidos"
   },
   "auth": {
     "loginIntro": "Inicia sesión con tu usuario.",
@@ -90,7 +99,9 @@
         "all": "Todas",
         "auth": "Autenticación",
         "user": "Usuarios",
-        "session": "Sesiones"
+        "session": "Sesiones",
+        "connection": "Conexiones",
+        "allowlist": "Destinos"
       },
       "empty": "No hay eventos.",
       "ts": "Fecha",
@@ -100,7 +111,10 @@
       "target": "Objeto",
       "details": "Detalles",
       "system": "Sistema",
-      "outcomes": { "success": "Correcto", "failure": "Fallido" },
+      "outcomes": {
+        "success": "Correcto",
+        "failure": "Fallido"
+      },
       "actions": {
         "auth": {
           "login": "Inicio de sesión",
@@ -115,8 +129,35 @@
           "reactivate": "Reactivación",
           "password_reset": "Contraseña restablecida"
         },
-        "session": { "revoke": "Sesión revocada" }
+        "session": {
+          "revoke": "Sesión revocada"
+        },
+        "connection": {
+          "create": "Alta de conexión",
+          "update": "Edición de conexión",
+          "delete": "Borrado de conexión",
+          "test": "Prueba de conexión",
+          "readiness": "Readiness"
+        },
+        "allowlist": {
+          "create": "Destino permitido",
+          "delete": "Destino retirado"
+        }
       }
+    },
+    "allowlist": {
+      "title": "Destinos permitidos",
+      "intro": "Las conexiones solo pueden conectar con estos destinos (protección anti-SSRF). Las IP de metadatos cloud (169.254.0.0/16) se bloquean siempre y loopback solo se permite con una red explícita, p. ej. 127.0.0.1/32.",
+      "pattern": "Destino",
+      "patternHint": "Red CIDR (10.0.0.0/8), IP, host (db.empresa.local) o comodín (*.empresa.local)",
+      "description": "Descripción",
+      "createdAt": "Alta",
+      "add": "Añadir destino",
+      "empty": "La lista está vacía: ninguna conexión de red puede probarse ni usarse.",
+      "remove": "Quitar",
+      "removeLabel": "Quitar {{pattern}}",
+      "removeTitle": "Quitar destino",
+      "removeBody": "Las conexiones a «{{pattern}}» dejarán de poder usarse."
     }
   },
   "home": {
@@ -138,5 +179,108 @@
     "title": "Página no encontrada",
     "body": "La dirección no corresponde a ninguna sección.",
     "back": "Volver al inicio"
+  },
+  "engines": {
+    "title": "Motores",
+    "intro": "Motores de base de datos que soporta util_bbdd, con los drivers instalados en el servidor y las capacidades verificadas.",
+    "matrixCaption": "Matriz de capacidades por motor. Las operaciones de documentación, grafos, comparación, volcado y carga se añadirán al implementarse.",
+    "engine": "Motor",
+    "versions": "Versiones",
+    "port": "Puerto",
+    "drivers": "Drivers",
+    "async": "Async",
+    "migrateSource": "Migración (origen)",
+    "migrateTarget": "Migración (destino)",
+    "readiness": "Readiness",
+    "installed": "Instalado en el servidor",
+    "notInstalled": "No instalado en el servidor",
+    "notInstalledShort": "no instalado",
+    "install": "Instalación",
+    "docs": "Documentación",
+    "requirements": "Requisitos del sistema",
+    "features": "Características",
+    "params": "Parámetros de conexión",
+    "paramName": "Parámetro",
+    "paramType": "Tipo",
+    "paramDefault": "Por defecto",
+    "paramDescription": "Descripción",
+    "required": "obligatorio",
+    "newConnection": "Nueva conexión con este motor",
+    "kinds": {
+      "secret": "secreto",
+      "host": "destino",
+      "path": "ruta",
+      "blocked": "no admitido"
+    }
+  },
+  "connections": {
+    "title": "Conexiones",
+    "new": "Nueva conexión",
+    "newTitle": "Nueva conexión",
+    "editTitle": "Editar {{name}}",
+    "create": "Crear conexión",
+    "search": "Buscar por nombre o descripción",
+    "empty": "No hay conexiones. Crea la primera o pide a un administrador una compartida.",
+    "name": "Nombre",
+    "engine": "Motor",
+    "target": "Destino",
+    "access": "Acceso",
+    "lastTest": "Última prueba",
+    "neverTested": "Sin probar",
+    "testOk": "Correcta",
+    "testFailed": "Fallida",
+    "readOnly": "Solo lectura",
+    "owner": "Propietario",
+    "passwordStored": "Guardada (cifrada)",
+    "noPassword": "Sin contraseña",
+    "test": "Probar conexión",
+    "readiness": "Readiness",
+    "readinessTitle": "Readiness del motor",
+    "testOkTitle": "Conexión correcta",
+    "testOkBody": "Versión del servidor {{version}} · {{ms}} ms",
+    "testFailedTitle": "La conexión ha fallado",
+    "readinessFailed": "No se pudo obtener el readiness",
+    "readinessUnsupported": "util_bbdd no tiene comprobaciones de readiness para este motor.",
+    "readinessStatic": "Solo comprobaciones estáticas: no se pudo conectar ({{detail}}).",
+    "checkedAt": "Comprobado: {{date}}",
+    "level": "Nivel",
+    "param": "Parámetro",
+    "current": "Valor actual",
+    "recommendation": "Recomendación",
+    "deleteTitle": "Borrar conexión",
+    "deleteBody": "Se borrará la conexión «{{name}}» y su contraseña cifrada. No se puede deshacer.",
+    "notEditable": "Es una conexión compartida: solo un administrador puede modificarla.",
+    "visibility": {
+      "private": "Privada",
+      "shared": "Compartida"
+    },
+    "form": {
+      "engine": "Motor",
+      "enginePlaceholder": "Elige un motor",
+      "chooseEngine": "Elige el motor para ver sus parámetros de conexión.",
+      "name": "Nombre",
+      "description": "Descripción",
+      "params": "Parámetros de {{engine}}",
+      "password": "Contraseña",
+      "passwordHint": "Se guarda cifrada y nunca se vuelve a mostrar.",
+      "passwordKeep": "Déjala vacía para conservar la guardada.",
+      "advanced_one": "Opciones avanzadas ({{count}})",
+      "advanced_other": "Opciones avanzadas ({{count}})",
+      "readOnly": "Solo lectura",
+      "readOnlyHint": "Impide las operaciones que escriben en esta BD (migración aplicada, volcado, carga).",
+      "visibility": "Visibilidad",
+      "visibilityHint": "Las compartidas las usan todos los usuarios sin ver la contraseña.",
+      "default": "Por defecto: {{value}}",
+      "unset": "(por defecto)",
+      "pathHint": "Ruta relativa a la carpeta de ficheros del servidor (UBW_FILES_DIR).",
+      "required": "«{{name}}» es obligatorio",
+      "integer": "Debe ser un número entero",
+      "number": "Debe ser un número",
+      "json": "Debe ser un objeto JSON",
+      "option": "Valor no permitido",
+      "nameRequired": "El nombre es obligatorio",
+      "tooLong": "Máximo {{max}} caracteres",
+      "passwordRequired": "La contraseña es obligatoria"
+    }
   }
 }

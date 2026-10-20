@@ -5,15 +5,17 @@ import { NavLink as RouterNavLink, Outlet } from 'react-router';
 import { UserMenu } from '../features/auth/UserMenu';
 import { useMe } from '../features/auth/useAuth';
 
-// Secciones del ROADMAP: se habilitan al implementar su fase.
-const SECTIONS: { key: string; phase: number }[] = [
-  { key: 'engines', phase: 2 },
-  { key: 'connections', phase: 2 },
+// Secciones disponibles y, deshabilitadas, las de fases futuras del ROADMAP.
+const SECTIONS: { key: string; to: string }[] = [
+  { key: 'engines', to: '/engines' },
+  { key: 'connections', to: '/connections' },
+];
+const UPCOMING: { key: string; phase: number }[] = [
   { key: 'projects', phase: 3 },
   { key: 'runs', phase: 3 },
 ];
 
-const ADMIN_SECTIONS = ['users', 'sessions', 'audit'] as const;
+const ADMIN_SECTIONS = ['users', 'sessions', 'allowlist', 'audit'] as const;
 
 export function Layout() {
   const { t } = useTranslation();
@@ -32,6 +34,14 @@ export function Layout() {
         <Stack gap={4}>
           <NavLink component={RouterNavLink} to="/" label={t('nav.home')} end />
           {SECTIONS.map((section) => (
+            <NavLink
+              key={section.key}
+              component={RouterNavLink}
+              to={section.to}
+              label={t(`nav.${section.key}`)}
+            />
+          ))}
+          {UPCOMING.map((section) => (
             <NavLink
               key={section.key}
               label={t(`nav.${section.key}`)}

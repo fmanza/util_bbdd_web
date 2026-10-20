@@ -24,6 +24,13 @@ class AuditAction:
     USER_REACTIVATE: Final = "user.reactivate"
     USER_PASSWORD_RESET: Final = "user.password_reset"  # noqa: S105 (nombre de acción)
     SESSION_REVOKE: Final = "session.revoke"
+    CONNECTION_CREATE: Final = "connection.create"
+    CONNECTION_UPDATE: Final = "connection.update"
+    CONNECTION_DELETE: Final = "connection.delete"
+    CONNECTION_TEST: Final = "connection.test"
+    CONNECTION_READINESS: Final = "connection.readiness"
+    ALLOWLIST_CREATE: Final = "allowlist.create"
+    ALLOWLIST_DELETE: Final = "allowlist.delete"
 
 
 @dataclass(frozen=True)

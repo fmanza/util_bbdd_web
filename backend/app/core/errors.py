@@ -26,14 +26,16 @@ class AppError(Exception):
         status: Código HTTP de la respuesta.
         title: Título del *problem details*.
         detail: Explicación para el usuario (nunca texto de excepciones de terceros).
+        extra: Campos adicionales del *problem details* (p. ej. ``errors`` por campo).
     """
 
     status: ClassVar[int] = 400
     title: ClassVar[str] = "Petición no válida"
 
-    def __init__(self, detail: str | None = None) -> None:
+    def __init__(self, detail: str | None = None, **extra: object) -> None:
         super().__init__(detail or self.title)
         self.detail = detail
+        self.extra = extra
 
 
 def problem(status: int, title: str, detail: str | None = None, **extra: object) -> JSONResponse:
@@ -50,7 +52,7 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AppError)
     async def _app(_: Request, exc: AppError) -> JSONResponse:
-        return problem(exc.status, exc.title, exc.detail)
+        return problem(exc.status, exc.title, exc.detail, **exc.extra)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:

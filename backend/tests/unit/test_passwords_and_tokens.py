@@ -72,7 +72,9 @@ def test_csrf_token_is_bound_to_session_and_key() -> None:
 def test_production_requires_secret_key() -> None:
     with pytest.raises(MissingSecretKeyError):
         require_secret_key(Settings(environment="production"))
-    require_secret_key(Settings(environment="production", app_secret_key="k"))  # type: ignore[arg-type]
+    with pytest.raises(MissingSecretKeyError, match="FERNET"):
+        require_secret_key(Settings(environment="production", app_secret_key="k"))  # type: ignore[arg-type]
+    require_secret_key(Settings(environment="production", app_secret_key="k", fernet_keys="f"))  # type: ignore[arg-type]
     require_secret_key(Settings(environment="development"))
 
 

@@ -36,7 +36,7 @@ export function stubApi(routes: Record<string, Handler>) {
 }
 
 export const HEALTH = {
-  'GET /api/health': { body: { status: 'ok', version: '0.2.0', util_bbdd_version: '4.0.0', database: 'ok' } },
+  'GET /api/health': { body: { status: 'ok', version: '0.3.0', util_bbdd_version: '4.0.0', database: 'ok' } },
 };
 
 /** Rutas base con sesión iniciada como `me` (o sin sesión con `null`). */
