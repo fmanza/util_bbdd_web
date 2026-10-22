@@ -1,7 +1,7 @@
 # Producto — util_bbdd_web
 
 - **Qué es**: aplicación web multiusuario que expone la funcionalidad de la librería util_bbdd 4.0.0.
-- **Versión actual**: 0.5.0 (Fase 4 cerrada: explorador de metadatos, queries nombradas y SQL libre restringido). Plan: `docs/plan/ROADMAP.md`.
+- **Versión actual**: 0.6.0 (Fase 5 cerrada: documentación Word/Excel/HTML y grafos de relaciones). Plan: `docs/plan/ROADMAP.md`.
 - **Usuarios**: equipos técnicos (DBA, desarrollo, migraciones) en una red interna; rol `admin` y rol `user`.
 
 ## Capacidades objetivo

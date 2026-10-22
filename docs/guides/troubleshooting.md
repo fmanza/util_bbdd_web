@@ -29,6 +29,8 @@
 | Lanzar ejecución → 429 | Más de `UBW_MAX_QUEUED_PER_USER` en cola o en curso | Esperar o cancelar alguna |
 | El progreso no se actualiza en vivo | Un proxy almacena la respuesta SSE | `proxy_buffering off` en nginx (ver despliegue); la UI cae a sondeo cada 2 s |
 | Explorador: 502 «No se pudo consultar la base de datos» | Conexión no permitida, caída o credenciales | El código (`not_allowed`, `connection_failed`…) indica la causa; prueba la conexión |
+| Documentación: el sitio HTML da 404 tras un rato | Su enlace firmado caducó (inactividad de la sesión) | Recarga el detalle de la ejecución |
+| Ejecución fallida con `graphviz_missing` | Falta Graphviz en el servidor | Usa la imagen oficial o instala `graphviz` |
 | Explorador: el schema tarda en abrirse | Primera lectura de un schema grande | Espera (hasta `UBW_METADATA_TIMEOUT_SECONDS`); después va desde la caché |
 | Una tabla nueva no aparece | El árbol viene de la caché | **Refrescar** |
 | SQL libre: 403 | Sin permiso «Puede ejecutar SQL libre» o sin rol editor | Un admin activa el permiso en *Usuarios* |

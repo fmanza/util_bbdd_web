@@ -1,8 +1,10 @@
 """Ejecuciones: historial por proyecto, lanzamiento (202), progreso por SSE, cancelación, relanzamiento, purga,
-artefactos (descarga y vista previa segura) y ZIP en *streaming* (ADR-002, ADR-005)."""
+artefactos (descarga y vista previa segura), sitio HTML generado (URL firmada, ADR-007) y ZIP en *streaming*
+(ADR-002, ADR-005)."""
 
 from __future__ import annotations
 
+import time
 from collections.abc import AsyncIterable
 from typing import Annotated, Any, Final
 
@@ -15,12 +17,14 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
 from app.api.v1.schemas_projects import ArtifactOut, RunCreate, RunDetailOut, RunOut, RunPage, RunStatus
+from app.core.config import Settings
 from app.core.errors import AppError
-from app.db.models import TERMINAL_STATUSES, Artifact, Run
+from app.core.security import site_token, verify_site_token
+from app.db.models import TERMINAL_STATUSES, Artifact, Run, User
 from app.db.session import new_session
 from app.domain.projects.service import get_membership
 from app.domain.runs import service
-from app.domain.runs.errors import ArtifactNotFoundError
+from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters
 from app.workspace.layout import run_dir, zip_stream
 
@@ -38,6 +42,15 @@ PREVIEW_MAX_BYTES: Final = 2 * 1024 * 1024
 SSE_POLL_SECONDS: Final = 1.0
 #: CSP de las vistas previas: sin scripts, sin peticiones salientes, origen opaco (``sandbox``).
 PREVIEW_CSP: Final = "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-ancestors 'self'"
+#: Sitio HTML de la documentación: sus scripts se ejecutan, pero con origen opaco (sin cookies, sin ``fetch`` a la
+#: API ni acceso a la SPA) y solo cargan recursos del propio servidor (ADR-007).
+SITE_CSP: Final = (
+    "sandbox allow-scripts allow-popups allow-downloads; default-src 'none'; script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none'; "
+    "form-action 'none'; base-uri 'none'; frame-ancestors 'self'"
+)
+SITE_ROOT: Final = "outputs/html/"
+_TEXT_MIMES: Final = frozenset({"text/html", "text/css", "text/javascript", "image/svg+xml"})
 
 
 class PreviewUnavailableError(AppError):
@@ -87,13 +100,34 @@ def _page(db: Any, rows: list[Run], total: int) -> RunPage:
     return RunPage(items=[_run_out(r, counts.get(r.id, 0)) for r in rows], total=total)
 
 
-def _detail(access: service.RunAccess) -> RunDetailOut:
+def _site_url(access: service.RunAccess, user: User, settings: Settings) -> str | None:
+    """URL firmada del ``index.html`` principal del sitio HTML (el menos profundo), si lo hay."""
+    run = access.run
+    indexes = [
+        a.path
+        for a in run.artifacts
+        if a.kind == "html" and a.path.startswith(SITE_ROOT) and a.path.endswith("/index.html")
+    ]
+    if not indexes:
+        return None
+    index = min(indexes, key=lambda p: (p.count("/"), p))
+    expires = int(time.time()) + settings.session_idle_minutes * 60
+    token = site_token(settings, run_id=run.id, user_id=user.id, expires=expires)
+    return f"/api/v1/runs/{run.id}/site/{token}/{index.removeprefix(SITE_ROOT)}"
+
+
+def _detail(access: service.RunAccess, user: User, settings: Settings) -> RunDetailOut:
     run = access.run
     base = _run_out(run, len(run.artifacts))
     artifacts = [
         ArtifactOut.model_validate(a).model_copy(update={"previewable": _previewable(a)}) for a in run.artifacts
     ]
-    return RunDetailOut(**base.model_dump(), my_role=access.membership.role, artifacts=artifacts)
+    return RunDetailOut(
+        **base.model_dump(),
+        my_role=access.membership.role,
+        artifacts=artifacts,
+        site_url=_site_url(access, user, settings),
+    )
 
 
 def _filters(status_filter: RunStatus | None, operation: str | None, user_id: int | None, q: str | None) -> RunFilters:
@@ -169,8 +203,8 @@ def list_my_runs(
 
 
 @router.get("/{run_id}", response_model=RunDetailOut, summary="Ver ejecución", responses={**_401, **_404})
-def get_run(run_id: str, user: CurrentUser, db: DbSession) -> RunDetailOut:
-    return _detail(service.get_access(db, user, run_id))
+def get_run(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> RunDetailOut:
+    return _detail(service.get_access(db, user, run_id), user, settings)
 
 
 def visible_run(run_id: str, user: CurrentUser, db: DbSession) -> service.RunAccess:
@@ -286,11 +320,41 @@ def preview_artifact(
     if artifact.size_bytes > PREVIEW_MAX_BYTES:
         raise PreviewTooLargeError()
     if artifact.kind in SANDBOXED_KINDS:
-        media = "image/svg+xml" if path.suffix.lower() == ".svg" else "text/html; charset=utf-8"
+        media = "text/html; charset=utf-8" if artifact.kind == "html" else artifact.mime
         return FileResponse(
             path, media_type=media, filename=path.name, content_disposition_type="inline", headers=_SAFE_HEADERS
         )
     return PlainTextResponse(path.read_text(encoding="utf-8", errors="replace"), headers=_SAFE_HEADERS)
+
+
+_SITE_HEADERS: Final = {
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": SITE_CSP,
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "private, max-age=300",
+}
+
+
+@router.get(
+    "/{run_id}/site/{token}/{path:path}", summary="Sitio HTML generado (URL firmada)", response_class=FileResponse,
+    responses={404: {"description": "Token no válido o caducado, sin acceso o fichero no registrado"}},
+)  # fmt: skip
+def site_file(run_id: str, token: str, path: str, db: DbSession, settings: SettingsDep) -> FileResponse:
+    """Fichero del sitio HTML (``outputs/html/**``) para el ``iframe`` con origen opaco, que no envía la cookie.
+
+    El token (``site_url`` del detalle) identifica al usuario; en cada petición se comprueba que sigue activo y es
+    miembro del proyecto. Solo se sirven artefactos registrados de tipo ``html``.
+    """
+    user_id = verify_site_token(settings, token, run_id=run_id, now=int(time.time()))
+    user = db.get(User, user_id) if user_id is not None else None
+    if user is None or not user.is_active:
+        raise RunNotFoundError()
+    access = service.get_access(db, user, run_id)
+    artifact, file = service.get_artifact_by_path(db, access.run, SITE_ROOT + path, settings)
+    if artifact.kind != "html":
+        raise ArtifactNotFoundError()
+    media = f"{artifact.mime}; charset=utf-8" if artifact.mime in _TEXT_MIMES else artifact.mime
+    return FileResponse(file, media_type=media, content_disposition_type="inline", headers=_SITE_HEADERS)
 
 
 @router.get(

@@ -849,6 +849,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/site/{token}/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sitio HTML generado (URL firmada)
+         * @description Fichero del sitio HTML (``outputs/html/**``) para el ``iframe`` con origen opaco, que no envía la cookie.
+         *
+         *     El token (``site_url`` del detalle) identifica al usuario; en cada petición se comprueba que sigue activo y es
+         *     miembro del proyecto. Solo se sirven artefactos registrados de tipo ``html``.
+         */
+        get: operations["site_file_api_v1_runs__run_id__site__token___path__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions": {
         parameters: {
             query?: never;
@@ -1534,12 +1557,22 @@ export interface components {
             default?: unknown;
             /** Description */
             description: string;
+            /**
+             * Group
+             * @description Sección del formulario
+             */
+            group?: string | null;
             /** Maximum */
             maximum: number | null;
             /** Minimum */
             minimum: number | null;
             /** Name */
             name: string;
+            /**
+             * Options
+             * @description Valores permitidos (desplegable)
+             */
+            options?: string[] | null;
             /** Required */
             required: boolean;
             /**
@@ -1802,6 +1835,11 @@ export interface components {
             project_name: string;
             /** Relaunched From */
             relaunched_from: string | null;
+            /**
+             * Site Url
+             * @description URL firmada y temporal del sitio HTML generado (para el iframe con origen opaco)
+             */
+            site_url?: string | null;
             /** Size Bytes */
             size_bytes: number;
             /** Started At */
@@ -4980,6 +5018,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    site_file_api_v1_runs__run_id__site__token___path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                token: string;
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token no válido o caducado, sin acceso o fichero no registrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

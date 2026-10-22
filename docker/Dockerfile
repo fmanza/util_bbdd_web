@@ -43,6 +43,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # docker build -f docker/Dockerfile --target backend-dev -t util_bbdd_web:backend-dev .
 # docker run --rm -v "$PWD/backend:/src/backend" -v "$PWD/openapi:/src/openapi" util_bbdd_web:backend-dev uv run --frozen pytest
 FROM backend-build AS backend-dev
+# Graphviz: los tests de documentación y grafos (Fase 5) llaman a ``dot`` como en la imagen runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends graphviz && rm -rf /var/lib/apt/lists/*
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen
 ENV PATH=/opt/venv/bin:$PATH
 CMD ["uv", "run", "--frozen", "pytest"]

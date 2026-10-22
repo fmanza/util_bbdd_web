@@ -62,3 +62,26 @@ def session_csrf_token(settings: Settings, session_token: str) -> str:
 def tokens_match(a: str, b: str) -> bool:
     """Comparación en tiempo constante."""
     return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
+
+
+def site_token(settings: Settings, *, run_id: str, user_id: int, expires: int) -> str:
+    """Token de la URL del sitio HTML de un run: ``<user_id>.<expires>.<HMAC>`` (ADR-007).
+
+    El ``iframe`` del sitio tiene origen opaco y sus subrecursos no llevan la cookie ``SameSite=Lax``; la URL firmada
+    sustituye a la cookie solo para leer ese sitio, y en cada petición se vuelve a comprobar la membresía.
+    """
+    message = f"site:{run_id}:{user_id}:{expires}".encode()
+    signature = hmac.new(_signing_key(settings), message, hashlib.sha256).hexdigest()[:40]
+    return f"{user_id}.{expires}.{signature}"
+
+
+def verify_site_token(settings: Settings, token: str, *, run_id: str, now: int) -> int | None:
+    """``user_id`` del token si la firma es válida y no ha caducado; ``None`` en otro caso."""
+    parts = token.split(".")
+    if len(parts) != 3 or not parts[0].isdigit() or not parts[1].isdigit():
+        return None
+    user_id, expires = int(parts[0]), int(parts[1])
+    if expires < now:
+        return None
+    expected = site_token(settings, run_id=run_id, user_id=user_id, expires=expires)
+    return user_id if tokens_match(expected, token) else None

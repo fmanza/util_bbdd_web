@@ -95,6 +95,8 @@ class OperationParamOut(_Out):
     description: str
     minimum: float | None
     maximum: float | None
+    options: list[str] | None = Field(default=None, description="Valores permitidos (desplegable)")
+    group: str | None = Field(default=None, description="Sección del formulario")
 
 
 class OperationOut(BaseModel):
@@ -154,6 +156,9 @@ class RunDetailOut(RunOut):
 
     my_role: ProjectRole
     artifacts: list[ArtifactOut]
+    site_url: str | None = Field(
+        default=None, description="URL firmada y temporal del sitio HTML generado (para el iframe con origen opaco)"
+    )
 
 
 class RunPage(BaseModel):

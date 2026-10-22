@@ -1,3 +1,3 @@
 """util_bbdd_web: backend FastAPI de la aplicación web multiusuario sobre util_bbdd."""
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"

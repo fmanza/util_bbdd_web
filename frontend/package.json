@@ -1,7 +1,7 @@
 {
   "name": "util-bbdd-web-frontend",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -24,6 +24,7 @@
     "@mantine/hooks": "9.6.3",
     "@tanstack/react-query": "5.104.1",
     "i18next": "26.4.2",
+    "marked": "18.1.0",
     "openapi-fetch": "0.17.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

@@ -132,6 +132,20 @@ def get_artifact(db: Session, run: Run, artifact_id: int, settings: Settings) ->
         ArtifactNotFoundError: No existe, el run está purgado o la ruta guardada sale de la carpeta del run.
     """
     artifact = db.scalar(select(Artifact).where(Artifact.id == artifact_id, Artifact.run_id == run.id))
+    return _checked(run, artifact, settings)
+
+
+def get_artifact_by_path(db: Session, run: Run, path: str, settings: Settings) -> tuple[Artifact, Path]:
+    """Como :func:`get_artifact`, pero por ruta: solo sirve ficheros **registrados** del run (sitio HTML).
+
+    Raises:
+        ArtifactNotFoundError: La ruta no es un artefacto del run o no está en disco.
+    """
+    artifact = db.scalar(select(Artifact).where(Artifact.run_id == run.id, Artifact.path == path))
+    return _checked(run, artifact, settings)
+
+
+def _checked(run: Run, artifact: Artifact | None, settings: Settings) -> tuple[Artifact, Path]:
     if artifact is None or run.workspace_path is None:
         raise ArtifactNotFoundError()
     try:

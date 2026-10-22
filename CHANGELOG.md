@@ -3,6 +3,41 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.6.0] - 2026-10-22
+
+Fase 5 — Documentación y grafos.
+
+### Added
+
+- **Documentación** (`documentation`): ejecución de `DatabaseDocumentation` de util_bbdd en Word, Excel y/o sitio
+  HTML, con las secciones de `imprimir` agrupadas en el formulario (tablas, vistas, rutinas, información adicional,
+  diagramas y presentación) y schema por motor (GAPS G22). Oracle solo admite el schema del usuario de la conexión
+  (G21, con aviso en el formulario).
+- **Grafo de relaciones** (`relationship_graph`): `GraphvizRelationshipGraphExt` sobre una tabla (paginado) o sobre
+  todas las tablas con relaciones; profundidad, dirección, columnas, tipos y SVG/PNG.
+- **Sitio HTML aislado** (ADR-007): `GET /api/v1/runs/{id}/site/{token}/{ruta}` con URL firmada y temporal
+  (`site_url` en el detalle), CSP `sandbox allow-scripts` sin `allow-same-origin`, `connect-src 'none'` y solo
+  artefactos `html` registrados.
+- Catálogo de operaciones: los parámetros incluyen `options` (desplegables) y `group` (secciones del formulario).
+- `schema` y `table` solo admiten nombres de objeto (letras, dígitos, `_ $ # . -` y espacios): util_bbdd puede
+  usarlos en el SQL de sus consultas de catálogo.
+- **Frontend**: formulario por secciones con desplegables; tarjeta *Documentación* (sitio en `iframe` con scripts y
+  origen opaco, abrir en pestaña nueva, descargas de Word y Excel); galería de grafos; Markdown renderizado con
+  `marked` 18.1.0 (cargado bajo demanda) en un `iframe` sin permisos; los ficheros del sitio no se listan.
+- Graphviz en el job de backend del CI y en la imagen `backend-dev`.
+- **Tests**: 43 nuevos en backend (400; util_bbdd real sobre SQLite: los 3 formatos, grafos, URL firmada, tokens
+  caducados o ajenos, *traversal*), 11 de integración contra los bench (37), 3 en Vitest (63) y E2E de documentación
+  (aislamiento del sitio comprobado en Chromium) y grafo.
+- **Documentación**: guía [Documentación y grafos](docs/guides/documentacion.md), ADR-007, huecos G21–G22.
+
+### Fixed
+
+- La vista previa de un PNG de `outputs/graphs/` se servía como `text/html`; ahora usa su tipo MIME.
+
+### Changed
+
+- Los selectores de operación y de conexión del formulario de lanzamiento son `select` nativos.
+
 ## [0.5.0] - 2026-10-22
 
 Fase 4 — Explorador de metadatos.

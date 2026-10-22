@@ -24,8 +24,10 @@ miembro; los administradores de la aplicación tampoco ven los ajenos.
 ## Lanzar una ejecución
 
 En la pestaña *Ejecuciones*, **Lanzar ejecución** (editores) abre el formulario de la operación elegida, generado a
-partir de sus parámetros. En esta versión solo existe **Prueba del motor de ejecuciones** (`noop`), pensada para
-validar la instalación:
+partir de sus parámetros. Operaciones disponibles:
+
+- **Documentación de la base de datos** y **Grafo de relaciones**: ver [Documentación y grafos](documentacion.md).
+- **Prueba del motor de ejecuciones** (`noop`), pensada para validar la instalación:
 
 | Parámetro | Efecto |
 |---|---|
@@ -33,8 +35,8 @@ validar la instalación:
 | Fallar a propósito | Termina en error (prueba de fallos) |
 | Conexión a probar | Alias de una conexión del proyecto que se prueba desde el worker (respeta los destinos permitidos) |
 
-La ejecución queda **En cola** hasta que el *worker* la toma. Las operaciones de util_bbdd (documentación,
-comparación, migración…) se añadirán en las fases siguientes.
+La ejecución queda **En cola** hasta que el *worker* la toma. Comparación, migración, volcado y carga llegarán en las
+fases siguientes.
 
 Límites (configurables por el administrador del servidor): como máximo **5 ejecuciones en cola o en curso** por
 usuario y una **cuota de 1 GB** de ficheros. Si se supera la cuota, purga ejecuciones antiguas.
@@ -61,8 +63,9 @@ almacena), la página se actualiza cada 2 segundos.
 - El historial del proyecto muestra **una fila por ejecución** (operación, usuario, estado, fecha, duración y número
   de artefactos), con filtro por estado y búsqueda por id, operación o usuario. *Ejecuciones* en el menú lista las de
   todos tus proyectos.
-- En el detalle, el **navegador de artefactos** agrupa los ficheros por tipo. HTML y SVG se ven en un marco aislado
-  (sin scripts); Markdown, SQL, el log y `run.json` como texto. Cada fichero se puede **descargar**, y
+- En el detalle, el **navegador de artefactos** agrupa los ficheros por tipo. HTML, SVG y PNG se ven en un marco aislado
+  (sin scripts); Markdown se muestra con formato (también aislado); SQL, el log y `run.json` como texto. Los
+  ficheros del sitio HTML de una documentación no se listan: el sitio se abre en su tarjeta. Cada fichero se puede **descargar**, y
   **Descargar ZIP** baja la ejecución completa.
 - **Relanzar** crea una ejecución nueva con los mismos parámetros (indica de cuál procede).
 - **Purgar** borra los ficheros de una ejecución terminada para liberar cuota; el resumen queda en el historial.

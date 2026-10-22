@@ -189,3 +189,8 @@ export const previewUrl = (runId: string, artifactId: number) =>
 export const downloadUrl = (runId: string, artifactId: number) =>
   `/api/v1/runs/${encodeURIComponent(runId)}/artifacts/${artifactId}`;
 export const archiveUrl = (runId: string) => `/api/v1/runs/${encodeURIComponent(runId)}/archive`;
+
+/** Ficheros del sitio HTML (subcarpetas de `outputs/html/`): se ven en el iframe de la documentación, no en la lista. */
+export function isSiteFile(artifact: Artifact): boolean {
+  return artifact.kind === 'html' && artifact.path.split('/').length > 3;
+}

@@ -22,6 +22,7 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes, formatDateTime, formatDuration } from '../../components/format';
 import { canRole } from '../projects/useProjects';
 import { ArtifactBrowser } from './ArtifactBrowser';
+import { RunOutputs } from './RunOutputs';
 import { RunStatusBadge } from './RunStatusBadge';
 import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiveRun } from './useRuns';
 
@@ -171,6 +172,8 @@ export function RunDetailPage() {
           ))}
         </Table.Tbody>
       </Table>
+
+      {run.status !== 'purged' && <RunOutputs run={run} />}
 
       <Title order={3}>{t('runs.artifacts')}</Title>
       {run.status === 'purged' ? (

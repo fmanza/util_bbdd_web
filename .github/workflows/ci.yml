@@ -20,8 +20,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - name: Dependencias nativas (MariaDB Connector/C)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmariadb-dev
+      - name: Dependencias nativas (MariaDB Connector/C y Graphviz para los grafos)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmariadb-dev graphviz
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.22"

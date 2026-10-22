@@ -13,7 +13,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 2 | Catálogo de motores y conexiones | 0.3.0 | ✅ Cerrada (2026-10-20) |
 | 3 | Proyectos y motor de ejecuciones | 0.4.0 | ✅ Cerrada (2026-10-22) |
 | 4 | Explorador de metadatos | 0.5.0 | ✅ Cerrada (2026-10-22) |
-| 5 | Documentación y grafos | 0.6.0 | Pendiente |
+| 5 | Documentación y grafos | 0.6.0 | ✅ Cerrada (2026-10-22) |
 | 6 | Comparación de esquemas | 0.7.0 | Pendiente |
 | 7 | Migración DDL | 0.8.0 | Pendiente |
 | 8 | Volcado de datos | 0.9.0 | Pendiente |
@@ -93,13 +93,14 @@ ejecución con progreso en vivo (`aria-live`), navegador de artefactos con vista
 ejecutor de queries nombradas; SQL libre solo para rol autorizado, sobre conexión `read_only`, con timeout y límite
 de filas; caché del snapshot por conexión con invalidación manual.
 
-## Fase 5 — Documentación y grafos
+## Fase 5 — Documentación y grafos ✅
 
 **util_bbdd**: `DatabaseDocumentation(db_manager, directorio_salida, fichero_salida=…, imprimir, formatos,
-batch_window_seconds=0).generate()`; `GraphvizRelationshipGraphExt` (`generate_all_tables_graphs_ext`,
-`pipe_level_graphs_ext` para SVG en memoria).
+batch_window_seconds=0).generate()`; `GraphvizRelationshipGraphExt` (`generate_graphviz_graph_paginated_ext`,
+`generate_all_tables_graphs_ext`).
 **Funcionalidad**: ejecución `documentation` (Word/Excel/HTML, opciones de `imprimir`), ejecución
-`relationship_graph` (tabla, profundidad, dirección, columnas); vista del SVG en la web.
+`relationship_graph` (tabla o todas, profundidad, dirección, columnas, SVG/PNG); sitio HTML navegable aislado
+(ADR-007), descargas y galería de grafos en la web.
 
 ## Fase 6 — Comparación de esquemas
 

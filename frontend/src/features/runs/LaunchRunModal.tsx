@@ -1,7 +1,19 @@
-import { Button, Group, Modal, Select, Stack, Switch, Text, TextInput } from '@mantine/core';
+import {
+  Alert,
+  Button,
+  Fieldset,
+  Group,
+  Modal,
+  NativeSelect,
+  SimpleGrid,
+  Stack,
+  Switch,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import type { TFunction } from 'i18next';
-import { useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { type ReactNode, useMemo, useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { z } from 'zod';
@@ -55,6 +67,16 @@ function defaultValue(param: OperationParam): string | boolean {
   return param.default === null || param.default === undefined ? '' : String(param.default);
 }
 
+/** Parámetros sin grupo primero; después cada grupo en el orden en que aparece. */
+function sections(params: OperationParam[]): [string | null, OperationParam[]][] {
+  const result = new Map<string | null, OperationParam[]>([[null, []]]);
+  for (const param of params) {
+    const key = param.group ?? null;
+    result.set(key, [...(result.get(key) ?? []), param]);
+  }
+  return [...result.entries()].filter(([, items]) => items.length > 0);
+}
+
 function LaunchForm({
   projectId,
   operation,
@@ -78,6 +100,13 @@ function LaunchForm({
     defaultValues: Object.fromEntries(operation.params.map((p) => [p.name, defaultValue(p)])),
   });
 
+  const connectionParam = operation.params.find((p) => p.type === 'connection')?.name;
+  const values = useWatch({ control: form.control });
+  const chosenAlias = connectionParam ? values[connectionParam] : undefined;
+  const chosen = connections.find((c) => c.alias === chosenAlias);
+  const oracleSchemaWarning =
+    chosen?.db_type === 'oracle' && operation.params.some((p) => p.name === 'schema');
+
   const onSubmit = form.handleSubmit((values) => {
     const params = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
     launch.mutate(
@@ -95,6 +124,70 @@ function LaunchForm({
     );
   });
 
+  const renderField = (param: OperationParam): ReactNode => (
+    <Controller
+      control={form.control}
+      name={param.name}
+      render={({ field }) => {
+        const error = form.formState.errors[param.name]?.message;
+        const label = t(`runs.params.${operation.name}.${param.name}`, { defaultValue: param.name });
+        if (param.type === 'boolean') {
+          return (
+            <Switch
+              label={label}
+              description={param.description}
+              checked={field.value === true}
+              onChange={(event) => field.onChange(event.currentTarget.checked)}
+            />
+          );
+        }
+        if (param.type === 'connection') {
+          return (
+            <NativeSelect
+              label={label}
+              description={param.description}
+              data={[
+                { value: '', label: t('runs.launch.noConnection') },
+                ...connections.map((c) => ({ value: c.alias, label: `${c.alias} · ${c.connection_name}` })),
+              ]}
+              value={typeof field.value === 'string' ? field.value : ''}
+              onChange={(event) => field.onChange(event.currentTarget.value)}
+              error={error}
+            />
+          );
+        }
+        if (param.options) {
+          return (
+            <NativeSelect
+              label={label}
+              description={param.description}
+              data={param.options.map((option) => ({
+                value: option,
+                label: t(`runs.options.${option}`, { defaultValue: option }),
+              }))}
+              value={typeof field.value === 'string' ? field.value : ''}
+              onChange={(event) => field.onChange(event.currentTarget.value)}
+              error={error}
+            />
+          );
+        }
+        const numeric = param.type === 'integer' || param.type === 'float';
+        return (
+          <TextInput
+            label={label}
+            description={param.description}
+            inputMode={numeric ? 'numeric' : undefined}
+            required={param.required}
+            value={typeof field.value === 'string' ? field.value : ''}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            error={error}
+          />
+        );
+      }}
+    />
+  );
+
   return (
     <form onSubmit={onSubmit} noValidate>
       <Stack>
@@ -102,56 +195,20 @@ function LaunchForm({
           {operation.description}
         </Text>
         {launch.isError && <ErrorAlert error={launch.error} />}
-        {operation.params.map((param) => (
-          <Controller
-            key={param.name}
-            control={form.control}
-            name={param.name}
-            render={({ field }) => {
-              const error = form.formState.errors[param.name]?.message;
-              const label = t(`runs.params.${operation.name}.${param.name}`, { defaultValue: param.name });
-              if (param.type === 'boolean') {
-                return (
-                  <Switch
-                    label={label}
-                    description={param.description}
-                    checked={field.value === true}
-                    onChange={(event) => field.onChange(event.currentTarget.checked)}
-                  />
-                );
-              }
-              if (param.type === 'connection') {
-                return (
-                  <Select
-                    label={label}
-                    description={param.description}
-                    placeholder={t('runs.launch.noConnection')}
-                    data={connections.map((c) => ({
-                      value: c.alias,
-                      label: `${c.alias} · ${c.connection_name}`,
-                    }))}
-                    value={typeof field.value === 'string' && field.value ? field.value : null}
-                    onChange={(next) => field.onChange(next ?? '')}
-                    clearable
-                    error={error}
-                  />
-                );
-              }
-              return (
-                <TextInput
-                  label={label}
-                  description={param.description}
-                  inputMode="numeric"
-                  required={param.required}
-                  value={typeof field.value === 'string' ? field.value : ''}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  error={error}
-                />
-              );
-            }}
-          />
-        ))}
+        {sections(operation.params).map(([group, params]) => {
+          const fields = params.map((param) => <div key={param.name}>{renderField(param)}</div>);
+          if (group === null) return <Stack key="__main__">{fields}</Stack>;
+          return (
+            <Fieldset key={group} legend={t(`runs.groups.${group}`, { defaultValue: group })}>
+              <SimpleGrid cols={{ base: 1, sm: 2 }}>{fields}</SimpleGrid>
+            </Fieldset>
+          );
+        })}
+        {oracleSchemaWarning && (
+          <Alert color="yellow" title={t('runs.launch.oracleTitle')}>
+            {t('runs.launch.oracleSchema')}
+          </Alert>
+        )}
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
             {t('common.cancel')}
@@ -185,12 +242,11 @@ export function LaunchRunModal({
     <Modal opened={opened} onClose={onClose} title={t('runs.launch.title')} size="lg">
       <Stack>
         {operations.isError && <ErrorAlert error={operations.error} />}
-        <Select
+        <NativeSelect
           label={t('runs.operation')}
           data={(operations.data ?? []).map((op) => ({ value: op.name, label: op.title }))}
-          value={selected?.name ?? null}
-          onChange={setName}
-          allowDeselect={false}
+          value={selected?.name ?? ''}
+          onChange={(event) => setName(event.currentTarget.value)}
         />
         {selected && (
           <LaunchForm

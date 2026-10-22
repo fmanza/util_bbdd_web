@@ -116,3 +116,84 @@ export const NOOP: Operation = {
     },
   ],
 };
+
+const param = (
+  name: string,
+  type: Operation['params'][number]['type'],
+  extra: Partial<Operation['params'][number]> = {},
+): Operation['params'][number] => ({
+  name,
+  type,
+  required: false,
+  default: null,
+  description: name,
+  minimum: null,
+  maximum: null,
+  options: null,
+  group: null,
+  ...extra,
+});
+
+export const DOCUMENTATION: Operation = {
+  name: 'documentation',
+  title: 'Documentación de la base de datos',
+  description: 'Documenta un schema',
+  params: [
+    param('connection', 'connection', { required: true }),
+    param('schema', 'string'),
+    param('word', 'boolean', { default: true, group: 'formats' }),
+    param('html', 'boolean', { default: true, group: 'formats' }),
+    param('graph_direction', 'string', {
+      default: 'both',
+      group: 'graphs',
+      options: ['both', 'outgoing', 'incoming'],
+    }),
+  ],
+};
+
+export const ORACLE_CONNECTION = {
+  id: 3,
+  alias: 'ventas',
+  connection_id: 9,
+  connection_name: 'Ventas Oracle',
+  db_type: 'oracle',
+  read_only: true,
+  created_at: '2026-10-20T08:00:00Z',
+};
+
+const artifact = (id: number, path: string, kind: string, previewable = false) => ({
+  id,
+  path,
+  kind,
+  mime: 'application/octet-stream',
+  size_bytes: 2048,
+  sha256: 'c'.repeat(64),
+  created_at: '2026-10-20T08:00:04Z',
+  previewable,
+});
+
+export const SITE_URL = `/api/v1/runs/${RUN_ID}/site/1.1900000000.abc/documentacion/index.html`;
+
+export const DOC_RUN: RunDetail = {
+  ...FINISHED,
+  operation: 'documentation',
+  params: { connection: 'origen', schema: null, word: true, html: true, graph_direction: 'both' },
+  site_url: SITE_URL,
+  artifacts: [
+    artifact(21, 'outputs/word/documentacion.docx', 'word'),
+    artifact(22, 'outputs/excel/documentacion.xlsx', 'excel'),
+    artifact(23, 'outputs/html/documentacion/index.html', 'html', true),
+    artifact(24, 'outputs/html/documentacion/assets/sql-highlight.js', 'html'),
+    artifact(25, 'outputs/markdown/resumen.md', 'markdown', true),
+  ],
+};
+
+export const GRAPH_RUN: RunDetail = {
+  ...FINISHED,
+  operation: 'relationship_graph',
+  params: { connection: 'origen', table: 'pedidos' },
+  artifacts: [
+    artifact(31, 'outputs/graphs/pedidos.svg', 'graphs', true),
+    artifact(32, 'outputs/graphs/pedidos_2.svg', 'graphs', true),
+  ],
+};

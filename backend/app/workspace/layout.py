@@ -39,6 +39,9 @@ _MIME_OVERRIDES: Final[dict[str, str]] = {
     ".json": "application/json",
     ".svg": "image/svg+xml",
     ".html": "text/html",
+    ".js": "text/javascript",
+    ".css": "text/css",
+    ".png": "image/png",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }

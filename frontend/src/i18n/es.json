@@ -434,6 +434,42 @@
         "step_seconds": "Segundos por paso",
         "fail": "Fallar a propósito",
         "connection": "Conexión a probar"
+      },
+      "documentation": {
+        "connection": "Conexión",
+        "schema": "Schema",
+        "word": "Word",
+        "excel": "Excel",
+        "html": "Sitio HTML",
+        "tables": "Tablas",
+        "table_columns": "Columnas",
+        "table_keys": "Claves",
+        "table_indexes": "Índices",
+        "table_ddl": "DDL de tablas",
+        "views": "Vistas",
+        "view_ddl": "DDL de vistas",
+        "routines": "Procedimientos y funciones",
+        "database_info": "Datos de la base de datos",
+        "storage": "Almacenamiento",
+        "engine_conditions": "Condiciones del motor",
+        "charset": "Charset y collation",
+        "graphs": "Diagramas de relaciones",
+        "graph_depth": "Profundidad",
+        "graph_direction": "Dirección",
+        "tables_per_document": "Tablas por documento Word",
+        "html_items_per_page": "Elementos por página HTML"
+      },
+      "relationship_graph": {
+        "connection": "Conexión",
+        "schema": "Schema",
+        "table": "Tabla central",
+        "max_depth": "Profundidad",
+        "direction": "Dirección",
+        "column_mode": "Columnas",
+        "max_columns": "Columnas máximas",
+        "show_data_types": "Mostrar tipos",
+        "max_subnodes": "Tablas por imagen",
+        "format": "Formato"
       }
     },
     "launch": {
@@ -442,7 +478,9 @@
       "submit": "Lanzar",
       "noConnection": "Sin conexión",
       "number": "Debe ser un número válido",
-      "range": "Entre {{min}} y {{max}}"
+      "range": "Entre {{min}} y {{max}}",
+      "oracleTitle": "Oracle: solo el schema del usuario",
+      "oracleSchema": "util_bbdd documenta en Oracle únicamente el schema del usuario de la conexión. Deja el schema vacío o pon ese usuario; para otro schema, crea una conexión con su usuario."
     },
     "artifactsBrowser": {
       "empty": "Esta ejecución no ha generado artefactos.",
@@ -450,7 +488,40 @@
       "noPreview": "Sin vista previa: descárgalo.",
       "previewOf": "Vista previa de {{path}}",
       "download": "Descargar",
-      "downloadLabel": "Descargar {{path}}"
+      "downloadLabel": "Descargar {{path}}",
+      "siteHidden_one": "{{count}} fichero del sitio HTML: ábrelo en «Documentación».",
+      "siteHidden_other": "{{count}} ficheros del sitio HTML: ábrelo en «Documentación»."
+    },
+    "groups": {
+      "formats": "Formatos",
+      "tables": "Tablas",
+      "views": "Vistas",
+      "routines": "Rutinas",
+      "extra": "Información adicional",
+      "graphs": "Diagramas",
+      "layout": "Presentación",
+      "graph": "Grafo"
+    },
+    "options": {
+      "both": "Ambas direcciones",
+      "outgoing": "Salientes (tablas a las que referencia)",
+      "incoming": "Entrantes (tablas que la referencian)",
+      "relations": "Solo columnas de relación",
+      "compact": "Sin columnas",
+      "all": "Todas las columnas",
+      "svg": "SVG",
+      "png": "PNG"
+    },
+    "outputs": {
+      "documentation": "Documentación",
+      "openSite": "Abrir en pestaña nueva",
+      "siteTitle": "Sitio HTML de la documentación",
+      "downloadLabel": "Descargar {{name}}",
+      "graphs_one": "{{count}} grafo",
+      "graphs_other": "{{count}} grafos",
+      "graphAlt": "Grafo de relaciones {{name}}",
+      "moreGraphs_one": "Y {{count}} imagen más en Artefactos.",
+      "moreGraphs_other": "Y {{count}} imágenes más en Artefactos."
     }
   },
   "explorer": {

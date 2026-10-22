@@ -1560,6 +1560,18 @@
             "title": "Description",
             "type": "string"
           },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sección del formulario",
+            "title": "Group"
+          },
           "maximum": {
             "anyOf": [
               {
@@ -1585,6 +1597,21 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Valores permitidos (desplegable)",
+            "title": "Options"
           },
           "required": {
             "title": "Required",
@@ -2268,6 +2295,18 @@
               }
             ],
             "title": "Relaunched From"
+          },
+          "site_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "URL firmada y temporal del sitio HTML generado (para el iframe con origen opaco)",
+            "title": "Site Url"
           },
           "size_bytes": {
             "title": "Size Bytes",
@@ -3265,7 +3304,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -6424,6 +6463,63 @@
           }
         },
         "summary": "Relanzar",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/site/{token}/{path}": {
+      "get": {
+        "description": "Fichero del sitio HTML (``outputs/html/**``) para el ``iframe`` con origen opaco, que no envía la cookie.\n\nEl token (``site_url`` del detalle) identifica al usuario; en cada petición se comprueba que sigue activo y es\nmiembro del proyecto. Solo se sirven artefactos registrados de tipo ``html``.",
+        "operationId": "site_file_api_v1_runs__run_id__site__token___path__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Token no válido o caducado, sin acceso o fichero no registrado"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sitio HTML generado (URL firmada)",
         "tags": [
           "runs"
         ]

@@ -67,14 +67,11 @@ class JobContext:
             db.commit()
         self.logger.info("Progreso", extra={"phase": phase, "progress": message, "pct": pct})
 
-    def test_connection(self, alias: str) -> tuple[str, str | None]:
-        """Prueba la conexión del proyecto con ``alias`` (allowlist incluida).
-
-        Returns:
-            ``(db_type, versión_del_servidor)``.
+    def connection_params(self, alias: str) -> tuple[str, dict[str, Any]]:
+        """``(db_type, conn_params)`` de la conexión del proyecto con ``alias``: secreto descifrado y allowlist aplicada.
 
         Raises:
-            JobError: Alias desconocido o la conexión falla (código saneado).
+            JobError: Alias desconocido o destino no utilizable (código saneado).
         """
         from app.db.models import Project
 
@@ -86,15 +83,25 @@ class JobContext:
                 link = get_project_connection(db, project, alias)
             except Exception:
                 raise JobError("invalid_params", f"El proyecto no tiene la conexión «{alias}».") from None
-            connection = link.connection
-            prepared = prepare_connection(db, connection, self.settings)
+            db_type = link.connection.db_type
+            prepared = prepare_connection(db, link.connection, self.settings)
             db.commit()
         if prepared.conn_params is None:
             code = prepared.error_code or "unknown"
             raise JobError(code, ERROR_MESSAGES.get(code, ERROR_MESSAGES["unknown"]))
-        result = probe.check_connection(
-            connection.db_type, prepared.conn_params, timeout=self.settings.connection_test_timeout
-        )
+        return db_type, prepared.conn_params
+
+    def test_connection(self, alias: str) -> tuple[str, str | None]:
+        """Prueba la conexión del proyecto con ``alias`` (allowlist incluida).
+
+        Returns:
+            ``(db_type, versión_del_servidor)``.
+
+        Raises:
+            JobError: Alias desconocido o la conexión falla (código saneado).
+        """
+        db_type, conn_params = self.connection_params(alias)
+        result = probe.check_connection(db_type, conn_params, timeout=self.settings.connection_test_timeout)
         if not result.ok:
             code = result.error.code if result.error else "unknown"
             self.logger.info(
@@ -102,4 +109,4 @@ class JobContext:
                 extra={"alias": alias, "code": code, "exc_type": result.error and result.error.exc_type},
             )
             raise JobError(code, ERROR_MESSAGES.get(code, ERROR_MESSAGES["unknown"]))
-        return connection.db_type, result.server_version
+        return db_type, result.server_version
