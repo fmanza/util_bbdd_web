@@ -274,6 +274,41 @@
         "title": "CheckOut",
         "type": "object"
       },
+      "ColumnDiffOut": {
+        "properties": {
+          "attribute": {
+            "enum": [
+              "type",
+              "nullable",
+              "primary_key",
+              "default",
+              "existence"
+            ],
+            "title": "Attribute",
+            "type": "string"
+          },
+          "column_name": {
+            "title": "Column Name",
+            "type": "string"
+          },
+          "source_value": {
+            "title": "Source Value",
+            "type": "string"
+          },
+          "target_value": {
+            "title": "Target Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "column_name",
+          "attribute",
+          "source_value",
+          "target_value"
+        ],
+        "title": "ColumnDiffOut",
+        "type": "object"
+      },
       "ColumnOut": {
         "properties": {
           "comment": {
@@ -377,6 +412,41 @@
           "nullable"
         ],
         "title": "ColumnOut",
+        "type": "object"
+      },
+      "CommentDiffOut": {
+        "properties": {
+          "column_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Name"
+          },
+          "object_name": {
+            "title": "Object Name",
+            "type": "string"
+          },
+          "source_comment": {
+            "title": "Source Comment",
+            "type": "string"
+          },
+          "target_comment": {
+            "title": "Target Comment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object_name",
+          "column_name",
+          "source_comment",
+          "target_comment"
+        ],
+        "title": "CommentDiffOut",
         "type": "object"
       },
       "ConnectionCreate": {
@@ -796,6 +866,127 @@
         "title": "DdlOut",
         "type": "object"
       },
+      "DiffEvolutionOut": {
+        "description": "Qué cambió entre la comparación ``baseline_id`` (anterior) y esta.",
+        "properties": {
+          "baseline_id": {
+            "title": "Baseline Id",
+            "type": "string"
+          },
+          "labels_match": {
+            "description": "Origen y destino son los mismos en las dos comparaciones",
+            "title": "Labels Match",
+            "type": "boolean"
+          },
+          "new": {
+            "items": {
+              "$ref": "#/components/schemas/DiffItemOut"
+            },
+            "title": "New",
+            "type": "array"
+          },
+          "persisting": {
+            "items": {
+              "$ref": "#/components/schemas/DiffItemOut"
+            },
+            "title": "Persisting",
+            "type": "array"
+          },
+          "resolved": {
+            "items": {
+              "$ref": "#/components/schemas/DiffItemOut"
+            },
+            "title": "Resolved",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "baseline_id",
+          "labels_match",
+          "new",
+          "resolved",
+          "persisting"
+        ],
+        "title": "DiffEvolutionOut",
+        "type": "object"
+      },
+      "DiffItemOut": {
+        "description": "Diferencia hoja con clave estable entre comparaciones.",
+        "properties": {
+          "attribute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribute"
+          },
+          "kind": {
+            "enum": [
+              "table",
+              "column",
+              "index",
+              "foreign_key",
+              "comment",
+              "view",
+              "routine"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "table",
+          "name",
+          "attribute",
+          "status",
+          "source",
+          "target"
+        ],
+        "title": "DiffItemOut",
+        "type": "object"
+      },
       "DriverOut": {
         "description": "Driver del motor y si está instalado en el servidor.",
         "properties": {
@@ -981,6 +1172,64 @@
         "title": "EngineOut",
         "type": "object"
       },
+      "ForeignKeyDiffOut": {
+        "properties": {
+          "fk_name": {
+            "title": "Fk Name",
+            "type": "string"
+          },
+          "source_columns": {
+            "default": "",
+            "title": "Source Columns",
+            "type": "string"
+          },
+          "source_referred_columns": {
+            "default": "",
+            "title": "Source Referred Columns",
+            "type": "string"
+          },
+          "source_referred_table": {
+            "default": "",
+            "title": "Source Referred Table",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "table_name": {
+            "title": "Table Name",
+            "type": "string"
+          },
+          "target_columns": {
+            "default": "",
+            "title": "Target Columns",
+            "type": "string"
+          },
+          "target_referred_columns": {
+            "default": "",
+            "title": "Target Referred Columns",
+            "type": "string"
+          },
+          "target_referred_table": {
+            "default": "",
+            "title": "Target Referred Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fk_name",
+          "table_name",
+          "status"
+        ],
+        "title": "ForeignKeyDiffOut",
+        "type": "object"
+      },
       "ForeignKeyOut": {
         "properties": {
           "columns": {
@@ -1129,6 +1378,54 @@
           "worker"
         ],
         "title": "HealthStatus",
+        "type": "object"
+      },
+      "IndexDiffOut": {
+        "properties": {
+          "index_name": {
+            "title": "Index Name",
+            "type": "string"
+          },
+          "source_columns": {
+            "default": "",
+            "title": "Source Columns",
+            "type": "string"
+          },
+          "source_unique": {
+            "default": false,
+            "title": "Source Unique",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "table_name": {
+            "title": "Table Name",
+            "type": "string"
+          },
+          "target_columns": {
+            "default": "",
+            "title": "Target Columns",
+            "type": "string"
+          },
+          "target_unique": {
+            "default": false,
+            "title": "Target Unique",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "index_name",
+          "table_name",
+          "status"
+        ],
+        "title": "IndexDiffOut",
         "type": "object"
       },
       "IndexOut": {
@@ -2092,6 +2389,48 @@
         "title": "ReadinessOut",
         "type": "object"
       },
+      "RoutineDiffOut": {
+        "properties": {
+          "routine_name": {
+            "title": "Routine Name",
+            "type": "string"
+          },
+          "routine_type": {
+            "enum": [
+              "PROCEDURE",
+              "FUNCTION"
+            ],
+            "title": "Routine Type",
+            "type": "string"
+          },
+          "source_definition": {
+            "default": "",
+            "title": "Source Definition",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_definition": {
+            "default": "",
+            "title": "Target Definition",
+            "type": "string"
+          }
+        },
+        "required": [
+          "routine_name",
+          "routine_type",
+          "status"
+        ],
+        "title": "RoutineDiffOut",
+        "type": "object"
+      },
       "RoutineItem": {
         "properties": {
           "name": {
@@ -2611,6 +2950,69 @@
         "title": "RunPage",
         "type": "object"
       },
+      "SchemaDiffOut": {
+        "description": "Diferencias de ``target`` respecto a ``source`` (``added`` = solo en origen; ``removed`` = solo en destino).",
+        "properties": {
+          "has_differences": {
+            "title": "Has Differences",
+            "type": "boolean"
+          },
+          "routine_diffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RoutineDiffOut"
+            },
+            "title": "Routine Diffs",
+            "type": "array"
+          },
+          "source_label": {
+            "title": "Source Label",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "table_diffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TableDiffOut"
+            },
+            "title": "Table Diffs",
+            "type": "array"
+          },
+          "target_label": {
+            "title": "Target Label",
+            "type": "string"
+          },
+          "total_differences": {
+            "title": "Total Differences",
+            "type": "integer"
+          },
+          "total_leaf_differences": {
+            "title": "Total Leaf Differences",
+            "type": "integer"
+          },
+          "view_diffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ViewDiffOut"
+            },
+            "title": "View Diffs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_label",
+          "target_label",
+          "summary",
+          "has_differences",
+          "total_differences",
+          "total_leaf_differences"
+        ],
+        "title": "SchemaDiffOut",
+        "type": "object"
+      },
       "SchemaItem": {
         "properties": {
           "cached": {
@@ -2990,6 +3392,61 @@
         "title": "TableDetail",
         "type": "object"
       },
+      "TableDiffOut": {
+        "properties": {
+          "column_diffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ColumnDiffOut"
+            },
+            "title": "Column Diffs",
+            "type": "array"
+          },
+          "comment_diffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CommentDiffOut"
+            },
+            "title": "Comment Diffs",
+            "type": "array"
+          },
+          "fk_diffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ForeignKeyDiffOut"
+            },
+            "title": "Fk Diffs",
+            "type": "array"
+          },
+          "index_diffs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/IndexDiffOut"
+            },
+            "title": "Index Diffs",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "table_name": {
+            "title": "Table Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table_name",
+          "status"
+        ],
+        "title": "TableDiffOut",
+        "type": "object"
+      },
       "TableItem": {
         "properties": {
           "columns": {
@@ -3270,6 +3727,39 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "ViewDiffOut": {
+        "properties": {
+          "source_definition": {
+            "default": "",
+            "title": "Source Definition",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "added",
+              "removed",
+              "modified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_definition": {
+            "default": "",
+            "title": "Target Definition",
+            "type": "string"
+          },
+          "view_name": {
+            "title": "View Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "view_name",
+          "status"
+        ],
+        "title": "ViewDiffOut",
+        "type": "object"
+      },
       "ViewItem": {
         "properties": {
           "comment": {
@@ -3304,7 +3794,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "0.6.0"
+    "version": "0.7.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -6341,6 +6831,123 @@
           }
         },
         "summary": "Cancelar",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/diff": {
+      "get": {
+        "description": "Diferencias del destino respecto al origen de una ejecución ``compare`` correcta.",
+        "operationId": "get_diff_api_v1_runs__run_id__diff_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaDiffOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "413": {
+            "description": "Demasiado grande para el visor"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Diff de una comparación de esquemas",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/diff/evolution": {
+      "get": {
+        "description": "Diferencias nuevas, resueltas y persistentes respecto a ``baseline`` (otra comparación visible).",
+        "operationId": "get_diff_evolution_api_v1_runs__run_id__diff_evolution_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id de la comparación anterior",
+            "in": "query",
+            "name": "baseline",
+            "required": true,
+            "schema": {
+              "description": "Id de la comparación anterior",
+              "maxLength": 32,
+              "minLength": 1,
+              "title": "Baseline",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiffEvolutionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "413": {
+            "description": "Demasiado grande para el visor"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evolución respecto a otra comparación",
         "tags": [
           "runs"
         ]

@@ -81,7 +81,9 @@ describe('resultados de la documentación', () => {
     expect(screen.getByRole('link', { name: 'Descargar documentacion.xlsx' })).toBeInTheDocument();
 
     // Los ficheros del sitio no se listan; el Markdown se renderiza en un iframe sin permisos.
-    expect(screen.getByText('2 ficheros del sitio HTML: ábrelo en «Documentación».')).toBeInTheDocument();
+    expect(
+      screen.getByText('2 ficheros del sitio HTML: ábrelo en la tarjeta de arriba.'),
+    ).toBeInTheDocument();
     expect(screen.queryByText('sql-highlight.js')).not.toBeInTheDocument();
     const markdown = await screen.findByTitle('Vista previa de outputs/markdown/resumen.md');
     expect(markdown).toHaveAttribute('sandbox', '');

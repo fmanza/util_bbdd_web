@@ -3,7 +3,7 @@
 Cada operación declara un modelo Pydantic (``extra="forbid"``) que valida los parámetros al encolar; los campos con
 ``ubw_kind="connection"`` son alias de una conexión del proyecto. La implementación vive en ``app/jobs/operations``.
 Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones.
-Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``.
+Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
 """
 
 from __future__ import annotations
@@ -119,6 +119,42 @@ class RelationshipGraphParams(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
 
+COMPARE_SCHEMA_DESCRIPTION = (
+    "Schema; vacío = el de la conexión. MySQL/MariaDB: la base de datos. Oracle: el usuario dueño de las tablas."
+)
+
+
+class CompareParams(BaseModel):
+    """Comparación de esquemas con ``SchemaComparator`` de util_bbdd e informes con ``SchemaDiffReporter``."""
+
+    source_connection: str = _connection("Conexión origen (la referencia).")
+    source_schema: str | None = Field(default=None, pattern=OBJECT_NAME_PATTERN, description=COMPARE_SCHEMA_DESCRIPTION)
+    target_connection: str = _connection("Conexión destino (la que se compara con el origen).")
+    target_schema: str | None = Field(default=None, pattern=OBJECT_NAME_PATTERN, description=COMPARE_SCHEMA_DESCRIPTION)
+    tables: bool = _group("scope", True, "Tablas y columnas.")
+    indexes: bool = _group("scope", True, "Índices (con tablas).")
+    foreign_keys: bool = _group("scope", True, "Claves foráneas (con tablas).")
+    comments: bool = _group("scope", True, "Comentarios de tablas y columnas (con tablas).")
+    views: bool = _group("scope", True, "Vistas.")
+    routines: bool = _group("scope", False, "Procedimientos y funciones (no en HSQLDB ni SQLite).")
+    html: bool = _group("reports", True, "Informe HTML.")
+    excel: bool = _group("reports", True, "Libro Excel.")
+    word: bool = _group("reports", False, "Documento Word.")
+    markdown: bool = _group("reports", True, "Markdown.")
+    sql: bool = _group("reports", True, "Script SQL de nivelación (solo se genera; no se ejecuta).")
+    sql_dialect: Literal["auto", "generic", "mariadb", "mysql", "postgresql", "sqlserver", "oracle", "sqlite"] = _group(
+        "reports", "auto", "Dialecto del script SQL; auto = el del motor destino."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _something_to_compare(self) -> CompareParams:
+        if not (self.tables or self.views or self.routines):
+            raise ValueError("Elige al menos tablas, vistas o rutinas.")
+        return self
+
+
 @dataclass(frozen=True)
 class OperationParam:
     """Parámetro de una operación tal como lo ve el formulario de lanzamiento."""
@@ -203,6 +239,13 @@ OPERATIONS: dict[str, OperationSpec] = {
         title="Grafo de relaciones",
         description="Diagrama de las claves foráneas alrededor de una tabla (o de todas) con Graphviz.",
         model=RelationshipGraphParams,
+    ),
+    "compare": OperationSpec(
+        name="compare",
+        title="Comparación de esquemas",
+        description="Compara dos conexiones o schemas con util_bbdd: visor del diff e informes HTML, Excel, Word, "
+        "Markdown y SQL.",
+        model=CompareParams,
     ),
 }
 

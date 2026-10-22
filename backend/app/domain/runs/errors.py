@@ -44,3 +44,15 @@ class QuotaExceededError(AppError):
 class TooManyRunsError(AppError):
     status = 429
     title = "Demasiadas ejecuciones en cola"
+
+
+class DiffNotAvailableError(AppError):
+    """La ejecución no es una comparación terminada con su diff (o se purgó)."""
+
+    status = 404
+    title = "Esta ejecución no tiene un diff de esquemas"
+
+
+class DiffTooLargeError(AppError):
+    status = 413
+    title = "El diff es demasiado grande para el visor; descarga los informes"

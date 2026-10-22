@@ -3,6 +3,35 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.7.0] - 2026-10-22
+
+Fase 6 — Comparación de esquemas.
+
+### Added
+
+- **Comparación** (`compare`): `SchemaComparator` de util_bbdd entre dos conexiones del proyecto (o dos schemas),
+  con selección de tablas, índices, FK, comentarios, vistas y rutinas; schema comprobado por lado (también en Oracle,
+  donde SQLAlchemy normaliza los nombres) y errores que indican el lado (origen/destino).
+- Diff guardado como artefacto (`outputs/diff/schema_diff.json`, tipo `diff`) e informes HTML, Excel, Word, Markdown y
+  SQL con `SchemaDiffReporter` (dialecto automático según el destino). El script SQL solo se genera.
+- **API**: `GET /api/v1/runs/{id}/diff` (diff tipado; 413 por encima de 20 MB) y
+  `GET /api/v1/runs/{id}/diff/evolution?baseline=` (diferencias nuevas, resueltas y persistentes entre dos
+  comparaciones, con aviso si origen o destino difieren).
+- **Frontend**: visor del diff (resumen, pestañas, filtros por nombre y estado, detalle de tablas, definiciones de
+  vistas y rutinas lado a lado con `diff` 9.0.0 cargado bajo demanda), panel *Comparar con otra ejecución*, tarjeta
+  de informes con el HTML aislado y aviso del script SQL.
+- **Tests**: 28 nuevos en backend (428; dos SQLite reales, sin rutas del servidor en ningún artefacto), 6 de
+  integración contra los bench (43; los 5 motores y PostgreSQL contra MySQL), 5 en Vitest (68) y E2E de comparación
+  y evolución.
+- **Documentación**: guía [Comparación de esquemas](docs/guides/comparacion.md), huecos G23–G25.
+
+### Security
+
+- Las etiquetas de util_bbdd (host, usuario, ruta del SQLite) se sustituyen por `alias (motor) [schema]` en el diff y
+  en todos los informes (G23).
+- El informe HTML no carga Mermaid del CDN: se sustituye por un `mermaid` vacío local para que su script funcione
+  bajo la CSP aislada (G25).
+
 ## [0.6.0] - 2026-10-22
 
 Fase 5 — Documentación y grafos.

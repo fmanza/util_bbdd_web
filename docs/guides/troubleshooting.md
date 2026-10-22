@@ -30,6 +30,8 @@
 | El progreso no se actualiza en vivo | Un proxy almacena la respuesta SSE | `proxy_buffering off` en nginx (ver despliegue); la UI cae a sondeo cada 2 s |
 | Explorador: 502 «No se pudo consultar la base de datos» | Conexión no permitida, caída o credenciales | El código (`not_allowed`, `connection_failed`…) indica la causa; prueba la conexión |
 | Documentación: el sitio HTML da 404 tras un rato | Su enlace firmado caducó (inactividad de la sesión) | Recarga el detalle de la ejecución |
+| Comparación: «El schema «x» no existe en el origen/destino» | Nombre mal escrito o de otro motor (en MySQL es la base de datos) | Copia el nombre del explorador |
+| Comparación: el visor da 413 | El diff supera 20 MB | Descarga los informes |
 | Ejecución fallida con `graphviz_missing` | Falta Graphviz en el servidor | Usa la imagen oficial o instala `graphviz` |
 | Explorador: el schema tarda en abrirse | Primera lectura de un schema grande | Espera (hasta `UBW_METADATA_TIMEOUT_SECONDS`); después va desde la caché |
 | Una tabla nueva no aparece | El árbol viene de la caché | **Refrescar** |

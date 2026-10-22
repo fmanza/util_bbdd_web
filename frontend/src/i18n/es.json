@@ -426,7 +426,8 @@
       "excel": "Excel",
       "log": "Log",
       "manifest": "Manifiesto",
-      "other": "Otro"
+      "other": "Otro",
+      "diff": "Diff"
     },
     "params": {
       "noop": {
@@ -470,6 +471,24 @@
         "show_data_types": "Mostrar tipos",
         "max_subnodes": "Tablas por imagen",
         "format": "Formato"
+      },
+      "compare": {
+        "source_connection": "Conexión origen",
+        "source_schema": "Schema origen",
+        "target_connection": "Conexión destino",
+        "target_schema": "Schema destino",
+        "tables": "Tablas y columnas",
+        "indexes": "Índices",
+        "foreign_keys": "Claves foráneas",
+        "comments": "Comentarios",
+        "views": "Vistas",
+        "routines": "Rutinas",
+        "html": "HTML",
+        "excel": "Excel",
+        "word": "Word",
+        "markdown": "Markdown",
+        "sql": "Script SQL",
+        "sql_dialect": "Dialecto SQL"
       }
     },
     "launch": {
@@ -489,8 +508,8 @@
       "previewOf": "Vista previa de {{path}}",
       "download": "Descargar",
       "downloadLabel": "Descargar {{path}}",
-      "siteHidden_one": "{{count}} fichero del sitio HTML: ábrelo en «Documentación».",
-      "siteHidden_other": "{{count}} ficheros del sitio HTML: ábrelo en «Documentación»."
+      "siteHidden_one": "{{count}} fichero del sitio HTML: ábrelo en la tarjeta de arriba.",
+      "siteHidden_other": "{{count}} ficheros del sitio HTML: ábrelo en la tarjeta de arriba."
     },
     "groups": {
       "formats": "Formatos",
@@ -500,7 +519,9 @@
       "extra": "Información adicional",
       "graphs": "Diagramas",
       "layout": "Presentación",
-      "graph": "Grafo"
+      "graph": "Grafo",
+      "scope": "Qué comparar",
+      "reports": "Informes"
     },
     "options": {
       "both": "Ambas direcciones",
@@ -510,7 +531,15 @@
       "compact": "Sin columnas",
       "all": "Todas las columnas",
       "svg": "SVG",
-      "png": "PNG"
+      "png": "PNG",
+      "auto": "Automático (motor destino)",
+      "generic": "Genérico",
+      "mariadb": "MariaDB",
+      "mysql": "MySQL",
+      "postgresql": "PostgreSQL",
+      "sqlserver": "SQL Server",
+      "oracle": "Oracle",
+      "sqlite": "SQLite"
     },
     "outputs": {
       "documentation": "Documentación",
@@ -521,7 +550,11 @@
       "graphs_other": "{{count}} grafos",
       "graphAlt": "Grafo de relaciones {{name}}",
       "moreGraphs_one": "Y {{count}} imagen más en Artefactos.",
-      "moreGraphs_other": "Y {{count}} imágenes más en Artefactos."
+      "moreGraphs_other": "Y {{count}} imágenes más en Artefactos.",
+      "reports": "Informes de la comparación",
+      "reportTitle": "Informe HTML de la comparación",
+      "sqlTitle": "El script SQL no se ha ejecutado",
+      "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
     }
   },
   "explorer": {
@@ -597,6 +630,84 @@
         "permission": "Necesitas el permiso «Puede ejecutar SQL libre»; pídeselo a un administrador.",
         "role": "Solo los editores y propietarios del proyecto pueden ejecutar SQL."
       }
+    }
+  },
+  "diff": {
+    "title": "Diferencias de esquema",
+    "source": "Origen",
+    "target": "Destino",
+    "filter": "Filtrar por nombre",
+    "state": "Estado",
+    "allStatuses": "Todos",
+    "status": {
+      "added": "Solo en origen",
+      "removed": "Solo en destino",
+      "modified": "Modificado"
+    },
+    "tablesStatus": {
+      "added": "Tablas solo en origen",
+      "removed": "Tablas solo en destino",
+      "modified": "Tablas modificadas"
+    },
+    "leaves": "Diferencias en total",
+    "semantics": "«Solo en origen» falta en el destino; «Solo en destino» sobra en el destino; «Modificado» existe en los dos con diferencias.",
+    "identicalTitle": "Sin diferencias",
+    "identical": "Los dos esquemas son iguales en lo comparado.",
+    "tabs": {
+      "tables": "Tablas ({{count}})",
+      "views": "Vistas ({{count}})",
+      "routines": "Rutinas ({{count}})"
+    },
+    "tableCounts": "{{columns}} columnas · {{indexes}} índices · {{fks}} FK",
+    "tableOnly": {
+      "added": "La tabla existe en el origen y falta en el destino.",
+      "removed": "La tabla existe en el destino y no en el origen."
+    },
+    "column": "Columna",
+    "attribute": "Atributo",
+    "index": "Índice",
+    "foreignKey": "Clave foránea",
+    "comment": "Comentario",
+    "tableComment": "(tabla)",
+    "attributes": {
+      "type": "Tipo",
+      "nullable": "Nulos",
+      "primary_key": "Clave primaria",
+      "default": "Valor por defecto",
+      "existence": "Existencia",
+      "table": "Tabla",
+      "column": "Columna",
+      "PROCEDURE": "Procedimiento",
+      "FUNCTION": "Función"
+    },
+    "noMatches": "Ningún objeto coincide con el filtro.",
+    "showMore_one": "Mostrar {{count}} más",
+    "showMore_other": "Mostrar {{count}} más",
+    "noDefinition": "Sin definición.",
+    "definitionTable_one": "Definición: {{count}} línea distinta",
+    "definitionTable_other": "Definición: {{count}} líneas distintas",
+    "kinds": {
+      "table": "Tabla",
+      "column": "Columna",
+      "index": "Índice",
+      "foreign_key": "Clave foránea",
+      "comment": "Comentario",
+      "view": "Vista",
+      "routine": "Rutina"
+    },
+    "evolution": {
+      "title": "Comparar con otra ejecución",
+      "baseline": "Comparación anterior",
+      "choose": "Elige una comparación…",
+      "noCandidates": "No hay otras comparaciones correctas en este proyecto.",
+      "new": "Nuevas",
+      "resolved": "Resueltas",
+      "persisting": "Siguen",
+      "none": "Ninguna.",
+      "kind": "Tipo",
+      "object": "Objeto",
+      "differentTitle": "Origen o destino distintos",
+      "different": "Las dos comparaciones no tienen el mismo origen y destino: la evolución puede no tener sentido."
     }
   }
 }

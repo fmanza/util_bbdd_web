@@ -22,6 +22,7 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes, formatDateTime, formatDuration } from '../../components/format';
 import { canRole } from '../projects/useProjects';
 import { ArtifactBrowser } from './ArtifactBrowser';
+import { DiffViewer } from './compare/DiffViewer';
 import { RunOutputs } from './RunOutputs';
 import { RunStatusBadge } from './RunStatusBadge';
 import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiveRun } from './useRuns';
@@ -173,6 +174,9 @@ export function RunDetailPage() {
         </Table.Tbody>
       </Table>
 
+      {run.operation === 'compare' && run.status === 'succeeded' && (
+        <DiffViewer runId={run.id} projectId={run.project_id} />
+      )}
       {run.status !== 'purged' && <RunOutputs run={run} />}
 
       <Title order={3}>{t('runs.artifacts')}</Title>

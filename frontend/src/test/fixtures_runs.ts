@@ -197,3 +197,81 @@ export const GRAPH_RUN: RunDetail = {
     artifact(32, 'outputs/graphs/pedidos_2.svg', 'graphs', true),
   ],
 };
+
+export const OLD_COMPARE_ID = '01JOLDCOMPARE0000000000000';
+
+export const COMPARE_RUN: RunDetail = {
+  ...FINISHED,
+  operation: 'compare',
+  params: { source_connection: 'origen', target_connection: 'destino' },
+  site_url: `/api/v1/runs/${RUN_ID}/site/1.1900000000.abc/comparacion/index.html`,
+  artifacts: [
+    artifact(41, 'outputs/diff/schema_diff.json', 'diff'),
+    artifact(42, 'outputs/html/comparacion/index.html', 'html', true),
+    artifact(43, 'outputs/sql/comparacion.sql', 'sql', true),
+    artifact(44, 'outputs/excel/comparacion.xlsx', 'excel'),
+  ],
+};
+
+export const SCHEMA_DIFF = {
+  source_label: 'origen (sqlite)',
+  target_label: 'destino (sqlite)',
+  summary: 'Tablas: 1 añadidas, 1 eliminadas, 1 modificadas | Vistas: 1 diferencias',
+  has_differences: true,
+  total_differences: 4,
+  total_leaf_differences: 5,
+  table_diffs: [
+    { table_name: 'facturas', status: 'added' },
+    { table_name: 'auditoria', status: 'removed' },
+    {
+      table_name: 'clientes',
+      status: 'modified',
+      column_diffs: [
+        { column_name: 'nombre', attribute: 'nullable', source_value: 'False', target_value: 'True' },
+      ],
+      index_diffs: [
+        {
+          index_name: 'ix_clientes_nombre',
+          table_name: 'clientes',
+          status: 'added',
+          source_columns: 'nombre',
+          target_columns: '',
+          source_unique: false,
+          target_unique: false,
+        },
+      ],
+      fk_diffs: [],
+      comment_diffs: [],
+    },
+  ],
+  view_diffs: [
+    {
+      view_name: 'v_clientes',
+      status: 'modified',
+      source_definition: 'SELECT id,\n  nombre\nFROM clientes',
+      target_definition: 'SELECT id\nFROM clientes',
+    },
+  ],
+  routine_diffs: [],
+};
+
+export const EVOLUTION = {
+  run_id: RUN_ID,
+  baseline_id: OLD_COMPARE_ID,
+  labels_match: false,
+  new: [
+    {
+      kind: 'column',
+      table: 'clientes',
+      name: 'nombre',
+      attribute: 'nullable',
+      status: 'modified',
+      source: 'False',
+      target: 'True',
+    },
+  ],
+  resolved: [
+    { kind: 'table', table: null, name: 'pedidos', attribute: null, status: 'added', source: '', target: '' },
+  ],
+  persisting: [],
+};

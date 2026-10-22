@@ -28,7 +28,7 @@ from typing import Any, Final
 
 MANIFEST: Final = "run.json"
 RUN_LOG: Final = "logs/run.log"
-OUTPUT_KINDS: Final = ("word", "excel", "html", "sql", "markdown", "graphs")
+OUTPUT_KINDS: Final = ("word", "excel", "html", "sql", "markdown", "graphs", "diff")
 _SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9_-]+$")
 _CHUNK = 64 * 1024
 

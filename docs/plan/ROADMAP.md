@@ -14,7 +14,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 3 | Proyectos y motor de ejecuciones | 0.4.0 | ✅ Cerrada (2026-10-22) |
 | 4 | Explorador de metadatos | 0.5.0 | ✅ Cerrada (2026-10-22) |
 | 5 | Documentación y grafos | 0.6.0 | ✅ Cerrada (2026-10-22) |
-| 6 | Comparación de esquemas | 0.7.0 | Pendiente |
+| 6 | Comparación de esquemas | 0.7.0 | ✅ Cerrada (2026-10-22) |
 | 7 | Migración DDL | 0.8.0 | Pendiente |
 | 8 | Volcado de datos | 0.9.0 | Pendiente |
 | 9 | Carga bulk | 0.10.0 | Pendiente |
@@ -102,13 +102,14 @@ batch_window_seconds=0).generate()`; `GraphvizRelationshipGraphExt` (`generate_g
 `relationship_graph` (tabla o todas, profundidad, dirección, columnas, SVG/PNG); sitio HTML navegable aislado
 (ADR-007), descargas y galería de grafos en la web.
 
-## Fase 6 — Comparación de esquemas
+## Fase 6 — Comparación de esquemas ✅
 
 **util_bbdd**: `SchemaComparator().compare(source: Inspector, target: Inspector, *, source_schema, target_schema,
 include_tables, include_views, include_indices, include_foreign_keys, include_comments, include_routines)` →
 `SchemaDiff`; `SchemaDiffReporter(...).render(diff, output_dir, format)` / `render_all`.
 **Funcionalidad**: ejecución `compare` entre dos conexiones o schemas; visor del diff navegable; descargas SQL,
-HTML, Word, Excel y Markdown. **Mejora opcional**: comparar dos ejecuciones `compare` en fechas distintas.
+HTML, Word, Excel y Markdown. **Mejora opcional** (incluida): comparar dos ejecuciones `compare` en fechas distintas
+(nuevas, resueltas y persistentes).
 
 ## Fase 7 — Migración DDL
 

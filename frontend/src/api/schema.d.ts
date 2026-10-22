@@ -809,6 +809,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diff de una comparación de esquemas
+         * @description Diferencias del destino respecto al origen de una ejecución ``compare`` correcta.
+         */
+        get: operations["get_diff_api_v1_runs__run_id__diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/diff/evolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Evolución respecto a otra comparación
+         * @description Diferencias nuevas, resueltas y persistentes respecto a ``baseline`` (otra comparación visible).
+         */
+        get: operations["get_diff_evolution_api_v1_runs__run_id__diff_evolution_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/events": {
         parameters: {
             query?: never;
@@ -1081,6 +1121,20 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** ColumnDiffOut */
+        ColumnDiffOut: {
+            /**
+             * Attribute
+             * @enum {string}
+             */
+            attribute: "type" | "nullable" | "primary_key" | "default" | "existence";
+            /** Column Name */
+            column_name: string;
+            /** Source Value */
+            source_value: string;
+            /** Target Value */
+            target_value: string;
+        };
         /** ColumnOut */
         ColumnOut: {
             /** Comment */
@@ -1105,6 +1159,17 @@ export interface components {
             precision?: number | null;
             /** Scale */
             scale?: number | null;
+        };
+        /** CommentDiffOut */
+        CommentDiffOut: {
+            /** Column Name */
+            column_name: string | null;
+            /** Object Name */
+            object_name: string;
+            /** Source Comment */
+            source_comment: string;
+            /** Target Comment */
+            target_comment: string;
         };
         /**
          * ConnectionCreate
@@ -1265,6 +1330,53 @@ export interface components {
             name: string;
         };
         /**
+         * DiffEvolutionOut
+         * @description Qué cambió entre la comparación ``baseline_id`` (anterior) y esta.
+         */
+        DiffEvolutionOut: {
+            /** Baseline Id */
+            baseline_id: string;
+            /**
+             * Labels Match
+             * @description Origen y destino son los mismos en las dos comparaciones
+             */
+            labels_match: boolean;
+            /** New */
+            new: components["schemas"]["DiffItemOut"][];
+            /** Persisting */
+            persisting: components["schemas"]["DiffItemOut"][];
+            /** Resolved */
+            resolved: components["schemas"]["DiffItemOut"][];
+            /** Run Id */
+            run_id: string;
+        };
+        /**
+         * DiffItemOut
+         * @description Diferencia hoja con clave estable entre comparaciones.
+         */
+        DiffItemOut: {
+            /** Attribute */
+            attribute: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "table" | "column" | "index" | "foreign_key" | "comment" | "view" | "routine";
+            /** Name */
+            name: string;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+            /** Table */
+            table: string | null;
+            /** Target */
+            target: string;
+        };
+        /**
          * DriverOut
          * @description Driver del motor y si está instalado en el servidor.
          */
@@ -1323,6 +1435,48 @@ export interface components {
             name: string;
             /** Version Range */
             version_range: string;
+        };
+        /** ForeignKeyDiffOut */
+        ForeignKeyDiffOut: {
+            /** Fk Name */
+            fk_name: string;
+            /**
+             * Source Columns
+             * @default
+             */
+            source_columns: string;
+            /**
+             * Source Referred Columns
+             * @default
+             */
+            source_referred_columns: string;
+            /**
+             * Source Referred Table
+             * @default
+             */
+            source_referred_table: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+            /** Table Name */
+            table_name: string;
+            /**
+             * Target Columns
+             * @default
+             */
+            target_columns: string;
+            /**
+             * Target Referred Columns
+             * @default
+             */
+            target_referred_columns: string;
+            /**
+             * Target Referred Table
+             * @default
+             */
+            target_referred_table: string;
         };
         /** ForeignKeyOut */
         ForeignKeyOut: {
@@ -1387,6 +1541,38 @@ export interface components {
              * @enum {string}
              */
             worker: "ok" | "stale" | "absent" | "unknown";
+        };
+        /** IndexDiffOut */
+        IndexDiffOut: {
+            /** Index Name */
+            index_name: string;
+            /**
+             * Source Columns
+             * @default
+             */
+            source_columns: string;
+            /**
+             * Source Unique
+             * @default false
+             */
+            source_unique: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+            /** Table Name */
+            table_name: string;
+            /**
+             * Target Columns
+             * @default
+             */
+            target_columns: string;
+            /**
+             * Target Unique
+             * @default false
+             */
+            target_unique: boolean;
         };
         /** IndexOut */
         IndexOut: {
@@ -1766,6 +1952,31 @@ export interface components {
             /** Supported */
             supported: boolean;
         };
+        /** RoutineDiffOut */
+        RoutineDiffOut: {
+            /** Routine Name */
+            routine_name: string;
+            /**
+             * Routine Type
+             * @enum {string}
+             */
+            routine_type: "PROCEDURE" | "FUNCTION";
+            /**
+             * Source Definition
+             * @default
+             */
+            source_definition: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+            /**
+             * Target Definition
+             * @default
+             */
+            target_definition: string;
+        };
         /** RoutineItem */
         RoutineItem: {
             /** Name */
@@ -1917,6 +2128,39 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * SchemaDiffOut
+         * @description Diferencias de ``target`` respecto a ``source`` (``added`` = solo en origen; ``removed`` = solo en destino).
+         */
+        SchemaDiffOut: {
+            /** Has Differences */
+            has_differences: boolean;
+            /**
+             * Routine Diffs
+             * @default []
+             */
+            routine_diffs: components["schemas"]["RoutineDiffOut"][];
+            /** Source Label */
+            source_label: string;
+            /** Summary */
+            summary: string;
+            /**
+             * Table Diffs
+             * @default []
+             */
+            table_diffs: components["schemas"]["TableDiffOut"][];
+            /** Target Label */
+            target_label: string;
+            /** Total Differences */
+            total_differences: number;
+            /** Total Leaf Differences */
+            total_leaf_differences: number;
+            /**
+             * View Diffs
+             * @default []
+             */
+            view_diffs: components["schemas"]["ViewDiffOut"][];
+        };
         /** SchemaItem */
         SchemaItem: {
             /** Cached */
@@ -2055,6 +2299,36 @@ export interface components {
             /** Uniques */
             uniques: components["schemas"]["KeyOut"][];
         };
+        /** TableDiffOut */
+        TableDiffOut: {
+            /**
+             * Column Diffs
+             * @default []
+             */
+            column_diffs: components["schemas"]["ColumnDiffOut"][];
+            /**
+             * Comment Diffs
+             * @default []
+             */
+            comment_diffs: components["schemas"]["CommentDiffOut"][];
+            /**
+             * Fk Diffs
+             * @default []
+             */
+            fk_diffs: components["schemas"]["ForeignKeyDiffOut"][];
+            /**
+             * Index Diffs
+             * @default []
+             */
+            index_diffs: components["schemas"]["IndexDiffOut"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+            /** Table Name */
+            table_name: string;
+        };
         /** TableItem */
         TableItem: {
             /** Columns */
@@ -2161,6 +2435,26 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** ViewDiffOut */
+        ViewDiffOut: {
+            /**
+             * Source Definition
+             * @default
+             */
+            source_definition: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "added" | "removed" | "modified";
+            /**
+             * Target Definition
+             * @default
+             */
+            target_definition: string;
+            /** View Name */
+            view_name: string;
         };
         /** ViewItem */
         ViewItem: {
@@ -4894,6 +5188,113 @@ export interface operations {
             };
             /** @description Ya terminó */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_diff_api_v1_runs__run_id__diff_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchemaDiffOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiado grande para el visor */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_diff_evolution_api_v1_runs__run_id__diff_evolution_get: {
+        parameters: {
+            query: {
+                /** @description Id de la comparación anterior */
+                baseline: string;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiffEvolutionOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiado grande para el visor */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

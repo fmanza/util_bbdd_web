@@ -16,6 +16,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
+from app.api.v1.schemas_diff import DiffEvolutionOut, DiffItemOut, SchemaDiffOut
 from app.api.v1.schemas_projects import ArtifactOut, RunCreate, RunDetailOut, RunOut, RunPage, RunStatus
 from app.core.config import Settings
 from app.core.errors import AppError
@@ -23,6 +24,7 @@ from app.core.security import site_token, verify_site_token
 from app.db.models import TERMINAL_STATUSES, Artifact, Run, User
 from app.db.session import new_session
 from app.domain.projects.service import get_membership
+from app.domain.runs import diff as diff_domain
 from app.domain.runs import service
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters
@@ -325,6 +327,48 @@ def preview_artifact(
             path, media_type=media, filename=path.name, content_disposition_type="inline", headers=_SAFE_HEADERS
         )
     return PlainTextResponse(path.read_text(encoding="utf-8", errors="replace"), headers=_SAFE_HEADERS)
+
+
+# --- diff de esquemas (Fase 6) ------------------------------------------------------------------------------------
+
+
+def _items(items: list[diff_domain.DiffItem]) -> list[DiffItemOut]:
+    return [DiffItemOut.model_validate(item, from_attributes=True) for item in items]
+
+
+@router.get(
+    "/{run_id}/diff", response_model=SchemaDiffOut, summary="Diff de una comparación de esquemas",
+    responses={**_401, **_404, 413: {"description": "Demasiado grande para el visor"}},
+)  # fmt: skip
+def get_diff(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> SchemaDiffOut:
+    """Diferencias del destino respecto al origen de una ejecución ``compare`` correcta."""
+    access = service.get_access(db, user, run_id)
+    return SchemaDiffOut.model_validate(diff_domain.load_diff(db, access.run, settings))
+
+
+@router.get(
+    "/{run_id}/diff/evolution", response_model=DiffEvolutionOut, summary="Evolución respecto a otra comparación",
+    responses={**_401, **_404, 413: {"description": "Demasiado grande para el visor"}},
+)  # fmt: skip
+def get_diff_evolution(
+    run_id: str,
+    baseline: Annotated[str, Query(min_length=1, max_length=32, description="Id de la comparación anterior")],
+    user: CurrentUser,
+    db: DbSession,
+    settings: SettingsDep,
+) -> DiffEvolutionOut:
+    """Diferencias nuevas, resueltas y persistentes respecto a ``baseline`` (otra comparación visible)."""
+    current = diff_domain.load_diff(db, service.get_access(db, user, run_id).run, settings)
+    previous = diff_domain.load_diff(db, service.get_access(db, user, baseline).run, settings)
+    result = diff_domain.evolution(current, previous)
+    return DiffEvolutionOut(
+        run_id=run_id,
+        baseline_id=baseline,
+        labels_match=result.labels_match,
+        new=_items(result.new),
+        resolved=_items(result.resolved),
+        persisting=_items(result.persisting),
+    )
 
 
 _SITE_HEADERS: Final = {
