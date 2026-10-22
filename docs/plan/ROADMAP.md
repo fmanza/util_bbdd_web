@@ -15,7 +15,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 4 | Explorador de metadatos | 0.5.0 | ✅ Cerrada (2026-10-22) |
 | 5 | Documentación y grafos | 0.6.0 | ✅ Cerrada (2026-10-22) |
 | 6 | Comparación de esquemas | 0.7.0 | ✅ Cerrada (2026-10-22) |
-| 7 | Migración DDL | 0.8.0 | Pendiente |
+| 7 | Migración DDL | 0.8.0 | ✅ Cerrada (2026-10-22) |
 | 8 | Volcado de datos | 0.9.0 | Pendiente |
 | 9 | Carga bulk | 0.10.0 | Pendiente |
 | 10 | Endurecimiento y release | 1.0.0 | Pendiente |
@@ -111,14 +111,15 @@ include_tables, include_views, include_indices, include_foreign_keys, include_co
 HTML, Word, Excel y Markdown. **Mejora opcional** (incluida): comparar dos ejecuciones `compare` en fechas distintas
 (nuevas, resueltas y persistentes).
 
-## Fase 7 — Migración DDL
+## Fase 7 — Migración DDL ✅
 
 **util_bbdd**: `MigrationPlanner(source_engine, target_engine, charset, collation, number_fallback, engine,
 int_display_width, sql_server_collation, pg_schema, oracle_identity_mode, view_strategy).plan(connection, schema)`
 → `MigrationPlan` (`emit_ddl()`, `emit_statements()`, `warnings`, `execute(target_connection, *, audit_sink)`).
 **Funcionalidad**: ejecución `migrate_plan` (scripts por motor destino + avisos); visor del plan; ejecución separada
 `migrate_apply` con doble confirmación, conexión destino no `read_only` y rol autorizado. Solo combinaciones
-soportadas (oracle, mariadb, mysql, sqlserver, postgresql; origen ≠ destino).
+soportadas (oracle, mariadb, mysql, sqlserver, postgresql; origen ≠ destino). Hecho según ADR-008: permiso
+`can_apply_ddl` + owner, modo seco obligatorio (hash del plan, conflictos, vistas y FK entre tipos distintos).
 
 ## Fase 8 — Volcado de datos
 

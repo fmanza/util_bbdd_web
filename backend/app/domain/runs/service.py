@@ -188,7 +188,10 @@ def enqueue(
         UnknownOperationError, RunParamsError: Operación o parámetros no válidos (422).
         TooManyRunsError: El usuario ya tiene ``max_queued_per_user`` en cola o en curso (429).
         QuotaExceededError: El usuario supera ``user_quota_mb`` (409).
+        MigrationForbiddenError, RunStateError: Reglas de ``migrate_apply`` (ADR-008, ``migrations.check_apply``).
     """
+    from app.domain.runs import migrations  # importa este módulo: se importa aquí para evitar el ciclo
+
     if not membership.can("editor"):
         raise ProjectForbiddenError()
     spec = get_operation(operation)
@@ -201,6 +204,10 @@ def enqueue(
                 f"El proyecto no tiene ninguna conexión con el alias «{alias}».",
                 errors=[{"loc": ["body", "params"], "msg": f"Alias desconocido: {alias}", "type": "value_error"}],
             ) from None
+    if spec.name == "migrate_plan":
+        migrations.check_plan(db, membership, clean)
+    elif spec.name == "migrate_apply":
+        migrations.check_apply(db, user, membership, clean, settings)
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
         raise TooManyRunsError(f"Tienes {active} ejecuciones en cola o en curso; espera a que terminen.")
@@ -224,15 +231,25 @@ def enqueue(
     db.add(run)
     audit.record(
         db, action=AuditAction.RUN_CREATE, ctx=ctx, actor_id=user.id, target_type="run", target_id=run_id,
-        details={"project_id": project.id, "operation": spec.name, "relaunched_from": relaunched_from},
+        details={
+            "project_id": project.id, "operation": spec.name, "relaunched_from": relaunched_from,
+            **({"migration": {k: clean.get(k) for k in ("mode", "plan_run", "target_connection", "dry_run_run")}}
+               if spec.name == "migrate_apply" else {}),
+        },
     )  # fmt: skip
     db.commit()
     return run
 
 
 def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, ctx: RequestContext) -> Run:
-    """Nueva ejecución con la misma operación y parámetros."""
+    """Nueva ejecución con la misma operación y parámetros.
+
+    Raises:
+        RunStateError: La operación no se relanza (``form=False``, p. ej. ``migrate_apply``: exige un modo seco nuevo).
+    """
     run = access.run
+    if not get_operation(run.operation).form:
+        raise RunStateError("Esta ejecución no se puede relanzar: lánzala de nuevo desde su origen.")
     return enqueue(
         db, user, access.membership, operation=run.operation, params=dict(run.params), settings=settings, ctx=ctx,
         relaunched_from=run.id,
@@ -244,11 +261,14 @@ def cancel(db: Session, user: User, access: RunAccess, *, ctx: RequestContext) -
 
     Raises:
         ProjectForbiddenError: Rol inferior a ``editor``.
-        RunStateError: Ya terminó.
+        RunStateError: Ya terminó, o es una ``migrate_apply`` en curso: matarla dejaría el destino a medias y sin
+            informe (ADR-008); en cola sí se cancela.
     """
     if not access.membership.can("editor"):
         raise ProjectForbiddenError()
     run = access.run
+    if run.operation == "migrate_apply" and run.status == "running":
+        raise RunStateError("Una migración en curso no se puede cancelar: dejaría el destino a medias.")
     now = utcnow()
     result = db.execute(
         update(Run)

@@ -44,6 +44,7 @@ Menú con tu nombre → *Cambiar contraseña*. Indica la actual y la nueva dos v
 | Editar | *Editar* en la fila | Cambia nombre visible o rol |
 | Desactivar / reactivar | Interruptor *Cuenta activa* | Desactivar cierra sus sesiones al momento; los usuarios no se borran para conservar la auditoría |
 | Restablecer contraseña | Campo *Restablecer contraseña* al editar | Cierra todas sus sesiones y quita el bloqueo por intentos |
+| Permisos especiales | *Puede ejecutar SQL libre* y *Puede aplicar DDL* al editar | SQL de solo lectura ([explorador](explorador.md)); aplicar migraciones en proyectos de los que sea propietario ([migración](migracion.md)) |
 
 Reglas:
 

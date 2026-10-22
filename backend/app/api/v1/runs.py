@@ -17,6 +17,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
 from app.api.v1.schemas_diff import DiffEvolutionOut, DiffItemOut, SchemaDiffOut
+from app.api.v1.schemas_migrate import MigrationPlanOut, MigrationReportOut
 from app.api.v1.schemas_projects import ArtifactOut, RunCreate, RunDetailOut, RunOut, RunPage, RunStatus
 from app.core.config import Settings
 from app.core.errors import AppError
@@ -25,7 +26,7 @@ from app.db.models import TERMINAL_STATUSES, Artifact, Run, User
 from app.db.session import new_session
 from app.domain.projects.service import get_membership
 from app.domain.runs import diff as diff_domain
-from app.domain.runs import service
+from app.domain.runs import migrations, service
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters
 from app.workspace.layout import run_dir, zip_stream
@@ -369,6 +370,32 @@ def get_diff_evolution(
         resolved=_items(result.resolved),
         persisting=_items(result.persisting),
     )
+
+
+# --- migración DDL (Fase 7) --------------------------------------------------------------------------------------
+
+
+@router.get(
+    "/{run_id}/plan", response_model=MigrationPlanOut, summary="Plan de una migración DDL",
+    responses={**_401, **_404, 413: {"description": "Demasiado grande para el visor"}},
+)  # fmt: skip
+def get_plan(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> MigrationPlanOut:
+    """Plan guardado por una ejecución ``migrate_plan`` correcta (tablas, avisos y sentencias)."""
+    access = service.get_access(db, user, run_id)
+    return MigrationPlanOut.model_validate(migrations.load_plan(db, access.run, settings))
+
+
+@router.get(
+    "/{run_id}/migration-report", response_model=MigrationReportOut, summary="Informe del modo seco o de la aplicación",
+    responses={**_401, **_404},
+)  # fmt: skip
+def get_migration_report(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> MigrationReportOut:
+    """Conflictos, validación de vistas y sentencias aplicadas de una ``migrate_apply`` (también si falló)."""
+    access = service.get_access(db, user, run_id)
+    if access.run.operation != "migrate_apply":
+        raise ArtifactNotFoundError("Esta ejecución no es una aplicación de migración.")
+    _, path = service.get_artifact_by_path(db, access.run, migrations.REPORT_PATH, settings)
+    return MigrationReportOut.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 _SITE_HEADERS: Final = {

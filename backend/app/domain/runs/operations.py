@@ -4,6 +4,7 @@ Cada operación declara un modelo Pydantic (``extra="forbid"``) que valida los p
 ``ubw_kind="connection"`` son alias de una conexión del proyecto. La implementación vive en ``app/jobs/operations``.
 Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones.
 Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
+Fase 7: ``migrate_plan`` y ``migrate_apply`` (este no sale en el formulario genérico: se lanza desde el plan).
 """
 
 from __future__ import annotations
@@ -155,6 +156,63 @@ class CompareParams(BaseModel):
         return self
 
 
+RUN_ID_PATTERN = r"^[0-9A-HJKMNP-TV-Z]{26}$"
+_CHARSET_PATTERN = r"^[A-Za-z0-9_]{1,64}$"
+MigrationEngine = Literal["mariadb", "mysql", "sqlserver", "postgresql", "oracle"]
+
+
+class MigratePlanParams(BaseModel):
+    """Plan de migración DDL con ``MigrationPlanner`` de util_bbdd: solo lee el origen (ADR-008)."""
+
+    source_connection: str = _connection("Conexión origen (Oracle, MariaDB, MySQL, SQL Server o PostgreSQL).")
+    source_schema: str | None = Field(
+        default=None, pattern=OBJECT_NAME_PATTERN, description="Schema a migrar; vacío = el de la conexión."
+    )
+    target_engine: MigrationEngine = Field(description="Motor destino (distinto del origen).")
+    view_strategy: Literal["auto", "transpile", "passthrough"] = _group(
+        "general", "auto", "Vistas: reescribirlas al dialecto destino (auto/transpile) o copiarlas sin cambios."
+    )
+    number_fallback: Literal["DOUBLE", "DECIMAL(38,10)", "DECIMAL(18,4)"] = _group(
+        "general", "DOUBLE", "Tipo destino para NUMBER de Oracle sin precisión (origen Oracle)."
+    )
+    charset: str | None = _group("mysql", None, "CHARACTER SET (destino MariaDB/MySQL).", pattern=_CHARSET_PATTERN)
+    collation: str | None = _group("mysql", None, "COLLATE (destino MariaDB/MySQL).", pattern=_CHARSET_PATTERN)
+    storage_engine: str = _group(
+        "mysql", "InnoDB", "Motor de almacenamiento (destino MariaDB/MySQL).", pattern=r"^[A-Za-z]{1,32}$"
+    )
+    int_display_width: int = _group("mysql", 11, "Ancho de INT (Oracle → MariaDB; 0 = sin ancho).", ge=0, le=255)
+    sql_server_collation: str | None = _group(
+        "sqlserver", None, "COLLATE por columna (destino SQL Server); vacío = la de la BD.", pattern=_CHARSET_PATTERN
+    )
+    pg_schema: str | None = _group(
+        "postgresql", None, "Schema destino (destino PostgreSQL; emite SET search_path).", pattern=OBJECT_NAME_PATTERN
+    )
+    oracle_identity_mode: Literal["sequence_trigger", "identity"] = _group(
+        "oracle", "sequence_trigger", "Autoincrementales en destino Oracle: secuencia + trigger o IDENTITY."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MigrateApplyParams(BaseModel):
+    """Modo seco o aplicación de un plan ``migrate_plan`` en una conexión destino (ADR-008).
+
+    ``apply`` exige un ``dry_run_run`` correcto reciente del mismo plan y destino y ``confirm`` igual al alias.
+    """
+
+    plan_run: str = Field(pattern=RUN_ID_PATTERN, description="Ejecución migrate_plan que se aplica.")
+    target_connection: str = _connection("Conexión destino (no de solo lectura, del motor del plan).")
+    mode: Literal["dry_run", "apply"] = Field(default="dry_run", description="Modo seco (sin cambios) o aplicar.")
+    dry_run_run: str | None = Field(
+        default=None, pattern=RUN_ID_PATTERN, description="Modo seco correcto previo (obligatorio para aplicar)."
+    )
+    confirm: str | None = Field(
+        default=None, max_length=64, description="Alias de la conexión destino escrito a mano (para aplicar)."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 @dataclass(frozen=True)
 class OperationParam:
     """Parámetro de una operación tal como lo ve el formulario de lanzamiento."""
@@ -178,6 +236,8 @@ class OperationSpec:
     title: str
     description: str
     model: type[BaseModel]
+    #: ``False``: no sale en el formulario genérico (se lanza desde otra pantalla) y no se puede relanzar.
+    form: bool = True
 
     @property
     def params(self) -> list[OperationParam]:
@@ -246,6 +306,20 @@ OPERATIONS: dict[str, OperationSpec] = {
         description="Compara dos conexiones o schemas con util_bbdd: visor del diff e informes HTML, Excel, Word, "
         "Markdown y SQL.",
         model=CompareParams,
+    ),
+    "migrate_plan": OperationSpec(
+        name="migrate_plan",
+        title="Plan de migración DDL",
+        description="Traduce el DDL de un schema a otro motor con util_bbdd: script, avisos y visor. No escribe en "
+        "ninguna base de datos.",
+        model=MigratePlanParams,
+    ),
+    "migrate_apply": OperationSpec(
+        name="migrate_apply",
+        title="Aplicar migración DDL",
+        description="Modo seco o aplicación de un plan de migración en una conexión destino.",
+        model=MigrateApplyParams,
+        form=False,
     ),
 }
 

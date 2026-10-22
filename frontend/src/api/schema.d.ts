@@ -486,7 +486,7 @@ export interface paths {
         };
         /**
          * Listar operaciones
-         * @description Operaciones que se pueden lanzar como ejecución (``noop`` en la Fase 3).
+         * @description Operaciones que se pueden lanzar como ejecución; ``form=false`` se lanzan desde otra pantalla.
          */
         get: operations["list_operations_api_v1_operations_get"];
         put?: never;
@@ -861,6 +861,46 @@ export interface paths {
          * @description Eventos ``run`` (instantánea al cambiar) y ``end`` al terminar; *keepalive* periódico.
          */
         get: operations["run_events_api_v1_runs__run_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/migration-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Informe del modo seco o de la aplicación
+         * @description Conflictos, validación de vistas y sentencias aplicadas de una ``migrate_apply`` (también si falló).
+         */
+        get: operations["get_migration_report_api_v1_runs__run_id__migration_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan de una migración DDL
+         * @description Plan guardado por una ejecución ``migrate_plan`` correcta (tablas, avisos y sentencias).
+         */
+        get: operations["get_plan_api_v1_runs__run_id__plan_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1436,6 +1476,26 @@ export interface components {
             /** Version Range */
             version_range: string;
         };
+        /**
+         * FkMismatchOut
+         * @description FK entre columnas de tipos distintos en el destino (GAPS G28).
+         */
+        FkMismatchOut: {
+            /** Column */
+            column: string;
+            /** Column Type */
+            column_type: string;
+            /** Foreign Key */
+            foreign_key: string;
+            /** Ref Column */
+            ref_column: string;
+            /** Ref Table */
+            ref_table: string;
+            /** Ref Type */
+            ref_type: string;
+            /** Table */
+            table: string;
+        };
         /** ForeignKeyDiffOut */
         ForeignKeyDiffOut: {
             /** Fk Name */
@@ -1617,6 +1677,8 @@ export interface components {
          * @description Usuario de la sesión actual.
          */
         Me: {
+            /** Can Apply Ddl */
+            can_apply_ddl: boolean;
             /** Can Run Sql */
             can_run_sql: boolean;
             /** Display Name */
@@ -1668,6 +1730,108 @@ export interface components {
              * @enum {string}
              */
             role: "owner" | "editor" | "viewer";
+        };
+        /**
+         * MigrationPlanOut
+         * @description Plan de migración guardado por ``migrate_plan``.
+         */
+        MigrationPlanOut: {
+            /** Error Count */
+            error_count: number;
+            /**
+             * Fk Blocking
+             * @description El destino (MariaDB/MySQL) rechazará esas FK: no se aplica
+             * @default false
+             */
+            fk_blocking: boolean;
+            /**
+             * Fk Mismatches
+             * @default []
+             */
+            fk_mismatches: components["schemas"]["FkMismatchOut"][];
+            /** Info Count */
+            info_count: number;
+            /**
+             * Routines
+             * @default []
+             */
+            routines: components["schemas"]["PlanObjectOut"][];
+            /** Source Engine */
+            source_engine: string;
+            /** Source Schema */
+            source_schema: string;
+            /** Statements */
+            statements: string[];
+            /** Statements Hash */
+            statements_hash: string;
+            /**
+             * Tables
+             * @default []
+             */
+            tables: components["schemas"]["PlanTableOut"][];
+            /** Target Engine */
+            target_engine: string;
+            /**
+             * Views
+             * @default []
+             */
+            views: components["schemas"]["PlanObjectOut"][];
+            /** Warning Count */
+            warning_count: number;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: components["schemas"]["PlanWarningOut"][];
+        };
+        /**
+         * MigrationReportOut
+         * @description Resultado de ``migrate_apply`` (modo seco o aplicación).
+         */
+        MigrationReportOut: {
+            /**
+             * Applied
+             * @default 0
+             */
+            applied: number;
+            /**
+             * Conflicts
+             * @default []
+             */
+            conflicts: string[];
+            /**
+             * Error
+             * @description Mensaje del motor recortado
+             */
+            error?: string | null;
+            /** Failed Position */
+            failed_position?: number | null;
+            /** Failed Statement */
+            failed_statement?: string | null;
+            /**
+             * Fk Blocking
+             * @default false
+             */
+            fk_blocking: boolean;
+            /**
+             * Fk Mismatches
+             * @default []
+             */
+            fk_mismatches: components["schemas"]["FkMismatchOut"][];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "dry_run" | "apply";
+            /** Statements */
+            statements: number;
+            /** Statements Hash */
+            statements_hash: string;
+            /**
+             * Views
+             * @default []
+             */
+            views: components["schemas"]["ViewValidationOut"][];
         };
         /** NamedQueryCreate */
         NamedQueryCreate: {
@@ -1730,6 +1894,12 @@ export interface components {
         OperationOut: {
             /** Description */
             description: string;
+            /**
+             * Form
+             * @description Sale en el formulario genérico de lanzamiento
+             * @default true
+             */
+            form: boolean;
             /** Name */
             name: string;
             /** Params */
@@ -1808,6 +1978,125 @@ export interface components {
              * Format: password
              */
             new_password: string;
+        };
+        /** PlanColumnOut */
+        PlanColumnOut: {
+            /**
+             * Auto Increment
+             * @default false
+             */
+            auto_increment: boolean;
+            /** Default */
+            default?: string | null;
+            /** Name */
+            name: string;
+            /** Nullable */
+            nullable: boolean;
+            /**
+             * Omit
+             * @default false
+             */
+            omit: boolean;
+            /** Original Name */
+            original_name: string;
+            /** Source Type */
+            source_type: string;
+            /** Target Type */
+            target_type: string;
+        };
+        /** PlanForeignKeyOut */
+        PlanForeignKeyOut: {
+            /** Columns */
+            columns: string[];
+            /** Name */
+            name: string;
+            /**
+             * Ref Columns
+             * @default []
+             */
+            ref_columns: string[];
+            /** Ref Table */
+            ref_table: string;
+        };
+        /** PlanIndexOut */
+        PlanIndexOut: {
+            /** Columns */
+            columns: string[];
+            /** Name */
+            name: string;
+            /** Unique */
+            unique: boolean;
+        };
+        /** PlanObjectOut */
+        PlanObjectOut: {
+            /** Name */
+            name: string;
+            /** Original Name */
+            original_name?: string | null;
+            /** Routine Type */
+            routine_type?: string | null;
+        };
+        /** PlanTableOut */
+        PlanTableOut: {
+            /**
+             * Columns
+             * @default []
+             */
+            columns: components["schemas"]["PlanColumnOut"][];
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+            /**
+             * Foreign Keys
+             * @default []
+             */
+            foreign_keys: components["schemas"]["PlanForeignKeyOut"][];
+            /**
+             * Indexes
+             * @default []
+             */
+            indexes: components["schemas"]["PlanIndexOut"][];
+            /** Name */
+            name: string;
+            /** Original Name */
+            original_name: string;
+            /**
+             * Primary Key
+             * @default []
+             */
+            primary_key: string[];
+        };
+        /** PlanWarningOut */
+        PlanWarningOut: {
+            /** Category */
+            category: string;
+            /** Code */
+            code?: string | null;
+            /** Column */
+            column?: string | null;
+            /** Message */
+            message: string;
+            /**
+             * Proposals
+             * @default []
+             */
+            proposals: string[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "INFO" | "WARNING" | "ERROR";
+            /** Source Type */
+            source_type?: string | null;
+            /** Table */
+            table: string;
+            /**
+             * Target Type
+             * @default
+             */
+            target_type: string;
         };
         /**
          * ProbeErrorOut
@@ -2364,6 +2653,8 @@ export interface components {
          * @description Usuario visto por un administrador.
          */
         UserOut: {
+            /** Can Apply Ddl */
+            can_apply_ddl: boolean;
             /** Can Run Sql */
             can_run_sql: boolean;
             /**
@@ -2412,6 +2703,8 @@ export interface components {
          * @description Edición parcial de usuario; ``password`` restablece la contraseña y cierra sus sesiones.
          */
         UserUpdate: {
+            /** Can Apply Ddl */
+            can_apply_ddl?: boolean | null;
             /** Can Run Sql */
             can_run_sql?: boolean | null;
             /** Display Name */
@@ -2464,6 +2757,20 @@ export interface components {
             materialized: boolean;
             /** Name */
             name: string;
+        };
+        /** ViewValidationOut */
+        ViewValidationOut: {
+            /** Error */
+            error?: string | null;
+            /**
+             * Method
+             * @default
+             */
+            method: string;
+            /** Valid */
+            valid?: boolean | null;
+            /** View */
+            view: string;
         };
     };
     responses: never;
@@ -5340,6 +5647,103 @@ export interface operations {
             };
             /** @description No existe o no eres miembro del proyecto */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_migration_report_api_v1_runs__run_id__migration_report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationReportOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_api_v1_runs__run_id__plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationPlanOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiado grande para el visor */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

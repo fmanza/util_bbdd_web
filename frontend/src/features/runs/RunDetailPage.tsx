@@ -23,9 +23,14 @@ import { formatBytes, formatDateTime, formatDuration } from '../../components/fo
 import { canRole } from '../projects/useProjects';
 import { ArtifactBrowser } from './ArtifactBrowser';
 import { DiffViewer } from './compare/DiffViewer';
+import { MigrationReportView } from './migrate/MigrationReportView';
+import { PlanViewer } from './migrate/PlanViewer';
 import { RunOutputs } from './RunOutputs';
 import { RunStatusBadge } from './RunStatusBadge';
 import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiveRun } from './useRuns';
+
+/** Operaciones que no se relanzan (la API responde 409): aplicar una migración exige un modo seco nuevo. */
+const NOT_RELAUNCHABLE = new Set(['migrate_apply']);
 
 export function RunDetailPage() {
   const { t } = useTranslation();
@@ -50,6 +55,8 @@ export function RunDetailPage() {
 
   const editor = canRole(run.my_role, 'editor');
   const active = isActive(run.status);
+  // Matar una migración en curso dejaría el destino a medias y sin informe (ADR-008): la API responde 409.
+  const applying = run.operation === 'migrate_apply' && run.status === 'running';
   const params = Object.entries(run.params);
 
   return (
@@ -65,7 +72,7 @@ export function RunDetailPage() {
           </Text>
         </Stack>
         <Group gap="xs">
-          {editor && active && (
+          {editor && active && !applying && (
             <Button
               color="orange"
               variant="light"
@@ -76,7 +83,12 @@ export function RunDetailPage() {
               {run.cancel_requested ? t('runs.cancelling') : t('runs.cancel')}
             </Button>
           )}
-          {editor && !active && run.status !== 'purged' && (
+          {editor && applying && (
+            <Text size="sm" c="dimmed">
+              {t('runs.cancelBlocked')}
+            </Text>
+          )}
+          {editor && !active && run.status !== 'purged' && !NOT_RELAUNCHABLE.has(run.operation) && (
             <Button
               variant="light"
               loading={relaunch.isPending}
@@ -174,6 +186,8 @@ export function RunDetailPage() {
         </Table.Tbody>
       </Table>
 
+      {run.operation === 'migrate_plan' && run.status === 'succeeded' && <PlanViewer run={run} />}
+      {run.operation === 'migrate_apply' && <MigrationReportView run={run} />}
       {run.operation === 'compare' && run.status === 'succeeded' && (
         <DiffViewer runId={run.id} projectId={run.project_id} />
       )}

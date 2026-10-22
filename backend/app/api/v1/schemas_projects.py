@@ -104,6 +104,7 @@ class OperationOut(BaseModel):
     title: str
     description: str
     params: list[OperationParamOut]
+    form: bool = Field(default=True, description="Sale en el formulario genérico de lanzamiento")
 
 
 # --- ejecuciones -------------------------------------------------------------------------------------------------

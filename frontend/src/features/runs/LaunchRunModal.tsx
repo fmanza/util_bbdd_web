@@ -67,6 +67,14 @@ function defaultValue(param: OperationParam): string | boolean {
   return param.default === null || param.default === undefined ? '' : String(param.default);
 }
 
+/** Grupos de `migrate_plan` que solo aplican a un motor destino: se ocultan para los demás. */
+const ENGINE_GROUPS: Record<string, readonly string[]> = {
+  mysql: ['mariadb', 'mysql'],
+  sqlserver: ['sqlserver'],
+  postgresql: ['postgresql'],
+  oracle: ['oracle'],
+};
+
 /** Parámetros sin grupo primero; después cada grupo en el orden en que aparece. */
 function sections(params: OperationParam[]): [string | null, OperationParam[]][] {
   const result = new Map<string | null, OperationParam[]>([[null, []]]);
@@ -104,6 +112,11 @@ function LaunchForm({
   const values = useWatch({ control: form.control });
   const chosenAlias = connectionParam ? values[connectionParam] : undefined;
   const chosen = connections.find((c) => c.alias === chosenAlias);
+  const targetEngine = values['target_engine'];
+  const groupVisible = (group: string | null) =>
+    group === null ||
+    !ENGINE_GROUPS[group] ||
+    (typeof targetEngine === 'string' && ENGINE_GROUPS[group].includes(targetEngine));
   const oracleSchemaWarning =
     chosen?.db_type === 'oracle' && operation.params.some((p) => p.name === 'schema');
 
@@ -195,15 +208,17 @@ function LaunchForm({
           {operation.description}
         </Text>
         {launch.isError && <ErrorAlert error={launch.error} />}
-        {sections(operation.params).map(([group, params]) => {
-          const fields = params.map((param) => <div key={param.name}>{renderField(param)}</div>);
-          if (group === null) return <Stack key="__main__">{fields}</Stack>;
-          return (
-            <Fieldset key={group} legend={t(`runs.groups.${group}`, { defaultValue: group })}>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>{fields}</SimpleGrid>
-            </Fieldset>
-          );
-        })}
+        {sections(operation.params)
+          .filter(([group]) => groupVisible(group))
+          .map(([group, params]) => {
+            const fields = params.map((param) => <div key={param.name}>{renderField(param)}</div>);
+            if (group === null) return <Stack key="__main__">{fields}</Stack>;
+            return (
+              <Fieldset key={group} legend={t(`runs.groups.${group}`, { defaultValue: group })}>
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>{fields}</SimpleGrid>
+              </Fieldset>
+            );
+          })}
         {oracleSchemaWarning && (
           <Alert color="yellow" title={t('runs.launch.oracleTitle')}>
             {t('runs.launch.oracleSchema')}
@@ -236,7 +251,9 @@ export function LaunchRunModal({
   const { t } = useTranslation();
   const operations = useOperations();
   const [name, setName] = useState<string | null>(null);
-  const selected = operations.data?.find((op) => op.name === (name ?? operations.data[0]?.name));
+  // `form=false` (p. ej. `migrate_apply`) se lanza desde otra pantalla.
+  const launchable = (operations.data ?? []).filter((op) => op.form !== false);
+  const selected = launchable.find((op) => op.name === (name ?? launchable[0]?.name));
 
   return (
     <Modal opened={opened} onClose={onClose} title={t('runs.launch.title')} size="lg">
@@ -244,7 +261,7 @@ export function LaunchRunModal({
         {operations.isError && <ErrorAlert error={operations.error} />}
         <NativeSelect
           label={t('runs.operation')}
-          data={(operations.data ?? []).map((op) => ({ value: op.name, label: op.title }))}
+          data={launchable.map((op) => ({ value: op.name, label: op.title }))}
           value={selected?.name ?? ''}
           onChange={(event) => setName(event.currentTarget.value)}
         />

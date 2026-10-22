@@ -3,6 +3,39 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.8.0] - 2026-10-22
+
+Fase 7 — Migración DDL.
+
+### Added
+
+- **Plan de migración** (`migrate_plan`): `MigrationPlanner` de util_bbdd entre Oracle, MariaDB, MySQL, SQL Server y
+  PostgreSQL (origen ≠ destino), con las opciones del planner por motor destino; guarda `plan.json` (tablas, tipos,
+  avisos, sentencias y su SHA-256) y el script SQL. Solo lee el origen.
+- **Aplicar** (`migrate_apply`, ADR-008): modo seco obligatorio (mismo hash del plan, conflictos con tablas y vistas
+  del destino, validación de vistas, FK entre tipos distintos) y aplicación con `MigrationPlan.execute` y auditoría
+  por sentencia (`outputs/audit/migracion.jsonl`); informe con la sentencia fallida y las aplicadas.
+- Permiso **`can_apply_ddl`** (migración `0006`, administración de usuarios, `Me`) + rol owner; destino no
+  `read_only` y del motor del plan; modo seco de menos de 60 min; confirmación con el alias; sin dos aplicaciones a
+  la vez sobre el mismo destino; `migrate_apply` no se relanza ni sale en el formulario genérico (`form=false`).
+- **API**: `GET /api/v1/runs/{id}/plan` y `GET /api/v1/runs/{id}/migration-report`; `OperationOut.form`.
+- **Frontend**: visor del plan (avisos por severidad, mapeo de tipos, sentencias con `highlight.js` 11.12.0 cargado
+  bajo demanda), panel *Aplicar* con modo seco, historial y modal de doble confirmación; informe de la aplicación;
+  formulario con solo las opciones del motor destino; interruptor *Puede aplicar DDL*.
+- **Tests**: 28 nuevos en backend (456), 13 de integración **escribiendo** en los bench (56: aplicación real en cuatro
+  combinaciones, hash, conflictos también en `pg_schema`, fallo a medias real, las 20 combinaciones planificables),
+  11 en Vitest (79) y E2E de plan → modo seco → aplicar contra el bench.
+- **Documentación**: guía [Migración DDL](docs/guides/migracion.md), ADR-008, huecos G26–G28.
+
+### Security
+
+- Toda escritura en BD destino exige permiso + owner, conexión no `read_only`, modo seco y confirmación, y se vuelve
+  a comprobar en el worker; errores del motor recortados y sin URL de conexión.
+- Las FK entre tipos distintos que MariaDB/MySQL rechazarían bloquean la aplicación (G28).
+- Auditoría de código previa al cierre: los conflictos se buscan en `pg_schema` con destino PostgreSQL; una
+  aplicación en curso no se cancela (409); el worker vuelve a comprobar también rol owner y motor del destino; los
+  errores de validación de vistas se recortan como los del motor; el error al aplicar se ve dentro del modal.
+
 ## [0.7.0] - 2026-10-22
 
 Fase 6 — Comparación de esquemas.

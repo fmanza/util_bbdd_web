@@ -31,6 +31,10 @@
 | Explorador: 502 «No se pudo consultar la base de datos» | Conexión no permitida, caída o credenciales | El código (`not_allowed`, `connection_failed`…) indica la causa; prueba la conexión |
 | Documentación: el sitio HTML da 404 tras un rato | Su enlace firmado caducó (inactividad de la sesión) | Recarga el detalle de la ejecución |
 | Comparación: «El schema «x» no existe en el origen/destino» | Nombre mal escrito o de otro motor (en MySQL es la base de datos) | Copia el nombre del explorador |
+| Migración: 403 al aplicar | Sin «Puede aplicar DDL» o sin ser propietario | Un admin concede el permiso; aplica el propietario |
+| Migración: «El origen ha cambiado desde el plan» | Cambió el schema origen tras planificar | Planifica de nuevo |
+| Migración: no aparece *Cancelar* | Las aplicaciones en curso no se cancelan (dejarían el destino a medias) | Espera a que termine; en cola sí se cancela |
+| Migración: `apply_partial` | Falló una sentencia; las anteriores quedaron aplicadas | Lee el informe y corrige el destino a mano |
 | Comparación: el visor da 413 | El diff supera 20 MB | Descarga los informes |
 | Ejecución fallida con `graphviz_missing` | Falta Graphviz en el servidor | Usa la imagen oficial o instala `graphviz` |
 | Explorador: el schema tarda en abrirse | Primera lectura de un schema grande | Espera (hasta `UBW_METADATA_TIMEOUT_SECONDS`); después va desde la caché |

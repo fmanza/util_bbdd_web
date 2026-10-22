@@ -91,4 +91,5 @@ src/
 Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·
 [ADR-002](adr/ADR-002-ejecucion-de-jobs.md) · [ADR-003](adr/ADR-003-autenticacion-sesiones.md) ·
 [ADR-004](adr/ADR-004-cifrado-secretos.md) · [ADR-005](adr/ADR-005-workspace-y-ejecuciones.md) ·
-[ADR-006](adr/ADR-006-integracion-util-bbdd.md) · [ADR-007](adr/ADR-007-sitio-html-aislado.md).
+[ADR-006](adr/ADR-006-integracion-util-bbdd.md) · [ADR-007](adr/ADR-007-sitio-html-aislado.md) ·
+[ADR-008](adr/ADR-008-aplicar-migraciones.md).

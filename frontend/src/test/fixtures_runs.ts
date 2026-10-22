@@ -1,4 +1,5 @@
 import type { Project } from '../features/projects/useProjects';
+import type { MigrationPlan } from '../features/runs/migrate/useMigrate';
 import type { Operation, Run, RunDetail } from '../features/runs/useRuns';
 
 export const PROJECT: Project = {
@@ -75,6 +76,7 @@ export const FINISHED: RunDetail = {
 
 export const NOOP: Operation = {
   name: 'noop',
+  form: true,
   title: 'Prueba del motor de ejecuciones',
   description: 'Simula una ejecución',
   params: [
@@ -136,6 +138,7 @@ const param = (
 
 export const DOCUMENTATION: Operation = {
   name: 'documentation',
+  form: true,
   title: 'Documentación de la base de datos',
   description: 'Documenta un schema',
   params: [
@@ -274,4 +277,96 @@ export const EVOLUTION = {
     { kind: 'table', table: null, name: 'pedidos', attribute: null, status: 'added', source: '', target: '' },
   ],
   persisting: [],
+};
+
+export const PLAN_ID = '01JPLANPLANPLANPLANPLANPLA';
+
+export const PLAN_RUN: RunDetail = {
+  ...FINISHED,
+  id: PLAN_ID,
+  operation: 'migrate_plan',
+  params: { source_connection: 'origen', source_schema: null, target_engine: 'mysql' },
+  artifacts: [
+    artifact(51, 'outputs/plan/plan.json', 'plan'),
+    artifact(52, 'outputs/sql/migracion_mysql.sql', 'sql'),
+  ],
+};
+
+export const MIGRATION_PLAN: MigrationPlan = {
+  source_engine: 'postgresql',
+  target_engine: 'mysql',
+  source_schema: 'public',
+  error_count: 0,
+  warning_count: 1,
+  info_count: 1,
+  statements_hash: 'a'.repeat(64),
+  statements: ['CREATE TABLE clientes (id INT NOT NULL, PRIMARY KEY (id))', 'CREATE TABLE pedidos (id INT)'],
+  warnings: [
+    {
+      table: 'clientes',
+      column: 'nombre',
+      category: 'TYPE',
+      target_type: 'VARCHAR(80)',
+      message: 'text → VARCHAR(80)',
+      severity: 'WARNING',
+      source_type: 'text',
+      proposals: [],
+      code: null,
+    },
+    {
+      table: 'clientes',
+      column: 'id',
+      category: 'AUTO_INCREMENT',
+      target_type: 'INT',
+      message: 'Columna PK marcada como AUTO_INCREMENT',
+      severity: 'INFO',
+      source_type: null,
+      proposals: [],
+      code: null,
+    },
+  ],
+  tables: [
+    {
+      name: 'clientes',
+      original_name: 'clientes',
+      comment: '',
+      primary_key: ['id'],
+      columns: [
+        {
+          name: 'id',
+          original_name: 'id',
+          source_type: 'integer',
+          target_type: 'INT',
+          nullable: false,
+          default: null,
+          auto_increment: true,
+          omit: false,
+        },
+      ],
+      indexes: [],
+      foreign_keys: [],
+    },
+  ],
+  views: [],
+  routines: [],
+  fk_mismatches: [],
+  fk_blocking: false,
+};
+
+export const MYSQL_TARGET = {
+  id: 7,
+  alias: 'destino',
+  connection_id: 11,
+  connection_name: 'MySQL pruebas',
+  db_type: 'mysql',
+  read_only: false,
+  created_at: '2026-10-20T08:00:00Z',
+};
+
+export const MYSQL_READ_ONLY = {
+  ...MYSQL_TARGET,
+  id: 8,
+  alias: 'lectura',
+  connection_id: 12,
+  read_only: true,
 };

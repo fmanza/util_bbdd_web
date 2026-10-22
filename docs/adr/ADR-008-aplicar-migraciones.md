@@ -1,0 +1,65 @@
+# ADR-008 — Aplicar migraciones DDL en una base de datos destino
+
+- **Estado**: Aceptado
+- **Fecha**: 2026-10-22
+
+## Contexto
+
+La Fase 7 es la primera que **escribe** en una base de datos destino. `MigrationPlan.execute` de util_bbdd:
+
+- aplica las sentencias una a una con `commit` tras cada una y **no es atómico**: si una falla, las anteriores quedan
+  aplicadas (en MySQL, MariaDB y Oracle el DDL además hace commit implícito);
+- no tiene modo seco propio; `validate_views` deshace una transacción en PostgreSQL y SQL Server y solo comprueba
+  sintaxis en el resto;
+- se niega a ejecutar con avisos `ERROR`, pero no con FK entre tipos distintos, que el destino puede rechazar (G28);
+- `MigrationPlan` no se serializa ni se reconstruye (G26).
+
+La regla 6 de SHARED exige rol autorizado, conexión no `read_only`, modo seco previo y confirmación explícita.
+
+## Decisión
+
+Tres pasos, cada uno una ejecución con su auditoría:
+
+1. **`migrate_plan`** (editor): solo lee el origen y guarda `plan.json` (tablas, tipos, avisos, sentencias y el
+   **SHA-256 de las sentencias**) y el script SQL.
+2. **`migrate_apply` en modo seco**: vuelve a planificar y exige el **mismo hash** (el origen no ha cambiado desde
+   el plan revisado), comprueba que ninguna tabla del plan exista ya como tabla o vista en el destino, valida las
+   vistas y detecta FK entre tipos distintos. No deja cambios.
+3. **`migrate_apply` aplicando**: exige un modo seco **correcto** del mismo plan y destino de **menos de 60 minutos**
+   y `confirm` igual al alias del destino; vuelve a comprobar hash y conflictos y llama a `plan.execute` con un
+   `JsonLinesAuditSink` (`outputs/audit/migracion.jsonl`).
+
+Quién y dónde, comprobado **al encolar** (`domain/runs/migrations.py`) y otra vez en el worker:
+
+- permiso por usuario **`can_apply_ddl`** (lo concede un admin) **y** rol `owner` del proyecto;
+- conexión destino del proyecto **no `read_only`** y del motor del plan;
+- plan sin avisos `ERROR` y, con destino MariaDB/MySQL, sin FK entre tipos distintos (`fk_blocking`);
+- ninguna otra `migrate_apply` activa sobre el mismo destino en el proyecto;
+- `migrate_apply` no se relanza ni sale en el formulario genérico, y **no se cancela en curso** (409; en cola sí):
+  matar el subproceso dejaría el destino a medias y sin informe.
+
+El worker vuelve a comprobar permiso, rol owner, que la conexión destino siga en el proyecto, no sea `read_only` y
+sea del motor del plan. Los conflictos se buscan en `pg_schema` cuando el destino es PostgreSQL con ese schema.
+
+En la web, el panel *Aplicar* del plan exige elegir destino, lanzar el modo seco y, en un modal, marcar «entiendo que
+no es atómico» y escribir el alias.
+
+## Consecuencias
+
+- Un fallo a medias deja el destino parcialmente migrado: el informe dice qué sentencia falló (de la auditoría),
+  cuántas quedaron aplicadas y el mensaje del motor recortado. Deshacerlo es manual.
+- Volver a planificar en cada paso cuesta una lectura del catálogo de origen, a cambio de aplicar exactamente lo
+  revisado.
+- Cambiar los permisos, el rol, el `read_only` o el motor de la conexión entre encolar y ejecutar se detecta en el
+  worker.
+- Un timeout (`UBW_JOB_TIMEOUT_SECONDS`) sí puede cortar una aplicación: lo aplicado queda en `migracion.jsonl`.
+- Deuda conocida: el modo seco se asocia al destino por alias (no por id de conexión) y la comprobación de
+  «ninguna otra aplicación activa» no es atómica frente a dos peticiones simultáneas.
+
+## Alternativas descartadas
+
+- **Aplicar las sentencias guardadas** sin volver a planificar: exigiría la función privada de ejecución de
+  util_bbdd y aplicaría un plan obsoleto si el origen cambió.
+- **Permiso solo por rol del proyecto** (owner): un owner cualquiera podría escribir en una BD de producción
+  compartida; el permiso global lo decide un admin.
+- **Transacción alrededor de todo el script**: imposible en MySQL, MariaDB y Oracle (commit implícito del DDL).

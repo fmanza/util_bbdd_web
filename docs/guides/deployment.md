@@ -27,7 +27,9 @@ El resto de usuarios se gestiona desde **Administración → Usuarios** ([guía]
 El explorador y el SQL libre solo leen, y el SQL libre se ejecuta en una transacción de solo lectura, pero la
 protección más fuerte es que las conexiones usen un **usuario de BD con solo permisos de lectura** (`SELECT` y acceso
 al catálogo). Es imprescindible en **SQL Server**, que no tiene transacciones de solo lectura. Reserva los usuarios con
-escritura para las conexiones sin «Solo lectura» de las fases de migración, volcado y carga.
+escritura para las conexiones sin «Solo lectura» de las fases de migración, volcado y carga. Para aplicar
+migraciones DDL, ese usuario necesita permisos de `CREATE` (tablas, índices, vistas, secuencias y triggers) en el
+schema destino, y el usuario de la web, el permiso «Puede aplicar DDL» ([guía](migracion.md)).
 
 ### Destinos y ficheros de las conexiones
 

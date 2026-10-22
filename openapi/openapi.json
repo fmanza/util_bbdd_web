@@ -1172,6 +1172,50 @@
         "title": "EngineOut",
         "type": "object"
       },
+      "FkMismatchOut": {
+        "description": "FK entre columnas de tipos distintos en el destino (GAPS G28).",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "column_type": {
+            "title": "Column Type",
+            "type": "string"
+          },
+          "foreign_key": {
+            "title": "Foreign Key",
+            "type": "string"
+          },
+          "ref_column": {
+            "title": "Ref Column",
+            "type": "string"
+          },
+          "ref_table": {
+            "title": "Ref Table",
+            "type": "string"
+          },
+          "ref_type": {
+            "title": "Ref Type",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "foreign_key",
+          "column",
+          "column_type",
+          "ref_table",
+          "ref_column",
+          "ref_type"
+        ],
+        "title": "FkMismatchOut",
+        "type": "object"
+      },
       "ForeignKeyDiffOut": {
         "properties": {
           "fk_name": {
@@ -1530,6 +1574,10 @@
       "Me": {
         "description": "Usuario de la sesión actual.",
         "properties": {
+          "can_apply_ddl": {
+            "title": "Can Apply Ddl",
+            "type": "boolean"
+          },
           "can_run_sql": {
             "title": "Can Run Sql",
             "type": "boolean"
@@ -1560,7 +1608,8 @@
           "username",
           "display_name",
           "role",
-          "can_run_sql"
+          "can_run_sql",
+          "can_apply_ddl"
         ],
         "title": "Me",
         "type": "object"
@@ -1645,6 +1694,200 @@
           "role"
         ],
         "title": "MemberUpdate",
+        "type": "object"
+      },
+      "MigrationPlanOut": {
+        "description": "Plan de migración guardado por ``migrate_plan``.",
+        "properties": {
+          "error_count": {
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "fk_blocking": {
+            "default": false,
+            "description": "El destino (MariaDB/MySQL) rechazará esas FK: no se aplica",
+            "title": "Fk Blocking",
+            "type": "boolean"
+          },
+          "fk_mismatches": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FkMismatchOut"
+            },
+            "title": "Fk Mismatches",
+            "type": "array"
+          },
+          "info_count": {
+            "title": "Info Count",
+            "type": "integer"
+          },
+          "routines": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlanObjectOut"
+            },
+            "title": "Routines",
+            "type": "array"
+          },
+          "source_engine": {
+            "title": "Source Engine",
+            "type": "string"
+          },
+          "source_schema": {
+            "title": "Source Schema",
+            "type": "string"
+          },
+          "statements": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Statements",
+            "type": "array"
+          },
+          "statements_hash": {
+            "title": "Statements Hash",
+            "type": "string"
+          },
+          "tables": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlanTableOut"
+            },
+            "title": "Tables",
+            "type": "array"
+          },
+          "target_engine": {
+            "title": "Target Engine",
+            "type": "string"
+          },
+          "views": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlanObjectOut"
+            },
+            "title": "Views",
+            "type": "array"
+          },
+          "warning_count": {
+            "title": "Warning Count",
+            "type": "integer"
+          },
+          "warnings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlanWarningOut"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_engine",
+          "target_engine",
+          "source_schema",
+          "error_count",
+          "warning_count",
+          "info_count",
+          "statements_hash",
+          "statements"
+        ],
+        "title": "MigrationPlanOut",
+        "type": "object"
+      },
+      "MigrationReportOut": {
+        "description": "Resultado de ``migrate_apply`` (modo seco o aplicación).",
+        "properties": {
+          "applied": {
+            "default": 0,
+            "title": "Applied",
+            "type": "integer"
+          },
+          "conflicts": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mensaje del motor recortado",
+            "title": "Error"
+          },
+          "failed_position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Position"
+          },
+          "failed_statement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Statement"
+          },
+          "fk_blocking": {
+            "default": false,
+            "title": "Fk Blocking",
+            "type": "boolean"
+          },
+          "fk_mismatches": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FkMismatchOut"
+            },
+            "title": "Fk Mismatches",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "dry_run",
+              "apply"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "statements": {
+            "title": "Statements",
+            "type": "integer"
+          },
+          "statements_hash": {
+            "title": "Statements Hash",
+            "type": "string"
+          },
+          "views": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ViewValidationOut"
+            },
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "statements_hash",
+          "statements"
+        ],
+        "title": "MigrationReportOut",
         "type": "object"
       },
       "NamedQueryCreate": {
@@ -1822,6 +2065,12 @@
           "description": {
             "title": "Description",
             "type": "string"
+          },
+          "form": {
+            "default": true,
+            "description": "Sale en el formulario genérico de lanzamiento",
+            "title": "Form",
+            "type": "boolean"
           },
           "name": {
             "title": "Name",
@@ -2028,6 +2277,289 @@
           "new_password"
         ],
         "title": "PasswordChange",
+        "type": "object"
+      },
+      "PlanColumnOut": {
+        "properties": {
+          "auto_increment": {
+            "default": false,
+            "title": "Auto Increment",
+            "type": "boolean"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nullable": {
+            "title": "Nullable",
+            "type": "boolean"
+          },
+          "omit": {
+            "default": false,
+            "title": "Omit",
+            "type": "boolean"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "original_name",
+          "source_type",
+          "target_type",
+          "nullable"
+        ],
+        "title": "PlanColumnOut",
+        "type": "object"
+      },
+      "PlanForeignKeyOut": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ref_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ref Columns",
+            "type": "array"
+          },
+          "ref_table": {
+            "title": "Ref Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "columns",
+          "ref_table"
+        ],
+        "title": "PlanForeignKeyOut",
+        "type": "object"
+      },
+      "PlanIndexOut": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unique": {
+            "title": "Unique",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "columns",
+          "unique"
+        ],
+        "title": "PlanIndexOut",
+        "type": "object"
+      },
+      "PlanObjectOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "original_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Name"
+          },
+          "routine_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routine Type"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PlanObjectOut",
+        "type": "object"
+      },
+      "PlanTableOut": {
+        "properties": {
+          "columns": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlanColumnOut"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "comment": {
+            "default": "",
+            "title": "Comment",
+            "type": "string"
+          },
+          "foreign_keys": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlanForeignKeyOut"
+            },
+            "title": "Foreign Keys",
+            "type": "array"
+          },
+          "indexes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlanIndexOut"
+            },
+            "title": "Indexes",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "primary_key": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Primary Key",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "original_name"
+        ],
+        "title": "PlanTableOut",
+        "type": "object"
+      },
+      "PlanWarningOut": {
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "proposals": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "INFO",
+              "WARNING",
+              "ERROR"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "source_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Type"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "target_type": {
+            "default": "",
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "category",
+          "message",
+          "severity"
+        ],
+        "title": "PlanWarningOut",
         "type": "object"
       },
       "ProbeErrorOut": {
@@ -3522,6 +4054,10 @@
       "UserOut": {
         "description": "Usuario visto por un administrador.",
         "properties": {
+          "can_apply_ddl": {
+            "title": "Can Apply Ddl",
+            "type": "boolean"
+          },
           "can_run_sql": {
             "title": "Can Run Sql",
             "type": "boolean"
@@ -3585,6 +4121,7 @@
           "role",
           "is_active",
           "can_run_sql",
+          "can_apply_ddl",
           "locked_until",
           "password_changed_at",
           "created_at",
@@ -3618,6 +4155,17 @@
       "UserUpdate": {
         "description": "Edición parcial de usuario; ``password`` restablece la contraseña y cierra sus sesiones.",
         "properties": {
+          "can_apply_ddl": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Can Apply Ddl"
+          },
           "can_run_sql": {
             "anyOf": [
               {
@@ -3789,12 +4337,52 @@
         ],
         "title": "ViewItem",
         "type": "object"
+      },
+      "ViewValidationOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "method": {
+            "default": "",
+            "title": "Method",
+            "type": "string"
+          },
+          "valid": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid"
+          },
+          "view": {
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "view"
+        ],
+        "title": "ViewValidationOut",
+        "type": "object"
       }
     }
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "0.7.0"
+    "version": "0.8.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -5364,7 +5952,7 @@
     },
     "/api/v1/operations": {
       "get": {
-        "description": "Operaciones que se pueden lanzar como ejecución (``noop`` en la Fase 3).",
+        "description": "Operaciones que se pueden lanzar como ejecución; ``form=false`` se lanzan desde otra pantalla.",
         "operationId": "list_operations_api_v1_operations_get",
         "responses": {
           "200": {
@@ -7012,6 +7600,107 @@
           }
         },
         "summary": "Progreso en vivo (SSE)",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/migration-report": {
+      "get": {
+        "description": "Conflictos, validación de vistas y sentencias aplicadas de una ``migrate_apply`` (también si falló).",
+        "operationId": "get_migration_report_api_v1_runs__run_id__migration_report_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Informe del modo seco o de la aplicación",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/plan": {
+      "get": {
+        "description": "Plan guardado por una ejecución ``migrate_plan`` correcta (tablas, avisos y sentencias).",
+        "operationId": "get_plan_api_v1_runs__run_id__plan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationPlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "413": {
+            "description": "Demasiado grande para el visor"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plan de una migración DDL",
         "tags": [
           "runs"
         ]

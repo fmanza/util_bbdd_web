@@ -77,7 +77,9 @@
       "resetPassword": "Restablecer contraseña",
       "resetPasswordHint": "Déjalo vacío para no cambiarla. Si la cambias, se cierran sus sesiones.",
       "canRunSql": "Puede ejecutar SQL libre",
-      "canRunSqlHint": "Solo consultas de lectura sobre conexiones «Solo lectura» de proyectos donde sea editor. Se audita."
+      "canRunSqlHint": "Solo consultas de lectura sobre conexiones «Solo lectura» de proyectos donde sea editor. Se audita.",
+      "canApplyDdl": "Puede aplicar DDL",
+      "canApplyDdlHint": "Permite aplicar migraciones en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada aplicación exige modo seco previo y confirmación."
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -427,7 +429,9 @@
       "log": "Log",
       "manifest": "Manifiesto",
       "other": "Otro",
-      "diff": "Diff"
+      "diff": "Diff",
+      "plan": "Plan",
+      "audit": "Auditoría"
     },
     "params": {
       "noop": {
@@ -489,6 +493,20 @@
         "markdown": "Markdown",
         "sql": "Script SQL",
         "sql_dialect": "Dialecto SQL"
+      },
+      "migrate_plan": {
+        "source_connection": "Conexión origen",
+        "source_schema": "Schema origen",
+        "target_engine": "Motor destino",
+        "view_strategy": "Vistas",
+        "number_fallback": "NUMBER sin precisión",
+        "charset": "Charset",
+        "collation": "Collation",
+        "storage_engine": "Motor de almacenamiento",
+        "int_display_width": "Ancho de INT",
+        "sql_server_collation": "Collation",
+        "pg_schema": "Schema destino",
+        "oracle_identity_mode": "Autoincrementales"
       }
     },
     "launch": {
@@ -521,7 +539,12 @@
       "layout": "Presentación",
       "graph": "Grafo",
       "scope": "Qué comparar",
-      "reports": "Informes"
+      "reports": "Informes",
+      "general": "Conversión",
+      "mysql": "Destino MariaDB/MySQL",
+      "sqlserver": "Destino SQL Server",
+      "postgresql": "Destino PostgreSQL",
+      "oracle": "Destino Oracle"
     },
     "options": {
       "both": "Ambas direcciones",
@@ -539,7 +562,14 @@
       "postgresql": "PostgreSQL",
       "sqlserver": "SQL Server",
       "oracle": "Oracle",
-      "sqlite": "SQLite"
+      "sqlite": "SQLite",
+      "transpile": "Reescribir (exige sqlglot)",
+      "passthrough": "Copiar sin cambios",
+      "DOUBLE": "DOUBLE",
+      "DECIMAL(38,10)": "DECIMAL(38,10)",
+      "DECIMAL(18,4)": "DECIMAL(18,4)",
+      "sequence_trigger": "Secuencia + trigger",
+      "identity": "IDENTITY"
     },
     "outputs": {
       "documentation": "Documentación",
@@ -555,7 +585,8 @@
       "reportTitle": "Informe HTML de la comparación",
       "sqlTitle": "El script SQL no se ha ejecutado",
       "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
-    }
+    },
+    "cancelBlocked": "Una migración en curso no se puede cancelar: dejaría el destino a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría."
   },
   "explorer": {
     "open": "Explorar",
@@ -708,6 +739,98 @@
       "object": "Objeto",
       "differentTitle": "Origen o destino distintos",
       "different": "Las dos comparaciones no tienen el mismo origen y destino: la evolución puede no tener sentido."
+    }
+  },
+  "migrate": {
+    "title": "Plan de migración",
+    "route": "{{source}} ({{schema}}) → {{target}}",
+    "stats": {
+      "tables": "Tablas",
+      "statements": "Sentencias"
+    },
+    "severity": "Severidad",
+    "allSeverities": "Todas",
+    "severities": {
+      "ERROR": "Errores",
+      "WARNING": "Avisos",
+      "INFO": "Información"
+    },
+    "object": "Objeto",
+    "category": "Categoría",
+    "message": "Mensaje",
+    "noWarnings": "Sin avisos.",
+    "tabs": {
+      "warnings": "Avisos",
+      "tables": "Tablas",
+      "statements": "Sentencias"
+    },
+    "columnsCount_one": "{{count}} columna",
+    "columnsCount_other": "{{count}} columnas",
+    "column": "Columna",
+    "sourceType": "Tipo origen",
+    "targetType": "Tipo destino",
+    "nullable": "Nulos",
+    "omitted": "omitida",
+    "statementN": "Sentencia {{n}} de {{total}}",
+    "moreStatements_one": "Y {{count}} sentencia más en el script SQL.",
+    "moreStatements_other": "Y {{count}} sentencias más en el script SQL.",
+    "blockedTitle": "El plan no se puede aplicar",
+    "blocked": "Tiene avisos de severidad ERROR. Corrige el origen o cambia las opciones y vuelve a planificar.",
+    "fk": {
+      "title": "Claves foráneas entre tipos distintos",
+      "blockingTitle": "Claves foráneas que el destino rechazará",
+      "warning": "util_bbdd ha dado tipos distintos a estas columnas y a las que referencian. El destino puede rechazar la FK al aplicar.",
+      "blocking": "MariaDB y MySQL rechazan una FK entre tipos distintos: el plan no se puede aplicar. Da precisión a esas columnas en el origen (p. ej. NUMBER(10) en Oracle) y vuelve a planificar."
+    },
+    "apply": {
+      "title": "Aplicar en una base de datos destino",
+      "noPermission": "Para aplicar migraciones necesitas el permiso «Puede aplicar DDL» (lo concede un administrador).",
+      "ownerOnly": "Solo el propietario del proyecto puede aplicar migraciones.",
+      "planBlocked": "Este plan no se puede aplicar (ver los avisos de arriba).",
+      "noTargets": "El proyecto no tiene conexiones {{engine}} que no sean de solo lectura.",
+      "target": "Conexión destino",
+      "chooseTarget": "Elige la conexión…",
+      "steps": "Primero el modo seco: comprueba que el origen no ha cambiado, que el destino no tiene ya esas tablas y valida las vistas, sin dejar cambios. Con un modo seco correcto de la última hora se puede aplicar.",
+      "dryRun": "Modo seco",
+      "open": "Aplicar…",
+      "needsDryRun": "Lanza un modo seco correcto sobre esta conexión para poder aplicar.",
+      "confirmTitle": "Aplicar la migración",
+      "notAtomicTitle": "No es atómico",
+      "notAtomic": "Las sentencias se aplican una a una en «{{alias}}». Si una falla, las anteriores quedan aplicadas y habrá que deshacerlas a mano.",
+      "understand": "Entiendo que no es atómico y he revisado el plan",
+      "typeAlias": "Escribe «{{alias}}» para confirmar",
+      "submit": "Aplicar ahora",
+      "history": "Modos secos y aplicaciones",
+      "mode": "Modo",
+      "modes": {
+        "dry_run": "Modo seco",
+        "apply": "Aplicación"
+      }
+    },
+    "report": {
+      "title": {
+        "dry_run": "Modo seco de la migración",
+        "apply": "Aplicación de la migración"
+      },
+      "plan": "Ver el plan",
+      "target": "Destino: {{target}}",
+      "pending": "El informe estará disponible al terminar.",
+      "conflictsTitle": "El destino ya tiene objetos del plan",
+      "conflicts": "Estas tablas o vistas ya existen en el destino; aplicar fallaría:",
+      "views": "Validación de vistas",
+      "view": "Vista",
+      "validation": "Validación",
+      "detail": "Detalle",
+      "valid": {
+        "true": "Válida",
+        "false": "No válida",
+        "null": "Sin validar"
+      },
+      "applied": "Sentencias aplicadas: {{applied}} de {{total}}.",
+      "failedTitle": "Falló la sentencia {{n}}",
+      "partial": "Las sentencias anteriores quedaron aplicadas en el destino.",
+      "dryOkTitle": "Modo seco correcto",
+      "dryOk": "Se puede aplicar desde el plan durante la próxima hora."
     }
   }
 }

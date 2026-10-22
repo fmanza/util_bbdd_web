@@ -26,6 +26,7 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
   const [role, setRole] = useState<Role>(user?.role ?? 'user');
   const [isActive, setIsActive] = useState(user?.is_active ?? true);
   const [canRunSql, setCanRunSql] = useState(user?.can_run_sql ?? false);
+  const [canApplyDdl, setCanApplyDdl] = useState(user?.can_apply_ddl ?? false);
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -53,6 +54,7 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
       if (role !== user.role) body.role = role;
       if (isActive !== user.is_active) body.is_active = isActive;
       if (canRunSql !== user.can_run_sql) body.can_run_sql = canRunSql;
+      if (canApplyDdl !== user.can_apply_ddl) body.can_apply_ddl = canApplyDdl;
       if (password) body.password = password;
       update.mutate({ id: user.id, body }, { onSuccess: onClose });
     } else {
@@ -112,6 +114,14 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
               description={t('admin.users.canRunSqlHint')}
               checked={canRunSql}
               onChange={(event) => setCanRunSql(event.currentTarget.checked)}
+            />
+          )}
+          {user && (
+            <Switch
+              label={t('admin.users.canApplyDdl')}
+              description={t('admin.users.canApplyDdlHint')}
+              checked={canApplyDdl}
+              onChange={(event) => setCanApplyDdl(event.currentTarget.checked)}
             />
           )}
           <PasswordInput
