@@ -3,6 +3,46 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.5.0] - 2026-10-22
+
+Fase 4 — Explorador de metadatos.
+
+### Added
+
+- **Explorador** (`/api/v1/connections/{id}/metadata/…`) para cualquier conexión visible: schemas (con los del
+  sistema marcados), árbol de tablas, vistas y rutinas desde `get_schema_metadata`, detalle de tabla (columnas, PK,
+  únicas, checks, índices, FK salientes y entrantes) y DDL con `util_bbdd.metadata.ddl`; snapshot cacheado y comprimido
+  por conexión y schema (`metadata_cache`) con refresco manual e invalidación al editar la conexión.
+- **Queries nombradas**: CRUD de administradores (`/api/v1/admin/queries`, plantillas `{param}` de util_bbdd validadas
+  como de solo lectura) y ejecución desde el explorador con `resolve_query` de util_bbdd; los parámetros solo admiten
+  identificadores o números (GAPS G18).
+- **SQL libre** (`/api/v1/projects/{id}/connections/{alias}/sql`): permiso por usuario `can_run_sql` (lo activa un
+  admin), rol editor, conexión `read_only`, guardián `sqlglot` (una única consulta de lectura, sin DML/DDL/`INTO`/
+  bloqueos/comandos en ningún nodo), transacción de solo lectura del motor (PostgreSQL, MySQL, MariaDB, Oracle,
+  SQLite; SQL Server con aviso), `ROLLBACK`, límite de filas y timeout; mensaje del motor recortado; auditoría con el
+  texto de la consulta.
+- Ejecutor genérico de tareas de util_bbdd en subproceso con timeout (`isolated.py`); la prueba de conexión lo usa.
+- **Frontend**: explorador (`/connections/:id/explore`) con árbol filtrable, detalle por pestañas y queries
+  nombradas; pestaña *SQL* del proyecto; administración de queries; interruptor del permiso en *Usuarios*.
+- **Tests**: 161 nuevos en backend (357; guardián con 147 casos), 15 de integración contra los bench (26), 8 en Vitest
+  (60) y E2E del explorador, queries y SQL libre sobre SQLite.
+- **Documentación**: guía [Explorador y SQL](docs/guides/explorador.md); usuarios de BD de solo lectura en
+  despliegue; huecos G17–G20.
+
+### Fixed
+
+- Detalle de ejecución: si el evento SSE `run` terminal llegaba antes que `end`, la fuente se cerraba y los artefactos
+  no aparecían hasta recargar (la detectó el E2E con carga).
+- E2E de la Fase 2: la entrada `host.docker.internal` de la allowlist ya no se quita al terminar (copias en paralelo).
+
+### Changed
+
+- `Me` y `UserOut` incluyen `can_run_sql`; migración `0005` con `server_default` para los usuarios existentes.
+
+### Dependencias
+
+- Python: `sqlglot` como dependencia directa (30.21.0, ya presente como transitiva de util_bbdd).
+
 ## [0.4.0] - 2026-10-22
 
 Fase 3 — Proyectos y motor de ejecuciones.

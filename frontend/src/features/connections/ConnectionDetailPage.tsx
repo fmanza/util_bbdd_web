@@ -143,16 +143,21 @@ export function ConnectionDetailPage() {
             </Badge>
           )}
         </Group>
-        {connection.editable && (
-          <Group gap="xs">
-            <Button variant="default" component={Link} to={`/connections/${connection.id}/edit`}>
-              {t('common.edit')}
-            </Button>
-            <Button color="red" variant="light" onClick={() => setConfirmDelete(true)}>
-              {t('common.delete')}
-            </Button>
-          </Group>
-        )}
+        <Group gap="xs">
+          <Button variant="light" component={Link} to={`/connections/${connection.id}/explore`}>
+            {t('explorer.open')}
+          </Button>
+          {connection.editable && (
+            <Group gap="xs">
+              <Button variant="default" component={Link} to={`/connections/${connection.id}/edit`}>
+                {t('common.edit')}
+              </Button>
+              <Button color="red" variant="light" onClick={() => setConfirmDelete(true)}>
+                {t('common.delete')}
+              </Button>
+            </Group>
+          )}
+        </Group>
       </Group>
       {connection.description && <Text>{connection.description}</Text>}
       <Card withBorder>

@@ -68,6 +68,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/queries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar queries nombradas */
+        get: operations["list_queries_api_v1_admin_queries_get"];
+        put?: never;
+        /**
+         * Crear query nombrada
+         * @description ``sql_template`` usa ``{param}`` (sintaxis de util_bbdd); debe ser una única consulta de lectura.
+         */
+        post: operations["create_query_api_v1_admin_queries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/queries/{query_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borrar query nombrada */
+        delete: operations["delete_query_api_v1_admin_queries__query_id__delete"];
+        options?: never;
+        head?: never;
+        /** Editar query nombrada */
+        patch: operations["update_query_api_v1_admin_queries__query_id__patch"];
+        trace?: never;
+    };
     "/api/v1/audit": {
         parameters: {
             query?: never;
@@ -240,6 +279,122 @@ export interface paths {
          * @description Edita nombre, descripción, parámetros, contraseña, solo lectura o visibilidad.
          */
         patch: operations["update_connection_api_v1_connections__connection_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/metadata/schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Schemas de la conexión
+         * @description Schemas visibles para el usuario de la conexión; ``system`` marca los del motor y ``cached`` los que ya tienen
+         *     snapshot.
+         */
+        get: operations["list_schemas_api_v1_connections__connection_id__metadata_schemas_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/metadata/schemas/{schema}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Árbol de un schema
+         * @description Tablas, vistas y rutinas del schema desde la caché (o leídas con ``get_schema_metadata``).
+         */
+        get: operations["get_schema_api_v1_connections__connection_id__metadata_schemas__schema__get"];
+        put?: never;
+        post?: never;
+        /** Invalidar la caché del schema */
+        delete: operations["invalidate_schema_api_v1_connections__connection_id__metadata_schemas__schema__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/metadata/schemas/{schema}/ddl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * DDL de un objeto
+         * @description ``CREATE`` de una tabla, vista o rutina (``util_bbdd.metadata.ddl``).
+         */
+        get: operations["get_ddl_api_v1_connections__connection_id__metadata_schemas__schema__ddl_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/metadata/schemas/{schema}/tables/{table}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una tabla */
+        get: operations["get_table_api_v1_connections__connection_id__metadata_schemas__schema__tables__table__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/queries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Queries nombradas del motor */
+        get: operations["list_queries_api_v1_connections__connection_id__queries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connections/{connection_id}/queries/{query_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ejecutar una query nombrada
+         * @description Resuelve la plantilla con util_bbdd, valida el SQL final y lo ejecuta en una transacción de solo lectura.
+         */
+        post: operations["run_query_api_v1_connections__connection_id__queries__query_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/connections/{connection_id}/readiness": {
@@ -430,6 +585,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/connections/{alias}/sql": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ejecutar SQL libre
+         * @description Consulta de lectura sobre una conexión ``read_only`` del proyecto, con límite de filas y timeout. Se audita.
+         */
+        post: operations["run_sql_api_v1_projects__project_id__connections__alias__sql_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/members": {
         parameters: {
             query?: never;
@@ -490,6 +665,26 @@ export interface paths {
          * @description Encola la ejecución (editores); el worker la ejecuta en un subproceso. Sigue el progreso en ``/events``.
          */
         post: operations["create_run_api_v1_projects__project_id__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/sql": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * ¿Puedo usar SQL libre en el proyecto?
+         * @description Permiso del usuario y conexiones del proyecto aptas (``read_only`` y motor con guardián).
+         */
+        get: operations["sql_capabilities_api_v1_projects__project_id__sql_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -856,6 +1051,38 @@ export interface components {
             /** Readiness */
             readiness: boolean;
         };
+        /** CheckOut */
+        CheckOut: {
+            /** Expression */
+            expression: string;
+            /** Name */
+            name: string;
+        };
+        /** ColumnOut */
+        ColumnOut: {
+            /** Comment */
+            comment?: string | null;
+            /** Data Type */
+            data_type: string;
+            /** Default */
+            default?: string | null;
+            /** Generated */
+            generated?: string | null;
+            /** Identity */
+            identity?: string | null;
+            /** Length */
+            length?: number | null;
+            /** Name */
+            name: string;
+            /** Nullable */
+            nullable: boolean;
+            /** Ordinal */
+            ordinal: number;
+            /** Precision */
+            precision?: number | null;
+            /** Scale */
+            scale?: number | null;
+        };
         /**
          * ConnectionCreate
          * @description Alta de conexión. ``password`` solo se escribe: se cifra y nunca se devuelve.
@@ -993,6 +1220,27 @@ export interface components {
             /** Csrf Token */
             csrf_token: string;
         };
+        /** DatabaseInfo */
+        DatabaseInfo: {
+            /** Charset */
+            charset?: string | null;
+            /** Collation */
+            collation?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /** DdlOut */
+        DdlOut: {
+            /** Ddl */
+            ddl: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "table" | "view" | "routine";
+            /** Name */
+            name: string;
+        };
         /**
          * DriverOut
          * @description Driver del motor y si está instalado en el servidor.
@@ -1053,6 +1301,32 @@ export interface components {
             /** Version Range */
             version_range: string;
         };
+        /** ForeignKeyOut */
+        ForeignKeyOut: {
+            /** Columns */
+            columns: string[];
+            /** Name */
+            name: string;
+            /** On Delete */
+            on_delete: string;
+            /** On Update */
+            on_update: string;
+            /** Ref Columns */
+            ref_columns: string[];
+            /** Ref Schema */
+            ref_schema: string;
+            /** Ref Table */
+            ref_table: string;
+            /** Table */
+            table: string;
+        };
+        /** FreeSqlIn */
+        FreeSqlIn: {
+            /** Limit */
+            limit?: number | null;
+            /** Sql */
+            sql: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1091,6 +1365,31 @@ export interface components {
              */
             worker: "ok" | "stale" | "absent" | "unknown";
         };
+        /** IndexOut */
+        IndexOut: {
+            /** Columns */
+            columns: string[];
+            /** Method */
+            method?: string | null;
+            /** Name */
+            name: string;
+            /** Predicate */
+            predicate?: string | null;
+            /**
+             * Primary
+             * @default false
+             */
+            primary: boolean;
+            /** Unique */
+            unique: boolean;
+        };
+        /** KeyOut */
+        KeyOut: {
+            /** Columns */
+            columns: string[];
+            /** Name */
+            name: string;
+        };
         /**
          * LoginRequest
          * @description Credenciales de inicio de sesión.
@@ -1109,6 +1408,8 @@ export interface components {
          * @description Usuario de la sesión actual.
          */
         Me: {
+            /** Can Run Sql */
+            can_run_sql: boolean;
             /** Display Name */
             display_name: string;
             /** Id */
@@ -1158,6 +1459,63 @@ export interface components {
              * @enum {string}
              */
             role: "owner" | "editor" | "viewer";
+        };
+        /** NamedQueryCreate */
+        NamedQueryCreate: {
+            /** Db Type */
+            db_type: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Name */
+            name: string;
+            /** Sql Template */
+            sql_template: string;
+        };
+        /** NamedQueryOut */
+        NamedQueryOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Db Type */
+            db_type: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Params */
+            params: string[];
+            /** Sql Template */
+            sql_template: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** NamedQueryRun */
+        NamedQueryRun: {
+            /** Limit */
+            limit?: number | null;
+            /** Params */
+            params?: {
+                [key: string]: string | number;
+            };
+        };
+        /** NamedQueryUpdate */
+        NamedQueryUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Sql Template */
+            sql_template?: string | null;
         };
         /** OperationOut */
         OperationOut: {
@@ -1329,6 +1687,22 @@ export interface components {
             name?: string | null;
         };
         /**
+         * QueryResultOut
+         * @description Resultado de una consulta: como mucho ``limit`` filas; ``truncated`` si había más.
+         */
+        QueryResultOut: {
+            /** Columns */
+            columns: string[];
+            /** Duration Ms */
+            duration_ms: number;
+            /** Row Count */
+            row_count: number;
+            /** Rows */
+            rows: (string | number | boolean | null)[][];
+            /** Truncated */
+            truncated: boolean;
+        };
+        /**
          * ReadinessFindingOut
          * @description Hallazgo de readiness.
          */
@@ -1358,6 +1732,17 @@ export interface components {
             findings: components["schemas"]["ReadinessFindingOut"][];
             /** Supported */
             supported: boolean;
+        };
+        /** RoutineItem */
+        RoutineItem: {
+            /** Name */
+            name: string;
+            /** Return Type */
+            return_type: string | null;
+            /** Routine Type */
+            routine_type: string | null;
+            /** Signature */
+            signature: string;
         };
         /** RunCreate */
         RunCreate: {
@@ -1494,6 +1879,46 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** SchemaItem */
+        SchemaItem: {
+            /** Cached */
+            cached: boolean;
+            /** Name */
+            name: string;
+            /** System */
+            system: boolean;
+        };
+        /** SchemaList */
+        SchemaList: {
+            /** Default */
+            default: string | null;
+            /** Schemas */
+            schemas: components["schemas"]["SchemaItem"][];
+        };
+        /**
+         * SchemaSummary
+         * @description Árbol de un schema leído del snapshot (cacheado).
+         */
+        SchemaSummary: {
+            database: components["schemas"]["DatabaseInfo"] | null;
+            /** Engine */
+            engine: string | null;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /** Routines */
+            routines: components["schemas"]["RoutineItem"][];
+            /** Schema Name */
+            schema_name: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Tables */
+            tables: components["schemas"]["TableItem"][];
+            /** Views */
+            views: components["schemas"]["ViewItem"][];
+        };
         /**
          * SessionOut
          * @description Sesión activa; nunca incluye el token.
@@ -1538,6 +1963,70 @@ export interface components {
             total: number;
         };
         /**
+         * SqlCapabilities
+         * @description Si el usuario puede usar SQL libre en el proyecto y con qué conexiones.
+         */
+        SqlCapabilities: {
+            /** Allowed */
+            allowed: boolean;
+            /** Connections */
+            connections: components["schemas"]["SqlConnection"][];
+            /** Reason */
+            reason: string | null;
+        };
+        /** SqlConnection */
+        SqlConnection: {
+            /** Alias */
+            alias: string;
+            /** Connection Name */
+            connection_name: string;
+            /** Db Type */
+            db_type: string;
+            /** Read Only */
+            read_only: boolean;
+            /** Read Only Transaction */
+            read_only_transaction: boolean;
+            /** Supported */
+            supported: boolean;
+        };
+        /**
+         * TableDetail
+         * @description Detalle de una tabla: columnas, claves, índices y FK salientes y entrantes.
+         */
+        TableDetail: {
+            /** Checks */
+            checks: components["schemas"]["CheckOut"][];
+            /** Columns */
+            columns: components["schemas"]["ColumnOut"][];
+            /** Comment */
+            comment: string | null;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /** Foreign Keys */
+            foreign_keys: components["schemas"]["ForeignKeyOut"][];
+            /** Indexes */
+            indexes: components["schemas"]["IndexOut"][];
+            /** Name */
+            name: string;
+            primary_key: components["schemas"]["KeyOut"] | null;
+            /** Referenced By */
+            referenced_by: components["schemas"]["ForeignKeyOut"][];
+            /** Uniques */
+            uniques: components["schemas"]["KeyOut"][];
+        };
+        /** TableItem */
+        TableItem: {
+            /** Columns */
+            columns: number;
+            /** Comment */
+            comment: string | null;
+            /** Name */
+            name: string;
+        };
+        /**
          * UserCreate
          * @description Alta de usuario.
          */
@@ -1563,6 +2052,8 @@ export interface components {
          * @description Usuario visto por un administrador.
          */
         UserOut: {
+            /** Can Run Sql */
+            can_run_sql: boolean;
             /**
              * Created At
              * Format: date-time
@@ -1609,6 +2100,8 @@ export interface components {
          * @description Edición parcial de usuario; ``password`` restablece la contraseña y cierra sus sesiones.
          */
         UserUpdate: {
+            /** Can Run Sql */
+            can_run_sql?: boolean | null;
             /** Display Name */
             display_name?: string | null;
             /** Is Active */
@@ -1630,6 +2123,15 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** ViewItem */
+        ViewItem: {
+            /** Comment */
+            comment: string | null;
+            /** Materialized */
+            materialized: boolean;
+            /** Name */
+            name: string;
         };
     };
     responses: never;
@@ -1793,6 +2295,221 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    list_queries_api_v1_admin_queries_get: {
+        parameters: {
+            query?: {
+                db_type?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedQueryOut"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_query_api_v1_admin_queries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NamedQueryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedQueryOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Motor no soportado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nombre repetido */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plantilla no válida o no es de solo lectura */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_query_api_v1_admin_queries__query_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                query_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_query_api_v1_admin_queries__query_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                query_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NamedQueryUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedQueryOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nombre repetido */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plantilla no válida */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2273,6 +2990,438 @@ export interface operations {
             };
             /** @description Parámetros no válidos para el motor */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_schemas_api_v1_connections__connection_id__metadata_schemas_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchemaList"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Demasiadas consultas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo consultar la BD (código saneado) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La BD no respondió a tiempo */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_schema_api_v1_connections__connection_id__metadata_schemas__schema__get: {
+        parameters: {
+            query?: {
+                /** @description Vuelve a leer el catálogo aunque haya caché */
+                refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                connection_id: number;
+                schema: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchemaSummary"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Demasiadas consultas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo consultar la BD (código saneado) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La BD no respondió a tiempo */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    invalidate_schema_api_v1_connections__connection_id__metadata_schemas__schema__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+                schema: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ddl_api_v1_connections__connection_id__metadata_schemas__schema__ddl_get: {
+        parameters: {
+            query: {
+                kind: "table" | "view" | "routine";
+                name: string;
+            };
+            header?: never;
+            path: {
+                connection_id: number;
+                schema: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DdlOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Demasiadas consultas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo consultar la BD (código saneado) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La BD no respondió a tiempo */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_table_api_v1_connections__connection_id__metadata_schemas__schema__tables__table__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+                schema: string;
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Demasiadas consultas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo consultar la BD (código saneado) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La BD no respondió a tiempo */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_queries_api_v1_connections__connection_id__queries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamedQueryOut"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_query_api_v1_connections__connection_id__queries__query_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connection_id: number;
+                query_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NamedQueryRun"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryResultOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parámetros no válidos o SQL no admitido */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiadas consultas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo consultar la BD (código saneado) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La BD no respondió a tiempo */
+            504: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2894,6 +4043,89 @@ export interface operations {
             };
         };
     };
+    run_sql_api_v1_projects__project_id__connections__alias__sql_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+                alias: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FreeSqlIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryResultOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin permiso de SQL libre, no eres editor o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conexión no visible u objeto inexistente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La conexión no es de solo lectura */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No es una única consulta de lectura, o el motor la rechaza */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiadas consultas en curso */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se pudo consultar la BD (código saneado) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description La BD no respondió a tiempo */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_members_api_v1_projects__project_id__members_get: {
         parameters: {
             query?: never;
@@ -3242,6 +4474,51 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    sql_capabilities_api_v1_projects__project_id__sql_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SqlCapabilities"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No eres miembro */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

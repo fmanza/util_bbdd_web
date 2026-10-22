@@ -11,6 +11,7 @@ const ANA = {
   display_name: 'Ana',
   role: 'user',
   is_active: true,
+  can_run_sql: false,
   locked_until: null,
   password_changed_at: '2026-10-20T08:00:00Z',
   created_at: '2026-10-20T08:00:00Z',

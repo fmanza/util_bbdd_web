@@ -22,6 +22,13 @@ Para automatizarlo, `--password-stdin` lee la contraseña de la entrada estánda
 ' "$PASS" | docker compose exec -T web python -m app.cli create-admin --username admin --password-stdin`).
 El resto de usuarios se gestiona desde **Administración → Usuarios** ([guía](usuarios_y_sesiones.md)).
 
+### Usuarios de BD para las conexiones
+
+El explorador y el SQL libre solo leen, y el SQL libre se ejecuta en una transacción de solo lectura, pero la
+protección más fuerte es que las conexiones usen un **usuario de BD con solo permisos de lectura** (`SELECT` y acceso
+al catálogo). Es imprescindible en **SQL Server**, que no tiene transacciones de solo lectura. Reserva los usuarios con
+escritura para las conexiones sin «Solo lectura» de las fases de migración, volcado y carga.
+
 ### Destinos y ficheros de las conexiones
 
 - **Allowlist**: ninguna conexión de red funciona hasta que un admin añade sus destinos en *Administración →

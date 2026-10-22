@@ -4,6 +4,7 @@ Fase 1: identidad (``users``, ``sessions``, ``audit_log``).
 Fase 2: conexiones (``connections``) y allowlist de destinos (``allowlist_entries``).
 Fase 3: proyectos (``projects``, ``project_members``, ``project_connections``), ejecuciones (``runs``,
 ``artifacts``) y latido del worker (``workers``).
+Fase 4: caché de metadatos (``metadata_cache``), queries nombradas (``named_queries``) y ``users.can_run_sql``.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     TypeDecorator,
@@ -71,6 +73,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(16))
     is_active: Mapped[bool] = mapped_column(default=True)
+    can_run_sql: Mapped[bool] = mapped_column(default=False)
     failed_attempts: Mapped[int] = mapped_column(default=0)
     locked_until: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
     password_changed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
@@ -288,3 +291,36 @@ class Worker(Base):
     hostname: Mapped[str] = mapped_column(String(255))
     started_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     heartbeat_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
+class MetadataCache(Base):
+    """Snapshot de metadatos de un schema de una conexión (JSON comprimido con zlib); se invalida a mano o al editar
+    la conexión."""
+
+    __tablename__ = "metadata_cache"
+
+    connection_id: Mapped[int] = mapped_column(ForeignKey("connections.id", ondelete="CASCADE"), primary_key=True)
+    schema: Mapped[str] = mapped_column(String(128), primary_key=True)
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    size_bytes: Mapped[int] = mapped_column(default=0)
+    payload: Mapped[bytes] = mapped_column(LargeBinary)
+
+
+class NamedQuery(Base):
+    """Query nombrada de solo lectura para un motor (la gestionan los admins).
+
+    ``sql_template`` usa ``{param}`` como util_bbdd (``str.format``); al ejecutar, cada parámetro debe tener forma de
+    identificador o número y el SQL final pasa por el guardián de solo lectura.
+    """
+
+    __tablename__ = "named_queries"
+    __table_args__ = (UniqueConstraint("db_type", "name", name="uq_named_queries_db_type_name"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    db_type: Mapped[str] = mapped_column(String(32))
+    name: Mapped[str] = mapped_column(String(64))
+    description: Mapped[str] = mapped_column(String(500), default="")
+    sql_template: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)

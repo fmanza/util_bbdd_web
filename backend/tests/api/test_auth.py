@@ -30,7 +30,13 @@ def test_login_sets_session_and_csrf_cookies_with_flags(client: TestClient, user
     )
 
     assert response.status_code == 200
-    assert response.json() == {"id": user.id, "username": "ana", "display_name": "Ana", "role": "user"}
+    assert response.json() == {
+        "id": user.id,
+        "username": "ana",
+        "display_name": "Ana",
+        "role": "user",
+        "can_run_sql": False,
+    }
     cookies = response.headers.get_list("set-cookie")
     session_cookie = next(c for c in cookies if c.startswith("ubw_session=")).lower()
     csrf_cookie = next(c for c in cookies if c.startswith("ubw_csrf=")).lower()

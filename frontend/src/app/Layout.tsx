@@ -13,7 +13,7 @@ const SECTIONS: { key: string; to: string }[] = [
   { key: 'engines', to: '/engines' },
 ];
 
-const ADMIN_SECTIONS = ['users', 'sessions', 'allowlist', 'audit'] as const;
+const ADMIN_SECTIONS = ['users', 'sessions', 'allowlist', 'queries', 'audit'] as const;
 
 export function Layout() {
   const { t } = useTranslation();

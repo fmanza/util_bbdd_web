@@ -38,6 +38,9 @@ class Settings(BaseSettings):
         user_quota_mb: Espacio de workspace por usuario (MB) de sus ejecuciones; ``0`` sin límite.
         run_retention_days: Se purgan las ejecuciones terminadas más antiguas; ``0`` desactiva.
         run_retention_per_project: Se conservan las N ejecuciones más recientes de cada proyecto; ``0`` desactiva.
+        metadata_timeout_seconds: Tiempo máximo de lectura de schemas, snapshot o DDL (se mata el subproceso).
+        query_timeout_seconds: Tiempo máximo de una query nombrada o de SQL libre.
+        query_max_rows: Filas máximas que devuelve una query (el usuario puede pedir menos).
     """
 
     model_config = SettingsConfigDict(env_prefix="UBW_", secrets_dir=None, extra="ignore")
@@ -63,6 +66,9 @@ class Settings(BaseSettings):
     user_quota_mb: int = Field(default=1024, ge=0)
     run_retention_days: int = Field(default=30, ge=0)
     run_retention_per_project: int = Field(default=100, ge=0)
+    metadata_timeout_seconds: float = Field(default=120.0, gt=0, le=1800)
+    query_timeout_seconds: float = Field(default=30.0, gt=0, le=600)
+    query_max_rows: int = Field(default=1000, ge=1, le=10_000)
 
     @property
     def cookie_secure(self) -> bool:

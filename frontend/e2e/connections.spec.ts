@@ -80,11 +80,13 @@ test('prueba y readiness reales contra el bench PostgreSQL', async ({ page }) =>
   test.skip(!BENCH_PASSWORD, 'Define UTIL_BBDD_BENCH_PASSWORD');
   const name = `e2e-bench-${Date.now()}`;
   await login(page);
+  // Idempotente y sin limpieza: otra copia del test (--repeat-each, workers en paralelo) puede estar usando la misma
+  // entrada; quitarla al final rompería a la otra. En el volumen de desarrollo queda permitida.
   await page.goto('/admin/allowlist');
-  const alreadyAllowed = await page.getByText('host.docker.internal', { exact: true }).count();
-  if (!alreadyAllowed) {
+  if (!(await page.getByText('host.docker.internal', { exact: true }).count())) {
     await page.getByRole('textbox', { name: /^Destino/ }).fill('host.docker.internal');
     await page.getByRole('button', { name: 'Añadir destino' }).click();
+    await page.reload(); // tolera el 409 si otra copia la ha creado a la vez
     await expect(page.getByText('host.docker.internal', { exact: true })).toBeVisible();
   }
 
@@ -96,9 +98,4 @@ test('prueba y readiness reales contra el bench PostgreSQL', async ({ page }) =>
   await expect(page.getByRole('columnheader', { name: 'Recomendación' })).toBeVisible({ timeout: 30_000 });
 
   await deleteCurrentConnection(page, name);
-  if (!alreadyAllowed) {
-    await page.goto('/admin/allowlist');
-    await page.getByRole('button', { name: 'Quitar host.docker.internal' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Quitar' }).click();
-  }
 });

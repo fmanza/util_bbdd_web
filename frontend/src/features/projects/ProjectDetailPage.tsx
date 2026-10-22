@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { SqlConsole } from '../explorer/SqlConsole';
 import { ConnectionsTab, MembersTab, RunsTab, SettingsTab } from './ProjectTabs';
 import { canRole, useProject } from './useProjects';
 
-const TABS = ['runs', 'connections', 'members', 'settings'] as const;
+const TABS = ['runs', 'connections', 'members', 'sql', 'settings'] as const;
 type Tab = (typeof TABS)[number];
 
 export function ProjectDetailPage() {
@@ -27,9 +28,15 @@ export function ProjectDetailPage() {
   }
 
   const owner = canRole(project.my_role, 'owner');
+  const editor = canRole(project.my_role, 'editor');
   const requested = searchParams.get('tab') as Tab | null;
   const tab: Tab =
-    requested && TABS.includes(requested) && (requested !== 'settings' || owner) ? requested : 'runs';
+    requested &&
+    TABS.includes(requested) &&
+    (requested !== 'settings' || owner) &&
+    (requested !== 'sql' || editor)
+      ? requested
+      : 'runs';
 
   return (
     <Stack>
@@ -48,6 +55,7 @@ export function ProjectDetailPage() {
           <Tabs.Tab value="runs">{t('projects.tabs.runs')}</Tabs.Tab>
           <Tabs.Tab value="connections">{t('projects.tabs.connections')}</Tabs.Tab>
           <Tabs.Tab value="members">{t('projects.tabs.members')}</Tabs.Tab>
+          {editor && <Tabs.Tab value="sql">{t('projects.tabs.sql')}</Tabs.Tab>}
           {owner && <Tabs.Tab value="settings">{t('projects.tabs.settings')}</Tabs.Tab>}
         </Tabs.List>
         <Tabs.Panel value="runs" pt="md">
@@ -59,6 +67,11 @@ export function ProjectDetailPage() {
         <Tabs.Panel value="members" pt="md">
           <MembersTab project={project} />
         </Tabs.Panel>
+        {editor && (
+          <Tabs.Panel value="sql" pt="md">
+            <SqlConsole projectId={project.id} />
+          </Tabs.Panel>
+        )}
         {owner && (
           <Tabs.Panel value="settings" pt="md">
             <SettingsTab project={project} />

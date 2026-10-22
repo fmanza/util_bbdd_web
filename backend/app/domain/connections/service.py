@@ -11,15 +11,17 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Final, Literal
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.db.models import Connection, User, Visibility, utcnow
+from app.db.models import Connection, MetadataCache, User, Visibility, utcnow
 from app.domain.connections import allowlist
 from app.domain.connections.crypto import SecretDecryptError, secret_box
 from app.domain.connections.errors import (
@@ -246,6 +248,7 @@ def update_connection(
             connection.secret_enc = _encrypt_password(data.password, settings)
             changed.append("password")
         connection.last_test_at = connection.last_test_ok = connection.last_test_error = None
+        db.execute(delete(MetadataCache).where(MetadataCache.connection_id == connection.id))
     if data.read_only is not None and data.read_only != connection.read_only:
         connection.read_only = data.read_only
         changed.append("read_only")
@@ -338,9 +341,19 @@ def prepare_connection(db: Session, connection: Connection, settings: Settings) 
     return PreparedConnection(with_timeouts(engine.db_type, conn_params), None)
 
 
-def _with_probe_slot() -> None:
+@contextmanager
+def probe_slot() -> Iterator[None]:
+    """Reserva uno de los ``MAX_CONCURRENT_PROBES`` subprocesos interactivos (pruebas, metadatos y SQL).
+
+    Raises:
+        TooManyTestsError: Están todos ocupados (429).
+    """
     if not _PROBES.acquire(blocking=False):
         raise TooManyTestsError()
+    try:
+        yield
+    finally:
+        _PROBES.release()
 
 
 def run_test(
@@ -357,13 +370,10 @@ def run_test(
     if prepared.conn_params is None:
         outcome = CheckOutcome(False, 0, None, prepared.error_code, utcnow())
     else:
-        _with_probe_slot()
-        try:
+        with probe_slot():
             result = probe.check_connection(
                 connection.db_type, prepared.conn_params, timeout=settings.connection_test_timeout
             )
-        finally:
-            _PROBES.release()
         if result.error is not None:
             logger.info(
                 "Prueba de conexión fallida",
@@ -406,13 +416,10 @@ def readiness(
     if prepared.conn_params is None:
         outcome = ReadinessOutcome(None, prepared.error_code)
     else:
-        _with_probe_slot()
-        try:
+        with probe_slot():
             report = probe.engine_readiness(
                 connection.db_type, prepared.conn_params, timeout=settings.connection_test_timeout
             )
-        finally:
-            _PROBES.release()
         secret_params = {spec.name for spec in get_engine(connection.db_type).params if spec.kind == "secret"}
         report = replace(
             report,

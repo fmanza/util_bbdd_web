@@ -42,6 +42,11 @@ class AuditAction:
     RUN_CREATE: Final = "run.create"
     RUN_CANCEL: Final = "run.cancel"
     RUN_PURGE: Final = "run.purge"
+    SQL_EXECUTE: Final = "sql.execute"
+    QUERY_EXECUTE: Final = "query.execute"
+    QUERY_CREATE: Final = "query.create"
+    QUERY_UPDATE: Final = "query.update"
+    QUERY_DELETE: Final = "query.delete"
 
 
 @dataclass(frozen=True)

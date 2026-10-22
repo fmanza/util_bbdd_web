@@ -12,7 +12,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 1 | Identidad y multiusuario | 0.2.0 | ✅ Cerrada (2026-10-20) |
 | 2 | Catálogo de motores y conexiones | 0.3.0 | ✅ Cerrada (2026-10-20) |
 | 3 | Proyectos y motor de ejecuciones | 0.4.0 | ✅ Cerrada (2026-10-22) |
-| 4 | Explorador de metadatos | 0.5.0 | Pendiente |
+| 4 | Explorador de metadatos | 0.5.0 | ✅ Cerrada (2026-10-22) |
 | 5 | Documentación y grafos | 0.6.0 | Pendiente |
 | 6 | Comparación de esquemas | 0.7.0 | Pendiente |
 | 7 | Migración DDL | 0.8.0 | Pendiente |
@@ -85,7 +85,7 @@ Job de prueba `noop` para validar el motor antes de las operaciones reales.
 **Frontend**: lista y detalle de proyecto, miembros, conexiones del proyecto, historial de ejecuciones, detalle de
 ejecución con progreso en vivo (`aria-live`), navegador de artefactos con vistas previas en `iframe sandbox`.
 
-## Fase 4 — Explorador de metadatos
+## Fase 4 — Explorador de metadatos ✅
 
 **util_bbdd**: `get_schema_metadata(schema, *, kinds, tables) -> SchemaSnapshot`, `metadata_source`,
 `metadata/ddl.py`, `get_available_queries()`, `execute_query_many/one()`, `execute_custom_many/one()`.

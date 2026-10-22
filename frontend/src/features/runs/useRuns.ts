@@ -111,16 +111,25 @@ export function useLiveRun(id: string) {
     const source = new EventSource(`/api/v1/runs/${encodeURIComponent(id)}/events`, {
       withCredentials: true,
     });
+    const reload = () => {
+      void queryClient.invalidateQueries({ queryKey: runKey(id) });
+      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+    };
     source.addEventListener('run', (event: MessageEvent<string>) => {
       const snapshot = JSON.parse(event.data) as Run;
       queryClient.setQueryData<RunDetail>(runKey(id), (previous) =>
         previous ? { ...previous, ...snapshot } : previous,
       );
+      // Al pasar a terminal, el efecto se desmonta y cierra la fuente antes de que llegue `end`: se recarga ya el
+      // detalle (artefactos) en lugar de depender de ese evento.
+      if (!isActive(snapshot.status)) {
+        source.close();
+        reload();
+      }
     });
     source.addEventListener('end', () => {
       source.close();
-      void queryClient.invalidateQueries({ queryKey: runKey(id) });
-      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      reload();
     });
     source.onerror = () => {
       source.close();

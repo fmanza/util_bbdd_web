@@ -32,7 +32,8 @@
     "users": "Usuarios",
     "sessions": "Sesiones",
     "audit": "Auditoría",
-    "allowlist": "Destinos permitidos"
+    "allowlist": "Destinos permitidos",
+    "queries": "Queries nombradas"
   },
   "auth": {
     "loginIntro": "Inicia sesión con tu usuario.",
@@ -74,7 +75,9 @@
       "locked": "Bloqueado",
       "usernameRule": "De 3 a 64 caracteres: letras, números, punto, guion o guion bajo",
       "resetPassword": "Restablecer contraseña",
-      "resetPasswordHint": "Déjalo vacío para no cambiarla. Si la cambias, se cierran sus sesiones."
+      "resetPasswordHint": "Déjalo vacío para no cambiarla. Si la cambias, se cierran sus sesiones.",
+      "canRunSql": "Puede ejecutar SQL libre",
+      "canRunSqlHint": "Solo consultas de lectura sobre conexiones «Solo lectura» de proyectos donde sea editor. Se audita."
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -103,7 +106,9 @@
         "connection": "Conexiones",
         "allowlist": "Destinos",
         "project": "Proyectos",
-        "run": "Ejecuciones"
+        "run": "Ejecuciones",
+        "sql": "SQL",
+        "query": "Queries"
       },
       "empty": "No hay eventos.",
       "ts": "Fecha",
@@ -159,6 +164,15 @@
           "create": "Ejecución lanzada",
           "cancel": "Ejecución cancelada",
           "purge": "Ejecución purgada"
+        },
+        "sql": {
+          "execute": "SQL libre"
+        },
+        "query": {
+          "execute": "Query ejecutada",
+          "create": "Query creada",
+          "update": "Query editada",
+          "delete": "Query borrada"
         }
       }
     },
@@ -175,6 +189,23 @@
       "removeLabel": "Quitar {{pattern}}",
       "removeTitle": "Quitar destino",
       "removeBody": "Las conexiones a «{{pattern}}» dejarán de poder usarse."
+    },
+    "queries": {
+      "title": "Queries nombradas",
+      "new": "Nueva query",
+      "createTitle": "Nueva query nombrada",
+      "editTitle": "Editar query",
+      "intro": "Consultas de solo lectura por motor que cualquier usuario puede ejecutar desde el explorador de una conexión. Los parámetros se escriben {así} y solo admiten identificadores o números.",
+      "empty": "No hay queries nombradas.",
+      "name": "Nombre",
+      "nameHint": "Letras, números, punto, guion y guion bajo",
+      "template": "Plantilla SQL",
+      "templateHint": "Una única consulta SELECT; parámetros con {nombre} (sintaxis de util_bbdd)",
+      "params": "Parámetros",
+      "editLabel": "Editar {{name}}",
+      "deleteLabel": "Borrar {{name}}",
+      "deleteTitle": "Borrar query",
+      "deleteBody": "Se borrará la query «{{name}}» de {{engine}}."
     }
   },
   "home": {
@@ -322,7 +353,8 @@
       "runs": "Ejecuciones",
       "connections": "Conexiones",
       "members": "Miembros",
-      "settings": "Ajustes"
+      "settings": "Ajustes",
+      "sql": "SQL"
     },
     "connectionsIntro": "Las ejecuciones usan las conexiones por su alias. Los miembros las usan sin ver nunca la contraseña.",
     "connection": "Conexión",
@@ -419,6 +451,81 @@
       "previewOf": "Vista previa de {{path}}",
       "download": "Descargar",
       "downloadLabel": "Descargar {{path}}"
+    }
+  },
+  "explorer": {
+    "open": "Explorar",
+    "title": "Explorador · {{name}}",
+    "backToConnection": "Volver a la conexión",
+    "tabs": {
+      "metadata": "Metadatos",
+      "queries": "Queries nombradas",
+      "columns": "Columnas ({{count}})",
+      "keys": "Claves",
+      "indexes": "Índices",
+      "relations": "Relaciones ({{count}})"
+    },
+    "schema": "Schema",
+    "system": "sistema",
+    "showSystem": "Mostrar schemas del sistema",
+    "filter": "Filtrar objetos",
+    "fetchedAt": "Leído: {{date}}",
+    "refresh": "Refrescar",
+    "objects": "Objetos del schema",
+    "groups": {
+      "table": "Tablas ({{count}})",
+      "view": "Vistas ({{count}})",
+      "routine": "Rutinas ({{count}})"
+    },
+    "kinds": {
+      "table": "tabla",
+      "view": "vista",
+      "routine": "rutina"
+    },
+    "chooseObject": "Elige una tabla, vista o rutina.",
+    "noDdl": "El motor no devuelve el DDL de este objeto (permisos o tipo no soportado).",
+    "column": "Columna",
+    "type": "Tipo",
+    "nullable": "Nulos",
+    "default": "Por defecto",
+    "comment": "Comentario",
+    "identity": "identidad",
+    "keyType": "Tipo",
+    "name": "Nombre",
+    "definition": "Definición",
+    "noKeys": "Sin claves ni checks.",
+    "columns": "Columnas",
+    "unique": "Único",
+    "noIndexes": "Sin índices.",
+    "direction": "Sentido",
+    "table": "Tabla",
+    "references": "Referencia a",
+    "referencedBy": "Referenciada por",
+    "noRelations": "Sin claves foráneas.",
+    "limit": "Máx. filas",
+    "run": "Ejecutar",
+    "queries": {
+      "empty": "No hay queries nombradas para este motor. Un administrador puede crearlas.",
+      "query": "Query",
+      "paramsHint": "Los parámetros solo admiten identificadores (letras, números, _ $ #) o números."
+    },
+    "result": {
+      "rows_one": "{{count}} fila · {{ms}} ms",
+      "rows_other": "{{count}} filas · {{ms}} ms",
+      "truncated": "Resultado recortado a {{count}} filas: hay más. Ajusta la consulta o el límite.",
+      "noColumns": "La consulta no devuelve columnas."
+    },
+    "sql": {
+      "intro": "Consultas de lectura (SELECT, WITH, UNION) sobre conexiones «Solo lectura» del proyecto. Se registran en la auditoría.",
+      "connection": "Conexión",
+      "query": "Consulta",
+      "hint": "Una única sentencia. Ctrl+Enter para ejecutar.",
+      "noConnections": "El proyecto no tiene conexiones de solo lectura compatibles con SQL libre.",
+      "noReadOnlyTransaction": "{{engine}} no tiene transacción de solo lectura: la protección depende del análisis de la consulta. Usa un usuario de BD con solo permisos SELECT.",
+      "denied": {
+        "permission": "Necesitas el permiso «Puede ejecutar SQL libre»; pídeselo a un administrador.",
+        "role": "Solo los editores y propietarios del proyecto pueden ejecutar SQL."
+      }
     }
   }
 }

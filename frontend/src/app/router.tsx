@@ -73,6 +73,12 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: 'connections/:connectionId/explore',
+            lazy: async () => ({
+              Component: (await import('../features/explorer/ExplorerPage')).ExplorerPage,
+            }),
+          },
+          {
             path: 'connections/:connectionId/edit',
             lazy: async () => ({
               Component: (await import('../features/connections/ConnectionFormPage')).EditConnectionPage,
@@ -96,6 +102,12 @@ export const routes: RouteObject[] = [
                 path: 'allowlist',
                 lazy: async () => ({
                   Component: (await import('../features/admin/AllowlistPage')).AllowlistPage,
+                }),
+              },
+              {
+                path: 'queries',
+                lazy: async () => ({
+                  Component: (await import('../features/admin/QueriesPage')).QueriesPage,
                 }),
               },
               {

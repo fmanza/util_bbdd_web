@@ -85,6 +85,7 @@ def update_user(
         display_name=body.display_name,
         role=body.role,
         is_active=body.is_active,
+        can_run_sql=body.can_run_sql,
         password=body.password.get_secret_value() if body.password is not None else None,
     )
     return UserOut.model_validate(users.update_user(db, user, changes, actor=admin, settings=settings, ctx=ctx))

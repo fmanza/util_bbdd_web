@@ -51,6 +51,7 @@ class Me(_Out):
     username: str
     display_name: str
     role: Role
+    can_run_sql: bool
 
 
 # --- users ------------------------------------------------------------------------------------------------------
@@ -64,6 +65,7 @@ class UserOut(_Out):
     display_name: str
     role: Role
     is_active: bool
+    can_run_sql: bool
     locked_until: datetime | None
     password_changed_at: datetime
     created_at: datetime
@@ -85,6 +87,7 @@ class UserUpdate(BaseModel):
     display_name: DisplayName | None = None
     role: Role | None = None
     is_active: bool | None = None
+    can_run_sql: bool | None = None
     password: Password | None = None
 
 

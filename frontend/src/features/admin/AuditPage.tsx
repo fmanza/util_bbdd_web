@@ -27,6 +27,8 @@ const ACTION_FILTERS = [
   { value: 'allowlist.', key: 'allowlist' },
   { value: 'project.', key: 'project' },
   { value: 'run.', key: 'run' },
+  { value: 'sql.', key: 'sql' },
+  { value: 'query.', key: 'query' },
 ] as const;
 
 export function AuditPage() {

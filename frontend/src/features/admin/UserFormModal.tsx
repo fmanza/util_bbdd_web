@@ -25,6 +25,7 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
   const [role, setRole] = useState<Role>(user?.role ?? 'user');
   const [isActive, setIsActive] = useState(user?.is_active ?? true);
+  const [canRunSql, setCanRunSql] = useState(user?.can_run_sql ?? false);
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -51,6 +52,7 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
       if (displayName.trim() !== user.display_name) body.display_name = displayName.trim();
       if (role !== user.role) body.role = role;
       if (isActive !== user.is_active) body.is_active = isActive;
+      if (canRunSql !== user.can_run_sql) body.can_run_sql = canRunSql;
       if (password) body.password = password;
       update.mutate({ id: user.id, body }, { onSuccess: onClose });
     } else {
@@ -102,6 +104,14 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
               description={t('admin.users.activeHint')}
               checked={isActive}
               onChange={(event) => setIsActive(event.currentTarget.checked)}
+            />
+          )}
+          {user && (
+            <Switch
+              label={t('admin.users.canRunSql')}
+              description={t('admin.users.canRunSqlHint')}
+              checked={canRunSql}
+              onChange={(event) => setCanRunSql(event.currentTarget.checked)}
             />
           )}
           <PasswordInput

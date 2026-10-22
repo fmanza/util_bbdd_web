@@ -34,6 +34,7 @@ class UserChanges:
     role: Role | None = None
     is_active: bool | None = None
     password: str | None = None
+    can_run_sql: bool | None = None
 
 
 def get_user(db: Session, user_id: int) -> User:
@@ -138,6 +139,9 @@ def update_user(
     if changes.role is not None and changes.role != user.role:
         user.role = changes.role
         changed.append("role")
+    if changes.can_run_sql is not None and changes.can_run_sql != user.can_run_sql:
+        user.can_run_sql = changes.can_run_sql
+        changed.append("can_run_sql")
     if changes.password is not None:
         check_policy(changes.password, username=user.username, min_length=settings.password_min_length)
         user.password_hash = hash_password(changes.password)
@@ -176,7 +180,11 @@ def update_user(
             actor_id=actor.id,
             target_type="user",
             target_id=user.id,
-            details={"fields": changed, **({"role": user.role} if "role" in changed else {})},
+            details={
+                "fields": changed,
+                **({"role": user.role} if "role" in changed else {}),
+                **({"can_run_sql": user.can_run_sql} if "can_run_sql" in changed else {}),
+            },
         )
     db.commit()
     return user

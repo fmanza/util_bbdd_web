@@ -28,6 +28,13 @@
 | Lanzar ejecución → 409 «Cuota de almacenamiento superada» | El usuario supera `UBW_USER_QUOTA_MB` | Purgar ejecuciones antiguas o subir la cuota |
 | Lanzar ejecución → 429 | Más de `UBW_MAX_QUEUED_PER_USER` en cola o en curso | Esperar o cancelar alguna |
 | El progreso no se actualiza en vivo | Un proxy almacena la respuesta SSE | `proxy_buffering off` en nginx (ver despliegue); la UI cae a sondeo cada 2 s |
+| Explorador: 502 «No se pudo consultar la base de datos» | Conexión no permitida, caída o credenciales | El código (`not_allowed`, `connection_failed`…) indica la causa; prueba la conexión |
+| Explorador: el schema tarda en abrirse | Primera lectura de un schema grande | Espera (hasta `UBW_METADATA_TIMEOUT_SECONDS`); después va desde la caché |
+| Una tabla nueva no aparece | El árbol viene de la caché | **Refrescar** |
+| SQL libre: 403 | Sin permiso «Puede ejecutar SQL libre» o sin rol editor | Un admin activa el permiso en *Usuarios* |
+| SQL libre: 409 | La conexión no es «Solo lectura» | Marca la conexión como solo lectura |
+| SQL libre: 422 «Solo se admiten consultas SELECT» | La consulta escribe o tiene varias sentencias | Una única consulta de lectura |
+| Oracle: ORA-01466 en SQL libre | Tabla creada hace unos segundos (transacción de solo lectura) | Reintentar pasados unos segundos |
 | `/api/docs` da 404 | Desactivado en producción | `UBW_ENVIRONMENT=development` (compose dev) |
 | Aviso `StarletteDeprecationWarning … httpx2` en pytest | Starlette 1.x depreca `httpx` en `TestClient` | Informativo; seguimiento en la deuda técnica |
 

@@ -80,6 +80,23 @@ describe('RunDetailPage', () => {
     expect(await screen.findByText('SELECT 1 AS ok;')).toBeInTheDocument();
   });
 
+  it('un evento run terminal recarga los artefactos aunque no llegue end', async () => {
+    const EventSourceMock = stubEventSource();
+    let finished = false;
+    stubApi({
+      ...session(ADMIN),
+      [`GET /api/v1/runs/${RUN_ID}`]: () => ({ body: finished ? FINISHED : RUN_DETAIL }),
+    });
+
+    renderRoute(`/runs/${RUN_ID}`);
+    await screen.findByText('Paso 1 de 2');
+    finished = true;
+    EventSourceMock.instances.at(-1)?.emit('run', { ...FINISHED, artifacts: undefined });
+
+    expect(await screen.findByTitle('Vista previa de outputs/html/resumen.html')).toBeInTheDocument();
+    expect(EventSourceMock.instances.at(-1)?.closed).toBe(true);
+  });
+
   it('cancela una ejecución en curso', async () => {
     stubEventSource();
     const fetchMock = stubApi({

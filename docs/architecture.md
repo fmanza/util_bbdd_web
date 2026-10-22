@@ -41,8 +41,8 @@ flowchart TB
 | `core/` | Ajustes `UBW_*` y Docker secrets, logging JSON, errores RFC 9457, tokens de sesión y CSRF | 0 → 1 |
 | `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic | 0 → |
 | `api/` | `/api/health`; `api/v1/` con los routers de negocio | 0 → |
-| `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py` (fichas, matriz, clasificación de parámetros) y `probe.py` (prueba y readiness en subproceso) | 0 → 2 |
-| `domain/` | `identity/` (usuarios, contraseñas, sesiones, auditoría), `engines/`, `connections/` (cifrado, allowlist, parámetros, servicio), proyectos, ejecuciones | 1 → 3 |
+| `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py`, `isolated.py` (subproceso con timeout), `probe.py`, `metadata.py` (schemas, snapshot, DDL), `sql.py` (guardián `sqlglot`, solo lectura, queries nombradas), `audit_sink.py` | 0 → 4 |
+| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/` y `explorer/` (caché de metadatos, queries nombradas, SQL libre) | 1 → 4 |
 | `cli.py` | `create-admin` (primer administrador) y `rotate-secrets` (rotación Fernet) | 1 → 2 |
 | `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y operaciones (`noop`) | 0 → 3 |
 | `workspace/` | Carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
@@ -83,6 +83,9 @@ src/
 | `UBW_USER_QUOTA_MB` | `1024` | Espacio de workspace por usuario (`0` sin límite) |
 | `UBW_RUN_RETENTION_DAYS` | `30` | Purga de ejecuciones terminadas más antiguas (`0` desactiva) |
 | `UBW_RUN_RETENTION_PER_PROJECT` | `100` | Ejecuciones conservadas por proyecto (`0` desactiva) |
+| `UBW_METADATA_TIMEOUT_SECONDS` | `120` | Lectura de schemas, snapshot o DDL |
+| `UBW_QUERY_TIMEOUT_SECONDS` | `30` | Queries nombradas y SQL libre |
+| `UBW_QUERY_MAX_ROWS` | `1000` | Filas máximas de una consulta (máx. 10 000) |
 | Secret `ubw_fernet_keys` | — | Cifrado de conexiones (ADR-004); **obligatorio** en producción |
 
 Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·

@@ -9,8 +9,20 @@ export interface StubResponse {
 
 type Handler = StubResponse | ((request: Request) => StubResponse | Promise<StubResponse>);
 
-export const ADMIN = { id: 1, username: 'admin', display_name: 'Admin', role: 'admin' } as const;
-export const USER = { id: 2, username: 'ana', display_name: 'Ana', role: 'user' } as const;
+export const ADMIN = {
+  id: 1,
+  username: 'admin',
+  display_name: 'Admin',
+  role: 'admin',
+  can_run_sql: true,
+} as const;
+export const USER = {
+  id: 2,
+  username: 'ana',
+  display_name: 'Ana',
+  role: 'user',
+  can_run_sql: false,
+} as const;
 
 /**
  * Sustituye `fetch` por un enrutador `"MÉTODO /ruta" → respuesta`. Las rutas sin handler responden 404 con
@@ -45,7 +57,7 @@ export function stubApi(routes: Record<string, Handler>) {
 }
 
 export const HEALTH = {
-  'GET /api/health': { body: { status: 'ok', version: '0.4.0', util_bbdd_version: '4.0.0', database: 'ok' } },
+  'GET /api/health': { body: { status: 'ok', version: '0.5.0', util_bbdd_version: '4.0.0', database: 'ok' } },
 };
 
 /** Rutas base con sesión iniciada como `me` (o sin sesión con `null`). */
