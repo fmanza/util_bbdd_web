@@ -1,18 +1,16 @@
-import { AppShell, Badge, Group, NavLink, Stack, Text, Title } from '@mantine/core';
+import { AppShell, Group, NavLink, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { NavLink as RouterNavLink, Outlet } from 'react-router';
 
 import { UserMenu } from '../features/auth/UserMenu';
 import { useMe } from '../features/auth/useAuth';
 
-// Secciones disponibles y, deshabilitadas, las de fases futuras del ROADMAP.
+// Secciones de la aplicación (las de fases futuras se añaden al implementarlas).
 const SECTIONS: { key: string; to: string }[] = [
-  { key: 'engines', to: '/engines' },
+  { key: 'projects', to: '/projects' },
+  { key: 'runs', to: '/runs' },
   { key: 'connections', to: '/connections' },
-];
-const UPCOMING: { key: string; phase: number }[] = [
-  { key: 'projects', phase: 3 },
-  { key: 'runs', phase: 3 },
+  { key: 'engines', to: '/engines' },
 ];
 
 const ADMIN_SECTIONS = ['users', 'sessions', 'allowlist', 'audit'] as const;
@@ -39,18 +37,6 @@ export function Layout() {
               component={RouterNavLink}
               to={section.to}
               label={t(`nav.${section.key}`)}
-            />
-          ))}
-          {UPCOMING.map((section) => (
-            <NavLink
-              key={section.key}
-              label={t(`nav.${section.key}`)}
-              disabled
-              rightSection={
-                <Badge size="xs" variant="light">
-                  {t('nav.phase', { phase: section.phase })}
-                </Badge>
-              }
             />
           ))}
           {me?.role === 'admin' && (

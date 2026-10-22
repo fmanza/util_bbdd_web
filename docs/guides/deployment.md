@@ -5,7 +5,7 @@
 ```bash
 python scripts/generate_secrets.py
 docker compose up -d --build
-docker compose --profile worker up -d     # a partir de la Fase 3
+# Arranca web (API + SPA) y worker (ejecuciones). /api/health informa "worker": "ok" cuando el worker late.
 ```
 
 ### Primer administrador

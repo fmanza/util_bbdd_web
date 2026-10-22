@@ -25,6 +25,8 @@ const ACTION_FILTERS = [
   { value: 'session.', key: 'session' },
   { value: 'connection.', key: 'connection' },
   { value: 'allowlist.', key: 'allowlist' },
+  { value: 'project.', key: 'project' },
+  { value: 'run.', key: 'run' },
 ] as const;
 
 export function AuditPage() {

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import '../i18n';
 
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
 // jsdom no implementa matchMedia ni ResizeObserver, que Mantine usa.
@@ -34,6 +34,9 @@ Object.defineProperty(document, 'fonts', {
   configurable: true,
   value: { addEventListener: vi.fn(), removeEventListener: vi.fn(), ready: Promise.resolve() },
 });
+
+// Con toda la suite en paralelo (Mantine + lazy routes), 1 s de espera por defecto se queda corto en CI.
+configure({ asyncUtilTimeout: 3000 });
 
 afterEach(() => {
   cleanup();

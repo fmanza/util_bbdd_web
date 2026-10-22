@@ -31,6 +31,13 @@ class Settings(BaseSettings):
         files_dir: Única carpeta del servidor a la que pueden apuntar los parámetros de ruta de las conexiones
             (fichero SQLite, JAR de HSQLDB, certificados TLS…). Evita leer ficheros arbitrarios como ``config.db``.
         connection_test_timeout: Segundos máximos de una prueba de conexión o readiness (se mata el subproceso).
+        worker_concurrency: Jobs simultáneos del worker (un subproceso cada uno, ADR-002).
+        worker_poll_seconds: Intervalo de sondeo de la cola y del latido del worker.
+        job_timeout_seconds: Duración máxima de un job; al superarla se mata su subproceso.
+        max_queued_per_user: Ejecuciones en cola o en curso por usuario (429 al superarlo).
+        user_quota_mb: Espacio de workspace por usuario (MB) de sus ejecuciones; ``0`` sin límite.
+        run_retention_days: Se purgan las ejecuciones terminadas más antiguas; ``0`` desactiva.
+        run_retention_per_project: Se conservan las N ejecuciones más recientes de cada proyecto; ``0`` desactiva.
     """
 
     model_config = SettingsConfigDict(env_prefix="UBW_", secrets_dir=None, extra="ignore")
@@ -49,6 +56,13 @@ class Settings(BaseSettings):
     password_min_length: int = Field(default=12, ge=8, le=128)
     files_dir: Path = Path("data/files")
     connection_test_timeout: float = Field(default=15.0, gt=0, le=120)
+    worker_concurrency: int = Field(default=2, ge=1, le=32)
+    worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
+    job_timeout_seconds: int = Field(default=3600, ge=1, le=7 * 24 * 3600)
+    max_queued_per_user: int = Field(default=5, ge=1, le=1000)
+    user_quota_mb: int = Field(default=1024, ge=0)
+    run_retention_days: int = Field(default=30, ge=0)
+    run_retention_per_project: int = Field(default=100, ge=0)
 
     @property
     def cookie_secure(self) -> bool:

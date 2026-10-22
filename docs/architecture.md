@@ -44,8 +44,8 @@ flowchart TB
 | `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py` (fichas, matriz, clasificación de parámetros) y `probe.py` (prueba y readiness en subproceso) | 0 → 2 |
 | `domain/` | `identity/` (usuarios, contraseñas, sesiones, auditoría), `engines/`, `connections/` (cifrado, allowlist, parámetros, servicio), proyectos, ejecuciones | 1 → 3 |
 | `cli.py` | `create-admin` (primer administrador) y `rotate-secrets` (rotación Fernet) | 1 → 2 |
-| `jobs/` | Worker, cola, subprocesos, progreso | 0 (esqueleto) → 3 |
-| `workspace/` | Carpetas por ejecución, `run.json`, ZIP, retención | 3 |
+| `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y operaciones (`noop`) | 0 → 3 |
+| `workspace/` | Carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
 
 ## Frontend
 
@@ -76,6 +76,13 @@ src/
 | Secret `ubw_app_secret_key` | — | Firma del token CSRF; **obligatorio** en producción (sin él la API no arranca) |
 | `UBW_FILES_DIR` | `/data/files` | Única carpeta a la que pueden apuntar los parámetros de ruta (SQLite, JAR, certificados) |
 | `UBW_CONNECTION_TEST_TIMEOUT` | `15` | Segundos máximos de una prueba o readiness (se mata el subproceso) |
+| `UBW_WORKER_CONCURRENCY` | `2` | Jobs simultáneos del worker |
+| `UBW_WORKER_POLL_SECONDS` | `1` | Sondeo de la cola y latido |
+| `UBW_JOB_TIMEOUT_SECONDS` | `3600` | Duración máxima de un job |
+| `UBW_MAX_QUEUED_PER_USER` | `5` | Ejecuciones en cola o en curso por usuario (429) |
+| `UBW_USER_QUOTA_MB` | `1024` | Espacio de workspace por usuario (`0` sin límite) |
+| `UBW_RUN_RETENTION_DAYS` | `30` | Purga de ejecuciones terminadas más antiguas (`0` desactiva) |
+| `UBW_RUN_RETENTION_PER_PROJECT` | `100` | Ejecuciones conservadas por proyecto (`0` desactiva) |
 | Secret `ubw_fernet_keys` | — | Cifrado de conexiones (ADR-004); **obligatorio** en producción |
 
 Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·

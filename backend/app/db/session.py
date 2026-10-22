@@ -41,10 +41,14 @@ def get_engine() -> Engine:
     return build_engine(settings.database_url)
 
 
+def new_session() -> Session:
+    """Sesión nueva sobre ``config.db`` (worker, subprocesos de jobs, SSE); quien la abre la cierra."""
+    return sessionmaker(bind=get_engine(), expire_on_commit=False)()
+
+
 def get_session() -> Iterator[Session]:
     """Dependencia FastAPI: una sesión por petición."""
-    factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
-    with factory() as session:
+    with new_session() as session:
         yield session
 
 

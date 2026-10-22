@@ -3,6 +3,47 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.4.0] - 2026-10-22
+
+Fase 3 — Proyectos y motor de ejecuciones.
+
+### Added
+
+- **Proyectos** (`/api/v1/projects`): miembros con rol `owner`/`editor`/`viewer` (siempre al menos un owner; se
+  puede salir), conexiones asociadas por alias (solo propias o compartidas; los miembros las usan sin ver el
+  secreto). Quien no es miembro recibe 404.
+- **Motor de ejecuciones** (ADR-002): cola propia sobre `runs` con reclamación atómica `UPDATE … RETURNING`, worker
+  (`python -m app.jobs.worker`) con un subproceso *spawn* por job, latidos, cancelación (termina el subproceso),
+  timeout, detección de hijos caídos, recuperación de huérfanos y parada limpia con SIGTERM.
+- **API de ejecuciones**: lanzar (202), historial agrupado por ejecución con filtros y búsqueda, `GET /runs` de mis
+  proyectos, progreso en vivo por SSE (`/runs/{id}/events`), cancelar, relanzar, purgar, descarga y vista previa de
+  artefactos (CSP `sandbox`), ZIP en *streaming*; catálogo `GET /operations`.
+- **Workspace** (ADR-005): carpeta por ejecución con `run.json`, `logs/run.log` y `outputs/<formato>/`, rutas solo con
+  IDs, artefactos con SHA-256, retención por días y por proyecto, cuota por usuario y límite de cola.
+- `RunAuditSink` (implementa `util_bbdd.audit.AuditSink`, sin `message`) para las fases 7–9.
+- Job `noop` con pasos, fallo simulado, prueba de una conexión del proyecto y artefactos de ejemplo.
+- `/api/health` informa `worker: ok|stale|absent`.
+- **Frontend**: proyectos (lista, alta, detalle con pestañas de ejecuciones, conexiones, miembros y ajustes según el
+  rol), lanzamiento con formulario generado desde la operación, detalle de ejecución con progreso en vivo
+  (`aria-live`, sondeo de reserva), cancelar, relanzar, purgar, navegador de artefactos con vista previa en
+  `iframe sandbox` y descarga del ZIP; sección *Ejecuciones*.
+- **Tests**: 45 nuevos en backend (196 en total; el worker se prueba con subprocesos reales en el CI), 13 nuevos en
+  Vitest (52) y E2E de proyecto → ejecución → artefactos → ZIP → relanzar, y de cancelación.
+- **Documentación**: guía [Proyectos y ejecuciones](docs/guides/proyectos_y_ejecuciones.md); notas de
+  implementación en ADR-002 y ADR-005; variables nuevas en arquitectura; solución de problemas.
+
+### Changed
+
+- `docker compose up` arranca también el `worker` (ya no es un perfil) con `stop_grace_period: 30s`; el CI espera a
+  `"worker": "ok"`.
+- El worker usa `signal.signal` (multiplataforma) en lugar de `signal.sigwait`: `mypy` pasa también en Windows.
+- Test de arquitectura ampliado a las dependencias entre capas (`workspace`, `domain`, `api`, `integrations`).
+- Vitest: `asyncUtilTimeout` de Testing Library a 3 s (suite completa en paralelo).
+
+### Dependencias
+
+- Ninguna nueva (SSE nativo de FastAPI 0.142, ULID propio, `zipfile`).
+
 ## [0.3.0] - 2026-10-20
 
 Fase 2 — Catálogo de motores y conexiones.

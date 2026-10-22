@@ -31,6 +31,30 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: 'projects',
+            lazy: async () => ({
+              Component: (await import('../features/projects/ProjectsPage')).ProjectsPage,
+            }),
+          },
+          {
+            path: 'projects/:projectId',
+            lazy: async () => ({
+              Component: (await import('../features/projects/ProjectDetailPage')).ProjectDetailPage,
+            }),
+          },
+          {
+            path: 'runs',
+            lazy: async () => ({
+              Component: (await import('../features/runs/RunsPage')).RunsPage,
+            }),
+          },
+          {
+            path: 'runs/:runId',
+            lazy: async () => ({
+              Component: (await import('../features/runs/RunDetailPage')).RunDetailPage,
+            }),
+          },
+          {
             path: 'connections',
             lazy: async () => ({
               Component: (await import('../features/connections/ConnectionsPage')).ConnectionsPage,

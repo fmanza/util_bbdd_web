@@ -101,7 +101,9 @@
         "user": "Usuarios",
         "session": "Sesiones",
         "connection": "Conexiones",
-        "allowlist": "Destinos"
+        "allowlist": "Destinos",
+        "project": "Proyectos",
+        "run": "Ejecuciones"
       },
       "empty": "No hay eventos.",
       "ts": "Fecha",
@@ -142,6 +144,21 @@
         "allowlist": {
           "create": "Destino permitido",
           "delete": "Destino retirado"
+        },
+        "project": {
+          "create": "Alta de proyecto",
+          "update": "Edición de proyecto",
+          "delete": "Borrado de proyecto",
+          "member_add": "Miembro añadido",
+          "member_update": "Rol cambiado",
+          "member_remove": "Miembro quitado",
+          "connection_add": "Conexión asociada",
+          "connection_remove": "Conexión quitada"
+        },
+        "run": {
+          "create": "Ejecución lanzada",
+          "cancel": "Ejecución cancelada",
+          "purge": "Ejecución purgada"
         }
       }
     },
@@ -281,6 +298,127 @@
       "nameRequired": "El nombre es obligatorio",
       "tooLong": "Máximo {{max}} caracteres",
       "passwordRequired": "La contraseña es obligatoria"
+    }
+  },
+  "projects": {
+    "title": "Proyectos",
+    "new": "Nuevo proyecto",
+    "create": "Crear proyecto",
+    "createTitle": "Nuevo proyecto",
+    "search": "Buscar proyectos",
+    "empty": "No participas en ningún proyecto. Crea uno o pide que te inviten.",
+    "name": "Nombre",
+    "description": "Descripción",
+    "myRole": "Mi rol",
+    "updatedAt": "Actualizado",
+    "roles": {
+      "owner": "Propietario",
+      "editor": "Editor",
+      "viewer": "Lector"
+    },
+    "role": "Rol",
+    "roleOf": "Rol de {{username}}",
+    "tabs": {
+      "runs": "Ejecuciones",
+      "connections": "Conexiones",
+      "members": "Miembros",
+      "settings": "Ajustes"
+    },
+    "connectionsIntro": "Las ejecuciones usan las conexiones por su alias. Los miembros las usan sin ver nunca la contraseña.",
+    "connection": "Conexión",
+    "alias": "Alias",
+    "aliasHint": "Minúsculas, números, - y _ (p. ej. origen, destino)",
+    "addConnection": "Asociar",
+    "noConnections": "El proyecto no tiene conexiones.",
+    "readWrite": "Lectura y escritura",
+    "removeConnectionLabel": "Quitar la conexión {{alias}}",
+    "addMember": "Añadir miembro",
+    "leave": "Salir del proyecto",
+    "removeMemberLabel": "Quitar a {{username}}",
+    "delete": "Borrar proyecto",
+    "deleteTitle": "Borrar proyecto",
+    "deleteBody": "Se borrará el proyecto «{{name}}» con todas sus ejecuciones y ficheros. No se puede deshacer.",
+    "chooseConnection": "Elige una conexión"
+  },
+  "runs": {
+    "title": "Ejecuciones",
+    "intro": "Ejecuciones recientes de todos tus proyectos.",
+    "empty": "Aún no hay ejecuciones.",
+    "emptyProject": "Este proyecto no tiene ejecuciones con esos filtros.",
+    "run": "Ejecución",
+    "project": "Proyecto",
+    "operation": "Operación",
+    "user": "Usuario",
+    "statusLabel": "Estado",
+    "allStatuses": "Todos",
+    "search": "Buscar (id, operación, usuario)",
+    "createdAt": "Lanzada",
+    "duration": "Duración",
+    "artifacts": "Artefactos",
+    "size": "Tamaño",
+    "openLabel": "Abrir la ejecución {{id}}",
+    "progressLabel": "Progreso: {{pct}} %",
+    "detailTitle": "Ejecución {{operation}}",
+    "relaunchedFrom": "Relanzada de",
+    "cancel": "Cancelar",
+    "cancelling": "Cancelando…",
+    "relaunch": "Relanzar",
+    "downloadZip": "Descargar ZIP",
+    "purge": "Purgar",
+    "purgeTitle": "Purgar ejecución",
+    "purgeBody": "Se borrarán los ficheros de la ejecución {{id}}; se conserva su resumen en el historial.",
+    "purgedBody": "Los ficheros de esta ejecución se purgaron (por retención o a mano).",
+    "polling": "Actualización cada 2 s (sin conexión de eventos en vivo).",
+    "status": {
+      "queued": "En cola",
+      "running": "En curso",
+      "succeeded": "Correcta",
+      "failed": "Fallida",
+      "cancelled": "Cancelada",
+      "purged": "Purgada"
+    },
+    "phases": {
+      "queued": "Esperando al worker",
+      "preparing": "Preparando",
+      "connecting": "Conectando",
+      "running": "Ejecutando",
+      "reporting": "Generando informes",
+      "done": "Terminada"
+    },
+    "kinds": {
+      "html": "HTML",
+      "markdown": "Markdown",
+      "sql": "SQL",
+      "graphs": "Grafo",
+      "word": "Word",
+      "excel": "Excel",
+      "log": "Log",
+      "manifest": "Manifiesto",
+      "other": "Otro"
+    },
+    "params": {
+      "noop": {
+        "steps": "Pasos",
+        "step_seconds": "Segundos por paso",
+        "fail": "Fallar a propósito",
+        "connection": "Conexión a probar"
+      }
+    },
+    "launch": {
+      "open": "Lanzar ejecución",
+      "title": "Lanzar ejecución",
+      "submit": "Lanzar",
+      "noConnection": "Sin conexión",
+      "number": "Debe ser un número válido",
+      "range": "Entre {{min}} y {{max}}"
+    },
+    "artifactsBrowser": {
+      "empty": "Esta ejecución no ha generado artefactos.",
+      "list": "Artefactos",
+      "noPreview": "Sin vista previa: descárgalo.",
+      "previewOf": "Vista previa de {{path}}",
+      "download": "Descargar",
+      "downloadLabel": "Descargar {{path}}"
     }
   }
 }

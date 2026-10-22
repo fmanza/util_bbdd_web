@@ -24,5 +24,7 @@ Fuente detallada: `docs/architecture.md` y `docs/adr/`. Resumen operativo:
 
 ## Flujo de una ejecución (Fase 3)
 
-`POST /api/v1/projects/{id}/runs` → fila `runs(queued)` → worker la toma → subproceso → integración util_bbdd →
-salidas en `workspace/.../outputs` + `artifacts` → `runs(succeeded|failed)` → SSE al navegador.
+`POST /api/v1/projects/{id}/runs` (202) → fila `runs(queued)` → el worker la reclama (`UPDATE … RETURNING`) →
+subproceso *spawn* con solo el `run_id` → operación (`app/jobs/operations`) → `workspace/.../outputs`, `run.json`,
+`logs/run.log` → `finalize_run` registra `artifacts` → `runs(succeeded|failed|cancelled)` → SSE
+(`/runs/{id}/events`) al navegador. Cancelar = `cancel_requested` → el worker termina el subproceso.

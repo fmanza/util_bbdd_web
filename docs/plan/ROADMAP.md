@@ -11,7 +11,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 0 | Fundaciones | 0.1.0 | ✅ Cerrada (2026-10-19) |
 | 1 | Identidad y multiusuario | 0.2.0 | ✅ Cerrada (2026-10-20) |
 | 2 | Catálogo de motores y conexiones | 0.3.0 | ✅ Cerrada (2026-10-20) |
-| 3 | Proyectos y motor de ejecuciones | 0.4.0 | Pendiente |
+| 3 | Proyectos y motor de ejecuciones | 0.4.0 | ✅ Cerrada (2026-10-22) |
 | 4 | Explorador de metadatos | 0.5.0 | Pendiente |
 | 5 | Documentación y grafos | 0.6.0 | Pendiente |
 | 6 | Comparación de esquemas | 0.7.0 | Pendiente |
@@ -69,7 +69,7 @@ de conexión en el worker o con timeout corto; saneado de errores.
 conexión con prueba y readiness.
 **Mejora incluida**: matriz de capacidades por motor y operación construida en la capa anticorrupción (GAPS G4/G5).
 
-## Fase 3 — Proyectos y motor de ejecuciones
+## Fase 3 — Proyectos y motor de ejecuciones ✅
 
 **Historias**
 - Creo proyectos, invito miembros (`owner`/`editor`/`viewer`) y asocio conexiones con alias (`origen`, `destino`).

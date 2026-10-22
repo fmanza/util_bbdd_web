@@ -2,7 +2,7 @@
 #   python scripts/generate_secrets.py   # una vez: crea secrets/*.txt (git-ignored)
 #   docker compose up -d --build
 #   http://127.0.0.1:8080
-# El worker (Fase 3) se arranca con: docker compose --profile worker up -d
+# Arranca la API (web) y el worker de ejecuciones (worker, ADR-002); el worker espera a que web esté sano.
 
 x-app: &app
   image: util_bbdd_web:${UBW_TAG:-dev}
@@ -38,8 +38,9 @@ services:
 
   worker:
     <<: *app
-    profiles: ["worker"]
     command: ["python", "-m", "app.jobs.worker"]
+    # SIGTERM: termina los jobs en curso (quedan como «interrupted») antes de salir.
+    stop_grace_period: 30s
     healthcheck:
       disable: true
     depends_on:

@@ -1,6 +1,6 @@
 # ADR-002 — Ejecución de jobs
 
-- **Estado**: Aceptado (implementación en Fase 3; la elección de la cola se confirma en el PLAN de esa fase)
+- **Estado**: Aceptado (implementado en la Fase 3, 0.4.0; cola opción **b**)
 - **Fecha**: 2026-10-19
 
 ## Contexto
@@ -26,3 +26,20 @@ ofrece callbacks de progreso ni cancelación (GAPS G1) y `DatabaseDocumentation`
 
 - Coste de arranque de un proceso por job (aceptable frente a la duración de las operaciones).
 - Sin porcentaje real de progreso hasta que util_bbdd resuelva G1.
+
+## Notas de implementación (Fase 3)
+
+- **Cola propia (opción b)**: `runs` es la cola. El worker reclama con un único
+  `UPDATE runs SET status='running' … WHERE id = (SELECT … WHERE status='queued' ORDER BY created_at LIMIT 1)
+  AND status='queued' RETURNING id` (SQLite ≥ 3.35; la imagen trae 3.40). Huey se descartó: dependencia nueva y una
+  pieza más para el mismo resultado.
+- **Subproceso por job** con `multiprocessing` *spawn*: el hijo solo recibe el `run_id`, lee la BD y descifra los
+  secretos que necesite. Escribe `run.json`, `logs/run.log` (JSON) y `outputs/`, y cierra el run (`finalize_run`).
+- **El padre** emite latidos (`workers`, `runs.heartbeat_at`), aplica cancelaciones (`cancel_requested` →
+  `terminate`/`kill` → `cancelled`) y timeouts (`UBW_JOB_TIMEOUT_SECONDS` → `job_timeout`), cierra como
+  `worker_crash` al hijo que muere sin estado final y, al arrancar, como `interrupted` los runs huérfanos de otro
+  worker sin latido. Con SIGTERM termina sus jobs (`interrupted`) y se da de baja.
+- **Progreso por fases** (`preparing → connecting → running → reporting → done`) escrito como mucho una vez por
+  segundo; la API lo emite por SSE con `EventSourceResponse` nativo de FastAPI (sin dependencias), comprobando el acceso
+  antes de abrir el stream.
+- `docker compose up` arranca `web` y `worker` (ya no es un perfil); `/api/health` informa `worker: ok|stale|absent`.

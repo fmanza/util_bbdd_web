@@ -37,6 +37,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec web python -
 
 En `development` las cookies no llevan `Secure` (HTTP local); en `test` y `production` sí.
 
+**Worker** en local (otra terminal): `cd backend && uv run python -m app.jobs.worker`. Sin worker, las ejecuciones
+se quedan en cola (`/api/health` → `"worker": "absent"`).
+
 **Pruebas de integración** contra los contenedores bench de util_bbdd (`docker-compose.bench.yml`, fuera del CI):
 con `UTIL_BBDD_BENCH_PASSWORD` definida, `cd backend && uv run pytest -m integration tests/integration`. Los puertos
 se cambian con `UTIL_BBDD_BENCH_<MOTOR>_PORT`, igual que en el compose.

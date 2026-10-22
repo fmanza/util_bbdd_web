@@ -31,6 +31,17 @@ class AuditAction:
     CONNECTION_READINESS: Final = "connection.readiness"
     ALLOWLIST_CREATE: Final = "allowlist.create"
     ALLOWLIST_DELETE: Final = "allowlist.delete"
+    PROJECT_CREATE: Final = "project.create"
+    PROJECT_UPDATE: Final = "project.update"
+    PROJECT_DELETE: Final = "project.delete"
+    PROJECT_MEMBER_ADD: Final = "project.member_add"
+    PROJECT_MEMBER_UPDATE: Final = "project.member_update"
+    PROJECT_MEMBER_REMOVE: Final = "project.member_remove"
+    PROJECT_CONNECTION_ADD: Final = "project.connection_add"
+    PROJECT_CONNECTION_REMOVE: Final = "project.connection_remove"
+    RUN_CREATE: Final = "run.create"
+    RUN_CANCEL: Final = "run.cancel"
+    RUN_PURGE: Final = "run.purge"
 
 
 @dataclass(frozen=True)

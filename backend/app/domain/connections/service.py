@@ -299,7 +299,7 @@ def rotate_secrets(db: Session, settings: Settings) -> int:
 
 
 @dataclass(frozen=True)
-class _Prepared:
+class PreparedConnection:
     conn_params: dict[str, Any] | None
     error_code: str | None
 
@@ -313,27 +313,29 @@ def _fixed(addresses: list[allowlist.IPAddress]) -> allowlist.Resolver:
     return resolve
 
 
-def _prepare(db: Session, connection: Connection, settings: Settings) -> _Prepared:
+def prepare_connection(db: Session, connection: Connection, settings: Settings) -> PreparedConnection:
     """``conn_params`` listos para conectar, o el código de error que impide intentarlo."""
     engine = get_engine(connection.db_type)
     try:
         password = _stored_password(connection, settings)
     except SecretDecryptError:
-        return _Prepared(None, "secret_unreadable")
+        return PreparedConnection(None, "secret_unreadable")
     secrets = {"password": password} if password else {}
     try:
         conn_params = build_params(engine.db_type, {**resolve_paths(engine, connection.params, settings), **secrets})
     except InvalidParamsError:
-        return _Prepared(None, "invalid_config")
+        return PreparedConnection(None, "invalid_config")
     policy = allowlist.current_policy(db)
     for host in allowlist.target_hosts(engine.db_type, conn_params):
         try:
             addresses = allowlist.resolve(host)
         except OSError:
-            return _Prepared(None, "connection_failed")  # el nombre no resuelve: no es un problema de la allowlist
+            return PreparedConnection(
+                None, "connection_failed"
+            )  # el nombre no resuelve: no es un problema de la allowlist
         if not allowlist.is_allowed(host, policy, _fixed(addresses)):
-            return _Prepared(None, "not_allowed")
-    return _Prepared(with_timeouts(engine.db_type, conn_params), None)
+            return PreparedConnection(None, "not_allowed")
+    return PreparedConnection(with_timeouts(engine.db_type, conn_params), None)
 
 
 def _with_probe_slot() -> None:
@@ -349,7 +351,7 @@ def run_test(
     Raises:
         TooManyTestsError: Ya hay ``MAX_CONCURRENT_PROBES`` en curso.
     """
-    prepared = _prepare(db, connection, settings)
+    prepared = prepare_connection(db, connection, settings)
     db.commit()  # cierra la transacción de lectura antes de una espera larga (SQLite, un escritor)
     outcome: CheckOutcome
     if prepared.conn_params is None:
@@ -399,7 +401,7 @@ def readiness(
     Raises:
         TooManyTestsError: Ya hay ``MAX_CONCURRENT_PROBES`` en curso.
     """
-    prepared = _prepare(db, connection, settings)
+    prepared = prepare_connection(db, connection, settings)
     db.commit()
     if prepared.conn_params is None:
         outcome = ReadinessOutcome(None, prepared.error_code)

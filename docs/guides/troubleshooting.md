@@ -22,6 +22,12 @@
 | «No se puede descifrar la contraseña guardada» | Se retiró una clave de `fernet_keys.txt` sin `rotate-secrets` | Restaurar la clave antigua, ejecutar `rotate-secrets` y retirarla después; o reintroducir la contraseña |
 | La API no arranca: `UBW_FERNET_KEYS … obligatoria` | Producción sin el secret `ubw_fernet_keys` | `python scripts/generate_secrets.py` |
 | Desde Docker no conecta con una BD en `127.0.0.1` del host | Dentro del contenedor, `127.0.0.1` es el propio contenedor | Usar `host.docker.internal` (Docker Desktop) o la IP del host, y añadirlo a la allowlist |
+| Las ejecuciones se quedan «En cola» | No hay worker (`/api/health` → `"worker": "absent"` o `"stale"`) | `docker compose up -d worker` y `docker compose logs worker` |
+| Ejecución «Fallida» con `interrupted` | El worker se reinició con el job en curso | Relanzar la ejecución |
+| Ejecución «Fallida» con `job_timeout` | Superó `UBW_JOB_TIMEOUT_SECONDS` | Subir el límite o dividir el trabajo |
+| Lanzar ejecución → 409 «Cuota de almacenamiento superada» | El usuario supera `UBW_USER_QUOTA_MB` | Purgar ejecuciones antiguas o subir la cuota |
+| Lanzar ejecución → 429 | Más de `UBW_MAX_QUEUED_PER_USER` en cola o en curso | Esperar o cancelar alguna |
+| El progreso no se actualiza en vivo | Un proxy almacena la respuesta SSE | `proxy_buffering off` en nginx (ver despliegue); la UI cae a sondeo cada 2 s |
 | `/api/docs` da 404 | Desactivado en producción | `UBW_ENVIRONMENT=development` (compose dev) |
 | Aviso `StarletteDeprecationWarning … httpx2` en pytest | Starlette 1.x depreca `httpx` en `TestClient` | Informativo; seguimiento en la deuda técnica |
 

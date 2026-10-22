@@ -2,6 +2,8 @@
 
 Fase 1: identidad (``users``, ``sessions``, ``audit_log``).
 Fase 2: conexiones (``connections``) y allowlist de destinos (``allowlist_entries``).
+Fase 3: proyectos (``projects``, ``project_members``, ``project_connections``), ejecuciones (``runs``,
+``artifacts``) y latido del worker (``workers``).
 """
 
 from __future__ import annotations
@@ -29,6 +31,10 @@ from app.db.base import Base
 Role = Literal["admin", "user"]
 ROLES: tuple[Role, ...] = ("admin", "user")
 Visibility = Literal["private", "shared"]
+ProjectRole = Literal["owner", "editor", "viewer"]
+PROJECT_ROLES: tuple[ProjectRole, ...] = ("owner", "editor", "viewer")
+RunStatus = Literal["queued", "running", "succeeded", "failed", "cancelled", "purged"]
+TERMINAL_STATUSES: frozenset[str] = frozenset({"succeeded", "failed", "cancelled"})
 
 
 def utcnow() -> datetime:
@@ -156,3 +162,129 @@ class AllowlistEntry(Base):
     description: Mapped[str] = mapped_column(String(255), default="")
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
+class Project(Base):
+    """Proyecto: agrupa miembros, conexiones con alias y ejecuciones.
+
+    ``owner_id`` es el creador y fija la ruta del workspace (ADR-005); la propiedad efectiva la dan los miembros con
+    rol ``owner``.
+    """
+
+    __tablename__ = "projects"
+    __table_args__ = (UniqueConstraint("owner_id", "name", name="uq_projects_owner_id_name"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    description: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
+
+    members: Mapped[list[ProjectMember]] = relationship(
+        back_populates="project", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class ProjectMember(Base):
+    """Pertenencia de un usuario a un proyecto con su rol."""
+
+    __tablename__ = "project_members"
+    __table_args__ = (CheckConstraint("role IN ('owner', 'editor', 'viewer')", name="role"),)
+
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    role: Mapped[str] = mapped_column(String(16))
+    added_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+    project: Mapped[Project] = relationship(back_populates="members")
+    user: Mapped[User] = relationship(lazy="joined")
+
+
+class ProjectConnection(Base):
+    """Conexión asociada a un proyecto con un alias (``origen``, ``destino``…) que usan las ejecuciones."""
+
+    __tablename__ = "project_connections"
+    __table_args__ = (UniqueConstraint("project_id", "alias", name="uq_project_connections_project_id_alias"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    connection_id: Mapped[int] = mapped_column(ForeignKey("connections.id", ondelete="CASCADE"), index=True)
+    alias: Mapped[str] = mapped_column(String(32))
+    added_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+    connection: Mapped[Connection] = relationship(lazy="joined")
+
+
+class Run(Base):
+    """Ejecución de una operación de util_bbdd (o ``noop``) en un proyecto; la tabla es la cola del worker.
+
+    ``params`` no contiene secretos; las conexiones se referencian por alias del proyecto. ``manifest`` copia
+    ``run.json`` y se conserva al purgar.
+    """
+
+    __tablename__ = "runs"
+    __table_args__ = (
+        CheckConstraint("status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled', 'purged')", name="status"),
+        Index("ix_runs_project_id_created_at", "project_id", "created_at"),
+        Index("ix_runs_status_created_at", "status", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(26), primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    operation: Mapped[str] = mapped_column(String(32))
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(16), default="queued")
+    phase: Mapped[str | None] = mapped_column(String(16), default=None)
+    progress_message: Mapped[str | None] = mapped_column(String(255), default=None)
+    progress_pct: Mapped[int | None] = mapped_column(default=None)
+    error_code: Mapped[str | None] = mapped_column(String(32), default=None)
+    error_message: Mapped[str | None] = mapped_column(String(500), default=None)
+    cancel_requested: Mapped[bool] = mapped_column(default=False)
+    worker_id: Mapped[str | None] = mapped_column(String(64), default=None)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
+    workspace_path: Mapped[str | None] = mapped_column(String(255), default=None)
+    size_bytes: Mapped[int] = mapped_column(default=0)
+    manifest: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
+    relaunched_from: Mapped[str | None] = mapped_column(String(26), default=None)
+
+    project: Mapped[Project] = relationship(lazy="joined")
+    user: Mapped[User | None] = relationship(lazy="joined")
+    artifacts: Mapped[list[Artifact]] = relationship(
+        back_populates="run", cascade="all, delete-orphan", passive_deletes=True, order_by="Artifact.path"
+    )
+
+
+class Artifact(Base):
+    """Fichero generado por una ejecución (ruta relativa a la carpeta del run)."""
+
+    __tablename__ = "artifacts"
+    __table_args__ = (UniqueConstraint("run_id", "path", name="uq_artifacts_run_id_path"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id", ondelete="CASCADE"), index=True)
+    path: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(16))
+    mime: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int] = mapped_column(default=0)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+    run: Mapped[Run] = relationship(back_populates="artifacts")
+
+
+class Worker(Base):
+    """Latido de un proceso worker (``/api/health`` informa si hay uno vivo)."""
+
+    __tablename__ = "workers"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    pid: Mapped[int] = mapped_column()
+    hostname: Mapped[str] = mapped_column(String(255))
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    heartbeat_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)

@@ -77,8 +77,9 @@ jobs:
           python3 scripts/generate_secrets.py
           UBW_TAG=ci docker compose up -d --no-build
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8080/api/health; then exit 0; fi
+            if curl -fsS http://127.0.0.1:8080/api/health | grep -q '"worker":"ok"'; then exit 0; fi
             sleep 2
           done
+          curl -sS http://127.0.0.1:8080/api/health || true
           docker compose logs
           exit 1

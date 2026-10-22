@@ -3,6 +3,8 @@ import { vi } from 'vitest';
 export interface StubResponse {
   status?: number;
   body?: unknown;
+  /** Respuesta de texto plano (vistas previas) en lugar de JSON. */
+  text?: string;
 }
 
 type Handler = StubResponse | ((request: Request) => StubResponse | Promise<StubResponse>);
@@ -18,13 +20,20 @@ export function stubApi(routes: Record<string, Handler>) {
   const fetchMock = vi.fn(async (request: Request) => {
     const key = `${request.method} ${new URL(request.url).pathname}`;
     const handler = routes[key];
-    const { status = 200, body } = handler
+    const {
+      status = 200,
+      body,
+      text,
+    } = handler
       ? typeof handler === 'function'
         ? await handler(request)
         : handler
       : { status: 404, body: { title: 'Not Found', status: 404 } };
     if (status === 204) {
       return new Response(null, { status });
+    }
+    if (text !== undefined) {
+      return new Response(text, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
     return new Response(JSON.stringify(body ?? {}), {
       status,
@@ -36,7 +45,7 @@ export function stubApi(routes: Record<string, Handler>) {
 }
 
 export const HEALTH = {
-  'GET /api/health': { body: { status: 'ok', version: '0.3.0', util_bbdd_version: '4.0.0', database: 'ok' } },
+  'GET /api/health': { body: { status: 'ok', version: '0.4.0', util_bbdd_version: '4.0.0', database: 'ok' } },
 };
 
 /** Rutas base con sesión iniciada como `me` (o sin sesión con `null`). */
