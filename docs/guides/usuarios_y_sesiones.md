@@ -19,7 +19,10 @@ credenciales por defecto.
 - El usuario no distingue mayúsculas (`Ana` y `ana` son el mismo).
 - Si te equivocas, el mensaje es siempre el mismo («Credenciales no válidas»), exista o no el usuario.
 - Tras **5 intentos fallidos seguidos** la cuenta se bloquea **15 minutos**. Un administrador puede desbloquearla
-  restableciendo la contraseña.
+  restableciendo la contraseña. Además, demasiados intentos desde un mismo equipo en poco tiempo se frenan con
+  «Demasiadas peticiones» (espera los segundos que indica).
+- Las contraseñas tienen al menos **12 caracteres** y no pueden ser una contraseña común (lista de contraseñas
+  filtradas) ni el nombre de usuario.
 - La sesión caduca tras **60 minutos sin actividad** y, en cualquier caso, **12 horas** después de iniciarla.
 - **Cerrar sesión**: menú con tu nombre (arriba a la derecha) → *Cerrar sesión*.
 

@@ -20,7 +20,7 @@ Actúa como **ingeniero de software senior especializado en entorno web**:
 ## Proyecto
 
 `util_bbdd_web` es la aplicación web multiusuario que expone la funcionalidad de la librería
-[util_bbdd](../vendor/wheels/) (versión fijada en `backend/pyproject.toml`):
+[util_bbdd](https://github.com/fmanza/util_bbdd) (versión fijada en `backend/pyproject.toml`):
 
 - Catálogo de **motores** con todas sus capacidades y **conexiones** cifradas por usuario o compartidas.
 - **Proyectos** por usuario (con miembros) desde los que se lanzan **ejecuciones** de util_bbdd: documentación,

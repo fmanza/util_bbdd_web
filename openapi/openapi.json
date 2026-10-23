@@ -5207,7 +5207,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "0.10.0"
+    "version": "1.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -5679,7 +5679,7 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "description": "Autentica, rota la sesión y pone las cookies ``ubw_session`` y ``ubw_csrf``.",
+        "description": "Autentica, rota la sesión y pone las cookies ``ubw_session`` y ``ubw_csrf``.\n\nAdemás del bloqueo por cuenta (ADR-003), limita por IP los intentos por minuto y los fallidos en 15 minutos: así\nno se puede probar una contraseña contra muchas cuentas ni bloquearlas todas desde un mismo origen.",
         "operationId": "login_api_v1_auth_login_post",
         "requestBody": {
           "content": {
@@ -5717,6 +5717,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "429": {
+            "description": "Demasiados intentos desde esta IP (``Retry-After``)"
           }
         },
         "summary": "Iniciar sesión",

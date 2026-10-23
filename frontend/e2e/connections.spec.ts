@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Requiere el admin E2E (ver login.spec.ts). El flujo contra el bench PostgreSQL necesita además
 // UTIL_BBDD_BENCH_PASSWORD y que el contenedor web alcance el host por host.docker.internal.

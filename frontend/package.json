@@ -1,7 +1,7 @@
 {
   "name": "util-bbdd-web-frontend",
   "private": true,
-  "version": "0.10.0",
+  "version": "1.0.0",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -54,7 +54,7 @@
     "prettier": "3.9.9",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.1",
-    "vite": "8.3.2",
+    "vite": "8.3.4",
     "vitest": "5.0.3"
   }
 }

@@ -37,6 +37,9 @@ def test_verify_accepts_right_and_rejects_wrong_password() -> None:
         ("corta", "al menos 12"),
         ("x" * (MAX_PASSWORD_LENGTH + 1), "superar"),
         ("Usuario-Largo1", "nombre de usuario"),
+        ("Password1234", "demasiado común"),  # lista del NCSC (ASVS 2.1.7)
+        ("QWERTYUIOP123", "demasiado común"),
+        ("util_bbdd_web", "demasiado común"),
     ],
 )
 def test_policy_rejects(password: str, fragment: str) -> None:

@@ -45,6 +45,13 @@ class Settings(BaseSettings):
         upload_max_uncompressed_mb: Tamaño descomprimido máximo de un ``.xlsx`` (MB; frena las *zip bombs*).
         upload_retention_days: Días que se conservan los ficheros subidos; ``0`` sin purga.
         bulk_max_rows: Filas máximas de un fichero de carga bulk.
+        rate_limit_enabled: Activa el rate limiting en memoria (Fase 10).
+        rate_limit_api_per_minute: Peticiones por minuto a ``/api`` con sesión (por sesión).
+        rate_limit_anonymous_per_minute: Peticiones por minuto a ``/api`` sin sesión (por IP).
+        rate_limit_login_per_minute: Intentos de inicio de sesión por minuto y por IP.
+        rate_limit_login_failures: Inicios de sesión fallidos por IP en 15 minutos antes de responder 429.
+        rate_limit_uploads_per_hour: Subidas de ficheros por hora y por sesión.
+        metrics_token: Token *bearer* de ``/metrics``; sin él, ``/metrics`` responde 404.
     """
 
     model_config = SettingsConfigDict(env_prefix="UBW_", secrets_dir=None, extra="ignore")
@@ -77,11 +84,23 @@ class Settings(BaseSettings):
     upload_max_uncompressed_mb: int = Field(default=300, ge=1, le=8192)
     upload_retention_days: int = Field(default=7, ge=0)
     bulk_max_rows: int = Field(default=1_000_000, ge=1, le=50_000_000)
+    rate_limit_enabled: bool = True
+    rate_limit_api_per_minute: int = Field(default=600, ge=1)
+    rate_limit_anonymous_per_minute: int = Field(default=300, ge=1)
+    rate_limit_login_per_minute: int = Field(default=30, ge=1)
+    rate_limit_login_failures: int = Field(default=10, ge=1)
+    rate_limit_uploads_per_hour: int = Field(default=60, ge=1)
+    metrics_token: SecretStr | None = Field(default=None)
 
     @property
     def cookie_secure(self) -> bool:
         """``Secure`` en las cookies salvo en ``development`` (HTTP local sin TLS, ADR-003)."""
         return self.environment != "development"
+
+    @property
+    def cookie_prefix(self) -> str:
+        """``__Host-`` con ``Secure`` (ASVS 3.4.4: sin ``Domain``, ``Path=/``; no la fija un subdominio)."""
+        return "__Host-" if self.cookie_secure else ""
 
     @property
     def database_url(self) -> str:
@@ -93,7 +112,8 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Ajustes del proceso, leídos una vez.
 
-    Con ``/run/secrets`` presente (Docker secrets) lee de ahí ``app_secret_key`` y ``fernet_keys``.
+    Con ``/run/secrets`` presente (Docker secrets) lee de ahí ``app_secret_key``, ``fernet_keys`` y
+    ``metrics_token``.
     """
     secrets_dir = Path("/run/secrets")
     if secrets_dir.is_dir():

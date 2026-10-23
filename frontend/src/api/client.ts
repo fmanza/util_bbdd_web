@@ -2,7 +2,8 @@ import createClient, { type Middleware } from 'openapi-fetch';
 
 import type { paths } from './schema';
 
-export const CSRF_COOKIE = 'ubw_csrf';
+/** Con TLS la cookie lleva el prefijo `__Host-` (ASVS 3.4.4); en desarrollo (HTTP) no. */
+export const CSRF_COOKIES = ['__Host-ubw_csrf', 'ubw_csrf'] as const;
 export const CSRF_HEADER = 'X-CSRF-Token';
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -18,7 +19,7 @@ export function readCookie(name: string): string | undefined {
 const csrfMiddleware: Middleware = {
   onRequest({ request }) {
     if (UNSAFE_METHODS.has(request.method) && !request.headers.has(CSRF_HEADER)) {
-      const token = readCookie(CSRF_COOKIE);
+      const token = CSRF_COOKIES.map(readCookie).find(Boolean);
       if (token) {
         request.headers.set(CSRF_HEADER, token);
       }
@@ -49,6 +50,8 @@ export interface Problem {
   detail?: string;
   /** Errores por campo (422): `loc` como en FastAPI, p. ej. `["body", "params", "host"]`. */
   errors?: ProblemFieldError[];
+  /** Identificador de la petición (cabecera `X-Request-ID`): la «referencia» que se da a soporte. */
+  request_id?: string;
 }
 
 export class ApiError extends Error {
@@ -74,7 +77,8 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response: Respons
     title: result.response.statusText || 'Error',
     status: result.response.status,
   };
-  throw new ApiError(problem);
+  const requestId = problem.request_id ?? result.response.headers.get('X-Request-ID') ?? undefined;
+  throw new ApiError(requestId ? { ...problem, request_id: requestId } : problem);
 }
 
 /** Como `unwrap`, para respuestas sin cuerpo (`204`). */

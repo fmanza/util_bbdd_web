@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Requiere el admin E2E (ver login.spec.ts) y el worker en marcha (`docker compose up` arranca web y worker).
 const ADMIN_USER = process.env.UBW_E2E_ADMIN_USER;

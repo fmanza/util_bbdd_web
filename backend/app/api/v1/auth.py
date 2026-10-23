@@ -7,16 +7,19 @@ from typing import Any
 from fastapi import APIRouter, Request, Response, status
 
 from app.api.deps import (
-    SESSION_COOKIE,
     Context,
     CurrentSession,
     DbSession,
     SettingsDep,
     clear_auth_cookies,
+    session_cookie,
     set_auth_cookies,
     set_csrf_cookie,
 )
 from app.api.v1.schemas import CsrfToken, LoginRequest, Me, PasswordChange
+from app.core.errors import AppError
+from app.core.middleware import client_ip
+from app.core.ratelimit import Limit, RateLimitedError, SlidingWindowLimiter
 from app.core.security import new_csrf_token, session_csrf_token
 from app.domain.identity import auth
 
@@ -24,6 +27,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 _401: dict[int | str, dict[str, Any]] = {401: {"description": "No autenticado"}}
 _403: dict[int | str, dict[str, Any]] = {403: {"description": "Token CSRF ausente o no válido"}}
+_429: dict[int | str, dict[str, Any]] = {429: {"description": "Demasiados intentos desde esta IP (``Retry-After``)"}}
+_FAILURE_WINDOW = 15 * 60
 
 
 @router.get("/csrf", response_model=CsrfToken, summary="Obtener token CSRF")
@@ -32,7 +37,7 @@ def get_csrf(request: Request, response: Response, settings: SettingsDep) -> Csr
 
     Sin sesión es aleatorio (protege el propio login); con cookie de sesión es el ligado a ella.
     """
-    session_token = request.cookies.get(SESSION_COOKIE)
+    session_token = request.cookies.get(session_cookie(settings))
     token = session_csrf_token(settings, session_token) if session_token else new_csrf_token()
     set_csrf_cookie(response, settings, token)
     return CsrfToken(csrf_token=token)
@@ -42,20 +47,38 @@ def get_csrf(request: Request, response: Response, settings: SettingsDep) -> Csr
     "/login",
     response_model=Me,
     summary="Iniciar sesión",
-    responses={401: {"description": "Credenciales no válidas o cuenta bloqueada"}, **_403},
+    responses={401: {"description": "Credenciales no válidas o cuenta bloqueada"}, **_403, **_429},
 )
 def login(
     body: LoginRequest, request: Request, response: Response, db: DbSession, settings: SettingsDep, ctx: Context
 ) -> Me:
-    """Autentica, rota la sesión y pone las cookies ``ubw_session`` y ``ubw_csrf``."""
-    issued = auth.login(
-        db,
-        username=body.username,
-        password=body.password.get_secret_value(),
-        settings=settings,
-        ctx=ctx,
-        previous_token=request.cookies.get(SESSION_COOKIE),
-    )
+    """Autentica, rota la sesión y pone las cookies ``ubw_session`` y ``ubw_csrf``.
+
+    Además del bloqueo por cuenta (ADR-003), limita por IP los intentos por minuto y los fallidos en 15 minutos: así
+    no se puede probar una contraseña contra muchas cuentas ni bloquearlas todas desde un mismo origen.
+    """
+    limiter: SlidingWindowLimiter = request.app.state.limiter
+    ip = client_ip(request.scope)
+    failures = Limit(settings.rate_limit_login_failures, _FAILURE_WINDOW)
+    if settings.rate_limit_enabled:
+        wait = limiter.blocked(f"login-fail:{ip}", failures) or limiter.hit(
+            f"login:{ip}", Limit(settings.rate_limit_login_per_minute, 60)
+        )
+        if wait is not None:
+            raise RateLimitedError(wait)
+    try:
+        issued = auth.login(
+            db,
+            username=body.username,
+            password=body.password.get_secret_value(),
+            settings=settings,
+            ctx=ctx,
+            previous_token=request.cookies.get(session_cookie(settings)),
+        )
+    except AppError as exc:
+        if exc.status == 401 and settings.rate_limit_enabled:
+            limiter.record(f"login-fail:{ip}")
+        raise
     set_auth_cookies(response, settings, issued.token)
     return Me.model_validate(issued.session.user)
 

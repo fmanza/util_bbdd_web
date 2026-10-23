@@ -7,6 +7,8 @@ import logging
 from datetime import UTC, datetime
 from typing import ClassVar
 
+from app.core.request_context import RequestIdFilter
+
 
 class JsonFormatter(logging.Formatter):
     """Formatea cada registro como un objeto JSON con nivel, logger, mensaje y excepción si la hay."""
@@ -27,9 +29,10 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging(level: str) -> None:
-    """Sustituye los handlers del logger raíz por uno a stdout en JSON."""
+    """Sustituye los handlers del logger raíz por uno a stdout en JSON (con ``request_id`` dentro de una petición)."""
     handler = logging.StreamHandler()
     handler.setFormatter(JsonFormatter())
+    handler.addFilter(RequestIdFilter())
     root = logging.getLogger()
     root.handlers[:] = [handler]
     root.setLevel(level.upper())

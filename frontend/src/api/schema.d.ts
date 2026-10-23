@@ -161,6 +161,9 @@ export interface paths {
         /**
          * Iniciar sesión
          * @description Autentica, rota la sesión y pone las cookies ``ubw_session`` y ``ubw_csrf``.
+         *
+         *     Además del bloqueo por cuenta (ADR-003), limita por IP los intentos por minuto y los fallidos en 15 minutos: así
+         *     no se puede probar una contraseña contra muchas cuentas ni bloquearlas todas desde un mismo origen.
          */
         post: operations["login_api_v1_auth_login_post"];
         delete?: never;
@@ -3730,6 +3733,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Demasiados intentos desde esta IP (``Retry-After``) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -38,12 +38,12 @@ flowchart TB
 
 | Paquete | Responsabilidad | Fase |
 |---|---|---|
-| `core/` | Ajustes `UBW_*` y Docker secrets, logging JSON, errores RFC 9457, tokens de sesión y CSRF | 0 → 1 |
-| `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic | 0 → |
-| `api/` | `/api/health`; `api/v1/` con los routers de negocio | 0 → |
+| `core/` | Ajustes `UBW_*` y Docker secrets, logging JSON con `request_id`, errores RFC 9457, tokens de sesión y CSRF, middleware HTTP (cabeceras, rate limiting, métricas) | 0 → 10 |
+| `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic, copia y restauración (`backup.py`) | 0 → 10 |
+| `api/` | `/api/health`, `/metrics` (Prometheus); `api/v1/` con los routers de negocio | 0 → 10 |
 | `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py`, `isolated.py` (subproceso con timeout), `probe.py`, `metadata.py` (schemas, snapshot, DDL), `sql.py` (guardián `sqlglot`, solo lectura, queries nombradas), `audit_sink.py` | 0 → 4 |
 | `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/`, `explorer/` (caché de metadatos, queries nombradas, SQL libre) y `uploads/` (ficheros de carga validados) | 1 → 9 |
-| `cli.py` | `create-admin` (primer administrador) y `rotate-secrets` (rotación Fernet) | 1 → 2 |
+| `cli.py` | `create-admin`, `rotate-secrets` (rotación Fernet), `backup`, `verify-backup` y `restore` | 1 → 10 |
 | `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y operaciones (`noop`) | 0 → 3 |
 | `workspace/` | Carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
 
@@ -63,7 +63,7 @@ src/
 
 | Variable | Por defecto (imagen) | Uso |
 |---|---|---|
-| `UBW_ENVIRONMENT` | `production` | `development` habilita `/api/docs` |
+| `UBW_ENVIRONMENT` | `production` | `development` habilita `/api/docs` y `/api/openapi.json` y quita el prefijo `__Host-` de las cookies (HTTP local) |
 | `UBW_DATA_DIR` | `/data` | `config.db` |
 | `UBW_WORKSPACE_DIR` | `/workspace` | Salidas por ejecución |
 | `UBW_STATIC_DIR` | `/app/static` | Build del frontend |
@@ -90,6 +90,9 @@ src/
 | `UBW_UPLOAD_MAX_UNCOMPRESSED_MB` | `300` | Tamaño descomprimido máximo de un `.xlsx` |
 | `UBW_UPLOAD_RETENTION_DAYS` | `7` | Purga de ficheros subidos sin uso (`0` desactiva) |
 | `UBW_BULK_MAX_ROWS` | `1000000` | Filas máximas de un fichero de carga |
+| `UBW_RATE_LIMIT_*` | ver [despliegue](guides/deployment.md#cabeceras-y-rate-limiting) | Límites por sesión, por IP sin sesión, login y subidas |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Proxies de confianza para `X-Forwarded-*` (uvicorn) |
+| Secret `ubw_metrics_token` | — | Activa `/metrics` con *bearer* (opcional) |
 | Secret `ubw_fernet_keys` | — | Cifrado de conexiones (ADR-004); **obligatorio** en producción |
 
 Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·

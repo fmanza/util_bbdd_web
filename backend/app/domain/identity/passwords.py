@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import gzip
 import secrets
 from functools import lru_cache
+from pathlib import Path
 
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
@@ -13,6 +15,16 @@ from app.domain.identity.errors import PasswordPolicyError
 MAX_PASSWORD_LENGTH = 128  # acota el coste de Argon2 ante entradas enormes
 
 _HASHER = PasswordHash((Argon2Hasher(),))
+_COMMON_FILE = Path(__file__).with_name("data") / "common_passwords.txt.gz"
+#: Términos del propio producto que tampoco valen como contraseña (además de la lista de comunes).
+_PRODUCT_WORDS = frozenset({"util_bbdd", "utilbbdd", "util_bbdd_web", "utilbbddweb"})
+
+
+@lru_cache(maxsize=1)
+def _common_passwords() -> frozenset[str]:
+    """Contraseñas comunes (lista del NCSC vía SecLists, ``data/README.md``), en minúsculas."""
+    with gzip.open(_COMMON_FILE, "rt", encoding="utf-8") as handle:
+        return frozenset(line.rstrip("\n") for line in handle if line.strip())
 
 
 @lru_cache(maxsize=1)
@@ -44,7 +56,7 @@ def check_policy(password: str, *, username: str, min_length: int) -> None:
     """Valida la política de contraseñas.
 
     Raises:
-        PasswordPolicyError: Longitud fuera de rango o igual al nombre de usuario.
+        PasswordPolicyError: Longitud fuera de rango, igual al nombre de usuario o demasiado común (ASVS 2.1.7).
     """
     if len(password) < min_length:
         raise PasswordPolicyError(f"La contraseña debe tener al menos {min_length} caracteres.")
@@ -52,3 +64,6 @@ def check_policy(password: str, *, username: str, min_length: int) -> None:
         raise PasswordPolicyError(f"La contraseña no puede superar {MAX_PASSWORD_LENGTH} caracteres.")
     if password.strip().lower() == username.strip().lower():
         raise PasswordPolicyError("La contraseña no puede coincidir con el nombre de usuario.")
+    lowered = password.lower()
+    if lowered in _common_passwords() or lowered in _PRODUCT_WORDS:
+        raise PasswordPolicyError("Esa contraseña es demasiado común: elige otra.")

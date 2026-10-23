@@ -40,8 +40,8 @@ def test_login_sets_session_and_csrf_cookies_with_flags(client: TestClient, user
         "can_write_data": False,
     }
     cookies = response.headers.get_list("set-cookie")
-    session_cookie = next(c for c in cookies if c.startswith("ubw_session=")).lower()
-    csrf_cookie = next(c for c in cookies if c.startswith("ubw_csrf=")).lower()
+    session_cookie = next(c for c in cookies if c.startswith("__Host-ubw_session=")).lower()
+    csrf_cookie = next(c for c in cookies if c.startswith("__Host-ubw_csrf=")).lower()
     for flag in ("httponly", "secure", "samesite=lax", "path=/"):
         assert flag in session_cookie
     assert "secure" in csrf_cookie
@@ -69,7 +69,7 @@ def test_bad_credentials_give_same_generic_401(client: TestClient, user: User, u
 
     assert response.status_code == 401
     assert response.json()["title"] == "Credenciales no válidas"
-    assert "ubw_session" not in client.cookies
+    assert "__Host-ubw_session" not in client.cookies
 
 
 def test_inactive_user_cannot_login(client: TestClient, user: User, db: Session) -> None:
@@ -99,8 +99,8 @@ def test_csrf_header_must_match_cookie(client: TestClient, user: User) -> None:
 
 def test_injected_csrf_cookie_is_rejected_with_session(user_client: TestClient) -> None:
     # Fijar cookie y cabecera al mismo valor no basta: con sesión se exige HMAC(clave, token_de_sesión).
-    user_client.cookies.delete("ubw_csrf")
-    user_client.cookies.set("ubw_csrf", "inyectado")
+    user_client.cookies.delete("__Host-ubw_csrf")
+    user_client.cookies.set("__Host-ubw_csrf", "inyectado")
 
     response = user_client.post("/api/v1/auth/logout", headers={"X-CSRF-Token": "inyectado"})
 
@@ -113,15 +113,15 @@ def test_csrf_endpoint_returns_session_bound_token_when_logged_in(user_client: T
 
 def test_login_rotates_previous_session(client: TestClient, user: User, db: Session) -> None:
     do_login(client, "ana", USER_PASSWORD)
-    first = client.cookies["ubw_session"]
+    first = client.cookies["__Host-ubw_session"]
     do_login(client, "ana", USER_PASSWORD)
 
-    assert client.cookies["ubw_session"] != first
+    assert client.cookies["__Host-ubw_session"] != first
     assert len(db.scalars(select(UserSession).where(UserSession.user_id == user.id)).all()) == 1
 
 
 def test_session_token_is_not_stored_in_clear(user_client: TestClient, db: Session) -> None:
-    token = user_client.cookies["ubw_session"]
+    token = user_client.cookies["__Host-ubw_session"]
 
     assert token not in db.scalars(select(UserSession.token_hash)).all()
 
@@ -196,7 +196,7 @@ def test_passwords_never_logged_nor_audited(
     assert "Inicio de sesión rechazado" in caplog.text
     assert "clave-erronea-xyz" not in caplog.text
     assert USER_PASSWORD not in caplog.text
-    assert client.cookies["ubw_session"] not in caplog.text
+    assert client.cookies["__Host-ubw_session"] not in caplog.text
     details = " ".join(str(e.details) for e in db.scalars(select(AuditEntry)).all())
     assert "clave-erronea-xyz" not in details
     assert USER_PASSWORD not in details

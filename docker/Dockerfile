@@ -31,7 +31,6 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=0 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 WORKDIR /src/backend
-COPY vendor/ /src/vendor/
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     EXTRAS=""; \
@@ -92,4 +91,6 @@ VOLUME ["/data", "/workspace"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD ["python", "-c", "import json,urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=4); sys.exit(0 if json.load(r)['status']=='ok' else 1)"]
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--no-server-header"]
+# Sin access log de uvicorn: la API escribe su propia línea JSON con request_id y ruta plantilla (Fase 10).
+# --proxy-headers confía en FORWARDED_ALLOW_IPS (127.0.0.1 por defecto): ver docs/guides/deployment.md.
+CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--no-server-header", "--no-access-log"]

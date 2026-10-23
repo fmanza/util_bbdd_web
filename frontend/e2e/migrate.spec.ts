@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Migración DDL real entre los contenedores bench (PostgreSQL → MySQL). Requiere el admin E2E,
 // UTIL_BBDD_BENCH_PASSWORD, UBW_E2E_MIGRATE=1 y, antes, las tablas de origen (y la limpieza después), desde backend/:

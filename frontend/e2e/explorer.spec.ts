@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Requiere el admin E2E (ver login.spec.ts) y una BD SQLite de ejemplo en el contenedor:
 //   python -c "import sqlite3; c=sqlite3.connect('e2e-tienda.db'); c.executescript(open('e2e/fixtures/tienda.sql').read())"

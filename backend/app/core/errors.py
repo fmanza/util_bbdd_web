@@ -14,6 +14,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.request_context import current_request_id
+
 PROBLEM_JSON = "application/problem+json"
 
 logger = logging.getLogger(__name__)
@@ -39,11 +41,13 @@ class AppError(Exception):
 
 
 def problem(status: int, title: str, detail: str | None = None, **extra: object) -> JSONResponse:
-    """Respuesta ``application/problem+json``."""
+    """Respuesta ``application/problem+json`` con el ``request_id`` de la petición (para soporte)."""
     body: dict[str, object] = {"type": "about:blank", "title": title, "status": status}
     if detail:
         body["detail"] = detail
     body.update(extra)
+    if (request_id := current_request_id()) is not None:
+        body["request_id"] = request_id
     return JSONResponse(body, status_code=status, media_type=PROBLEM_JSON)
 
 
@@ -52,7 +56,10 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AppError)
     async def _app(_: Request, exc: AppError) -> JSONResponse:
-        return problem(exc.status, exc.title, exc.detail, **exc.extra)
+        response = problem(exc.status, exc.title, exc.detail, **exc.extra)
+        if (retry_after := getattr(exc, "retry_after", None)) is not None:
+            response.headers["Retry-After"] = str(retry_after)
+        return response
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:

@@ -9,11 +9,13 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.api import health
+from app.api import health, metrics
 from app.api.v1 import router as v1_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers, problem
 from app.core.logging import configure_logging
+from app.core.middleware import HttpMetrics, HttpMiddleware
+from app.core.ratelimit import SlidingWindowLimiter
 from app.core.security import require_secret_key
 
 
@@ -24,7 +26,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings: Ajustes a usar; por defecto, los del entorno.
 
     Returns:
-        Aplicación con ``/api/health``, ``/api/v1`` y, si existe ``static_dir``, la SPA.
+        Aplicación con ``/api/health``, ``/api/v1``, ``/metrics`` y, si existe ``static_dir``, la SPA; con el
+        middleware de ``request_id``, cabeceras de seguridad, rate limiting y métricas.
 
     Raises:
         MissingSecretKeyError: Producción sin ``UBW_APP_SECRET_KEY``.
@@ -36,11 +39,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="util_bbdd_web",
         version=__version__,
-        openapi_url="/api/openapi.json",
+        # En producción no se publica el esquema (ASVS 14.3): el contrato está en openapi/openapi.json.
+        openapi_url="/api/openapi.json" if settings.environment != "production" else None,
         docs_url="/api/docs" if settings.environment != "production" else None,
         redoc_url=None,
     )
     install_error_handlers(app)
+    limiter = SlidingWindowLimiter()
+    http_metrics = HttpMetrics()
+    app.state.limiter = limiter
+    app.state.http_metrics = http_metrics
+    metrics.register_collectors(http_metrics.registry)
+    app.add_middleware(HttpMiddleware, settings=settings, limiter=limiter, metrics=http_metrics)
+    app.include_router(metrics.router)
 
     api = APIRouter(prefix="/api")
     api.include_router(health.router)

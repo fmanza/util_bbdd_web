@@ -18,7 +18,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 7 | Migración DDL | 0.8.0 | ✅ Cerrada (2026-10-22) |
 | 8 | Volcado de datos | 0.9.0 | ✅ Cerrada (2026-10-23) |
 | 9 | Carga bulk | 0.10.0 | ✅ Cerrada (2026-10-23) |
-| 10 | Endurecimiento y release | 1.0.0 | Pendiente |
+| 10 | Endurecimiento y release | 1.0.0 | ✅ Cerrada (2026-10-23) |
 
 **DoD común a todas las fases**: comandos de desarrollo en verde (backend y frontend), OpenAPI exportado y cliente
 regenerado, migración Alembic con `downgrade`, tests de autorización (401/404), imagen construida y `/api/health`
@@ -141,13 +141,19 @@ subidas `multipart` con contenido verificado, vista previa con filas afectadas y
 permiso `can_write_data` + owner, confirmación del alias y, en update/delete, de las filas afectadas; paralelo
 opcional con aceptación de que no es atómico (G36).
 
-## Fase 10 — Endurecimiento y release 1.0
+## Fase 10 — Endurecimiento y release 1.0 ✅
 
 - Revisión OWASP ASVS nivel 2 (`/security-review` completo) y remediación.
 - Cabeceras de seguridad, rate limiting de login y API, métricas Prometheus, logs JSON con `request_id`.
 - Backup y restauración de `config.db` (`sqlite3 .backup`) y del workspace; guía de despliegue tras proxy TLS.
 - E2E de todos los flujos; prueba de carga básica; imagen variante HSQLDB/ODBC verificada.
 - Publicación de util_bbdd en un índice privado o GitHub Releases y retirada del wheel vendorizado (ADR-006).
+
+Hecho: informe [ASVS L2](../security/ASVS_L2.md) con remediación (cookies `__Host-`, contraseñas comunes, CSP y
+cabeceras, OpenAPI oculto en producción, dependencias con CVE), rate limiting propio en memoria, `/metrics` con
+*bearer*, logs JSON con `request_id`, `app.cli backup|verify-backup|restore`, guía tras proxy TLS (nginx, Caddy),
+E2E de miembros, seguridad y CSP en toda la suite, `scripts/load_test.py`, variantes HSQLDB/ODBC verificadas y
+wheel de util_bbdd 4.0.0 en la release `v4.0.0` con hash en `uv.lock`.
 
 ## Mejoras opcionales (fuera de fase, decidir al planificar)
 

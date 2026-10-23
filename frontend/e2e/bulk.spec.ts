@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Carga bulk en SQLite (no necesita el bench). Requiere el admin E2E, UBW_E2E_SQLITE=1 y, en el contenedor, la BD
 // e2e-carga.db creada con el esquema de e2e/fixtures/volcado_vacio.sql:

@@ -33,6 +33,15 @@
 | Comparación: «El schema «x» no existe en el origen/destino» | Nombre mal escrito o de otro motor (en MySQL es la base de datos) | Copia el nombre del explorador |
 | Volcado: `dump_partial` | Una tabla falló o una constraint no se reactivó | Revisa el resultado por tabla |
 | Volcado: «attempt to write a readonly database» (SQLite) | El fichero no es del usuario de la aplicación | Dale permisos de escritura al usuario `app` |
+| 429 «Demasiadas peticiones» | Se superó un límite de `UBW_RATE_LIMIT_*` (por sesión, por IP sin sesión, login o subidas) | Esperar los segundos de `Retry-After`; si afecta a muchos usuarios a la vez, revisar `UBW_FORWARDED_ALLOW_IPS` (sin él todos comparten la IP del proxy) o subir el límite |
+| Login: 429 aunque la contraseña sea buena | Más de `UBW_RATE_LIMIT_LOGIN_FAILURES` fallos desde esa IP en 15 min | Esperar o reiniciar `web` (los contadores son en memoria) |
+| Tras actualizar a 1.0 todos tienen que volver a entrar | Las cookies pasan a `__Host-ubw_session`/`__Host-ubw_csrf` | Esperado una vez |
+| No se mantiene la sesión (vuelve al login) | Acceso por HTTP sin TLS a otro host que `localhost`: el navegador no guarda cookies `Secure` | Usar el proxy TLS (o `UBW_ENVIRONMENT=development` solo en local) |
+| «Esa contraseña es demasiado común» | Está en la lista de contraseñas comunes (ASVS 2.1.7) | Elegir otra, mejor una frase |
+| `/metrics` da 404 / 401 | Sin secret `ubw_metrics_token` / sin `Authorization: Bearer` correcto | Ver *Logs y métricas* en el despliegue |
+| `restore`: «hay un worker en marcha» | La aplicación sigue arrancada | `docker compose stop` y `docker compose run --rm --no-deps …` |
+| `restore`: «… está dañado» | La copia no coincide con su `manifest.json` | Usar otra copia; no restaurar una incompleta |
+| Para dar soporte, ¿qué petición falló? | — | La «Referencia» del error es el `request_id`: búscalo en `docker compose logs web` |
 | Carga: 413 al subir un fichero | Supera `UBW_UPLOAD_MAX_MB` o el límite del proxy | Divide el fichero o sube ambos límites (`client_max_body_size`) |
 | Carga: 415/422 al subir | Extensión distinta de `.csv`/`.xlsx`, contenido que no corresponde o Excel con macros | Guarda el fichero como CSV o `.xlsx` sin macros |
 | Carga: `invalid_file` | Codificación, separador u hoja incorrectos, o más de `UBW_BULK_MAX_ROWS` filas | Fija separador y codificación en el formulario o divide el fichero |

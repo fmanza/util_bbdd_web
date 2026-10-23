@@ -14,12 +14,19 @@ x-app: &app
       WITH_ODBC: ${WITH_ODBC:-false}
   environment:
     UBW_LOG_LEVEL: ${UBW_LOG_LEVEL:-INFO}
+    # IP del proxy inverso en el que confía uvicorn para X-Forwarded-For/Proto (rate limit por IP real, HSTS).
+    FORWARDED_ALLOW_IPS: ${UBW_FORWARDED_ALLOW_IPS:-127.0.0.1}
+    # Rate limiting por IP de lo que llega sin sesión y del inicio de sesión (Fase 10; el resto, por defecto).
+    UBW_RATE_LIMIT_ANONYMOUS_PER_MINUTE: ${UBW_RATE_LIMIT_ANONYMOUS_PER_MINUTE:-300}
+    UBW_RATE_LIMIT_LOGIN_PER_MINUTE: ${UBW_RATE_LIMIT_LOGIN_PER_MINUTE:-30}
+    UBW_RATE_LIMIT_LOGIN_FAILURES: ${UBW_RATE_LIMIT_LOGIN_FAILURES:-10}
   volumes:
     - data:/data
     - workspace:/workspace
   secrets:
     - ubw_app_secret_key
     - ubw_fernet_keys
+    # - ubw_metrics_token   # activa /metrics (Bearer); ver docs/guides/deployment.md
   read_only: true
   tmpfs:
     - /tmp
@@ -56,3 +63,5 @@ secrets:
     file: ./secrets/app_secret_key.txt
   ubw_fernet_keys:
     file: ./secrets/fernet_keys.txt
+  # ubw_metrics_token:
+  #   file: ./secrets/metrics_token.txt

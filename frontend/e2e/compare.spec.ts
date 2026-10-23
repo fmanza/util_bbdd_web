@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from './fixtures';
 
 // Requisitos de explorer.spec.ts y, además, la segunda BD en el contenedor:
 //   python -c "import sqlite3; c=sqlite3.connect('e2e-tienda-v2.db'); c.executescript(open('e2e/fixtures/tienda_v2.sql').read())"

@@ -14,7 +14,8 @@
     "actions": "Acciones",
     "yes": "Sí",
     "no": "No",
-    "delete": "Borrar"
+    "delete": "Borrar",
+    "reference": "Referencia: {{id}}"
   },
   "roles": {
     "admin": "Administrador",

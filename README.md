@@ -1,10 +1,10 @@
 # util_bbdd_web
 
-Aplicación web multiusuario sobre [util_bbdd](vendor/wheels/): catálogo de motores con sus capacidades, conexiones
+Aplicación web multiusuario sobre [util_bbdd](https://github.com/fmanza/util_bbdd): catálogo de motores con sus capacidades, conexiones
 cifradas, proyectos por usuario y ejecuciones de util_bbdd (documentación, grafos, comparación de esquemas,
 migración DDL, volcado y carga bulk) con los resultados guardados y **agrupados por ejecución**.
 
-> Estado: **0.10.0 — Fase 9 (carga bulk)**. El plan completo está en [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
+> Estado: **1.0.0 — release** (Fases 0–10 cerradas; revisión [ASVS L2](docs/security/ASVS_L2.md)). El plan completo está en [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
 
 ## Arranque rápido
 
@@ -28,7 +28,7 @@ Abre <http://127.0.0.1:8080> e inicia sesión. Estado del servicio: <http://127.
 | Frontend | React 19 + TypeScript 5.9, Vite 8, React Router 8, TanStack Query 5, Mantine 9, i18next |
 | Backend | Python 3.12, FastAPI, Pydantic 2, SQLAlchemy 2.1, Alembic |
 | Persistencia | SQLite (WAL) en volumen `data`; salidas en volumen `workspace` |
-| Librería | util_bbdd 4.0.0 (wheel en `vendor/wheels/`, ADR-006) |
+| Librería | util_bbdd 4.0.0 (wheel de la release v4.0.0 en GitHub, hash fijado en `uv.lock`, ADR-006) |
 | Contenedor | Dockerfile multi-stage, usuario no root, sistema de ficheros de solo lectura |
 
 ## Documentación

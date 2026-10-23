@@ -1,6 +1,6 @@
 [project]
 name = "util_bbdd_web"
-version = "0.10.0"
+version = "1.0.0"
 description = "Aplicación web multiusuario sobre util_bbdd: conexiones, proyectos y ejecuciones agrupadas."
 readme = "../README.md"
 requires-python = ">=3.12,<3.13"
@@ -14,7 +14,7 @@ dependencies = [
     "pydantic-settings>=2.10",
     "sqlalchemy>=2.1",
     "alembic>=1.16",
-    # util_bbdd fijado por versión (ADR-006): wheel vendorizado en vendor/wheels, ver [tool.uv.sources].
+    # util_bbdd fijado por versión (ADR-006): wheel de la release v4.0.0 en GitHub, hash en uv.lock.
     "util_bbdd[oracle,mariadb,mysql,postgresql,migrate,analysis]==4.0.0",
     # Drivers sin extra en util_bbdd (UTIL_BBDD_GAPS.md G3).
     "pymssql>=2.3",
@@ -23,6 +23,7 @@ dependencies = [
     "cryptography>=50",  # Fernet para secretos de conexión (ADR-004)
     "sqlglot>=30",  # guardián de solo lectura del SQL libre (Fase 4)
     "python-multipart>=0.0.32",  # subida de ficheros de la carga bulk (Fase 9)
+    "prometheus-client>=0.26",  # métricas /metrics (Fase 10)
 ]
 
 [project.optional-dependencies]
@@ -44,11 +45,12 @@ dev = [
 package = false
 # Cadena de suministro: solo versiones publicadas antes de esta fecha (≥ 2 semanas). Se adelanta a mano al actualizar.
 exclude-newer = "2026-10-05T00:00:00Z"
-# Excepciones justificadas: util_bbdd 4.0.0 exige asyncpg>=0.32, publicado después del corte.
-exclude-newer-package = { asyncpg = "2026-10-19T00:00:00Z" }
+# Excepciones justificadas: util_bbdd 4.0.0 exige asyncpg>=0.32, publicado después del corte; opentelemetry-api
+# 1.45.1 (2026-10-06) corrige CVE-2026-114603 (ReDoS en ``tracestate``; llega con FastAPI, Fase 10).
+exclude-newer-package = { asyncpg = "2026-10-19T00:00:00Z", opentelemetry-api = "2026-10-09T00:00:00Z" }
 
 [tool.uv.sources]
-util_bbdd = { path = "../vendor/wheels/util_bbdd-4.0.0-py3-none-any.whl" }
+util_bbdd = { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.0.0/util_bbdd-4.0.0-py3-none-any.whl" }
 
 [tool.ruff]
 line-length = 120

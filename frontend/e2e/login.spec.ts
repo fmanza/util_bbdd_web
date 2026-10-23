@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Requiere un admin creado antes con el CLI:
 //   docker compose exec web python -m app.cli create-admin --username e2e-admin
@@ -27,7 +27,7 @@ test('el admin inicia sesión, ve la administración y cierra sesión', async ({
 
   await expect(page.getByText('Servicio operativo')).toBeVisible();
   const cookies = await context.cookies();
-  const session = cookies.find((cookie) => cookie.name === 'ubw_session');
+  const session = cookies.find((cookie) => cookie.name.endsWith('ubw_session'));
   expect(session?.httpOnly).toBe(true);
   expect(session?.sameSite).toBe('Lax');
 
@@ -57,6 +57,9 @@ test('el admin crea un usuario que puede entrar pero no ve la administración', 
   await dialog.getByRole('textbox', { name: /Nombre visible/ }).fill('Usuaria E2E');
   await dialog.getByLabel(/^Contraseña/).fill(password);
   await dialog.getByRole('button', { name: 'Crear usuario' }).click();
+  await expect(dialog).toBeHidden();
+  // La lista está paginada: se busca el usuario nuevo.
+  await page.getByRole('textbox', { name: 'Buscar por usuario o nombre' }).fill(username);
   await expect(page.getByRole('cell', { name: username, exact: true })).toBeVisible();
 
   const other = await browser.newPage();

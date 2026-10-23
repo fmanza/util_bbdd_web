@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Mismos requisitos que explorer.spec.ts: admin E2E, `e2e-tienda.db` copiada al contenedor y UBW_E2E_SQLITE=1.
 const ADMIN_USER = process.env.UBW_E2E_ADMIN_USER;

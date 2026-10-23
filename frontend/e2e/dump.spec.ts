@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 
 // Volcado SQLite → SQLite (no necesita el bench). Requiere el admin E2E, UBW_E2E_SQLITE=1 y, en el contenedor, las BD
 // de e2e/fixtures/volcado.sql (origen) y volcado_vacio.sql (destino):

@@ -19,6 +19,17 @@ CSRF_COOKIE = "ubw_csrf"
 CSRF_HEADER = "X-CSRF-Token"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
 
+
+def session_cookie(settings: Settings) -> str:
+    """Nombre de la cookie de sesión: ``__Host-ubw_session`` con TLS, ``ubw_session`` en ``development``."""
+    return settings.cookie_prefix + SESSION_COOKIE
+
+
+def csrf_cookie(settings: Settings) -> str:
+    """Nombre de la cookie CSRF: ``__Host-ubw_csrf`` con TLS, ``ubw_csrf`` en ``development``."""
+    return settings.cookie_prefix + CSRF_COOKIE
+
+
 DbSession = Annotated[Session, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -40,7 +51,7 @@ def current_session(request: Request, db: DbSession, settings: SettingsDep) -> U
     Raises:
         HTTPException: 401 si no hay cookie o la sesión no es válida.
     """
-    token = request.cookies.get(SESSION_COOKIE)
+    token = request.cookies.get(session_cookie(settings))
     session = resolve_session(db, token, settings) if token else None
     if session is None:
         raise HTTPException(status_code=401, detail="No autenticado")
@@ -84,10 +95,10 @@ def csrf_protect(request: Request, settings: SettingsDep) -> None:
     if request.method in SAFE_METHODS:
         return
     header = request.headers.get(CSRF_HEADER, "")
-    cookie = request.cookies.get(CSRF_COOKIE, "")
+    cookie = request.cookies.get(csrf_cookie(settings), "")
     if not header or not cookie or not tokens_match(header, cookie):
         raise HTTPException(status_code=403, detail="Token CSRF ausente o no válido")
-    session_token = request.cookies.get(SESSION_COOKIE)
+    session_token = request.cookies.get(session_cookie(settings))
     if session_token and not tokens_match(header, session_csrf_token(settings, session_token)):
         raise HTTPException(status_code=403, detail="Token CSRF ausente o no válido")
 
@@ -97,7 +108,7 @@ def set_auth_cookies(response: Response, settings: Settings, session_token: str)
     max_age = settings.session_absolute_hours * 3600
     csrf = session_csrf_token(settings, session_token)
     response.set_cookie(
-        SESSION_COOKIE,
+        session_cookie(settings),
         session_token,
         max_age=max_age,
         path="/",
@@ -112,11 +123,17 @@ def set_auth_cookies(response: Response, settings: Settings, session_token: str)
 def set_csrf_cookie(response: Response, settings: Settings, token: str, *, max_age: int | None = None) -> None:
     """Cookie ``ubw_csrf`` sin ``HttpOnly`` para que la SPA la copie en la cabecera."""
     response.set_cookie(
-        CSRF_COOKIE, token, max_age=max_age, path="/", secure=settings.cookie_secure, httponly=False, samesite="lax"
+        csrf_cookie(settings),
+        token,
+        max_age=max_age,
+        path="/",
+        secure=settings.cookie_secure,
+        httponly=False,
+        samesite="lax",
     )
 
 
 def clear_auth_cookies(response: Response, settings: Settings) -> None:
     """Borra las cookies de sesión y CSRF."""
-    for name, httponly in ((SESSION_COOKIE, True), (CSRF_COOKIE, False)):
+    for name, httponly in ((session_cookie(settings), True), (csrf_cookie(settings), False)):
         response.delete_cookie(name, path="/", secure=settings.cookie_secure, httponly=httponly, samesite="lax")

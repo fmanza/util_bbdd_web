@@ -105,7 +105,7 @@ def do_login(client: TestClient, username: str, password: str) -> None:
         "/api/v1/auth/login", json={"username": username, "password": password}, headers={"X-CSRF-Token": csrf}
     )
     assert response.status_code == 200, response.text
-    client.headers["X-CSRF-Token"] = client.cookies["ubw_csrf"]
+    client.headers["X-CSRF-Token"] = client.cookies["__Host-ubw_csrf"]
 
 
 @pytest.fixture

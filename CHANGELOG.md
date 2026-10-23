@@ -3,6 +3,52 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [1.0.0] - 2026-10-23
+
+Fase 10 — Endurecimiento y release 1.0.
+
+### Added
+
+- **Revisión OWASP ASVS 4.0.3 nivel 2** con su remediación: [docs/security/ASVS_L2.md](docs/security/ASVS_L2.md)
+  (capítulo por capítulo, evidencias y riesgos aceptados).
+- **Cabeceras de seguridad** en toda respuesta (middleware ASGI propio): CSP de la SPA (`script-src 'self'`,
+  `frame-ancestors 'none'`), `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP/CORP, `Cache-Control: no-store`
+  en `/api` y HSTS en producción con HTTPS; las CSP propias del sitio HTML y las vistas previas se respetan.
+- **Rate limiting** en memoria (sin dependencias): por sesión, por IP sin sesión, intentos y fallos de login por IP y
+  subidas; 429 *problem details* con `Retry-After` (`UBW_RATE_LIMIT_*`).
+- **`request_id`**: cabecera `X-Request-ID` (aceptada si es válida o ULID nuevo), en cada log de la petición, en los
+  *problem details* y como «Referencia» en los errores de la SPA; línea de acceso JSON propia con ruta plantilla.
+- **Métricas Prometheus** en `/metrics` (`prometheus-client`), solo con el secret `ubw_metrics_token` y *bearer*:
+  peticiones y latencia por ruta plantilla, 429 por regla, ejecuciones por estado y operación, latido del worker.
+- **Copias de seguridad**: `python -m app.cli backup | verify-backup | restore` (instantánea en caliente de
+  `config.db`, workspace y ficheros, manifiesto con SHA-256; restauración validada antes de tocar nada).
+- **Guía de despliegue** tras proxy TLS (nginx y Caddy, `FORWARDED_ALLOW_IPS`, `/metrics` restringido, copias,
+  variantes, prueba de carga y actualización a 1.0).
+- **Prueba de carga** `scripts/load_test.py` (httpx + asyncio) con umbrales.
+- **E2E**: miembros y roles, cabeceras y cookies, bloqueo de cuenta con auditoría, y vigilancia de violaciones de CSP
+  en todos los specs (`e2e/fixtures.ts`).
+- **Tests**: 32 nuevos (550; cabeceras, límites, métricas, copias y restauración, cookies, contraseñas comunes) en backend y 3 nuevos (105) en Vitest.
+
+### Changed
+
+- **util_bbdd** se instala desde la release `v4.0.0` de GitHub (mismo wheel, SHA-256 fijado en `uv.lock`); se retira
+  `vendor/` (ADR-006 revisado).
+- Cookies `__Host-ubw_session` y `__Host-ubw_csrf` con TLS (ASVS 3.4.4): los usuarios vuelven a iniciar sesión una vez.
+- Las contraseñas nuevas se comprueban contra 45 578 contraseñas comunes (lista del NCSC, local; ASVS 2.1.7).
+- `/api/openapi.json` ya no se publica en producción.
+- uvicorn sin access log propio (la API escribe el suyo); `FORWARDED_ALLOW_IPS` configurable en el compose.
+
+### Fixed
+
+- `docs/guides/deployment.md`: el ejemplo de `printf '%s\n'` estaba partido en dos líneas.
+- `frontend/src/test/api.ts` mal formateado desde la 0.10.0.
+
+### Security
+
+- opentelemetry-api 1.45.1 (CVE-2026-114603, ReDoS en `tracestate`) y Vite 8.3.4 (avisos del servidor de desarrollo).
+- Riesgo aceptado: `mariadb` 1.1.14 (PYSEC-2026-217, sin versión corregida; no aplica con parámetros enlazados y
+  `utf8mb4`).
+
 ## [0.10.0] - 2026-10-23
 
 Fase 9 — Carga bulk.

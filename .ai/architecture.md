@@ -6,7 +6,7 @@ Fuente detallada: `docs/architecture.md` y `docs/adr/`. Resumen operativo:
 
 | Nivel | Paquete | Puede importar |
 |---|---|---|
-| 1 | `backend/app/core` | stdlib, pydantic-settings |
+| 1 | `backend/app/core` | stdlib, pydantic-settings, Starlette/FastAPI (errores, middleware), prometheus-client |
 | 1 | `backend/app/db` | core, SQLAlchemy |
 | 2 | `backend/app/integrations/util_bbdd` | core, **util_bbdd** (único) |
 | 2 | `backend/app/workspace` | core |
