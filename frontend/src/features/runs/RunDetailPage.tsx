@@ -22,6 +22,8 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes, formatDateTime, formatDuration } from '../../components/format';
 import { canRole } from '../projects/useProjects';
 import { ArtifactBrowser } from './ArtifactBrowser';
+import { BulkPreviewViewer } from './bulk/BulkPreviewViewer';
+import { BulkResultView } from './bulk/BulkResultView';
 import { DiffViewer } from './compare/DiffViewer';
 import { DumpPreviewViewer } from './dump/DumpPreviewViewer';
 import { DumpResultView } from './dump/DumpResultView';
@@ -32,9 +34,9 @@ import { RunStatusBadge } from './RunStatusBadge';
 import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiveRun } from './useRuns';
 
 /** Operaciones que no se relanzan (la API responde 409): aplicar una migración exige un modo seco nuevo. */
-const NOT_RELAUNCHABLE = new Set(['migrate_apply', 'dump_apply']);
+const NOT_RELAUNCHABLE = new Set(['migrate_apply', 'dump_apply', 'bulk_apply']);
 /** Escrituras en una BD destino: en curso no se cancelan (la API responde 409). */
-const NOT_CANCELLABLE_RUNNING = new Set(['migrate_apply', 'dump_apply']);
+const NOT_CANCELLABLE_RUNNING = new Set(['migrate_apply', 'dump_apply', 'bulk_apply']);
 
 export function RunDetailPage() {
   const { t } = useTranslation();
@@ -193,6 +195,8 @@ export function RunDetailPage() {
       {run.operation === 'migrate_apply' && <MigrationReportView run={run} />}
       {run.operation === 'dump_preview' && run.status === 'succeeded' && <DumpPreviewViewer run={run} />}
       {run.operation === 'dump_apply' && <DumpResultView run={run} />}
+      {run.operation === 'bulk_preview' && run.status === 'succeeded' && <BulkPreviewViewer run={run} />}
+      {run.operation === 'bulk_apply' && <BulkResultView run={run} />}
       {run.operation === 'compare' && run.status === 'succeeded' && (
         <DiffViewer runId={run.id} projectId={run.project_id} />
       )}

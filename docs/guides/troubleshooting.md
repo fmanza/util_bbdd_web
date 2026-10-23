@@ -33,6 +33,11 @@
 | Comparación: «El schema «x» no existe en el origen/destino» | Nombre mal escrito o de otro motor (en MySQL es la base de datos) | Copia el nombre del explorador |
 | Volcado: `dump_partial` | Una tabla falló o una constraint no se reactivó | Revisa el resultado por tabla |
 | Volcado: «attempt to write a readonly database» (SQLite) | El fichero no es del usuario de la aplicación | Dale permisos de escritura al usuario `app` |
+| Carga: 413 al subir un fichero | Supera `UBW_UPLOAD_MAX_MB` o el límite del proxy | Divide el fichero o sube ambos límites (`client_max_body_size`) |
+| Carga: 415/422 al subir | Extensión distinta de `.csv`/`.xlsx`, contenido que no corresponde o Excel con macros | Guarda el fichero como CSV o `.xlsx` sin macros |
+| Carga: `invalid_file` | Codificación, separador u hoja incorrectos, o más de `UBW_BULK_MAX_ROWS` filas | Fija separador y codificación en el formulario o divide el fichero |
+| Carga: `preview_changed` | Cambiaron la tabla, el mapeo o las filas afectadas desde la vista previa | Repite la vista previa |
+| Carga: `bulk_partial` | Falló una partición de una carga paralela; las demás quedaron confirmadas | Revisa las particiones y corrige el destino |
 | Migración: 403 al aplicar | Sin «Puede aplicar DDL» o sin ser propietario | Un admin concede el permiso; aplica el propietario |
 | Migración: «El origen ha cambiado desde el plan» | Cambió el schema origen tras planificar | Planifica de nuevo |
 | Migración: no aparece *Cancelar* | Las aplicaciones en curso no se cancelan (dejarían el destino a medias) | Espera a que termine; en cola sí se cancela |

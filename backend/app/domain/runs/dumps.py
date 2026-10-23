@@ -93,7 +93,7 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunStateError: Otro volcado en curso sobre el destino (409).
     """
     if not user.can_write_data:
-        raise DumpForbiddenError("Necesitas el permiso «Puede volcar datos»; pídeselo a un administrador.")
+        raise DumpForbiddenError("Necesitas el permiso «Puede escribir datos»; pídeselo a un administrador.")
     if membership.role != "owner":
         raise DumpForbiddenError("Solo el propietario del proyecto puede volcar datos.")
     preview_run = db.get(Run, params["preview_run"])

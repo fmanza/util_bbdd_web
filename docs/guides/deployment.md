@@ -31,7 +31,8 @@ escritura para las conexiones sin «Solo lectura» de las fases de migración, v
 migraciones DDL, ese usuario necesita permisos de `CREATE` (tablas, índices, vistas, secuencias y triggers) en el
 schema destino, y el usuario de la web, el permiso «Puede aplicar DDL» ([guía](migracion.md)). Para volcar datos
 ([guía](volcado.md)) el usuario de BD destino necesita `INSERT` (y `DELETE`/`TRUNCATE` si se vacía) y, para que
-util_bbdd desactive y reactive constraints e índices, `ALTER` sobre esas tablas.
+util_bbdd desactive y reactive constraints e índices, `ALTER` sobre esas tablas. Para la carga bulk
+([guía](carga.md)), `INSERT`, `UPDATE` o `DELETE` sobre la tabla destino según la operación.
 
 ### Destinos y ficheros de las conexiones
 
@@ -58,9 +59,13 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;              # SSE de progreso (Fase 3)
+        client_max_body_size 51m;         # subidas de la carga bulk: UBW_UPLOAD_MAX_MB + margen (Fase 9)
     }
 }
 ```
+
+Si subes `UBW_UPLOAD_MAX_MB`, sube también el límite de cuerpo del proxy (nginx responde 413 antes de llegar a la
+aplicación). Los ficheros subidos se guardan en el volumen del workspace y cuentan para la cuota del usuario.
 
 ## Variantes de imagen
 

@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { BulkTab } from '../bulk/BulkTab';
 import { SqlConsole } from '../explorer/SqlConsole';
 import { ConnectionsTab, MembersTab, RunsTab, SettingsTab } from './ProjectTabs';
 import { canRole, useProject } from './useProjects';
 
-const TABS = ['runs', 'connections', 'members', 'sql', 'settings'] as const;
+const TABS = ['runs', 'connections', 'members', 'sql', 'bulk', 'settings'] as const;
 type Tab = (typeof TABS)[number];
 
 export function ProjectDetailPage() {
@@ -34,7 +35,7 @@ export function ProjectDetailPage() {
     requested &&
     TABS.includes(requested) &&
     (requested !== 'settings' || owner) &&
-    (requested !== 'sql' || editor)
+    ((requested !== 'sql' && requested !== 'bulk') || editor)
       ? requested
       : 'runs';
 
@@ -56,6 +57,7 @@ export function ProjectDetailPage() {
           <Tabs.Tab value="connections">{t('projects.tabs.connections')}</Tabs.Tab>
           <Tabs.Tab value="members">{t('projects.tabs.members')}</Tabs.Tab>
           {editor && <Tabs.Tab value="sql">{t('projects.tabs.sql')}</Tabs.Tab>}
+          {editor && <Tabs.Tab value="bulk">{t('projects.tabs.bulk')}</Tabs.Tab>}
           {owner && <Tabs.Tab value="settings">{t('projects.tabs.settings')}</Tabs.Tab>}
         </Tabs.List>
         <Tabs.Panel value="runs" pt="md">
@@ -70,6 +72,11 @@ export function ProjectDetailPage() {
         {editor && (
           <Tabs.Panel value="sql" pt="md">
             <SqlConsole projectId={project.id} />
+          </Tabs.Panel>
+        )}
+        {editor && (
+          <Tabs.Panel value="bulk" pt="md">
+            <BulkTab project={project} />
           </Tabs.Panel>
         )}
         {owner && (

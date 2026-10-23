@@ -3,6 +3,48 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.10.0] - 2026-10-23
+
+Fase 9 — Carga bulk.
+
+### Added
+
+- **Subidas** de CSV y Excel por proyecto (`POST/GET/DELETE /api/v1/projects/{id}/uploads`, `multipart/form-data`,
+  migración `0008`): copia en streaming con límite de tamaño (`UBW_UPLOAD_MAX_MB`) y cuota, comprobación del contenido
+  real (CSV sin NUL; `.xlsx` sin macros y con tamaño descomprimido acotado), auditoría y purga a los
+  `UBW_UPLOAD_RETENTION_DAYS`. `GET …/uploads/{id}/info` devuelve columnas, muestra y hojas o separador detectado.
+- **Vista previa** (`bulk_preview`, modo seco): mapeo de columnas (explícito o por nombre), validaciones (columnas
+  inexistentes u obligatorias, clave primaria en update/delete), filas afectadas por PK, plan paralelo, muestra y
+  **SQL generado** como artefacto (`generar_sql=True`, G35).
+- **Carga** (`bulk_apply`, ADR-010): insert, update y delete con `BulkCrud`; permiso «Puede escribir datos» + owner,
+  vista previa sin errores de menos de 60 min con el mismo fichero, conexión y estructura, confirmación del alias y,
+  en update/delete, de las **filas afectadas** (el worker las vuelve a contar antes de escribir); plan paralelo con
+  aceptación expresa de que no es atómico (G36); rechazos en `rechazos.csv`, auditoría `carga.jsonl` y filas antes y
+  después (G37).
+- **API**: `GET /api/v1/runs/{id}/bulk-preview` y `GET /api/v1/runs/{id}/bulk-result`.
+- **Frontend**: pestaña *Carga* del proyecto (subida, asistente con mapeo y vista previa), visor de la vista previa
+  con SQL y modal de confirmación, y resultado con particiones.
+- **Tests**: 30 nuevos en backend (518; cargas reales SQLite en el CI), 10 de integración escribiendo en los 5
+  motores del bench, 12 en Vitest (102) y E2E de subida → insertar → borrar con confirmación.
+- **Documentación**: guía [Carga bulk](docs/guides/carga.md), ADR-010, huecos G35–G37, nota de proxy
+  (`client_max_body_size`).
+
+### Changed
+
+- El permiso `can_write_data` se muestra como **«Puede escribir datos»** (antes *Puede volcar datos*): cubre volcado y
+  carga.
+- La cuota de usuario cuenta también los ficheros subidos.
+- Migración, volcado y carga comparten la regla de una escritura por destino y la de no cancelar en curso.
+- `migrate.spec.ts` se omite en las copias de `--repeat-each` (escribe en un destino compartido del bench).
+
+### Security
+
+- Ficheros guardados con nombre propio (`<ulid>.<ext>`), acceso por proyecto (otro proyecto → 404) y rol editor para
+  subir o borrar; un fichero en uso por una carga no se borra.
+- Errores de la carga con la primera línea del motor y los valores enmascarados (G34).
+- `audit_log` registra en cada carga la vista previa, el fichero, el destino, la tabla, la operación y las filas
+  confirmadas.
+
 ## [0.9.0] - 2026-10-23
 
 Fase 8 — Volcado de datos.

@@ -161,13 +161,14 @@ def _checked(run: Run, artifact: Artifact | None, settings: Settings) -> tuple[A
 # --- encolar -----------------------------------------------------------------------------------------------------
 
 
-def _usage_bytes(db: Session, user_id: int) -> int:
-    return (
-        db.scalar(
-            select(func.coalesce(func.sum(Run.size_bytes), 0)).where(Run.user_id == user_id, Run.status != "purged")
-        )
-        or 0
+def usage_bytes(db: Session, user_id: int) -> int:
+    """Espacio que usa ``user_id``: sus ejecuciones no purgadas y sus ficheros subidos (Fase 9)."""
+    from app.domain.uploads.service import uploads_bytes
+
+    runs = db.scalar(
+        select(func.coalesce(func.sum(Run.size_bytes), 0)).where(Run.user_id == user_id, Run.status != "purged")
     )
+    return int(runs or 0) + uploads_bytes(db, user_id)
 
 
 def enqueue(
@@ -191,7 +192,7 @@ def enqueue(
         MigrationForbiddenError, DumpForbiddenError, RunStateError: Reglas de escritura en la BD destino
             (``migrations.check_apply``, ADR-008; ``dumps.check_apply``, ADR-009).
     """
-    from app.domain.runs import dumps, migrations  # importan este módulo: aquí para evitar el ciclo
+    from app.domain.runs import bulks, dumps, migrations  # importan este módulo: aquí para evitar el ciclo
 
     if not membership.can("editor"):
         raise ProjectForbiddenError()
@@ -211,10 +212,14 @@ def enqueue(
         migrations.check_apply(db, user, membership, clean, settings)
     elif spec.name == "dump_apply":
         dumps.check_apply(db, user, membership, clean, settings)
+    elif spec.name == "bulk_preview":
+        bulks.check_preview(db, membership, clean)
+    elif spec.name == "bulk_apply":
+        bulks.check_apply(db, user, membership, clean, settings)
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
         raise TooManyRunsError(f"Tienes {active} ejecuciones en cola o en curso; espera a que terminen.")
-    if settings.user_quota_mb and _usage_bytes(db, user.id) >= settings.user_quota_mb * 1024 * 1024:
+    if settings.user_quota_mb and usage_bytes(db, user.id) >= settings.user_quota_mb * 1024 * 1024:
         raise QuotaExceededError("Purga ejecuciones antiguas para liberar espacio.")
     now = utcnow()
     run_id = new_ulid()
@@ -239,6 +244,7 @@ def enqueue(
             **({"migration": {k: clean.get(k) for k in ("mode", "plan_run", "target_connection", "dry_run_run")}}
                if spec.name == "migrate_apply" else {}),
             **({"dump": _dump_audit(db, clean)} if spec.name == "dump_apply" else {}),
+            **({"bulk": _bulk_audit(db, clean)} if spec.name == "bulk_apply" else {}),
         },
     )  # fmt: skip
     db.commit()
@@ -250,6 +256,17 @@ def _dump_audit(db: Session, params: dict[str, Any]) -> dict[str, Any]:
     preview = db.get(Run, params["preview_run"])
     shown = ("source_connection", "target_connection", "tables", "truncate_target", "on_error")
     return {"preview_run": params["preview_run"], **{k: preview.params.get(k) for k in shown if preview}}
+
+
+def _bulk_audit(db: Session, params: dict[str, Any]) -> dict[str, Any]:
+    """Qué fichero, dónde y cómo escribe una carga, para ``audit_log`` (los parámetros viven en su vista previa)."""
+    preview = db.get(Run, params["preview_run"])
+    shown = ("upload", "target_connection", "table", "operation", "on_error", "parallel")
+    return {
+        "preview_run": params["preview_run"],
+        "confirm_rows": params.get("confirm_rows"),
+        **{k: preview.params.get(k) for k in shown if preview},
+    }
 
 
 def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, ctx: RequestContext) -> Run:
@@ -268,7 +285,7 @@ def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, 
 
 
 #: Operaciones que escriben en una BD destino: en curso no se cancelan (ADR-008, ADR-009); en cola sí.
-NOT_CANCELLABLE_RUNNING: Final = frozenset({"migrate_apply", "dump_apply"})
+NOT_CANCELLABLE_RUNNING: Final = frozenset({"migrate_apply", "dump_apply", "bulk_apply"})
 
 
 def cancel(db: Session, user: User, access: RunAccess, *, ctx: RequestContext) -> Run:

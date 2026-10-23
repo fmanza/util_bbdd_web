@@ -75,6 +75,8 @@ async function waitStatus(page: Page, status: string, from: string) {
 }
 
 test('planificar, modo seco y aplicar una migración PostgreSQL → MySQL', async ({ page }) => {
+  // Crea tablas en un destino compartido del bench: la copia de --repeat-each chocaría con la primera.
+  test.skip(test.info().repeatEachIndex > 0, 'Escribe en un destino compartido');
   test.setTimeout(300_000);
   const stamp = Date.now();
   const [pg, my, project] = [`e2e-mig-pg-${stamp}`, `e2e-mig-my-${stamp}`, `e2e-mig-${stamp}`];

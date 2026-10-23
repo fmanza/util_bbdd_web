@@ -227,6 +227,305 @@
         "title": "AuditPage",
         "type": "object"
       },
+      "Body_create_upload_api_v1_projects__project_id__uploads_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "Fichero .csv o .xlsx",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_upload_api_v1_projects__project_id__uploads_post",
+        "type": "object"
+      },
+      "BulkPartitionOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index",
+          "rows"
+        ],
+        "title": "BulkPartitionOut",
+        "type": "object"
+      },
+      "BulkPlanOut": {
+        "properties": {
+          "reasons": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "workers": {
+            "title": "Workers",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "workers"
+        ],
+        "title": "BulkPlanOut",
+        "type": "object"
+      },
+      "BulkPreviewOut": {
+        "description": "Validación del fichero contra la tabla, filas afectadas, plan paralelo y SQL generado (sin ejecutar).",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "errors": {
+            "description": "Errores de validación: con alguno no se puede cargar",
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "ignored_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored Columns",
+            "type": "array"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Mapping",
+            "type": "object"
+          },
+          "matches": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filas del destino con la misma PK (las que update/delete tocarán)",
+            "title": "Matches"
+          },
+          "operation": {
+            "enum": [
+              "insert",
+              "update",
+              "delete"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "parallel": {
+            "$ref": "#/components/schemas/BulkPlanOut"
+          },
+          "primary_key": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Primary Key",
+            "type": "array"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "sample": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Sample",
+            "type": "array"
+          },
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema"
+          },
+          "sql_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ruta del SQL generado dentro de outputs/ (null si hay errores)",
+            "title": "Sql File"
+          },
+          "structure_hash": {
+            "title": "Structure Hash",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "target_engine": {
+            "title": "Target Engine",
+            "type": "string"
+          },
+          "target_rows": {
+            "title": "Target Rows",
+            "type": "integer"
+          },
+          "upload_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Filename"
+          }
+        },
+        "required": [
+          "table",
+          "operation",
+          "rows",
+          "columns",
+          "mapping",
+          "errors",
+          "matches",
+          "target_rows",
+          "parallel",
+          "sample",
+          "sql_file",
+          "target_engine",
+          "structure_hash"
+        ],
+        "title": "BulkPreviewOut",
+        "type": "object"
+      },
+      "BulkResultOut": {
+        "description": "Resultado de ``bulk_apply``: filas del destino antes y después, rechazos y particiones.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primera línea del error del motor, sin valores de filas",
+            "title": "Error"
+          },
+          "matches": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matches"
+          },
+          "operation": {
+            "enum": [
+              "insert",
+              "update",
+              "delete"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "parallel": {
+            "$ref": "#/components/schemas/BulkPlanOut"
+          },
+          "partitions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/BulkPartitionOut"
+            },
+            "title": "Partitions",
+            "type": "array"
+          },
+          "rejected": {
+            "default": 0,
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "target_rows_after": {
+            "title": "Target Rows After",
+            "type": "integer"
+          },
+          "target_rows_before": {
+            "title": "Target Rows Before",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation",
+          "table",
+          "rows",
+          "target_rows_before",
+          "target_rows_after",
+          "parallel"
+        ],
+        "title": "BulkResultOut",
+        "type": "object"
+      },
       "CapabilitiesOut": {
         "description": "Matriz de capacidades verificadas del motor.",
         "properties": {
@@ -4398,6 +4697,127 @@
         "title": "TableItem",
         "type": "object"
       },
+      "UploadInfoOut": {
+        "description": "Lo necesario para mapear columnas: columnas, primeras filas y hojas (Excel) o separador y codificación (CSV).",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "delimiter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delimiter"
+          },
+          "encoding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encoding"
+          },
+          "sample": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "title": "Sample",
+            "type": "array"
+          },
+          "sheets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheets"
+          }
+        },
+        "required": [
+          "columns",
+          "sample"
+        ],
+        "title": "UploadInfoOut",
+        "type": "object"
+      },
+      "UploadOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "kind",
+          "size_bytes",
+          "sha256",
+          "created_at"
+        ],
+        "title": "UploadOut",
+        "type": "object"
+      },
       "UserCreate": {
         "description": "Alta de usuario.",
         "properties": {
@@ -4787,7 +5207,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "0.9.0"
+    "version": "0.10.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -7408,6 +7828,278 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/uploads": {
+      "get": {
+        "operationId": "list_uploads_api_v1_projects__project_id__uploads_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UploadOut"
+                  },
+                  "title": "Response List Uploads Api V1 Projects  Project Id  Uploads Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ficheros del proyecto",
+        "tags": [
+          "uploads"
+        ]
+      },
+      "post": {
+        "description": "Guarda el fichero (editores). Se comprueba el contenido real, no solo la extensión.",
+        "operationId": "create_upload_api_v1_projects__project_id__uploads_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_upload_api_v1_projects__project_id__uploads_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Rol inferior a editor"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "409": {
+            "description": "Cuota superada"
+          },
+          "413": {
+            "description": "Demasiado grande"
+          },
+          "415": {
+            "description": "No es .csv ni .xlsx"
+          },
+          "422": {
+            "description": "El contenido no es válido"
+          }
+        },
+        "summary": "Subir un fichero",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/uploads/{upload_id}": {
+      "delete": {
+        "operationId": "delete_upload_api_v1_projects__project_id__uploads__upload_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "title": "Upload Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Rol inferior a editor"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "409": {
+            "description": "En uso"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Borrar un fichero",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/uploads/{upload_id}/info": {
+      "get": {
+        "description": "Columnas y primeras filas con las opciones de lectura (para el mapeo de columnas).",
+        "operationId": "upload_info_api_v1_projects__project_id__uploads__upload_id__info_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sheet",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sheet"
+            }
+          },
+          {
+            "in": "query",
+            "name": "delimiter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(,|;|\\t|\\|)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Delimiter"
+            }
+          },
+          {
+            "in": "query",
+            "name": "encoding",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(utf-8|cp1252|latin-1)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Encoding"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadInfoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "422": {
+            "description": "No se puede leer con esas opciones"
+          }
+        },
+        "summary": "Columnas de un fichero",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
     "/api/v1/runs": {
       "get": {
         "description": "Ejecuciones de todos los proyectos de los que eres miembro.",
@@ -7769,6 +8461,104 @@
           }
         },
         "summary": "Vista previa de un artefacto",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/bulk-preview": {
+      "get": {
+        "description": "Validación, filas afectadas, plan paralelo y SQL generado de una ``bulk_preview`` correcta.",
+        "operationId": "get_bulk_preview_api_v1_runs__run_id__bulk_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vista previa (modo seco) de una carga",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/bulk-result": {
+      "get": {
+        "description": "Filas antes y después, rechazos y particiones de un ``bulk_apply`` (también si falló).",
+        "operationId": "get_bulk_result_api_v1_runs__run_id__bulk_result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resultado de una carga",
         "tags": [
           "runs"
         ]

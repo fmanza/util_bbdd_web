@@ -114,7 +114,7 @@ describe('vista previa del volcado', () => {
   it('explica por qué no se puede volcar', async () => {
     stubPreview({ me: ADMIN });
     renderRoute(`/runs/${PREVIEW_ID}`);
-    expect(await screen.findByText(/necesitas el permiso «Puede volcar datos»/)).toBeInTheDocument();
+    expect(await screen.findByText(/necesitas el permiso «Puede escribir datos»/)).toBeInTheDocument();
   });
 
   it('no se vuelca sobre un destino de solo lectura ni con una vista previa antigua', async () => {

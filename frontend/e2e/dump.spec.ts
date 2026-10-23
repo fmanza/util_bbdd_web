@@ -25,7 +25,7 @@ async function setOwnPermission(page: Page, value: boolean) {
   await page.goto('/admin/users');
   await page.getByRole('button', { name: `Editar ${ADMIN_USER}` }).click();
   const dialog = page.getByRole('dialog');
-  const toggle = dialog.getByRole('switch', { name: /Puede volcar datos/ });
+  const toggle = dialog.getByRole('switch', { name: /Puede escribir datos/ });
   if ((await toggle.isChecked()) !== value) {
     await toggle.click({ force: true });
   }

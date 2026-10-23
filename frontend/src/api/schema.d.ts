@@ -691,6 +691,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ficheros del proyecto */
+        get: operations["list_uploads_api_v1_projects__project_id__uploads_get"];
+        put?: never;
+        /**
+         * Subir un fichero
+         * @description Guarda el fichero (editores). Se comprueba el contenido real, no solo la extensión.
+         */
+        post: operations["create_upload_api_v1_projects__project_id__uploads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/uploads/{upload_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Borrar un fichero */
+        delete: operations["delete_upload_api_v1_projects__project_id__uploads__upload_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/uploads/{upload_id}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Columnas de un fichero
+         * @description Columnas y primeras filas con las opciones de lectura (para el mapeo de columnas).
+         */
+        get: operations["upload_info_api_v1_projects__project_id__uploads__upload_id__info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs": {
         parameters: {
             query?: never;
@@ -781,6 +839,46 @@ export interface paths {
          * @description HTML y SVG con CSP ``sandbox`` (para un ``iframe sandbox``); Markdown, SQL, log y ``run.json`` como texto.
          */
         get: operations["preview_artifact_api_v1_runs__run_id__artifacts__artifact_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/bulk-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vista previa (modo seco) de una carga
+         * @description Validación, filas afectadas, plan paralelo y SQL generado de una ``bulk_preview`` correcta.
+         */
+        get: operations["get_bulk_preview_api_v1_runs__run_id__bulk_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/bulk-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resultado de una carga
+         * @description Filas antes y después, rechazos y particiones de un ``bulk_apply`` (también si falló).
+         */
+        get: operations["get_bulk_result_api_v1_runs__run_id__bulk_result_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1179,6 +1277,129 @@ export interface components {
             items: components["schemas"]["AuditEntryOut"][];
             /** Total */
             total: number;
+        };
+        /** Body_create_upload_api_v1_projects__project_id__uploads_post */
+        Body_create_upload_api_v1_projects__project_id__uploads_post: {
+            /**
+             * File
+             * @description Fichero .csv o .xlsx
+             */
+            file: string;
+        };
+        /** BulkPartitionOut */
+        BulkPartitionOut: {
+            /** Error */
+            error?: string | null;
+            /** Index */
+            index: number;
+            /** Rows */
+            rows: number;
+        };
+        /** BulkPlanOut */
+        BulkPlanOut: {
+            /**
+             * Reasons
+             * @default []
+             */
+            reasons: string[];
+            /** Workers */
+            workers: number;
+        };
+        /**
+         * BulkPreviewOut
+         * @description Validación del fichero contra la tabla, filas afectadas, plan paralelo y SQL generado (sin ejecutar).
+         */
+        BulkPreviewOut: {
+            /** Columns */
+            columns: string[];
+            /**
+             * Errors
+             * @description Errores de validación: con alguno no se puede cargar
+             */
+            errors: string[];
+            /**
+             * Ignored Columns
+             * @default []
+             */
+            ignored_columns: string[];
+            /** Mapping */
+            mapping: {
+                [key: string]: string;
+            };
+            /**
+             * Matches
+             * @description Filas del destino con la misma PK (las que update/delete tocarán)
+             */
+            matches: number | null;
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "insert" | "update" | "delete";
+            parallel: components["schemas"]["BulkPlanOut"];
+            /**
+             * Primary Key
+             * @default []
+             */
+            primary_key: string[];
+            /** Rows */
+            rows: number;
+            /** Sample */
+            sample: (string | null)[][];
+            /** Schema */
+            schema?: string | null;
+            /**
+             * Sql File
+             * @description Ruta del SQL generado dentro de outputs/ (null si hay errores)
+             */
+            sql_file: string | null;
+            /** Structure Hash */
+            structure_hash: string;
+            /** Table */
+            table: string;
+            /** Target Engine */
+            target_engine: string;
+            /** Target Rows */
+            target_rows: number;
+            /** Upload Filename */
+            upload_filename?: string | null;
+        };
+        /**
+         * BulkResultOut
+         * @description Resultado de ``bulk_apply``: filas del destino antes y después, rechazos y particiones.
+         */
+        BulkResultOut: {
+            /**
+             * Error
+             * @description Primera línea del error del motor, sin valores de filas
+             */
+            error?: string | null;
+            /** Matches */
+            matches?: number | null;
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "insert" | "update" | "delete";
+            parallel: components["schemas"]["BulkPlanOut"];
+            /**
+             * Partitions
+             * @default []
+             */
+            partitions: components["schemas"]["BulkPartitionOut"][];
+            /**
+             * Rejected
+             * @default 0
+             */
+            rejected: number;
+            /** Rows */
+            rows: number;
+            /** Table */
+            table: string;
+            /** Target Rows After */
+            target_rows_after: number;
+            /** Target Rows Before */
+            target_rows_before: number;
         };
         /**
          * CapabilitiesOut
@@ -2830,6 +3051,42 @@ export interface components {
             comment: string | null;
             /** Name */
             name: string;
+        };
+        /**
+         * UploadInfoOut
+         * @description Lo necesario para mapear columnas: columnas, primeras filas y hojas (Excel) o separador y codificación (CSV).
+         */
+        UploadInfoOut: {
+            /** Columns */
+            columns: string[];
+            /** Delimiter */
+            delimiter?: string | null;
+            /** Encoding */
+            encoding?: string | null;
+            /** Sample */
+            sample: (string | null)[][];
+            /** Sheets */
+            sheets?: string[] | null;
+        };
+        /** UploadOut */
+        UploadOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Filename */
+            filename: string;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Username */
+            username?: string | null;
         };
         /**
          * UserCreate
@@ -5369,6 +5626,232 @@ export interface operations {
             };
         };
     };
+    list_uploads_api_v1_projects__project_id__uploads_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadOut"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_upload_api_v1_projects__project_id__uploads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_upload_api_v1_projects__project_id__uploads_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol inferior a editor */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cuota superada */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiado grande */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No es .csv ni .xlsx */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description El contenido no es válido */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_upload_api_v1_projects__project_id__uploads__upload_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rol inferior a editor */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description En uso */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_info_api_v1_projects__project_id__uploads__upload_id__info_get: {
+        parameters: {
+            query?: {
+                sheet?: string | null;
+                delimiter?: string | null;
+                encoding?: string | null;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+                upload_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadInfoOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No se puede leer con esas opciones */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_my_runs_api_v1_runs_get: {
         parameters: {
             query?: {
@@ -5644,6 +6127,96 @@ export interface operations {
             };
             /** @description Sin vista previa */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bulk_preview_api_v1_runs__run_id__bulk_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkPreviewOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bulk_result_api_v1_runs__run_id__bulk_result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkResultOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,6 +1,6 @@
 [project]
 name = "util_bbdd_web"
-version = "0.9.0"
+version = "0.10.0"
 description = "Aplicación web multiusuario sobre util_bbdd: conexiones, proyectos y ejecuciones agrupadas."
 readme = "../README.md"
 requires-python = ">=3.12,<3.13"
@@ -22,6 +22,7 @@ dependencies = [
     "pwdlib[argon2]>=0.3",  # Argon2id para contraseñas (ADR-003)
     "cryptography>=50",  # Fernet para secretos de conexión (ADR-004)
     "sqlglot>=30",  # guardián de solo lectura del SQL libre (Fase 4)
+    "python-multipart>=0.0.32",  # subida de ficheros de la carga bulk (Fase 9)
 ]
 
 [project.optional-dependencies]
@@ -75,6 +76,11 @@ packages = ["app"]
 [[tool.mypy.overrides]]
 module = ["util_bbdd", "util_bbdd.*"]
 follow_imports = "silent"
+
+# Lectura de ficheros de la carga bulk (Fase 9): sin stubs; sus objetos se tratan como ``Any``.
+[[tool.mypy.overrides]]
+module = ["pandas", "pandas.*", "openpyxl", "openpyxl.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

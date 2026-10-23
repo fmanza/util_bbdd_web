@@ -6,12 +6,13 @@ Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofr
 Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
 Fase 7: ``migrate_plan`` y ``migrate_apply`` (este no sale en el formulario genérico: se lanza desde el plan).
 Fase 8: ``dump_preview`` (modo seco) y ``dump_apply`` (se lanza desde la vista previa).
+Fase 9: ``bulk_preview`` y ``bulk_apply`` (carga desde fichero; las dos se lanzan desde el asistente de carga).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -267,6 +268,48 @@ class DumpApplyParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+#: Nombre de tabla (sin ``.``: el schema va aparte) y de columna (admite espacios, como en una cabecera de CSV).
+TABLE_PATTERN = r"^[\w$#][\w$# -]{0,127}$"
+COLUMN_PATTERN = r"^[^\x00-\x1f]{1,128}$"
+
+
+class BulkPreviewParams(BaseModel):
+    """Vista previa (modo seco) de una carga desde un fichero subido: valida, cuenta y genera el SQL (ADR-010)."""
+
+    upload: str = Field(pattern=RUN_ID_PATTERN, description="Fichero subido al proyecto.")
+    target_connection: str = _connection("Conexión destino.")
+    target_schema: str | None = Field(
+        default=None, pattern=OBJECT_NAME_PATTERN, description="Schema destino; vacío = el de la conexión."
+    )
+    table: str = Field(pattern=TABLE_PATTERN, description="Tabla destino.")
+    operation: Literal["insert", "update", "delete"] = Field(description="Operación por fila del fichero.")
+    mapping: dict[Annotated[str, Field(pattern=COLUMN_PATTERN)], Annotated[str, Field(pattern=COLUMN_PATTERN)]] = Field(
+        default_factory=dict, max_length=500, description="Columna del fichero → columna de la tabla."
+    )
+    sheet: str | None = Field(default=None, max_length=100, description="Hoja del Excel; vacío = la primera.")
+    delimiter: Literal[",", ";", "\t", "|"] | None = Field(default=None, description="Separador del CSV.")
+    encoding: Literal["utf-8", "cp1252", "latin-1"] | None = Field(default=None, description="Codificación del CSV.")
+    on_error: Literal["raise", "isolate"] = Field(default="raise", description="Filas que el destino no admite.")
+    max_rejects: int | None = Field(default=None, ge=1, le=1_000_000, description="Rechazos máximos.")
+    parallel: bool = Field(default=False, description="Plan paralelo automático (deja de ser atómico).")
+    chunk_size: int | None = Field(default=None, ge=100, le=100_000, description="Filas por lote.")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class BulkApplyParams(BaseModel):
+    """Carga con los parámetros de una vista previa correcta y reciente (ADR-010)."""
+
+    preview_run: str = Field(pattern=RUN_ID_PATTERN, description="Vista previa bulk_preview que se ejecuta.")
+    confirm: str = Field(max_length=64, description="Alias de la conexión destino escrito a mano.")
+    confirm_rows: int | None = Field(
+        default=None, ge=0, description="Filas del destino afectadas (update/delete), escritas a mano."
+    )
+    accept_non_atomic: bool = Field(default=False, description="Acepta que la carga paralela no es atómica.")
+
+    model_config = ConfigDict(extra="forbid")
+
+
 @dataclass(frozen=True)
 class OperationParam:
     """Parámetro de una operación tal como lo ve el formulario de lanzamiento."""
@@ -387,6 +430,20 @@ OPERATIONS: dict[str, OperationSpec] = {
         title="Volcado de datos",
         description="Copia las filas según una vista previa correcta y reciente.",
         model=DumpApplyParams,
+        form=False,
+    ),
+    "bulk_preview": OperationSpec(
+        name="bulk_preview",
+        title="Carga bulk: vista previa",
+        description="Valida un fichero contra una tabla, cuenta las filas afectadas y genera el SQL sin ejecutarlo.",
+        model=BulkPreviewParams,
+        form=False,
+    ),
+    "bulk_apply": OperationSpec(
+        name="bulk_apply",
+        title="Carga bulk",
+        description="Inserta, actualiza o borra filas desde un fichero según una vista previa correcta y reciente.",
+        model=BulkApplyParams,
         form=False,
     ),
 }

@@ -16,6 +16,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
+from app.api.v1.schemas_bulk import BulkPreviewOut, BulkResultOut
 from app.api.v1.schemas_diff import DiffEvolutionOut, DiffItemOut, SchemaDiffOut
 from app.api.v1.schemas_dump import DumpPreviewOut, DumpResultOut
 from app.api.v1.schemas_migrate import MigrationPlanOut, MigrationReportOut
@@ -26,8 +27,8 @@ from app.core.security import site_token, verify_site_token
 from app.db.models import TERMINAL_STATUSES, Artifact, Run, User
 from app.db.session import new_session
 from app.domain.projects.service import get_membership
+from app.domain.runs import bulks, dumps, migrations, service
 from app.domain.runs import diff as diff_domain
-from app.domain.runs import dumps, migrations, service
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters
 from app.workspace.layout import run_dir, zip_stream
@@ -420,6 +421,28 @@ def get_dump_result(run_id: str, user: CurrentUser, db: DbSession, settings: Set
     """Filas por tabla, rechazos, constraints reactivadas y contadores PK de un ``dump_apply`` (también si falló)."""
     access = service.get_access(db, user, run_id)
     return DumpResultOut.model_validate(dumps.load_result(db, access.run, settings))
+
+
+# --- carga bulk (Fase 9) -----------------------------------------------------------------------------------------
+
+
+@router.get(
+    "/{run_id}/bulk-preview", response_model=BulkPreviewOut, summary="Vista previa (modo seco) de una carga",
+    responses={**_401, **_404},
+)  # fmt: skip
+def get_bulk_preview(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> BulkPreviewOut:
+    """Validación, filas afectadas, plan paralelo y SQL generado de una ``bulk_preview`` correcta."""
+    access = service.get_access(db, user, run_id)
+    return BulkPreviewOut.model_validate(bulks.load_preview(db, access.run, settings))
+
+
+@router.get(
+    "/{run_id}/bulk-result", response_model=BulkResultOut, summary="Resultado de una carga", responses={**_401, **_404}
+)
+def get_bulk_result(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> BulkResultOut:
+    """Filas antes y después, rechazos y particiones de un ``bulk_apply`` (también si falló)."""
+    access = service.get_access(db, user, run_id)
+    return BulkResultOut.model_validate(bulks.load_result(db, access.run, settings))
 
 
 _SITE_HEADERS: Final = {

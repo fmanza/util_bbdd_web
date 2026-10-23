@@ -1,0 +1,60 @@
+"""Esquemas HTTP de la carga bulk (Fase 9): vista previa (modo seco) y resultado."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class _Bulk(BaseModel):
+    # Documentos guardados por el job: se ignoran campos de versiones posteriores.
+    model_config = ConfigDict(extra="ignore")
+
+
+class BulkPlanOut(_Bulk):
+    workers: int
+    reasons: list[str] = []
+
+
+class BulkPreviewOut(_Bulk):
+    """Validación del fichero contra la tabla, filas afectadas, plan paralelo y SQL generado (sin ejecutar)."""
+
+    table: str
+    schema_name: str | None = Field(default=None, alias="schema")
+    operation: Literal["insert", "update", "delete"]
+    rows: int
+    columns: list[str]
+    mapping: dict[str, str]
+    ignored_columns: list[str] = []
+    primary_key: list[str] = []
+    errors: list[str] = Field(description="Errores de validación: con alguno no se puede cargar")
+    matches: int | None = Field(description="Filas del destino con la misma PK (las que update/delete tocarán)")
+    target_rows: int
+    parallel: BulkPlanOut
+    sample: list[list[str | None]]
+    sql_file: str | None = Field(description="Ruta del SQL generado dentro de outputs/ (null si hay errores)")
+    upload_filename: str | None = None
+    target_engine: str
+    structure_hash: str
+
+
+class BulkPartitionOut(_Bulk):
+    index: int
+    rows: int
+    error: str | None = None
+
+
+class BulkResultOut(_Bulk):
+    """Resultado de ``bulk_apply``: filas del destino antes y después, rechazos y particiones."""
+
+    operation: Literal["insert", "update", "delete"]
+    table: str
+    rows: int
+    matches: int | None = None
+    target_rows_before: int
+    target_rows_after: int
+    rejected: int = 0
+    error: str | None = Field(default=None, description="Primera línea del error del motor, sin valores de filas")
+    parallel: BulkPlanOut
+    partitions: list[BulkPartitionOut] = []

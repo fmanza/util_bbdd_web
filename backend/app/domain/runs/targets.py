@@ -1,4 +1,4 @@
-"""Escrituras en una BD destino (ADR-008, ADR-009): una sola a la vez por destino, sea migración o volcado."""
+"""Escrituras en una BD destino (ADR-008/009/010): una sola a la vez por destino (migración, volcado o carga)."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import TERMINAL_STATUSES, Run
 
-WRITE_OPERATIONS: Final = ("migrate_apply", "dump_apply")
+WRITE_OPERATIONS: Final = ("migrate_apply", "dump_apply", "bulk_apply")
 
 
 def _target_alias(db: Session, run: Run) -> str | None:
-    """Alias destino de una escritura: en el propio run (migración) o en su vista previa (volcado)."""
+    """Alias destino de una escritura: en el propio run (migración) o en su vista previa (volcado, carga)."""
     if run.operation == "migrate_apply":
         return str(run.params.get("target_connection"))
     preview = db.get(Run, run.params.get("preview_run")) if run.params.get("preview_run") else None

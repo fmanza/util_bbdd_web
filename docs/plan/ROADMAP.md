@@ -17,7 +17,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 6 | Comparación de esquemas | 0.7.0 | ✅ Cerrada (2026-10-22) |
 | 7 | Migración DDL | 0.8.0 | ✅ Cerrada (2026-10-22) |
 | 8 | Volcado de datos | 0.9.0 | ✅ Cerrada (2026-10-23) |
-| 9 | Carga bulk | 0.10.0 | Pendiente |
+| 9 | Carga bulk | 0.10.0 | ✅ Cerrada (2026-10-23) |
 | 10 | Endurecimiento y release | 1.0.0 | Pendiente |
 
 **DoD común a todas las fases**: comandos de desarrollo en verde (backend y frontend), OpenAPI exportado y cliente
@@ -131,12 +131,15 @@ informe Excel y resumen por tabla. `truncate_target` desactivado por defecto en 
 `can_write_data` + owner, vista previa obligatoria (60 min, misma estructura), «VACIAR» para vaciar, rechazos
 aislados; además, bundle repartido (vendors y traducciones de pantallas en chunks propios).
 
-## Fase 9 — Carga bulk
+## Fase 9 — Carga bulk ✅
 
 **util_bbdd**: `BulkCrud(engine, *, batch, audit, rejects, execution, parallel)` con
 `bulk_insert/update/delete_from_df` y `_from_chunks`, `maintenance_scope(...)`, `parallel_plan(...)`.
 **Funcionalidad**: subida CSV/Excel validada (tamaño, tipo, columnas), mapeo de columnas, vista previa,
-insert/update/delete con plan paralelo, SQL generado como artefacto, rechazos y auditoría.
+insert/update/delete con plan paralelo, SQL generado como artefacto, rechazos y auditoría. Hecho según ADR-010:
+subidas `multipart` con contenido verificado, vista previa con filas afectadas y SQL (`generar_sql=True`, G35),
+permiso `can_write_data` + owner, confirmación del alias y, en update/delete, de las filas afectadas; paralelo
+opcional con aceptación de que no es atómico (G36).
 
 ## Fase 10 — Endurecimiento y release 1.0
 

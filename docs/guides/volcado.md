@@ -1,6 +1,6 @@
 # Volcado de datos
 
-Guía de uso de la Fase 8 (versión 0.9.0). Copia **filas** de una conexión del proyecto a otra con `DumpOrchestrator`
+Guía de uso de la Fase 8 (versión 0.9.0; vigente en 0.10.0). Copia **filas** de una conexión del proyecto a otra con `DumpOrchestrator`
 de util_bbdd: mismo motor o distinto. Las **tablas destino deben existir** (créalas antes, p. ej. con la
 [migración DDL](migracion.md)). Diseño de seguridad: [ADR-009](../adr/ADR-009-volcado-de-datos.md).
 
@@ -29,7 +29,7 @@ fuera del volcado. Avisos:
 
 ## 2. Volcar
 
-Requisitos (si falta alguno, el panel *Volcar los datos* explica cuál): permiso **«Puede volcar datos»** (lo concede un
+Requisitos (si falta alguno, el panel *Volcar los datos* explica cuál): permiso **«Puede escribir datos»** (lo concede un
 administrador en *Usuarios*), ser **propietario** del proyecto, conexión destino **no** de solo lectura y vista previa
 de **menos de 60 minutos**.
 
@@ -55,7 +55,7 @@ datos de negocio) y el rastro de auditoría `volcado.jsonl`.
 
 | Código | Causa | Qué hacer |
 |---|---|---|
-| 403 al volcar | Sin «Puede volcar datos» o sin ser propietario | Pídelo a un administrador o al propietario |
+| 403 al volcar | Sin «Puede escribir datos» o sin ser propietario | Pídelo a un administrador o al propietario |
 | 422 «más de 60 minutos» | Vista previa antigua | Lanza otra vista previa |
 | `preview_changed` | Cambiaron tablas o columnas desde la vista previa | Repite la vista previa y revísala |
 | `dump_partial` | Alguna tabla falló o alguna constraint no se reactivó | Revisa el resultado por tabla; corrige los datos o el destino |

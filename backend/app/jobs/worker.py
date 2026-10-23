@@ -29,6 +29,7 @@ from app.core.logging import configure_logging
 from app.core.ulid import new_ulid
 from app.db.session import new_session
 from app.domain.runs.service import apply_retention
+from app.domain.uploads.service import purge_old_uploads
 from app.jobs import queue
 from app.jobs.runner import finalize_run, run_job
 
@@ -84,6 +85,7 @@ class Worker:
         try:
             with new_session() as db:
                 apply_retention(db, self.settings)
+                purge_old_uploads(db, self.settings)
         except Exception as exc:  # la retención nunca debe parar el worker
             logger.error("Fallo aplicando la retención", extra={"exc_type": type(exc).__name__})
 

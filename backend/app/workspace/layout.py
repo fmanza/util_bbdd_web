@@ -40,6 +40,7 @@ OUTPUT_KINDS: Final = (
     "audit",
     "dump",
     "rejects",
+    "bulk",
 )
 _SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9_-]+$")
 _CHUNK = 64 * 1024

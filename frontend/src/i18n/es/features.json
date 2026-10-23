@@ -25,8 +25,8 @@
       "canRunSqlHint": "Solo consultas de lectura sobre conexiones «Solo lectura» de proyectos donde sea editor. Se audita.",
       "canApplyDdl": "Puede aplicar DDL",
       "canApplyDdlHint": "Permite aplicar migraciones en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada aplicación exige modo seco previo y confirmación.",
-      "canWriteData": "Puede volcar datos",
-      "canWriteDataHint": "Permite copiar filas a conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada volcado exige una vista previa reciente y confirmación."
+      "canWriteData": "Puede escribir datos",
+      "canWriteDataHint": "Permite volcar filas y cargar ficheros en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada escritura exige una vista previa reciente y confirmación."
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -283,7 +283,8 @@
       "connections": "Conexiones",
       "members": "Miembros",
       "settings": "Ajustes",
-      "sql": "SQL"
+      "sql": "SQL",
+      "bulk": "Carga"
     },
     "connectionsIntro": "Las ejecuciones usan las conexiones por su alias. Los miembros las usan sin ver nunca la contraseña.",
     "connection": "Conexión",
@@ -360,7 +361,8 @@
       "plan": "Plan",
       "audit": "Auditoría",
       "dump": "Volcado",
-      "rejects": "Rechazos"
+      "rejects": "Rechazos",
+      "bulk": "Carga"
     },
     "params": {
       "noop": {
@@ -815,7 +817,7 @@
     },
     "apply": {
       "title": "Volcar los datos",
-      "noPermission": "Para volcar datos necesitas el permiso «Puede volcar datos» (lo concede un administrador).",
+      "noPermission": "Para volcar datos necesitas el permiso «Puede escribir datos» (lo concede un administrador).",
       "ownerOnly": "Solo el propietario del proyecto puede volcar datos.",
       "readOnly": "La conexión destino «{{alias}}» es de solo lectura.",
       "stale": "La vista previa tiene más de 60 minutos: lánzala de nuevo para poder volcar.",
@@ -858,6 +860,114 @@
       "rejectsTitle": "Hay filas apartadas",
       "rejects": "Las filas que el destino no admitió están en rechazos.csv (en Artefactos).",
       "noReport": "No se pudo generar el informe Excel; los datos ya se cargaron."
+    }
+  },
+  "bulk": {
+    "operations": {
+      "insert": "Insertar",
+      "update": "Actualizar",
+      "delete": "Borrar"
+    },
+    "uploads": {
+      "title": "Ficheros",
+      "empty": "Todavía no hay ficheros en este proyecto.",
+      "hint": "CSV o Excel (.xlsx). Se comprueba el contenido real y se borran a los pocos días; contienen datos de negocio.",
+      "choose": "Fichero",
+      "send": "Subir",
+      "file": "Fichero",
+      "size": "Tamaño",
+      "created": "Subido",
+      "delete": "Borrar {{name}}"
+    },
+    "form": {
+      "title": "Nueva carga",
+      "file": "Fichero",
+      "chooseFile": "Elige un fichero…",
+      "operation": "Operación",
+      "connection": "Conexión destino",
+      "chooseConnection": "Elige la conexión…",
+      "readOnly": "solo lectura",
+      "schema": "Schema destino",
+      "schemaHint": "Vacío = el de la conexión; con schema se ofrecen las columnas.",
+      "table": "Tabla destino",
+      "sheet": "Hoja",
+      "delimiter": "Separador",
+      "encoding": "Codificación",
+      "auto": "Automático ({{value}})",
+      "tab": "Tabulador",
+      "mapping": "Columnas",
+      "mappingHint": "Columna de la tabla para cada columna del fichero; «no cargar» la ignora.",
+      "mappingFree": "Escribe la columna de la tabla para cada columna del fichero (vacío = no cargar).",
+      "fileColumn": "Columna del fichero",
+      "example": "Primer valor",
+      "tableColumn": "Columna de la tabla",
+      "targetFor": "Columna de la tabla para «{{column}}»",
+      "skip": "(no cargar)",
+      "isolate": "Apartar las filas que el destino no admita (rechazos.csv)",
+      "parallel": "Plan paralelo automático",
+      "parallelHint": "Más rápido en tablas grandes, pero deja de ser atómico (una transacción por partición).",
+      "preview": "Vista previa"
+    },
+    "preview": {
+      "title": "Vista previa de la carga",
+      "route": "{{operation}} «{{file}}» en {{table}} ({{target}})",
+      "rows": "Filas del fichero",
+      "targetRows": "Filas en la tabla",
+      "matches": {
+        "insert": "Claves que ya existen",
+        "update": "Filas que se actualizarán",
+        "delete": "Filas que se borrarán"
+      },
+      "workers": "Hilos",
+      "errorsTitle": "No se puede cargar",
+      "ignored": "Columnas del fichero que no se cargan: {{columns}}.",
+      "parallelTitle": "Plan paralelo de {{workers}} hilos: no es atómico",
+      "sample": "Primeras filas",
+      "sql": "SQL que se ejecutará",
+      "sqlMore_one": "Y {{count}} línea más en el script (en Artefactos).",
+      "sqlMore_other": "Y {{count}} líneas más en el script (en Artefactos).",
+      "sqlTooBig": "El SQL generado es demasiado grande para mostrarlo: descárgalo en Artefactos."
+    },
+    "apply": {
+      "title": "Ejecutar la carga",
+      "hasErrors": "La vista previa tiene errores: corrige el fichero o el mapeo y repítela.",
+      "noPermission": "Para cargar datos necesitas el permiso «Puede escribir datos» (lo concede un administrador).",
+      "ownerOnly": "Solo el propietario del proyecto puede cargar datos.",
+      "readOnly": "La conexión destino «{{alias}}» es de solo lectura.",
+      "stale": "La vista previa tiene más de 60 minutos: lánzala de nuevo para poder cargar.",
+      "open": {
+        "insert": "Insertar en «{{alias}}»…",
+        "update": "Actualizar en «{{alias}}»…",
+        "delete": "Borrar en «{{alias}}»…"
+      },
+      "confirmTitle": "Ejecutar la carga",
+      "warning": {
+        "insert": "Se insertarán las filas del fichero",
+        "update_one": "Se actualizará {{count}} fila",
+        "update_other": "Se actualizarán {{count}} filas",
+        "delete_one": "Se borrará {{count}} fila",
+        "delete_other": "Se borrarán {{count}} filas"
+      },
+      "noCancel": "Una vez empezada en «{{alias}}», la carga no se puede cancelar.",
+      "understand": "He revisado la vista previa y el SQL generado",
+      "nonAtomic": "Entiendo que con {{workers}} hilos no es atómica: si una partición falla, las demás quedan",
+      "typeAlias": "Escribe «{{alias}}» para confirmar",
+      "typeRows": "Escribe el número de filas afectadas",
+      "submit": "Cargar ahora"
+    },
+    "result": {
+      "title": "Resultado de la carga",
+      "preview": "Ver la vista previa",
+      "pending": "El resultado estará disponible al terminar.",
+      "rows": "Filas del fichero",
+      "before": "Filas antes",
+      "after": "Filas después",
+      "rejected": "Apartadas",
+      "errorTitle": "La carga falló",
+      "rejectsTitle": "Hay filas apartadas",
+      "rejects": "Las filas que el destino no admitió están en rechazos.csv (en Artefactos).",
+      "partitions": "Particiones",
+      "error": "Error"
     }
   }
 }

@@ -42,7 +42,7 @@ flowchart TB
 | `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic | 0 → |
 | `api/` | `/api/health`; `api/v1/` con los routers de negocio | 0 → |
 | `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py`, `isolated.py` (subproceso con timeout), `probe.py`, `metadata.py` (schemas, snapshot, DDL), `sql.py` (guardián `sqlglot`, solo lectura, queries nombradas), `audit_sink.py` | 0 → 4 |
-| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/` y `explorer/` (caché de metadatos, queries nombradas, SQL libre) | 1 → 4 |
+| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/`, `explorer/` (caché de metadatos, queries nombradas, SQL libre) y `uploads/` (ficheros de carga validados) | 1 → 9 |
 | `cli.py` | `create-admin` (primer administrador) y `rotate-secrets` (rotación Fernet) | 1 → 2 |
 | `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y operaciones (`noop`) | 0 → 3 |
 | `workspace/` | Carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
@@ -86,10 +86,15 @@ src/
 | `UBW_METADATA_TIMEOUT_SECONDS` | `120` | Lectura de schemas, snapshot o DDL |
 | `UBW_QUERY_TIMEOUT_SECONDS` | `30` | Queries nombradas y SQL libre |
 | `UBW_QUERY_MAX_ROWS` | `1000` | Filas máximas de una consulta (máx. 10 000) |
+| `UBW_UPLOAD_MAX_MB` | `50` | Tamaño máximo de un fichero de carga bulk |
+| `UBW_UPLOAD_MAX_UNCOMPRESSED_MB` | `300` | Tamaño descomprimido máximo de un `.xlsx` |
+| `UBW_UPLOAD_RETENTION_DAYS` | `7` | Purga de ficheros subidos sin uso (`0` desactiva) |
+| `UBW_BULK_MAX_ROWS` | `1000000` | Filas máximas de un fichero de carga |
 | Secret `ubw_fernet_keys` | — | Cifrado de conexiones (ADR-004); **obligatorio** en producción |
 
 Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·
 [ADR-002](adr/ADR-002-ejecucion-de-jobs.md) · [ADR-003](adr/ADR-003-autenticacion-sesiones.md) ·
 [ADR-004](adr/ADR-004-cifrado-secretos.md) · [ADR-005](adr/ADR-005-workspace-y-ejecuciones.md) ·
 [ADR-006](adr/ADR-006-integracion-util-bbdd.md) · [ADR-007](adr/ADR-007-sitio-html-aislado.md) ·
-[ADR-008](adr/ADR-008-aplicar-migraciones.md) · [ADR-009](adr/ADR-009-volcado-de-datos.md).
+[ADR-008](adr/ADR-008-aplicar-migraciones.md) · [ADR-009](adr/ADR-009-volcado-de-datos.md) ·
+[ADR-010](adr/ADR-010-carga-bulk.md).

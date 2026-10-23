@@ -41,6 +41,10 @@ class Settings(BaseSettings):
         metadata_timeout_seconds: Tiempo máximo de lectura de schemas, snapshot o DDL (se mata el subproceso).
         query_timeout_seconds: Tiempo máximo de una query nombrada o de SQL libre.
         query_max_rows: Filas máximas que devuelve una query (el usuario puede pedir menos).
+        upload_max_mb: Tamaño máximo de un fichero subido para la carga bulk (MB).
+        upload_max_uncompressed_mb: Tamaño descomprimido máximo de un ``.xlsx`` (MB; frena las *zip bombs*).
+        upload_retention_days: Días que se conservan los ficheros subidos; ``0`` sin purga.
+        bulk_max_rows: Filas máximas de un fichero de carga bulk.
     """
 
     model_config = SettingsConfigDict(env_prefix="UBW_", secrets_dir=None, extra="ignore")
@@ -69,6 +73,10 @@ class Settings(BaseSettings):
     metadata_timeout_seconds: float = Field(default=120.0, gt=0, le=1800)
     query_timeout_seconds: float = Field(default=30.0, gt=0, le=600)
     query_max_rows: int = Field(default=1000, ge=1, le=10_000)
+    upload_max_mb: int = Field(default=50, ge=1, le=2048)
+    upload_max_uncompressed_mb: int = Field(default=300, ge=1, le=8192)
+    upload_retention_days: int = Field(default=7, ge=0)
+    bulk_max_rows: int = Field(default=1_000_000, ge=1, le=50_000_000)
 
     @property
     def cookie_secure(self) -> bool:

@@ -7,6 +7,7 @@ Fase 3: proyectos (``projects``, ``project_members``, ``project_connections``), 
 Fase 4: caché de metadatos (``metadata_cache``), queries nombradas (``named_queries``) y ``users.can_run_sql``.
 Fase 7: ``users.can_apply_ddl`` (aplicar migraciones DDL en una BD destino, ADR-008).
 Fase 8: ``users.can_write_data`` (volcar datos en una BD destino, ADR-009).
+Fase 9: ``uploads`` (ficheros CSV/Excel de la carga bulk, ADR-010).
 """
 
 from __future__ import annotations
@@ -328,3 +329,25 @@ class NamedQuery(Base):
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
+
+
+class Upload(Base):
+    """Fichero CSV o Excel subido a un proyecto para la carga bulk (ADR-010).
+
+    Se guarda en ``users/<owner>/projects/<id>/uploads/<id>.<ext>`` (``path``, relativo al workspace): el nombre del
+    usuario solo se muestra (``filename``), nunca forma parte de la ruta. Se borra con el proyecto o por retención.
+    """
+
+    __tablename__ = "uploads"
+
+    id: Mapped[str] = mapped_column(String(26), primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    filename: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(8))
+    path: Mapped[str] = mapped_column(String(255))
+    size_bytes: Mapped[int] = mapped_column(default=0)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+    user: Mapped[User | None] = relationship()

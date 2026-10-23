@@ -4,7 +4,7 @@ Aplicación web multiusuario sobre [util_bbdd](vendor/wheels/): catálogo de mot
 cifradas, proyectos por usuario y ejecuciones de util_bbdd (documentación, grafos, comparación de esquemas,
 migración DDL, volcado y carga bulk) con los resultados guardados y **agrupados por ejecución**.
 
-> Estado: **0.9.0 — Fase 8 (volcado de datos)**. El plan completo está en [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
+> Estado: **0.10.0 — Fase 9 (carga bulk)**. El plan completo está en [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
 
 ## Arranque rápido
 
@@ -40,7 +40,7 @@ Abre <http://127.0.0.1:8080> e inicia sesión. Estado del servicio: <http://127.
   [Motores y conexiones](docs/guides/conexiones.md) · [Proyectos y ejecuciones](docs/guides/proyectos_y_ejecuciones.md) ·
   [Explorador y SQL](docs/guides/explorador.md) · [Documentación y grafos](docs/guides/documentacion.md) ·
   [Comparación de esquemas](docs/guides/comparacion.md) · [Migración DDL](docs/guides/migracion.md) ·
-  [Volcado de datos](docs/guides/volcado.md)
+  [Volcado de datos](docs/guides/volcado.md) · [Carga bulk](docs/guides/carga.md)
 - Asistentes IA: [CLAUDE.md](CLAUDE.md), [.github/copilot-instructions.md](.github/copilot-instructions.md),
   [.github/SHARED_INSTRUCTIONS.md](.github/SHARED_INSTRUCTIONS.md)
 

@@ -30,6 +30,8 @@ partir de sus parámetros. Operaciones disponibles:
 - **Comparación de esquemas**: ver [Comparación de esquemas](comparacion.md).
 - **Plan de migración DDL** (y su aplicación desde el plan): ver [Migración DDL](migracion.md).
 - **Volcado de datos: vista previa** (y el volcado desde ella): ver [Volcado de datos](volcado.md).
+- La **carga bulk** desde un fichero se lanza desde la pestaña *Carga* del proyecto: ver
+  [Carga bulk desde fichero](carga.md).
 - **Prueba del motor de ejecuciones** (`noop`), pensada para validar la instalación:
 
 | Parámetro | Efecto |
@@ -38,7 +40,7 @@ partir de sus parámetros. Operaciones disponibles:
 | Fallar a propósito | Termina en error (prueba de fallos) |
 | Conexión a probar | Alias de una conexión del proyecto que se prueba desde el worker (respeta los destinos permitidos) |
 
-La ejecución queda **En cola** hasta que el *worker* la toma. La carga bulk llegará en la fase siguiente.
+La ejecución queda **En cola** hasta que el *worker* la toma.
 
 Límites (configurables por el administrador del servidor): como máximo **5 ejecuciones en cola o en curso** por
 usuario y una **cuota de 1 GB** de ficheros. Si se supera la cuota, purga ejecuciones antiguas.
