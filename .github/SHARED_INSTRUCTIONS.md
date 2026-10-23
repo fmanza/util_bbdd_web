@@ -45,6 +45,7 @@ backend/app/
 frontend/src/
   app/ api/ features/ components/ i18n/ test/
 openapi/openapi.json      # contrato; genera frontend/src/api/schema.d.ts
+docs/ + zensical.toml     # documentación (GitHub y sitio Zensical)
 docker/                   # Dockerfile multi-stage (runtime, backend-dev) + entrypoint
 ```
 
@@ -113,6 +114,13 @@ npm run gen:api        # tras exportar openapi/openapi.json
 npm run e2e            # con la app levantada; primera vez: npx playwright install chromium
 ```
 
+Documentación (desde la raíz; sitio con [Zensical](https://zensical.org), configuración en `zensical.toml`):
+
+```bash
+uv run --frozen --project backend --only-group docs zensical build --strict   # falla ante enlaces o anclas rotos
+uv run --frozen --project backend --only-group docs zensical serve            # http://127.0.0.1:8000
+```
+
 Aplicación completa (desde la raíz):
 
 ```bash
@@ -172,10 +180,11 @@ PLAN → AUDIT_PLAN → IMPLEMENT → AUDIT_CODE → VERSION
 
 - [ ] Ninguna regla común copiada en un entry point
 - [ ] Rutas relativas y existentes
-- [ ] Sin términos ni rutas heredados de util_bbdd (`src/util_bbdd`, `mkdocs`, `zensical`…)
+- [ ] Sin términos ni rutas heredados de util_bbdd (`src/util_bbdd`, `mkdocs.yml`…); la documentación de este
+      proyecto se publica con Zensical (`zensical.toml`)
 - [ ] Slash commands ↔ prompts ↔ `.github/AGENTS.md` coherentes
 - [ ] Revisión con Config Reviewer (`/config-review`)
 
 ---
 
-*Actualizado: 2026-10-19*
+*Actualizado: 2026-10-23*

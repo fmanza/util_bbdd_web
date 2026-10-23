@@ -40,6 +40,9 @@ dev = [
     "ruff>=0.12",
     "mypy>=1.17",
 ]
+docs = [
+    "zensical>=0.0.67",  # sitio de documentación (zensical.toml en la raíz)
+]
 
 [tool.uv]
 package = false

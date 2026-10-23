@@ -1,5 +1,9 @@
 # Documentación de util_bbdd_web 1.0.0
 
+Se lee en GitHub o como sitio web con [Zensical](https://zensical.org): desde la raíz del repositorio,
+`uv run --frozen --project backend --only-group docs zensical serve` (<http://127.0.0.1:8000>) o `… build` (genera
+`site/`).
+
 ## Para empezar
 
 | Si eres… | Lee primero | Después |
@@ -35,4 +39,4 @@
 | [Guía de desarrolladores](guides/onboarding_dev.md) | Flujo de trabajo, contrato API, pruebas y E2E |
 | [ADR](adr/) | Decisiones de arquitectura (ADR-001 a ADR-010) |
 | [ROADMAP](plan/ROADMAP.md) y [huecos de util_bbdd](plan/UTIL_BBDD_GAPS.md) | Plan por fases y limitaciones de la librería |
-| [CHANGELOG](../CHANGELOG.md) | Cambios por versión |
+| [CHANGELOG](https://github.com/fmanza/util_bbdd_web/blob/develop/CHANGELOG.md) | Cambios por versión |

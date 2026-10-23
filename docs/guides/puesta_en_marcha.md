@@ -230,26 +230,30 @@ Guía funcional para los usuarios: [Guía de usuario](guia_usuario.md).
 
 - **Copias diarias** (cron del servidor; conserva las 7 últimas y las saca del servidor):
 
-  ```cron
-  0 2 * * * cd /opt/util_bbdd_web && docker compose exec -T web python -m app.cli backup >> /var/log/ubw-backup.log 2>&1 && docker compose exec -T web sh -c 'ls -dt /data/backups/ubw-backup-* | tail -n +8 | xargs -r rm -rf'
-  ```
+    ```cron
+    0 2 * * * cd /opt/util_bbdd_web && docker compose exec -T web python -m app.cli backup >> /var/log/ubw-backup.log 2>&1 && docker compose exec -T web sh -c 'ls -dt /data/backups/ubw-backup-* | tail -n +8 | xargs -r rm -rf'
+    ```
 
-  Copia después `/data/backups` a otro sistema (`docker compose cp web:/data/backups ./copias`). Restauración:
-  [Despliegue › Copias de seguridad](deployment.md#copias-de-seguridad).
+    Copia después `/data/backups` a otro sistema (`docker compose cp web:/data/backups ./copias`). Restauración:
+    [Despliegue › Copias de seguridad](deployment.md#copias-de-seguridad).
+
 - **Salud**: vigila `/api/health` (`status` y `worker`). Opcionalmente, Prometheus con `/metrics`
-  ([cómo activarlo](deployment.md#logs-y-métricas)).
+    ([cómo activarlo](deployment.md#logs-y-métricas)).
+
 - **Logs**: `docker compose logs -f web worker` (JSON; la «Referencia» que ven los usuarios en un error es el
-  `request_id`).
+    `request_id`).
+
 - **Actualizar** a una versión nueva:
 
-  ```bash
-  docker compose exec web python -m app.cli backup
-  git fetch --tags && git checkout v<nueva>
-  docker compose up -d --build              # las migraciones se aplican al arrancar
-  curl -s http://127.0.0.1:8080/api/health
-  ```
+    ```bash
+    docker compose exec web python -m app.cli backup
+    git fetch --tags && git checkout v<nueva>
+    docker compose up -d --build              # las migraciones se aplican al arrancar
+    curl -s http://127.0.0.1:8080/api/health
+    ```
 
-  Lee antes el [CHANGELOG](../../CHANGELOG.md): al pasar de 0.x a 1.0.0 todos los usuarios vuelven a iniciar sesión.
+    Lee antes el [CHANGELOG](https://github.com/fmanza/util_bbdd_web/blob/develop/CHANGELOG.md): al pasar de 0.x
+    a 1.0.0 todos los usuarios vuelven a iniciar sesión.
 
 ### 4.8. Lista de comprobación
 

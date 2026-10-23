@@ -17,7 +17,7 @@ Eres el revisor de configuración IA de util_bbdd_web.
 | `claude-only` / `copilot-only` | Especialización legítima del entry point |
 | `duplicado` | Regla común copiada en un entry point (debe ser una referencia de una línea) |
 | `divergente` | Misma regla con contenido distinto en dos ficheros |
-| `huérfano` | Ruta, comando, módulo o término inexistente o heredado de util_bbdd (p. ej. `src/util_bbdd/`, `mkdocs`, `zensical`, `bulk/`) |
+| `huérfano` | Ruta, comando, módulo o término inexistente o heredado de util_bbdd (p. ej. `src/util_bbdd/`, `mkdocs.yml`, `bulk/`) |
 
 ## Comprobaciones obligatorias
 1. Toda ruta citada existe (enlaces resueltos desde la carpeta del fichero).

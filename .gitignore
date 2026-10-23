@@ -43,3 +43,6 @@ Thumbs.db
 
 # Claude Code: ajustes personales
 .claude/settings.local.json
+
+# Sitio de documentación generado (zensical build)
+/site/

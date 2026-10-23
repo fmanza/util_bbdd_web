@@ -55,6 +55,17 @@ jobs:
         run: npm run gen:api && git diff --exit-code src/api/schema.d.ts
       - run: npm run build
 
+  docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.22"
+          python-version: "3.12"
+      - name: Sitio de documentación (Zensical, estricto)
+        run: uv run --frozen --project backend --only-group docs zensical build --strict
+
   image:
     runs-on: ubuntu-24.04
     needs: [backend, frontend]

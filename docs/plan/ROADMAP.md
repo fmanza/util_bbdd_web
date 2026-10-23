@@ -38,6 +38,7 @@ regenerado, migración Alembic con `downgrade`, tests de autorización (401/404)
 ## Fase 1 — Identidad y multiusuario ✅
 
 **Historias**
+
 - Como admin, creo, desactivo y reactivo usuarios y asigno el rol `admin` o `user`.
 - Como usuario, inicio y cierro sesión, y cambio mi contraseña.
 - Como admin, veo y revoco sesiones activas, y consulto el registro de auditoría.
@@ -52,6 +53,7 @@ bloqueo por intentos; comando `python -m app.cli create-admin`; dependencia `cur
 ## Fase 2 — Catálogo de motores y conexiones ✅
 
 **Historias**
+
 - Veo la ficha de cada motor: nombre, descripción, rango de versiones, puerto por defecto, drivers (y si están
   instalados), características, soporte async, operaciones disponibles (p. ej. migración) y parámetros de conexión.
 - Creo conexiones con un formulario generado desde los `connection_params` del motor, las pruebo y veo su informe
@@ -72,6 +74,7 @@ conexión con prueba y readiness.
 ## Fase 3 — Proyectos y motor de ejecuciones ✅
 
 **Historias**
+
 - Creo proyectos, invito miembros (`owner`/`editor`/`viewer`) y asocio conexiones con alias (`origen`, `destino`).
 - Lanzo una ejecución y sigo su progreso; la cancelo.
 - Veo el historial de ejecuciones del proyecto **agrupado por ejecución** (operación, usuario, estado, duración,

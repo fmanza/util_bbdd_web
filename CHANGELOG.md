@@ -3,6 +3,21 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Sin publicar]
+
+### Added
+
+- **Puesta en marcha** local y en producción (`docs/guides/puesta_en_marcha.md`), **guía de usuario**, índice
+  `docs/README.md` y `.env.example`.
+- **Sitio de documentación con Zensical**: `zensical.toml` (navegación por perfiles, anclas con tildes como en GitHub),
+  grupo de dependencias `docs` en `backend/pyproject.toml` y job `docs` del CI (`zensical build --strict`).
+
+### Changed
+
+- Markdown de `docs/` compatible con GitHub y con Python-Markdown: anidado a 4 espacios, línea en blanco antes de
+  listas y enlaces fuera de `docs/` como URL absoluta (reglas en `docs.instructions.md`).
+- La lista de comprobación de SHARED ya no trata `zensical` como término heredado de util_bbdd.
+
 ## [1.0.0] - 2026-10-23
 
 Fase 10 — Endurecimiento y release 1.0.

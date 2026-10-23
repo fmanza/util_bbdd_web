@@ -102,10 +102,10 @@ cancela, y solo puede haber una a la vez por destino.
 
 - Puesta en marcha y operación: [Puesta en marcha](puesta_en_marcha.md) y [Despliegue](deployment.md).
 - *Administración*:
-  - **Usuarios**: altas, roles, permisos especiales, desactivar y restablecer contraseña.
-  - **Sesiones**: ver y cerrar sesiones activas.
-  - **Destinos permitidos**: hosts y redes a los que se puede conectar.
-  - **Queries nombradas**: consultas reutilizables del explorador.
-  - **Auditoría**: inicios de sesión, cambios y escrituras.
+    - **Usuarios**: altas, roles, permisos especiales, desactivar y restablecer contraseña.
+    - **Sesiones**: ver y cerrar sesiones activas.
+    - **Destinos permitidos**: hosts y redes a los que se puede conectar.
+    - **Queries nombradas**: consultas reutilizables del explorador.
+    - **Auditoría**: inicios de sesión, cambios y escrituras.
 
-  Detalle en [Usuarios y sesiones](usuarios_y_sesiones.md) y [Explorador y SQL](explorador.md).
+    Detalle en [Usuarios y sesiones](usuarios_y_sesiones.md) y [Explorador y SQL](explorador.md).

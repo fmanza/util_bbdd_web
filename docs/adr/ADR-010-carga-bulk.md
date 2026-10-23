@@ -32,12 +32,14 @@ usuario, con `BulkCrud` de util_bbdd. Comparado con el volcado (ADR-009):
 3. **`bulk_apply`** (`form=false`) solo referencia la vista previa y exige, como ADR-009: permiso **«Puede escribir
    datos»** (`can_write_data`, el mismo del volcado) y rol owner; vista previa correcta, **sin errores** y de menos de
    60 minutos; mismo fichero y misma conexión; destino no `read_only` y del mismo motor; `confirm` = alias. Además:
-   - update y delete: `confirm_rows` = **filas afectadas** de la vista previa; el worker las vuelve a contar antes de
-     escribir y aborta con `preview_changed` si ya no coinciden;
-   - plan paralelo de más de un hilo: `accept_non_atomic`.
 
-   Una sola escritura (migración, volcado o carga) por destino; en curso no se cancela ni se relanza. El worker
-   comprueba todo de nuevo, refleja la tabla y exige la misma huella. Se ejecuta siempre con `generar_sql=False`.
+    - update y delete: `confirm_rows` = **filas afectadas** de la vista previa; el worker las vuelve a contar antes de
+      escribir y aborta con `preview_changed` si ya no coinciden;
+    - plan paralelo de más de un hilo: `accept_non_atomic`.
+
+    Una sola escritura (migración, volcado o carga) por destino; en curso no se cancela ni se relanza. El worker
+    comprueba todo de nuevo, refleja la tabla y exige la misma huella. Se ejecuta siempre con `generar_sql=False`.
+
 4. El resultado lo calcula la web: filas del destino **antes y después**, coincidencias por PK, `rows_rejected`
    (fiable) y particiones. Errores con la primera línea del motor y los valores enmascarados (`redact_values`, G34).
    Artefactos: `result.json`, `carga.jsonl` (auditoría de util_bbdd) y `rechazos.csv` con «apartar».

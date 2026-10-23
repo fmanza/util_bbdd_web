@@ -39,6 +39,19 @@ npm ci
 npm run dev        # http://localhost:5173 (en Windows, 127.0.0.1 puede no responder)
 ```
 
+## Documentación
+
+La documentación vive en `docs/` y se lee igual en GitHub y como sitio [Zensical](https://zensical.org)
+(`zensical.toml` en la raíz, dependencia del grupo `docs` de `backend/pyproject.toml`):
+
+```bash
+uv run --frozen --project backend --only-group docs zensical serve            # http://127.0.0.1:8000
+uv run --frozen --project backend --only-group docs zensical build --strict   # lo que comprueba el CI
+```
+
+Python-Markdown es más estricto que GitHub: lo anidado en listas, a 4 espacios, y línea en blanco antes de
+listas y tablas (reglas en `.github/instructions/docs.instructions.md`). El sitio se genera en `site/` (ignorado).
+
 ## Cambiar la API
 
 1. Router y esquemas en `backend/app/api/v1/`.
@@ -48,7 +61,7 @@ npm run dev        # http://localhost:5173 (en Windows, 127.0.0.1 puede no respo
 
 ## Validar antes de pedir revisión
 
-Los comandos de [SHARED_INSTRUCTIONS.md § «Comandos de desarrollo»](../../.github/SHARED_INSTRUCTIONS.md#comandos-de-desarrollo).
+Los comandos de [SHARED_INSTRUCTIONS.md § «Comandos de desarrollo»](https://github.com/fmanza/util_bbdd_web/blob/develop/.github/SHARED_INSTRUCTIONS.md#comandos-de-desarrollo).
 
 ## Dónde está cada cosa
 
