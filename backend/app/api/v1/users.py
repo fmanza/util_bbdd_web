@@ -87,6 +87,7 @@ def update_user(
         is_active=body.is_active,
         can_run_sql=body.can_run_sql,
         can_apply_ddl=body.can_apply_ddl,
+        can_write_data=body.can_write_data,
         password=body.password.get_secret_value() if body.password is not None else None,
     )
     return UserOut.model_validate(users.update_user(db, user, changes, actor=admin, settings=settings, ctx=ctx))

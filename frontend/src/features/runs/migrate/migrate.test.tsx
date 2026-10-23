@@ -235,7 +235,7 @@ describe('auditoría de la Fase 7', () => {
 
     renderRoute(`/runs/${DRY_ID}`);
 
-    expect(await screen.findByText(/no se puede cancelar: dejaría el destino a medias/)).toBeInTheDocument();
+    expect(await screen.findByText(/no se puede cancelar: la dejaría a medias/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
   });
 });

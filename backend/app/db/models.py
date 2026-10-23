@@ -6,6 +6,7 @@ Fase 3: proyectos (``projects``, ``project_members``, ``project_connections``), 
 ``artifacts``) y latido del worker (``workers``).
 Fase 4: caché de metadatos (``metadata_cache``), queries nombradas (``named_queries``) y ``users.can_run_sql``.
 Fase 7: ``users.can_apply_ddl`` (aplicar migraciones DDL en una BD destino, ADR-008).
+Fase 8: ``users.can_write_data`` (volcar datos en una BD destino, ADR-009).
 """
 
 from __future__ import annotations
@@ -76,6 +77,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     can_run_sql: Mapped[bool] = mapped_column(default=False)
     can_apply_ddl: Mapped[bool] = mapped_column(default=False)
+    can_write_data: Mapped[bool] = mapped_column(default=False)
     failed_attempts: Mapped[int] = mapped_column(default=0)
     locked_until: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
     password_changed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)

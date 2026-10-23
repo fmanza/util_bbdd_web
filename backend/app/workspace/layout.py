@@ -28,7 +28,19 @@ from typing import Any, Final
 
 MANIFEST: Final = "run.json"
 RUN_LOG: Final = "logs/run.log"
-OUTPUT_KINDS: Final = ("word", "excel", "html", "sql", "markdown", "graphs", "diff", "plan", "audit")
+OUTPUT_KINDS: Final = (
+    "word",
+    "excel",
+    "html",
+    "sql",
+    "markdown",
+    "graphs",
+    "diff",
+    "plan",
+    "audit",
+    "dump",
+    "rejects",
+)
 _SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9_-]+$")
 _CHUNK = 64 * 1024
 
@@ -38,6 +50,7 @@ _MIME_OVERRIDES: Final[dict[str, str]] = {
     ".log": "text/plain",
     ".json": "application/json",
     ".jsonl": "application/x-ndjson",
+    ".csv": "text/csv",
     ".svg": "image/svg+xml",
     ".html": "text/html",
     ".js": "text/javascript",

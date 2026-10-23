@@ -1,0 +1,77 @@
+{
+  "app": {
+    "title": "util_bbdd web"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "error": "Se ha producido un error",
+    "errorBody": "Inténtalo de nuevo más tarde.",
+    "noPermission": "Sin permiso",
+    "noPermissionBody": "Esta sección es solo para administradores.",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "edit": "Editar",
+    "actions": "Acciones",
+    "yes": "Sí",
+    "no": "No",
+    "delete": "Borrar"
+  },
+  "roles": {
+    "admin": "Administrador",
+    "user": "Usuario"
+  },
+  "nav": {
+    "label": "Navegación principal",
+    "home": "Inicio",
+    "engines": "Motores",
+    "connections": "Conexiones",
+    "projects": "Proyectos",
+    "runs": "Ejecuciones",
+    "phase": "Fase {{phase}}",
+    "admin": "Administración",
+    "users": "Usuarios",
+    "sessions": "Sesiones",
+    "audit": "Auditoría",
+    "allowlist": "Destinos permitidos",
+    "queries": "Queries nombradas"
+  },
+  "auth": {
+    "loginIntro": "Inicia sesión con tu usuario.",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "userMenu": "Menú de usuario de {{name}}",
+    "required": "Campo obligatorio",
+    "changePassword": "Cambiar contraseña",
+    "changePasswordIntro": "Al cambiarla se cierran tus sesiones abiertas en otros navegadores.",
+    "currentPassword": "Contraseña actual",
+    "newPassword": "Contraseña nueva",
+    "confirmPassword": "Repite la contraseña nueva",
+    "passwordHint": "Mínimo {{min}} caracteres. Mejor una frase larga que una palabra compleja.",
+    "passwordTooShort": "Debe tener al menos {{min}} caracteres",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "passwordChanged": "Contraseña cambiada",
+    "passwordChangedBody": "Las demás sesiones se han cerrado."
+  },
+  "home": {
+    "title": "Inicio",
+    "intro": "Conexiones, proyectos y ejecuciones de util_bbdd para varios usuarios. Las secciones se habilitan fase a fase según el ROADMAP."
+  },
+  "health": {
+    "loading": "Comprobando el servicio…",
+    "ok": "Servicio operativo",
+    "degraded": "Servicio degradado",
+    "unreachable": "No se puede contactar con la API",
+    "unreachableBody": "Comprueba que el backend está en marcha.",
+    "appVersion": "Versión de la aplicación",
+    "libVersion": "Versión de util_bbdd",
+    "notInstalled": "no instalada",
+    "database": "Base de datos de configuración"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "body": "La dirección no corresponde a ninguna sección.",
+    "back": "Volver al inicio"
+  }
+}

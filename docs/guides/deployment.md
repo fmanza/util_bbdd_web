@@ -29,7 +29,9 @@ protección más fuerte es que las conexiones usen un **usuario de BD con solo p
 al catálogo). Es imprescindible en **SQL Server**, que no tiene transacciones de solo lectura. Reserva los usuarios con
 escritura para las conexiones sin «Solo lectura» de las fases de migración, volcado y carga. Para aplicar
 migraciones DDL, ese usuario necesita permisos de `CREATE` (tablas, índices, vistas, secuencias y triggers) en el
-schema destino, y el usuario de la web, el permiso «Puede aplicar DDL» ([guía](migracion.md)).
+schema destino, y el usuario de la web, el permiso «Puede aplicar DDL» ([guía](migracion.md)). Para volcar datos
+([guía](volcado.md)) el usuario de BD destino necesita `INSERT` (y `DELETE`/`TRUNCATE` si se vacía) y, para que
+util_bbdd desactive y reactive constraints e índices, `ALTER` sobre esas tablas.
 
 ### Destinos y ficheros de las conexiones
 

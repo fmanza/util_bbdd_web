@@ -23,7 +23,8 @@ Tu trabajo es revisar los cambios de `frontend/` con hallazgos verificables, sin
 3. Datos: TanStack Query con `queryKey` estables, invalidación tras mutaciones, sin `fetch` directo fuera de `src/api`.
 4. Tipos: solo tipos del cliente generado; sin `any`; sin edición manual de `schema.d.ts`.
 5. Rendimiento: rutas con carga diferida, tablas grandes virtualizadas, sin re-render masivo.
-6. i18n: textos en `src/i18n/es.json`, nada literal en componentes.
+6. i18n: textos en `src/i18n/es/core.json` (login, menú, comunes) o `src/i18n/es/features.json` (pantallas), nada
+   literal en componentes.
 7. Seguridad: sin `dangerouslySetInnerHTML` con contenido de usuario o de artefactos; vistas previas HTML en `iframe` con `sandbox`.
 8. Tests: Testing Library por rol/texto, casos de error y permisos.
 

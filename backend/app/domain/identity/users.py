@@ -36,6 +36,7 @@ class UserChanges:
     password: str | None = None
     can_run_sql: bool | None = None
     can_apply_ddl: bool | None = None
+    can_write_data: bool | None = None
 
 
 def get_user(db: Session, user_id: int) -> User:
@@ -146,6 +147,9 @@ def update_user(
     if changes.can_apply_ddl is not None and changes.can_apply_ddl != user.can_apply_ddl:
         user.can_apply_ddl = changes.can_apply_ddl
         changed.append("can_apply_ddl")
+    if changes.can_write_data is not None and changes.can_write_data != user.can_write_data:
+        user.can_write_data = changes.can_write_data
+        changed.append("can_write_data")
     if changes.password is not None:
         check_policy(changes.password, username=user.username, min_length=settings.password_min_length)
         user.password_hash = hash_password(changes.password)
@@ -189,6 +193,7 @@ def update_user(
                 **({"role": user.role} if "role" in changed else {}),
                 **({"can_run_sql": user.can_run_sql} if "can_run_sql" in changed else {}),
                 **({"can_apply_ddl": user.can_apply_ddl} if "can_apply_ddl" in changed else {}),
+                **({"can_write_data": user.can_write_data} if "can_write_data" in changed else {}),
             },
         )
     db.commit()

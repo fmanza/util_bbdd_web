@@ -16,6 +16,7 @@ export const ADMIN = {
   role: 'admin',
   can_run_sql: true,
   can_apply_ddl: false,
+  can_write_data: false,
 } as const;
 export const USER = {
   id: 2,
@@ -24,6 +25,7 @@ export const USER = {
   role: 'user',
   can_run_sql: false,
   can_apply_ddl: false,
+  can_write_data: false,
 } as const;
 
 /**
@@ -59,7 +61,7 @@ export function stubApi(routes: Record<string, Handler>) {
 }
 
 export const HEALTH = {
-  'GET /api/health': { body: { status: 'ok', version: '0.8.0', util_bbdd_version: '4.0.0', database: 'ok' } },
+  'GET /api/health': { body: { status: 'ok', version: '0.9.0', util_bbdd_version: '4.0.0', database: 'ok' } },
 };
 
 /** Rutas base con sesión iniciada como `me` (o sin sesión con `null`). */

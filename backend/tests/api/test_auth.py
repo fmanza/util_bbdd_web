@@ -37,6 +37,7 @@ def test_login_sets_session_and_csrf_cookies_with_flags(client: TestClient, user
         "role": "user",
         "can_run_sql": False,
         "can_apply_ddl": False,
+        "can_write_data": False,
     }
     cookies = response.headers.get_list("set-cookie")
     session_cookie = next(c for c in cookies if c.startswith("ubw_session=")).lower()

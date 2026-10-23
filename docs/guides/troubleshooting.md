@@ -31,6 +31,8 @@
 | Explorador: 502 «No se pudo consultar la base de datos» | Conexión no permitida, caída o credenciales | El código (`not_allowed`, `connection_failed`…) indica la causa; prueba la conexión |
 | Documentación: el sitio HTML da 404 tras un rato | Su enlace firmado caducó (inactividad de la sesión) | Recarga el detalle de la ejecución |
 | Comparación: «El schema «x» no existe en el origen/destino» | Nombre mal escrito o de otro motor (en MySQL es la base de datos) | Copia el nombre del explorador |
+| Volcado: `dump_partial` | Una tabla falló o una constraint no se reactivó | Revisa el resultado por tabla |
+| Volcado: «attempt to write a readonly database» (SQLite) | El fichero no es del usuario de la aplicación | Dale permisos de escritura al usuario `app` |
 | Migración: 403 al aplicar | Sin «Puede aplicar DDL» o sin ser propietario | Un admin concede el permiso; aplica el propietario |
 | Migración: «El origen ha cambiado desde el plan» | Cambió el schema origen tras planificar | Planifica de nuevo |
 | Migración: no aparece *Cancelar* | Las aplicaciones en curso no se cancelan (dejarían el destino a medias) | Espera a que termine; en cola sí se cancela |

@@ -3,6 +3,44 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [0.9.0] - 2026-10-23
+
+Fase 8 — Volcado de datos.
+
+### Added
+
+- **Vista previa** (`dump_preview`, modo seco, solo lectura): orden de carga por FK y ciclos (el mismo que util_bbdd,
+  G29), filas en origen y destino, columnas omitidas u obligatorias sin origen, FK fuera del volcado y avisos (destino
+  con filas, tablas sin destino, motor sin gestión de constraints, Oracle con «apartar» G32, SQLite con fechas G33).
+- **Volcado** (`dump_apply`, ADR-009): `DumpOrchestrator` con los parámetros de la vista previa; permiso
+  **`can_write_data`** (migración `0007`) + owner, vista previa de menos de 60 min y con la misma estructura, destino
+  no `read_only`, confirmación con el alias y «VACIAR» si se vacía el destino; sin dos volcados a la vez, sin relanzar
+  ni cancelar en curso; rechazos aislados en `rechazos.csv`, informe Excel, `result.json` y auditoría.
+- **API**: `GET /api/v1/runs/{id}/dump-preview` y `GET /api/v1/runs/{id}/dump-result`.
+- **Frontend**: visor de la vista previa con panel de volcado y doble confirmación, resultado por tabla con constraints
+  y rechazos, interruptor *Puede volcar datos*.
+- **Tests**: 32 nuevos en backend (488; volcados reales SQLite → SQLite en el CI), 13 de integración escribiendo en
+  los bench (69: PostgreSQL → MySQL/MariaDB, MySQL → PostgreSQL, Oracle → SQL Server y MariaDB → Oracle, con
+  constraints reactivadas, rechazos y errores enmascarados), 11 en Vitest (90) y E2E de vista previa → vaciar y
+  volcar → añadir.
+- **Documentación**: guía [Volcado de datos](docs/guides/volcado.md), ADR-009, huecos G29–G34.
+
+### Changed
+
+- **Bundle**: React y el router en `vendor-react`, i18next y TanStack Query en `vendor-app`, y las traducciones de las
+  pantallas (`src/i18n/es/features.json`) en un chunk que se carga con la primera ruta lazy; el chunk principal pasa
+  de 492 kB a 132 kB (sin aviso de Vite). `src/i18n/es.json` se divide en `es/core.json` y `es/features.json`.
+- Las escrituras en curso en la BD destino (migración y volcado) comparten la regla de no cancelación.
+
+### Security
+
+- Los mensajes de error del volcado se guardan sin los parámetros de SQLAlchemy (que traen filas del origen) y con
+  los valores de clave enmascarados (MySQL/MariaDB, SQL Server; G34).
+- Auditoría de código previa al cierre: la vista previa guarda el id de las conexiones y un alias reasignado no
+  vale; migración y volcado no pueden escribir a la vez en el mismo destino; `audit_log` detalla cada volcado;
+  `work/` se borra aunque util_bbdd falle; el patrón de tablas ya no admite `schema.tabla`; un test estático
+  impide usar claves de pantallas fuera de las rutas lazy.
+
 ## [0.8.0] - 2026-10-22
 
 Fase 7 — Migración DDL.

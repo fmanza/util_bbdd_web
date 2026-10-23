@@ -27,6 +27,7 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
   const [isActive, setIsActive] = useState(user?.is_active ?? true);
   const [canRunSql, setCanRunSql] = useState(user?.can_run_sql ?? false);
   const [canApplyDdl, setCanApplyDdl] = useState(user?.can_apply_ddl ?? false);
+  const [canWriteData, setCanWriteData] = useState(user?.can_write_data ?? false);
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -55,6 +56,7 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
       if (isActive !== user.is_active) body.is_active = isActive;
       if (canRunSql !== user.can_run_sql) body.can_run_sql = canRunSql;
       if (canApplyDdl !== user.can_apply_ddl) body.can_apply_ddl = canApplyDdl;
+      if (canWriteData !== user.can_write_data) body.can_write_data = canWriteData;
       if (password) body.password = password;
       update.mutate({ id: user.id, body }, { onSuccess: onClose });
     } else {
@@ -122,6 +124,14 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
               description={t('admin.users.canApplyDdlHint')}
               checked={canApplyDdl}
               onChange={(event) => setCanApplyDdl(event.currentTarget.checked)}
+            />
+          )}
+          {user && (
+            <Switch
+              label={t('admin.users.canWriteData')}
+              description={t('admin.users.canWriteDataHint')}
+              checked={canWriteData}
+              onChange={(event) => setCanWriteData(event.currentTarget.checked)}
             />
           )}
           <PasswordInput

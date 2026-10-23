@@ -8,7 +8,7 @@ Escribir en una BD destino exige, **al encolar**:
 3. Conexión destino del proyecto **no** ``read_only`` y del motor del plan.
 4. Para ``apply``: un modo seco (``dry_run``) correcto del mismo plan y destino de hace menos de
    ``DRY_RUN_MAX_AGE``, y ``confirm`` igual al alias del destino.
-5. Ninguna otra ``migrate_apply`` activa sobre ese destino en el proyecto.
+5. Ninguna otra escritura (migración o volcado) activa sobre ese destino en el proyecto.
 
 El job vuelve a planificar y compara el hash de las sentencias antes de tocar el destino.
 """
@@ -19,15 +19,15 @@ import json
 from datetime import timedelta
 from typing import Any, Final
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.errors import AppError
-from app.db.models import TERMINAL_STATUSES, Run, User, utcnow
+from app.db.models import Run, User, utcnow
 from app.domain.projects.service import Membership, get_project_connection
 from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError, RunStateError
 from app.domain.runs.service import get_artifact_by_path
+from app.domain.runs.targets import active_write
 
 PLAN_PATH: Final = "outputs/plan/plan.json"
 REPORT_PATH: Final = "outputs/plan/report.json"
@@ -122,8 +122,8 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         _check_dry_run(db, membership, params)
         if params.get("confirm") != alias:
             raise _params_error("confirm", "Escribe el alias de la conexión destino para confirmar.")
-    if _active_apply(db, membership.project.id, alias):
-        raise RunStateError("Ya hay una migración en curso sobre esa conexión destino.")
+    if active_write(db, membership.project.id, alias):
+        raise RunStateError("Ya hay una migración o un volcado en curso sobre esa conexión destino.")
 
 
 def _check_dry_run(db: Session, membership: Membership, params: dict[str, Any]) -> None:
@@ -142,12 +142,3 @@ def _check_dry_run(db: Session, membership: Membership, params: dict[str, Any]) 
         raise _params_error("dry_run_run", "Aplicar exige un modo seco correcto del mismo plan y destino.")
     if dry.finished_at is None or utcnow() - dry.finished_at > DRY_RUN_MAX_AGE:
         raise _params_error("dry_run_run", "El modo seco tiene más de 60 minutos: repítelo.")
-
-
-def _active_apply(db: Session, project_id: int, alias: str) -> bool:
-    runs = db.scalars(
-        select(Run).where(
-            Run.project_id == project_id, Run.operation == "migrate_apply", Run.status.not_in(TERMINAL_STATUSES)
-        )
-    ).all()
-    return any(run.params.get("target_connection") == alias for run in runs if run.status != "purged")

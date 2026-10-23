@@ -5,11 +5,12 @@ import { RequireAdmin, RequireAuth } from '../features/auth/guards';
 import { LoginPage } from '../features/auth/LoginPage';
 import { HomePage } from '../features/health/HomePage';
 import { Layout } from './Layout';
+import { loadFeatureMessages } from '../i18n';
 import { NotFoundPage } from './NotFoundPage';
 
 // `/login` queda fuera del layout; el resto exige sesión. Las secciones de cada fase se añaden como hijas de
 // Layout y se cargan con `lazy` para dividir el bundle.
-export const routes: RouteObject[] = [
+const pages: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
   {
     element: <RequireAuth />,
@@ -122,5 +123,21 @@ export const routes: RouteObject[] = [
     ],
   },
 ];
+
+/** Cada ruta lazy carga, en paralelo con su código, las traducciones de las pantallas (una sola vez). */
+function withMessages(routes: RouteObject[]): RouteObject[] {
+  return routes.map((route) => {
+    const children = route.children ? { children: withMessages(route.children) } : {};
+    const { lazy } = route;
+    if (typeof lazy !== 'function') return { ...route, ...children } as RouteObject;
+    return {
+      ...route,
+      ...children,
+      lazy: async () => (await Promise.all([lazy(), loadFeatureMessages()]))[0],
+    } as RouteObject;
+  });
+}
+
+export const routes = withMessages(pages);
 
 export const router = createBrowserRouter(routes);

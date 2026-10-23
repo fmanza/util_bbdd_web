@@ -5,6 +5,7 @@ Cada operación declara un modelo Pydantic (``extra="forbid"``) que valida los p
 Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones.
 Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
 Fase 7: ``migrate_plan`` y ``migrate_apply`` (este no sale en el formulario genérico: se lanza desde el plan).
+Fase 8: ``dump_preview`` (modo seco) y ``dump_apply`` (se lanza desde la vista previa).
 """
 
 from __future__ import annotations
@@ -213,6 +214,59 @@ class MigrateApplyParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+#: Lista de tablas separadas por comas (nombres de objeto, sin comillas ni ``;``). Sin ``.``: las tablas se buscan en
+#: el schema del formulario, no como ``schema.tabla``.
+TABLES_PATTERN = r"^\s*[\w$#-]+(\s*,\s*[\w$#-]+)*\s*$"
+
+
+class DumpPreviewParams(BaseModel):
+    """Vista previa (modo seco) de un volcado de datos: solo lee origen y destino (ADR-009)."""
+
+    source_connection: str = _connection("Conexión origen (de donde se leen las filas).")
+    source_schema: str | None = Field(
+        default=None, pattern=OBJECT_NAME_PATTERN, description="Schema origen; vacío = el de la conexión."
+    )
+    target_connection: str = _connection("Conexión destino (donde se escriben; sus tablas deben existir).")
+    target_schema: str | None = Field(
+        default=None, pattern=OBJECT_NAME_PATTERN, description="Schema destino; vacío = el de la conexión."
+    )
+    tables: str | None = Field(
+        default=None,
+        max_length=4000,
+        pattern=TABLES_PATTERN,
+        description="Tablas a volcar separadas por comas; vacío = todas las del origen.",
+    )
+    truncate_target: bool = _group(
+        "load", False, "Vaciar las tablas destino antes de cargar (si no, las filas se añaden)."
+    )
+    sync_pk_sequences: bool = _group("load", True, "Ajustar secuencias/IDENTITY/AUTO_INCREMENT al máximo cargado.")
+    on_error: Literal["raise", "isolate"] = _group(
+        "errors", "raise", "Filas que el destino no admite: fallar la tabla o apartarlas a un CSV de rechazos."
+    )
+    max_rejects: int | None = _group(
+        "errors", None, "Rechazos máximos por tabla (con «apartar»); vacío = sin límite.", ge=1, le=1_000_000
+    )
+    chunk_size: int = _group("performance", 5000, "Filas por lote de lectura y escritura.", ge=100, le=100_000)
+    max_parallel_tables: int = _group("performance", 1, "Tablas independientes en paralelo.", ge=1, le=4)
+    manage_indexes: Literal["none", "secondary"] = _group(
+        "performance", "none", "Desactivar los índices secundarios no únicos durante la carga y reconstruirlos."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class DumpApplyParams(BaseModel):
+    """Volcado de datos con los parámetros de una vista previa correcta y reciente (ADR-009)."""
+
+    preview_run: str = Field(pattern=RUN_ID_PATTERN, description="Vista previa dump_preview que se ejecuta.")
+    confirm: str = Field(max_length=64, description="Alias de la conexión destino escrito a mano.")
+    confirm_truncate: str | None = Field(
+        default=None, max_length=16, description="«VACIAR» escrito a mano si la vista previa vacía el destino."
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 @dataclass(frozen=True)
 class OperationParam:
     """Parámetro de una operación tal como lo ve el formulario de lanzamiento."""
@@ -319,6 +373,20 @@ OPERATIONS: dict[str, OperationSpec] = {
         title="Aplicar migración DDL",
         description="Modo seco o aplicación de un plan de migración en una conexión destino.",
         model=MigrateApplyParams,
+        form=False,
+    ),
+    "dump_preview": OperationSpec(
+        name="dump_preview",
+        title="Volcado de datos: vista previa",
+        description="Modo seco de un volcado de filas entre dos conexiones: orden de carga por FK, ciclos, filas y "
+        "avisos por tabla. No escribe; desde su detalle se lanza el volcado.",
+        model=DumpPreviewParams,
+    ),
+    "dump_apply": OperationSpec(
+        name="dump_apply",
+        title="Volcado de datos",
+        description="Copia las filas según una vista previa correcta y reciente.",
+        model=DumpApplyParams,
         form=False,
     ),
 }

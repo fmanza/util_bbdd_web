@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom/vitest';
-import '../i18n';
+import i18n from '../i18n';
+import features from '../i18n/es/features.json';
 
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+
+// En la app las traducciones de las pantallas llegan con la primera ruta lazy; en los tests, desde el principio.
+i18n.addResourceBundle('es', 'translation', features, true, true);
 
 // jsdom no implementa matchMedia ni ResizeObserver, que Mantine usa.
 Object.defineProperty(window, 'matchMedia', {

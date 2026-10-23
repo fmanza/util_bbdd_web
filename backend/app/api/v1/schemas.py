@@ -53,6 +53,7 @@ class Me(_Out):
     role: Role
     can_run_sql: bool
     can_apply_ddl: bool
+    can_write_data: bool
 
 
 # --- users ------------------------------------------------------------------------------------------------------
@@ -68,6 +69,7 @@ class UserOut(_Out):
     is_active: bool
     can_run_sql: bool
     can_apply_ddl: bool
+    can_write_data: bool
     locked_until: datetime | None
     password_changed_at: datetime
     created_at: datetime
@@ -91,6 +93,7 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
     can_run_sql: bool | None = None
     can_apply_ddl: bool | None = None
+    can_write_data: bool | None = None
     password: Password | None = None
 
 

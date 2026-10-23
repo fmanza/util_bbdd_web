@@ -849,6 +849,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/dump-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vista previa (modo seco) de un volcado
+         * @description Orden de carga por FK, ciclos, filas y avisos por tabla de una ``dump_preview`` correcta.
+         */
+        get: operations["get_dump_preview_api_v1_runs__run_id__dump_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/dump-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resultado de un volcado
+         * @description Filas por tabla, rechazos, constraints reactivadas y contadores PK de un ``dump_apply`` (también si falló).
+         */
+        get: operations["get_dump_result_api_v1_runs__run_id__dump_result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/events": {
         parameters: {
             query?: never;
@@ -1426,6 +1466,168 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** DumpConstraintOut */
+        DumpConstraintOut: {
+            /** Constraint */
+            constraint: string;
+            /** Error */
+            error?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "enabled" | "failed" | "unverified";
+            /** Table */
+            table: string;
+        };
+        /** DumpPkSyncOut */
+        DumpPkSyncOut: {
+            /** Error */
+            error?: string | null;
+            /** Status */
+            status: string;
+            /** Table */
+            table: string;
+        };
+        /**
+         * DumpPreviewOut
+         * @description Modo seco de un volcado: orden de carga por FK, ciclos, filas y avisos por tabla.
+         */
+        DumpPreviewOut: {
+            /**
+             * Constraints Managed
+             * @description util_bbdd desactiva y reactiva las constraints de este destino
+             */
+            constraints_managed: boolean;
+            /** Cycles */
+            cycles: string[][];
+            /** Load Order */
+            load_order: string[];
+            /** Source Engine */
+            source_engine: string;
+            /** Source Schema */
+            source_schema: string | null;
+            /** Structure Hash */
+            structure_hash: string;
+            /** Tables */
+            tables: components["schemas"]["DumpPreviewTableOut"][];
+            /** Target Engine */
+            target_engine: string;
+            /** Target Schema */
+            target_schema: string | null;
+            /** Truncate Target */
+            truncate_target: boolean;
+            /**
+             * Warnings
+             * @description Códigos de aviso: isolate_oracle (G32), sqlite_dates (G33)
+             * @default []
+             */
+            warnings: string[];
+        };
+        /** DumpPreviewTableOut */
+        DumpPreviewTableOut: {
+            /**
+             * Date Columns
+             * @description SQLite → SQLite: columnas de fecha del destino que util_bbdd no carga desde texto (G33)
+             * @default []
+             */
+            date_columns: string[];
+            /** In Cycle */
+            in_cycle: boolean;
+            /**
+             * Missing Target Columns
+             * @description Columnas del destino obligatorias que el origen no tiene (la carga de la tabla fallará)
+             */
+            missing_target_columns: string[];
+            /**
+             * Outside References
+             * @description Tablas referenciadas por FK que no entran en el volcado
+             */
+            outside_references: string[];
+            /** Position */
+            position: number;
+            /**
+             * Skipped Columns
+             * @description Columnas del origen que el destino no tiene (no se copian)
+             */
+            skipped_columns: string[];
+            /** Source Rows */
+            source_rows: number;
+            /** Table */
+            table: string;
+            /** Target Rows */
+            target_rows: number | null;
+            /**
+             * Target Table
+             * @description Tabla del destino; null = no existe (no se cargará)
+             */
+            target_table: string | null;
+        };
+        /**
+         * DumpResultOut
+         * @description Resultado de ``dump_apply``: por tabla, constraints reactivadas y contadores PK.
+         */
+        DumpResultOut: {
+            /**
+             * Constraints
+             * @default []
+             */
+            constraints: components["schemas"]["DumpConstraintOut"][];
+            /** Cycles */
+            cycles: string[][];
+            /** Load Order */
+            load_order: string[];
+            /**
+             * Pk Sync
+             * @default []
+             */
+            pk_sync: components["schemas"]["DumpPkSyncOut"][];
+            /**
+             * Report
+             * @description Se generó el informe Excel
+             */
+            report: boolean;
+            /** Tables */
+            tables: components["schemas"]["DumpTableResultOut"][];
+        };
+        /** DumpTableResultOut */
+        DumpTableResultOut: {
+            /**
+             * Error
+             * @description Primera línea del error del motor, sin datos de filas
+             */
+            error?: string | null;
+            /**
+             * In Cycle
+             * @default false
+             */
+            in_cycle: boolean;
+            /** Position */
+            position: number;
+            /**
+             * Rows Rejected
+             * @default 0
+             */
+            rows_rejected: number;
+            /**
+             * Skipped Columns
+             * @default []
+             */
+            skipped_columns: string[];
+            /** Source Rows */
+            source_rows: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "success" | "missing_target" | "skipped" | "error";
+            /** Table */
+            table: string;
+            /** Target Rows After */
+            target_rows_after: number;
+            /** Target Rows Before */
+            target_rows_before: number;
+        };
         /**
          * EngineDetailOut
          * @description Ficha completa de un motor.
@@ -1681,6 +1883,8 @@ export interface components {
             can_apply_ddl: boolean;
             /** Can Run Sql */
             can_run_sql: boolean;
+            /** Can Write Data */
+            can_write_data: boolean;
             /** Display Name */
             display_name: string;
             /** Id */
@@ -2657,6 +2861,8 @@ export interface components {
             can_apply_ddl: boolean;
             /** Can Run Sql */
             can_run_sql: boolean;
+            /** Can Write Data */
+            can_write_data: boolean;
             /**
              * Created At
              * Format: date-time
@@ -2707,6 +2913,8 @@ export interface components {
             can_apply_ddl?: boolean | null;
             /** Can Run Sql */
             can_run_sql?: boolean | null;
+            /** Can Write Data */
+            can_write_data?: boolean | null;
             /** Display Name */
             display_name?: string | null;
             /** Is Active */
@@ -5584,6 +5792,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DiffEvolutionOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiado grande para el visor */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dump_preview_api_v1_runs__run_id__dump_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpPreviewOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Demasiado grande para el visor */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dump_result_api_v1_runs__run_id__dump_result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpResultOut"];
                 };
             };
             /** @description No autenticado */

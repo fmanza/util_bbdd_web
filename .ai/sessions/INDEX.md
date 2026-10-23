@@ -10,3 +10,4 @@
 | [2026-10-22-fase5](2026-10-22-fase5/TRACEABILITY.md) | phase | Fase 5 cerrada (0.6.0) |
 | [2026-10-22-fase6](2026-10-22-fase6/TRACEABILITY.md) | phase | Fase 6 cerrada (0.7.0) |
 | [2026-10-22-fase7](2026-10-22-fase7/TRACEABILITY.md) | phase | Fase 7 cerrada (0.8.0) |
+| [2026-10-22-fase8](2026-10-22-fase8/TRACEABILITY.md) | phase | Fase 8 cerrada (0.9.0) |

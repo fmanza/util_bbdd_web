@@ -17,6 +17,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
 from app.api.v1.schemas_diff import DiffEvolutionOut, DiffItemOut, SchemaDiffOut
+from app.api.v1.schemas_dump import DumpPreviewOut, DumpResultOut
 from app.api.v1.schemas_migrate import MigrationPlanOut, MigrationReportOut
 from app.api.v1.schemas_projects import ArtifactOut, RunCreate, RunDetailOut, RunOut, RunPage, RunStatus
 from app.core.config import Settings
@@ -26,7 +27,7 @@ from app.db.models import TERMINAL_STATUSES, Artifact, Run, User
 from app.db.session import new_session
 from app.domain.projects.service import get_membership
 from app.domain.runs import diff as diff_domain
-from app.domain.runs import migrations, service
+from app.domain.runs import dumps, migrations, service
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters
 from app.workspace.layout import run_dir, zip_stream
@@ -396,6 +397,29 @@ def get_migration_report(run_id: str, user: CurrentUser, db: DbSession, settings
         raise ArtifactNotFoundError("Esta ejecución no es una aplicación de migración.")
     _, path = service.get_artifact_by_path(db, access.run, migrations.REPORT_PATH, settings)
     return MigrationReportOut.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+# --- volcado de datos (Fase 8) -----------------------------------------------------------------------------------
+
+
+@router.get(
+    "/{run_id}/dump-preview", response_model=DumpPreviewOut, summary="Vista previa (modo seco) de un volcado",
+    responses={**_401, **_404, 413: {"description": "Demasiado grande para el visor"}},
+)  # fmt: skip
+def get_dump_preview(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> DumpPreviewOut:
+    """Orden de carga por FK, ciclos, filas y avisos por tabla de una ``dump_preview`` correcta."""
+    access = service.get_access(db, user, run_id)
+    return DumpPreviewOut.model_validate(dumps.load_preview(db, access.run, settings))
+
+
+@router.get(
+    "/{run_id}/dump-result", response_model=DumpResultOut, summary="Resultado de un volcado",
+    responses={**_401, **_404, 413: {"description": "Demasiado grande para el visor"}},
+)  # fmt: skip
+def get_dump_result(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> DumpResultOut:
+    """Filas por tabla, rechazos, constraints reactivadas y contadores PK de un ``dump_apply`` (también si falló)."""
+    access = service.get_access(db, user, run_id)
+    return DumpResultOut.model_validate(dumps.load_result(db, access.run, settings))
 
 
 _SITE_HEADERS: Final = {

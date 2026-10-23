@@ -1,59 +1,4 @@
 {
-  "app": {
-    "title": "util_bbdd web"
-  },
-  "common": {
-    "loading": "Cargando…",
-    "error": "Se ha producido un error",
-    "errorBody": "Inténtalo de nuevo más tarde.",
-    "noPermission": "Sin permiso",
-    "noPermissionBody": "Esta sección es solo para administradores.",
-    "cancel": "Cancelar",
-    "save": "Guardar",
-    "edit": "Editar",
-    "actions": "Acciones",
-    "yes": "Sí",
-    "no": "No",
-    "delete": "Borrar"
-  },
-  "roles": {
-    "admin": "Administrador",
-    "user": "Usuario"
-  },
-  "nav": {
-    "label": "Navegación principal",
-    "home": "Inicio",
-    "engines": "Motores",
-    "connections": "Conexiones",
-    "projects": "Proyectos",
-    "runs": "Ejecuciones",
-    "phase": "Fase {{phase}}",
-    "admin": "Administración",
-    "users": "Usuarios",
-    "sessions": "Sesiones",
-    "audit": "Auditoría",
-    "allowlist": "Destinos permitidos",
-    "queries": "Queries nombradas"
-  },
-  "auth": {
-    "loginIntro": "Inicia sesión con tu usuario.",
-    "username": "Usuario",
-    "password": "Contraseña",
-    "login": "Iniciar sesión",
-    "logout": "Cerrar sesión",
-    "userMenu": "Menú de usuario de {{name}}",
-    "required": "Campo obligatorio",
-    "changePassword": "Cambiar contraseña",
-    "changePasswordIntro": "Al cambiarla se cierran tus sesiones abiertas en otros navegadores.",
-    "currentPassword": "Contraseña actual",
-    "newPassword": "Contraseña nueva",
-    "confirmPassword": "Repite la contraseña nueva",
-    "passwordHint": "Mínimo {{min}} caracteres. Mejor una frase larga que una palabra compleja.",
-    "passwordTooShort": "Debe tener al menos {{min}} caracteres",
-    "passwordMismatch": "Las contraseñas no coinciden",
-    "passwordChanged": "Contraseña cambiada",
-    "passwordChangedBody": "Las demás sesiones se han cerrado."
-  },
   "admin": {
     "users": {
       "title": "Usuarios",
@@ -79,7 +24,9 @@
       "canRunSql": "Puede ejecutar SQL libre",
       "canRunSqlHint": "Solo consultas de lectura sobre conexiones «Solo lectura» de proyectos donde sea editor. Se audita.",
       "canApplyDdl": "Puede aplicar DDL",
-      "canApplyDdlHint": "Permite aplicar migraciones en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada aplicación exige modo seco previo y confirmación."
+      "canApplyDdlHint": "Permite aplicar migraciones en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada aplicación exige modo seco previo y confirmación.",
+      "canWriteData": "Puede volcar datos",
+      "canWriteDataHint": "Permite copiar filas a conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada volcado exige una vista previa reciente y confirmación."
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -209,26 +156,6 @@
       "deleteTitle": "Borrar query",
       "deleteBody": "Se borrará la query «{{name}}» de {{engine}}."
     }
-  },
-  "home": {
-    "title": "Inicio",
-    "intro": "Conexiones, proyectos y ejecuciones de util_bbdd para varios usuarios. Las secciones se habilitan fase a fase según el ROADMAP."
-  },
-  "health": {
-    "loading": "Comprobando el servicio…",
-    "ok": "Servicio operativo",
-    "degraded": "Servicio degradado",
-    "unreachable": "No se puede contactar con la API",
-    "unreachableBody": "Comprueba que el backend está en marcha.",
-    "appVersion": "Versión de la aplicación",
-    "libVersion": "Versión de util_bbdd",
-    "notInstalled": "no instalada",
-    "database": "Base de datos de configuración"
-  },
-  "notFound": {
-    "title": "Página no encontrada",
-    "body": "La dirección no corresponde a ninguna sección.",
-    "back": "Volver al inicio"
   },
   "engines": {
     "title": "Motores",
@@ -431,7 +358,9 @@
       "other": "Otro",
       "diff": "Diff",
       "plan": "Plan",
-      "audit": "Auditoría"
+      "audit": "Auditoría",
+      "dump": "Volcado",
+      "rejects": "Rechazos"
     },
     "params": {
       "noop": {
@@ -507,6 +436,20 @@
         "sql_server_collation": "Collation",
         "pg_schema": "Schema destino",
         "oracle_identity_mode": "Autoincrementales"
+      },
+      "dump_preview": {
+        "source_connection": "Conexión origen",
+        "source_schema": "Schema origen",
+        "target_connection": "Conexión destino",
+        "target_schema": "Schema destino",
+        "tables": "Tablas",
+        "truncate_target": "Vaciar el destino antes de cargar",
+        "sync_pk_sequences": "Ajustar secuencias de PK",
+        "on_error": "Filas que el destino no admite",
+        "max_rejects": "Rechazos máximos por tabla",
+        "chunk_size": "Filas por lote",
+        "max_parallel_tables": "Tablas en paralelo",
+        "manage_indexes": "Índices secundarios"
       }
     },
     "launch": {
@@ -544,7 +487,10 @@
       "mysql": "Destino MariaDB/MySQL",
       "sqlserver": "Destino SQL Server",
       "postgresql": "Destino PostgreSQL",
-      "oracle": "Destino Oracle"
+      "oracle": "Destino Oracle",
+      "load": "Carga",
+      "errors": "Errores",
+      "performance": "Rendimiento"
     },
     "options": {
       "both": "Ambas direcciones",
@@ -569,7 +515,11 @@
       "DECIMAL(38,10)": "DECIMAL(38,10)",
       "DECIMAL(18,4)": "DECIMAL(18,4)",
       "sequence_trigger": "Secuencia + trigger",
-      "identity": "IDENTITY"
+      "identity": "IDENTITY",
+      "raise": "Fallar la tabla",
+      "isolate": "Apartar a rechazos.csv",
+      "none": "No tocar",
+      "secondary": "Desactivar y reconstruir"
     },
     "outputs": {
       "documentation": "Documentación",
@@ -586,7 +536,7 @@
       "sqlTitle": "El script SQL no se ha ejecutado",
       "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
     },
-    "cancelBlocked": "Una migración en curso no se puede cancelar: dejaría el destino a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría."
+    "cancelBlocked": "Una escritura en curso en la base de datos destino no se puede cancelar: la dejaría a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría."
   },
   "explorer": {
     "open": "Explorar",
@@ -831,6 +781,83 @@
       "partial": "Las sentencias anteriores quedaron aplicadas en el destino.",
       "dryOkTitle": "Modo seco correcto",
       "dryOk": "Se puede aplicar desde el plan durante la próxima hora."
+    }
+  },
+  "dump": {
+    "preview": {
+      "title": "Vista previa del volcado",
+      "route": "{{source}} → {{target}}",
+      "truncates": "Vacía el destino",
+      "tables": "Tablas",
+      "sourceRows": "Filas origen",
+      "targetRows": "Filas destino",
+      "missing": "Sin destino",
+      "cycles": "Ciclos de FK",
+      "order": "Orden de carga",
+      "table": "Tabla",
+      "notes": "Notas",
+      "inCycle": "en ciclo",
+      "noTarget": "no existe",
+      "skipped": "no se copian: {{columns}}",
+      "required": "obligatorias sin origen: {{columns}}",
+      "outside": "FK a tablas fuera del volcado: {{tables}}"
+    },
+    "warnings": {
+      "title": "Avisos",
+      "missingTables": "No existen en el destino y no se cargarán: {{tables}}.",
+      "requiredColumns": "Tienen columnas obligatorias en el destino que el origen no tiene; su carga fallará: {{tables}}.",
+      "append": "El destino ya tiene filas en {{tables}}: se añadirán (pueden duplicarse claves).",
+      "cycles_one": "Hay {{count}} ciclo de FK: esas tablas se cargan al final con las constraints desactivadas.",
+      "cycles_other": "Hay {{count}} ciclos de FK: esas tablas se cargan al final con las constraints desactivadas.",
+      "noConstraints": "util_bbdd no gestiona las constraints de {{engine}}: se cargan activas.",
+      "isolate_oracle": "Con destino Oracle, «apartar» no aparta las filas con clave primaria duplicada: la tabla falla (G32).",
+      "sqlite_dates": "SQLite → SQLite: util_bbdd no carga fechas guardadas como texto y estas tablas fallarán: {{columns}} (G33)."
+    },
+    "apply": {
+      "title": "Volcar los datos",
+      "noPermission": "Para volcar datos necesitas el permiso «Puede volcar datos» (lo concede un administrador).",
+      "ownerOnly": "Solo el propietario del proyecto puede volcar datos.",
+      "readOnly": "La conexión destino «{{alias}}» es de solo lectura.",
+      "stale": "La vista previa tiene más de 60 minutos: lánzala de nuevo para poder volcar.",
+      "open": "Volcar en «{{alias}}»…",
+      "openTruncate": "Vaciar y volcar en «{{alias}}»…",
+      "confirmTitle": "Volcar los datos",
+      "noCancelTitle": "No se podrá cancelar",
+      "noCancel": "Las tablas se cargan una a una en «{{alias}}» con las constraints desactivadas; una vez empezado, el volcado no se puede cancelar.",
+      "truncateTitle": "Se vaciará el destino",
+      "truncate_one": "Se borrará {{count}} fila que ya existe en las tablas destino.",
+      "truncate_other": "Se borrarán {{count}} filas que ya existen en las tablas destino.",
+      "understand": "He revisado la vista previa y entiendo lo que se va a escribir",
+      "typeAlias": "Escribe «{{alias}}» para confirmar",
+      "typeWord": "Escribe «{{word}}» para confirmar que se vacía el destino",
+      "submit": "Volcar ahora",
+      "history": "Volcados lanzados desde esta vista previa"
+    },
+    "result": {
+      "title": "Resultado del volcado",
+      "preview": "Ver la vista previa",
+      "pending": "El resultado estará disponible al terminar.",
+      "tables": "Tablas volcadas",
+      "source": "Origen",
+      "before": "Antes",
+      "after": "Después",
+      "rejected": "Rechazadas",
+      "error": "Error",
+      "status": {
+        "success": "Correcta",
+        "missing_target": "Sin destino",
+        "skipped": "Omitida",
+        "error": "Error"
+      },
+      "constraints": "Constraints que no se reactivaron",
+      "constraintStatus": {
+        "enabled": "Activa",
+        "failed": "Fallida",
+        "unverified": "Sin verificar"
+      },
+      "rejectsTitle": "Hay filas apartadas",
+      "rejects": "Las filas que el destino no admitió están en rechazos.csv (en Artefactos).",
+      "noReport": "No se pudo generar el informe Excel; los datos ya se cargaron."
     }
   }
 }

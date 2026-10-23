@@ -1006,6 +1006,390 @@
         "title": "DriverOut",
         "type": "object"
       },
+      "DumpConstraintOut": {
+        "properties": {
+          "constraint": {
+            "title": "Constraint",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "status": {
+            "enum": [
+              "enabled",
+              "failed",
+              "unverified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "constraint",
+          "status"
+        ],
+        "title": "DumpConstraintOut",
+        "type": "object"
+      },
+      "DumpPkSyncOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "status"
+        ],
+        "title": "DumpPkSyncOut",
+        "type": "object"
+      },
+      "DumpPreviewOut": {
+        "description": "Modo seco de un volcado: orden de carga por FK, ciclos, filas y avisos por tabla.",
+        "properties": {
+          "constraints_managed": {
+            "description": "util_bbdd desactiva y reactiva las constraints de este destino",
+            "title": "Constraints Managed",
+            "type": "boolean"
+          },
+          "cycles": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Cycles",
+            "type": "array"
+          },
+          "load_order": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Load Order",
+            "type": "array"
+          },
+          "source_engine": {
+            "title": "Source Engine",
+            "type": "string"
+          },
+          "source_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Schema"
+          },
+          "structure_hash": {
+            "title": "Structure Hash",
+            "type": "string"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/DumpPreviewTableOut"
+            },
+            "title": "Tables",
+            "type": "array"
+          },
+          "target_engine": {
+            "title": "Target Engine",
+            "type": "string"
+          },
+          "target_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Schema"
+          },
+          "truncate_target": {
+            "title": "Truncate Target",
+            "type": "boolean"
+          },
+          "warnings": {
+            "default": [],
+            "description": "Códigos de aviso: isolate_oracle (G32), sqlite_dates (G33)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_engine",
+          "target_engine",
+          "source_schema",
+          "target_schema",
+          "truncate_target",
+          "constraints_managed",
+          "tables",
+          "cycles",
+          "load_order",
+          "structure_hash"
+        ],
+        "title": "DumpPreviewOut",
+        "type": "object"
+      },
+      "DumpPreviewTableOut": {
+        "properties": {
+          "date_columns": {
+            "default": [],
+            "description": "SQLite → SQLite: columnas de fecha del destino que util_bbdd no carga desde texto (G33)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Date Columns",
+            "type": "array"
+          },
+          "in_cycle": {
+            "title": "In Cycle",
+            "type": "boolean"
+          },
+          "missing_target_columns": {
+            "description": "Columnas del destino obligatorias que el origen no tiene (la carga de la tabla fallará)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Target Columns",
+            "type": "array"
+          },
+          "outside_references": {
+            "description": "Tablas referenciadas por FK que no entran en el volcado",
+            "items": {
+              "type": "string"
+            },
+            "title": "Outside References",
+            "type": "array"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "skipped_columns": {
+            "description": "Columnas del origen que el destino no tiene (no se copian)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped Columns",
+            "type": "array"
+          },
+          "source_rows": {
+            "title": "Source Rows",
+            "type": "integer"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "target_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rows"
+          },
+          "target_table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tabla del destino; null = no existe (no se cargará)",
+            "title": "Target Table"
+          }
+        },
+        "required": [
+          "table",
+          "target_table",
+          "position",
+          "in_cycle",
+          "source_rows",
+          "target_rows",
+          "skipped_columns",
+          "missing_target_columns",
+          "outside_references"
+        ],
+        "title": "DumpPreviewTableOut",
+        "type": "object"
+      },
+      "DumpResultOut": {
+        "description": "Resultado de ``dump_apply``: por tabla, constraints reactivadas y contadores PK.",
+        "properties": {
+          "constraints": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DumpConstraintOut"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "cycles": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Cycles",
+            "type": "array"
+          },
+          "load_order": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Load Order",
+            "type": "array"
+          },
+          "pk_sync": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DumpPkSyncOut"
+            },
+            "title": "Pk Sync",
+            "type": "array"
+          },
+          "report": {
+            "description": "Se generó el informe Excel",
+            "title": "Report",
+            "type": "boolean"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/DumpTableResultOut"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "load_order",
+          "cycles",
+          "report",
+          "tables"
+        ],
+        "title": "DumpResultOut",
+        "type": "object"
+      },
+      "DumpTableResultOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primera línea del error del motor, sin datos de filas",
+            "title": "Error"
+          },
+          "in_cycle": {
+            "default": false,
+            "title": "In Cycle",
+            "type": "boolean"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "rows_rejected": {
+            "default": 0,
+            "title": "Rows Rejected",
+            "type": "integer"
+          },
+          "skipped_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped Columns",
+            "type": "array"
+          },
+          "source_rows": {
+            "title": "Source Rows",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "success",
+              "missing_target",
+              "skipped",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          },
+          "target_rows_after": {
+            "title": "Target Rows After",
+            "type": "integer"
+          },
+          "target_rows_before": {
+            "title": "Target Rows Before",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "table",
+          "status",
+          "source_rows",
+          "target_rows_before",
+          "target_rows_after",
+          "position"
+        ],
+        "title": "DumpTableResultOut",
+        "type": "object"
+      },
       "EngineDetailOut": {
         "description": "Ficha completa de un motor.",
         "properties": {
@@ -1582,6 +1966,10 @@
             "title": "Can Run Sql",
             "type": "boolean"
           },
+          "can_write_data": {
+            "title": "Can Write Data",
+            "type": "boolean"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -1609,7 +1997,8 @@
           "display_name",
           "role",
           "can_run_sql",
-          "can_apply_ddl"
+          "can_apply_ddl",
+          "can_write_data"
         ],
         "title": "Me",
         "type": "object"
@@ -4062,6 +4451,10 @@
             "title": "Can Run Sql",
             "type": "boolean"
           },
+          "can_write_data": {
+            "title": "Can Write Data",
+            "type": "boolean"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -4122,6 +4515,7 @@
           "is_active",
           "can_run_sql",
           "can_apply_ddl",
+          "can_write_data",
           "locked_until",
           "password_changed_at",
           "created_at",
@@ -4176,6 +4570,17 @@
               }
             ],
             "title": "Can Run Sql"
+          },
+          "can_write_data": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Can Write Data"
           },
           "display_name": {
             "anyOf": [
@@ -4382,7 +4787,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "0.8.0"
+    "version": "0.9.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -7536,6 +7941,110 @@
           }
         },
         "summary": "Evolución respecto a otra comparación",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/dump-preview": {
+      "get": {
+        "description": "Orden de carga por FK, ciclos, filas y avisos por tabla de una ``dump_preview`` correcta.",
+        "operationId": "get_dump_preview_api_v1_runs__run_id__dump_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DumpPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "413": {
+            "description": "Demasiado grande para el visor"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vista previa (modo seco) de un volcado",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/dump-result": {
+      "get": {
+        "description": "Filas por tabla, rechazos, constraints reactivadas y contadores PK de un ``dump_apply`` (también si falló).",
+        "operationId": "get_dump_result_api_v1_runs__run_id__dump_result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DumpResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "413": {
+            "description": "Demasiado grande para el visor"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resultado de un volcado",
         "tags": [
           "runs"
         ]

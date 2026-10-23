@@ -18,6 +18,27 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rolldownOptions: {
+      output: {
+        // Librerías que se cargan siempre al inicio, en chunks propios: el código de la app cambia en cada versión y
+        // estos no, así que el navegador los reutiliza de la caché. Solo se agrupa lo que ya carga la entrada: un
+        // grupo genérico de node_modules arrastraría a la carga inicial lo que hoy es lazy (marked, diff, highlight.js).
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor-react',
+              test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/,
+              priority: 20,
+            },
+            {
+              name: 'vendor-app',
+              test: /node_modules[\\/](i18next|react-i18next|@tanstack|openapi-fetch)[\\/]/,
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',

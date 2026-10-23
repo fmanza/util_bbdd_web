@@ -9,7 +9,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
@@ -188,9 +188,10 @@ def enqueue(
         UnknownOperationError, RunParamsError: Operación o parámetros no válidos (422).
         TooManyRunsError: El usuario ya tiene ``max_queued_per_user`` en cola o en curso (429).
         QuotaExceededError: El usuario supera ``user_quota_mb`` (409).
-        MigrationForbiddenError, RunStateError: Reglas de ``migrate_apply`` (ADR-008, ``migrations.check_apply``).
+        MigrationForbiddenError, DumpForbiddenError, RunStateError: Reglas de escritura en la BD destino
+            (``migrations.check_apply``, ADR-008; ``dumps.check_apply``, ADR-009).
     """
-    from app.domain.runs import migrations  # importa este módulo: se importa aquí para evitar el ciclo
+    from app.domain.runs import dumps, migrations  # importan este módulo: aquí para evitar el ciclo
 
     if not membership.can("editor"):
         raise ProjectForbiddenError()
@@ -208,6 +209,8 @@ def enqueue(
         migrations.check_plan(db, membership, clean)
     elif spec.name == "migrate_apply":
         migrations.check_apply(db, user, membership, clean, settings)
+    elif spec.name == "dump_apply":
+        dumps.check_apply(db, user, membership, clean, settings)
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
         raise TooManyRunsError(f"Tienes {active} ejecuciones en cola o en curso; espera a que terminen.")
@@ -235,10 +238,18 @@ def enqueue(
             "project_id": project.id, "operation": spec.name, "relaunched_from": relaunched_from,
             **({"migration": {k: clean.get(k) for k in ("mode", "plan_run", "target_connection", "dry_run_run")}}
                if spec.name == "migrate_apply" else {}),
+            **({"dump": _dump_audit(db, clean)} if spec.name == "dump_apply" else {}),
         },
     )  # fmt: skip
     db.commit()
     return run
+
+
+def _dump_audit(db: Session, params: dict[str, Any]) -> dict[str, Any]:
+    """Qué y dónde escribe un volcado, para ``audit_log`` (los parámetros viven en su vista previa)."""
+    preview = db.get(Run, params["preview_run"])
+    shown = ("source_connection", "target_connection", "tables", "truncate_target", "on_error")
+    return {"preview_run": params["preview_run"], **{k: preview.params.get(k) for k in shown if preview}}
 
 
 def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, ctx: RequestContext) -> Run:
@@ -256,19 +267,23 @@ def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, 
     )  # fmt: skip
 
 
+#: Operaciones que escriben en una BD destino: en curso no se cancelan (ADR-008, ADR-009); en cola sí.
+NOT_CANCELLABLE_RUNNING: Final = frozenset({"migrate_apply", "dump_apply"})
+
+
 def cancel(db: Session, user: User, access: RunAccess, *, ctx: RequestContext) -> Run:
     """Cancela: una en cola pasa a ``cancelled`` al momento; una en curso la termina el worker.
 
     Raises:
         ProjectForbiddenError: Rol inferior a ``editor``.
-        RunStateError: Ya terminó, o es una ``migrate_apply`` en curso: matarla dejaría el destino a medias y sin
-            informe (ADR-008); en cola sí se cancela.
+        RunStateError: Ya terminó, o escribe en una BD destino y está en curso (``NOT_CANCELLABLE_RUNNING``):
+            matarla dejaría el destino a medias (y, en un volcado, constraints desactivadas); en cola sí se cancela.
     """
     if not access.membership.can("editor"):
         raise ProjectForbiddenError()
     run = access.run
-    if run.operation == "migrate_apply" and run.status == "running":
-        raise RunStateError("Una migración en curso no se puede cancelar: dejaría el destino a medias.")
+    if run.operation in NOT_CANCELLABLE_RUNNING and run.status == "running":
+        raise RunStateError("Una escritura en curso en la BD destino no se puede cancelar: la dejaría a medias.")
     now = utcnow()
     result = db.execute(
         update(Run)

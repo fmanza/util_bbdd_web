@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from app.jobs.context import JobContext
-from app.jobs.operations import compare, documentation, migrate, noop
+from app.jobs.operations import compare, documentation, dump, migrate, noop
 
 IMPLEMENTATIONS: dict[str, Callable[[JobContext], None]] = {
     "noop": noop.run,
@@ -14,4 +14,6 @@ IMPLEMENTATIONS: dict[str, Callable[[JobContext], None]] = {
     "compare": compare.run,
     "migrate_plan": migrate.run_plan,
     "migrate_apply": migrate.run_apply,
+    "dump_preview": dump.run_preview,
+    "dump_apply": dump.run_apply,
 }

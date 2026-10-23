@@ -13,6 +13,7 @@ const ANA = {
   is_active: true,
   can_run_sql: false,
   can_apply_ddl: false,
+  can_write_data: false,
   locked_until: null,
   password_changed_at: '2026-10-20T08:00:00Z',
   created_at: '2026-10-20T08:00:00Z',

@@ -16,7 +16,7 @@ auditoría) estén probados antes de las operaciones destructivas.
 | 5 | Documentación y grafos | 0.6.0 | ✅ Cerrada (2026-10-22) |
 | 6 | Comparación de esquemas | 0.7.0 | ✅ Cerrada (2026-10-22) |
 | 7 | Migración DDL | 0.8.0 | ✅ Cerrada (2026-10-22) |
-| 8 | Volcado de datos | 0.9.0 | Pendiente |
+| 8 | Volcado de datos | 0.9.0 | ✅ Cerrada (2026-10-23) |
 | 9 | Carga bulk | 0.10.0 | Pendiente |
 | 10 | Endurecimiento y release | 1.0.0 | Pendiente |
 
@@ -121,13 +121,15 @@ int_display_width, sql_server_collation, pg_schema, oracle_identity_mode, view_s
 soportadas (oracle, mariadb, mysql, sqlserver, postgresql; origen ≠ destino). Hecho según ADR-008: permiso
 `can_apply_ddl` + owner, modo seco obligatorio (hash del plan, conflictos, vistas y FK entre tipos distintos).
 
-## Fase 8 — Volcado de datos
+## Fase 8 — Volcado de datos ✅
 
 **util_bbdd**: `DumpOrchestrator(DumpConfig(source_engine, target_engine, source_schema, target_schema, tables,
 chunk_size, output_dir, truncate_target, manage_indexes, max_parallel_tables, on_error, audit_sink, …)).run()` →
 `DumpResult` (`report`, `load_order`, `cycles_detected`, `table_results`…).
 **Funcionalidad**: vista previa del orden de carga por FK y ciclos (modo seco); ejecución `dump` con confirmación;
-informe Excel y resumen por tabla. `truncate_target` desactivado por defecto en la UI.
+informe Excel y resumen por tabla. `truncate_target` desactivado por defecto en la UI. Hecho según ADR-009: permiso
+`can_write_data` + owner, vista previa obligatoria (60 min, misma estructura), «VACIAR» para vaciar, rechazos
+aislados; además, bundle repartido (vendors y traducciones de pantallas en chunks propios).
 
 ## Fase 9 — Carga bulk
 

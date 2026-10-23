@@ -27,5 +27,6 @@ applyTo: "frontend/**/*.{ts,tsx}"
 
 ## Estilo
 - Sin `any`; tipos del cliente generado; `import type` para tipos.
-- Textos con `useTranslation()`; claves en `src/i18n/es.json`.
+- Textos con `useTranslation()`; claves en `src/i18n/es/core.json` (lo que se ve sin pasar por una ruta lazy) o
+  `src/i18n/es/features.json` (pantallas; se carga con la primera ruta lazy).
 - Prettier + ESLint (`npm run lint`) sin avisos.
