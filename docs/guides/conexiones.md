@@ -1,6 +1,6 @@
 # Motores y conexiones
 
-Guía de uso del catálogo de motores y de las conexiones (Fase 2, versión 0.3.0).
+Guía de uso del catálogo de motores y de las conexiones. Disponible desde la versión 0.3.0 (Fase 2); vigente en 1.0.0.
 
 ## Catálogo de motores
 

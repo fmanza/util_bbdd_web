@@ -2,6 +2,9 @@
 secrets/*
 !secrets/.gitkeep
 
+# Variables de Docker Compose del despliegue (plantilla: .env.example)
+.env
+
 # Python
 __pycache__/
 *.py[cod]

@@ -19,7 +19,10 @@ flowchart LR
     W -- util_bbdd --> DB[(BD de usuarios<br/>Oracle, PG, MSSQL…)]
 ```
 
-- **Un origen**: la API sirve la SPA (`/`) y la API (`/api`); sin CORS.
+- **Un origen**: la API sirve la SPA (`/`) y la API (`/api`); sin CORS. En producción va detrás de un proxy TLS
+  ([Puesta en marcha](guides/puesta_en_marcha.md)).
+- **Middleware HTTP** (`core/middleware.py`, ASGI): `request_id`, cabeceras de seguridad (CSP), rate limiting en
+  memoria, línea de acceso JSON y métricas Prometheus (`/metrics`, opcional con *bearer*).
 - **Una imagen**: `web` (uvicorn) y `worker` comparten imagen, volúmenes y secretos.
 - **Contrato**: `openapi/openapi.json` genera `frontend/src/api/schema.d.ts`.
 

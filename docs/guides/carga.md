@@ -1,6 +1,6 @@
 # Carga bulk desde fichero
 
-Guía de uso de la Fase 9 (versión 0.10.0). **Inserta, actualiza o borra** filas de una tabla a partir de un fichero
+Guía de uso de la carga bulk (desde la 0.10.0, Fase 9; vigente en 1.0.0). **Inserta, actualiza o borra** filas de una tabla a partir de un fichero
 CSV o Excel, con `BulkCrud` de util_bbdd. La tabla destino debe existir. Diseño de seguridad:
 [ADR-010](../adr/ADR-010-carga-bulk.md).
 

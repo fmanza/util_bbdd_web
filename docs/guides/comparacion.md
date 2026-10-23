@@ -1,6 +1,6 @@
 # Comparación de esquemas
 
-Guía de uso de la operación de la Fase 6 (versión 0.7.0). Se lanza desde la pestaña *Ejecuciones* de un proyecto
+Guía de uso de la comparación de esquemas (desde la 0.7.0, Fase 6; vigente en 1.0.0). Se lanza desde la pestaña *Ejecuciones* de un proyecto
 (rol editor) con dos conexiones del proyecto, o con la misma conexión y dos schemas distintos.
 
 ## Lanzar una comparación

@@ -1,6 +1,6 @@
 # Explorador de metadatos, queries nombradas y SQL
 
-Guía de uso del explorador (Fase 4, versión 0.5.0).
+Guía de uso del explorador. Disponible desde la versión 0.5.0 (Fase 4); vigente en 1.0.0.
 
 ## Explorar una conexión
 

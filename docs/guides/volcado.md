@@ -1,6 +1,6 @@
 # Volcado de datos
 
-Guía de uso de la Fase 8 (versión 0.9.0; vigente en 0.10.0). Copia **filas** de una conexión del proyecto a otra con `DumpOrchestrator`
+Guía de uso del volcado de datos (desde la 0.9.0, Fase 8; vigente en 1.0.0). Copia **filas** de una conexión del proyecto a otra con `DumpOrchestrator`
 de util_bbdd: mismo motor o distinto. Las **tablas destino deben existir** (créalas antes, p. ej. con la
 [migración DDL](migracion.md)). Diseño de seguridad: [ADR-009](../adr/ADR-009-volcado-de-datos.md).
 

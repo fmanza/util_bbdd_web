@@ -11,45 +11,32 @@
 
 ## Primer arranque
 
-```bash
-git clone <repo> util_bbdd_web && cd util_bbdd_web
-python scripts/generate_secrets.py          # secrets/*.txt (git-ignored)
-docker compose up -d --build
-# http://127.0.0.1:8080
-```
+Sigue [Puesta en marcha › En local](puesta_en_marcha.md#3-en-local). Tienes tres formas:
+
+- **Probar la imagen**: `docker compose up -d --build`, en <http://127.0.0.1:8080>.
+- **Desarrollar sin Docker**: API con uv y `--reload` en el puerto 8000, worker y Vite en <http://localhost:5173>.
+  Los tres procesos necesitan los mismos `UBW_FERNET_KEYS`/`UBW_APP_SECRET_KEY`.
+- **Desarrollar con la API en Docker**: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+  web worker` y Vite en el equipo.
+
+En `development` las cookies no llevan `Secure` ni el prefijo `__Host-`, y `/api/docs` está disponible. En `test` y
+`production` sí lo llevan; los tests usan `https://testserver`.
 
 ## Desarrollo diario
 
-**Backend** con recarga en caliente (en Docker, puerto 8000):
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build web
-```
-
-o en local con uv: `cd backend && uv sync && uv run alembic upgrade head && uv run uvicorn app.main:create_app --factory --reload --port 8000`.
-
-Crea un administrador para entrar (no hay credenciales por defecto):
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml exec web python -m app.cli create-admin --username admin
-# o en local: cd backend && uv run python -m app.cli create-admin --username admin
-```
-
-En `development` las cookies no llevan `Secure` (HTTP local); en `test` y `production` sí.
-
-**Worker** en local (otra terminal): `cd backend && uv run python -m app.jobs.worker`. Sin worker, las ejecuciones
-se quedan en cola (`/api/health` → `"worker": "absent"`).
+Sin worker, las ejecuciones se quedan en cola (`/api/health` → `"worker": "absent"`).
 
 **Pruebas de integración** contra los contenedores bench de util_bbdd (`docker-compose.bench.yml`, fuera del CI):
 con `UTIL_BBDD_BENCH_PASSWORD` definida, `cd backend && uv run pytest -m integration tests/integration`. Los puertos
-se cambian con `UTIL_BBDD_BENCH_<MOTOR>_PORT`, igual que en el compose.
+se cambian con `UTIL_BBDD_BENCH_<MOTOR>_PORT`, igual que en el compose. Si un contenedor publica otro puerto, el
+real se consulta con `docker port <contenedor>` (p. ej. SQL Server: `UTIL_BBDD_BENCH_MSSQL_PORT`).
 
 **Frontend** (proxy de `/api` a `127.0.0.1:8000`):
 
 ```bash
 cd frontend
 npm ci
-npm run dev        # http://127.0.0.1:5173
+npm run dev        # http://localhost:5173 (en Windows, 127.0.0.1 puede no responder)
 ```
 
 ## Cambiar la API

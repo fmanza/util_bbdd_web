@@ -1,5 +1,8 @@
 # Despliegue
 
+Referencia de producción. Para instalar paso a paso (local y servidor) empieza por
+[Puesta en marcha](puesta_en_marcha.md); aquí están los detalles de cada pieza.
+
 ## Servidor interno con Docker Compose
 
 ```bash

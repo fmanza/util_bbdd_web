@@ -1,6 +1,6 @@
 # Usuarios, sesiones y auditoría
 
-Guía de uso de la identidad multiusuario (Fase 1, versión 0.2.0).
+Guía de uso de la identidad multiusuario. Disponible desde la versión 0.2.0 (Fase 1); vigente en 1.0.0.
 
 ## Roles
 

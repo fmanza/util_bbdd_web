@@ -1,6 +1,6 @@
 # Documentación y grafos de relaciones
 
-Guía de uso de las operaciones de la Fase 5 (versión 0.6.0). Se lanzan desde la pestaña *Ejecuciones* de un proyecto
+Guía de uso de las operaciones de documentación y grafos (desde la 0.6.0, Fase 5; vigente en 1.0.0). Se lanzan desde la pestaña *Ejecuciones* de un proyecto
 (rol editor) sobre una conexión asociada al proyecto, y se ejecutan en el worker como cualquier ejecución.
 
 ## Documentación de la base de datos

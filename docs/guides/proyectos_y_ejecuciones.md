@@ -1,6 +1,6 @@
 # Proyectos y ejecuciones
 
-Guía de uso de los proyectos y del motor de ejecuciones (Fase 3, versión 0.4.0).
+Guía de uso de los proyectos y del motor de ejecuciones. Disponible desde la versión 0.4.0 (Fase 3); vigente en 1.0.0.
 
 ## Proyectos
 

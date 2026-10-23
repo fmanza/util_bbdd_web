@@ -1,6 +1,6 @@
 # Migración DDL
 
-Guía de uso de la Fase 7 (versión 0.8.0). Traduce las tablas, vistas y rutinas de un schema a **otro motor** con
+Guía de uso de la migración DDL (desde la 0.8.0, Fase 7; vigente en 1.0.0). Traduce las tablas, vistas y rutinas de un schema a **otro motor** con
 `MigrationPlanner` de util_bbdd y, si se quiere, las **crea en una base de datos destino**. Diseño de seguridad:
 [ADR-008](../adr/ADR-008-aplicar-migraciones.md).
 
