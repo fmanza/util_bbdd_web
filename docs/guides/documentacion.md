@@ -15,8 +15,23 @@ Documenta un schema con `DatabaseDocumentation` de util_bbdd.
 | Vistas | Vistas (columnas) y su DDL |
 | Rutinas | Procedimientos y funciones |
 | Información adicional | Datos de la BD (versión), almacenamiento, condiciones del motor, charset y collation |
-| Diagramas | Diagramas de relaciones en Word y HTML, con profundidad (1–3) y dirección |
+| Diagramas | Diagramas de relaciones en Word y HTML, con profundidad (1–3), dirección y columnas de cada tabla (ver abajo) |
 | Presentación | Tablas por documento Word (si hay más, se generan varios) y elementos por página del índice HTML |
+
+**Columnas en el diagrama** (independiente de la opción *Columnas* de *Tablas*, que controla la tabla de columnas del
+documento):
+
+| Opción | Qué muestra cada tabla del diagrama |
+|---|---|
+| Primero las de relación, luego el resto (por defecto) | Las columnas de PK/FK que dibuja el diagrama y, hasta el máximo, las demás |
+| Solo columnas de relación | Solo las de PK/FK que dibuja el diagrama; una tabla sin FK sale «Sin columnas visibles» |
+| Todas las columnas | Las primeras columnas de la tabla, hasta el máximo |
+| Sin columnas | Solo el nombre de la tabla |
+
+Con **Columnas máximas por tabla** (1–50, 8 por defecto) se limita cada tabla; las que no caben se resumen en
+«… N columna(s) más». **Mostrar tipos de columna** añade el tipo de cada una.
+
+Una tabla **sin relaciones** se dibuja sola en el Word, pero el sitio HTML no muestra su diagrama (GAPS G38).
 
 **Schema por motor**: en PostgreSQL, SQL Server y HSQLDB es el schema; en MySQL y MariaDB, la base de datos; en
 SQLite no aplica. En **Oracle**, util_bbdd solo documenta el schema del **usuario de la conexión**: deja el campo
@@ -39,7 +54,7 @@ Dibuja con Graphviz las claves foráneas alrededor de una tabla (`GraphvizRelati
 | Tabla central | La tabla del grafo; **vacío = un grafo por cada tabla con relaciones** |
 | Profundidad | Niveles de relación (1–5) |
 | Dirección | Ambas, salientes (tablas a las que referencia) o entrantes (tablas que la referencian) |
-| Columnas | Solo las de relación, ninguna o todas; con un máximo por tabla |
+| Columnas | Solo las de relación (por defecto), primero las de relación y luego el resto, ninguna o todas; con un máximo por tabla |
 | Mostrar tipos | Tipo de cada columna |
 | Tablas por imagen | Si hay más tablas relacionadas, el grafo se reparte en varias imágenes |
 | Formato | SVG o PNG |

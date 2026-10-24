@@ -11,6 +11,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   `docs/README.md` y `.env.example`.
 - **Sitio de documentación con Zensical**: `zensical.toml` (navegación por perfiles, anclas con tildes como en GitHub),
   grupo de dependencias `docs` en `backend/pyproject.toml` y job `docs` del CI (`zensical build --strict`).
+- **Columnas en los diagramas de la documentación**: `graph_columns` (por defecto, primero las de relación y luego el
+  resto; antes solo las de relación, y una tabla sin FK salía «Sin columnas visibles»), `graph_max_columns` y
+  `graph_data_types`. Hueco G38 registrado: el sitio HTML omite el diagrama de las tablas sin relaciones.
+- **Grafo de relaciones**: opción de columnas «Primero las de relación, luego el resto» (`column_mode=relations_first`;
+  el valor por defecto sigue siendo «Solo columnas de relación»).
 
 ### Changed
 

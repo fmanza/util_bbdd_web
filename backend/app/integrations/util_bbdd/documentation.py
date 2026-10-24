@@ -17,6 +17,10 @@ from pathlib import Path
 from typing import Any, Final, Literal
 
 Direction = Literal["both", "outgoing", "incoming"]
+#: Columnas de los diagramas (documentación y grafo de relaciones). En la web ``compact`` es «sin columnas»; el
+#: ``compact`` de util_bbdd (primero las de relación, luego el resto) es ``relations_first``.
+GraphColumns = Literal["relations_first", "relations", "all", "compact"]
+_GRAPH_COLUMN_MODE: Final[dict[str, str]] = {"relations_first": "compact", "relations": "relations", "all": "all"}
 
 #: Procesos ``dot`` simultáneos por job (util_bbdd usa por defecto todos los núcleos hasta 8).
 GRAPH_WORKERS: Final = 2
@@ -78,6 +82,9 @@ class DocumentationOptions:
     graphs: bool = True
     graph_depth: int = 1
     graph_direction: Direction = "both"
+    graph_columns: GraphColumns = "relations_first"
+    graph_max_columns: int = 8
+    graph_data_types: bool = False
     tables_per_document: int = 50
     html_items_per_page: int = 15
 
@@ -117,6 +124,12 @@ def build_imprimir(options: DocumentationOptions) -> dict[str, Any]:
             "max_depth": options.graph_depth,
             "direction": options.graph_direction,
             "workers": GRAPH_WORKERS,
+            "show_columns": options.graph_columns != "compact",
+            "columns": {
+                "mode": _GRAPH_COLUMN_MODE.get(options.graph_columns, "relations"),
+                "max_items": options.graph_max_columns,
+                "show_data_types": options.graph_data_types,
+            },
         },
         "tablas_por_documento": options.tables_per_document,
         "html_items_por_pagina": options.html_items_per_page,
@@ -198,7 +211,7 @@ class GraphOptions:
     table: str | None = None
     max_depth: int = 1
     direction: Direction = "both"
-    column_mode: Literal["relations", "compact", "all"] = "relations"
+    column_mode: GraphColumns = "relations"
     max_columns: int = 8
     show_data_types: bool = False
     max_subnodes: int = 10
@@ -227,7 +240,7 @@ def generate_graphs(
         graph = GraphvizRelationshipGraphExt(
             manager,
             show_columns=options.column_mode != "compact",
-            column_mode=options.column_mode,
+            column_mode=_GRAPH_COLUMN_MODE.get(options.column_mode, "relations"),
             max_columns=options.max_columns,
             show_data_types=options.show_data_types,
             max_depth=options.max_depth,

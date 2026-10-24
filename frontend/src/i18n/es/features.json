@@ -392,6 +392,9 @@
         "graphs": "Diagramas de relaciones",
         "graph_depth": "Profundidad",
         "graph_direction": "Dirección",
+        "graph_columns": "Columnas en el diagrama",
+        "graph_max_columns": "Columnas máximas por tabla",
+        "graph_data_types": "Mostrar tipos de columna",
         "tables_per_document": "Tablas por documento Word",
         "html_items_per_page": "Elementos por página HTML"
       },
@@ -498,6 +501,7 @@
       "both": "Ambas direcciones",
       "outgoing": "Salientes (tablas a las que referencia)",
       "incoming": "Entrantes (tablas que la referencian)",
+      "relations_first": "Primero las de relación, luego el resto",
       "relations": "Solo columnas de relación",
       "compact": "Sin columnas",
       "all": "Todas las columnas",

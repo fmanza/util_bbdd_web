@@ -46,12 +46,24 @@ describe('formulario de documentación', () => {
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Conexión' }), 'ventas');
     expect(await within(dialog).findByText('Oracle: solo el schema del usuario')).toBeInTheDocument();
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Dirección' }), 'outgoing');
+    const columns = within(dialog).getByRole('combobox', { name: 'Columnas en el diagrama' });
+    expect(columns).toHaveValue('relations_first');
+    expect(
+      within(columns).getByRole('option', { name: 'Primero las de relación, luego el resto' }),
+    ).toBeInTheDocument();
+    await user.selectOptions(columns, 'all');
     await user.click(within(dialog).getByRole('button', { name: 'Lanzar' }));
 
     await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')).toHaveLength(1));
     expect(await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()).toEqual({
       operation: 'documentation',
-      params: { connection: 'ventas', word: true, html: true, graph_direction: 'outgoing' },
+      params: {
+        connection: 'ventas',
+        word: true,
+        html: true,
+        graph_direction: 'outgoing',
+        graph_columns: 'all',
+      },
     });
   });
 });

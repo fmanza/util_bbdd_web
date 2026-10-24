@@ -35,6 +35,11 @@ def test_documentation_defaults_and_alias() -> None:
     assert params["schema"] == "ventas" and "schema_name" not in params
     assert (params["word"], params["excel"], params["html"], params["graphs"]) == (True, True, True, True)
     assert params["routines"] is False
+    assert (params["graph_columns"], params["graph_max_columns"], params["graph_data_types"]) == (
+        "relations_first",
+        8,
+        False,
+    )
 
 
 @pytest.mark.parametrize(
@@ -43,6 +48,9 @@ def test_documentation_defaults_and_alias() -> None:
         {"connection": "origen", "word": False, "excel": False, "html": False},
         {"connection": "origen", "graph_depth": 4},
         {"connection": "origen", "graph_direction": "sideways"},
+        {"connection": "origen", "graph_columns": "none"},
+        {"connection": "origen", "graph_max_columns": 0},
+        {"connection": "origen", "graph_max_columns": 51},
         {"connection": "origen", "plantilla_word": "/etc/passwd"},
         {"connection": "origen", "schema": "public'; DROP TABLE x; --"},
         {"connection": "origen", "schema": 'a"b'},
@@ -80,6 +88,8 @@ def test_params_carry_groups_and_options() -> None:
     params = {p.name: p for p in get_operation("relationship_graph").params}
 
     assert params["direction"].options == ["both", "outgoing", "incoming"]
+    assert params["column_mode"].options == ["relations", "relations_first", "compact", "all"]
+    assert params["column_mode"].default == "relations"
     assert params["direction"].group == "graph"
     assert params["schema"].type == "string" and params["schema"].required is False
     assert params["connection"].type == "connection" and params["connection"].group is None
@@ -127,8 +137,35 @@ def test_build_imprimir_maps_options() -> None:
     assert imprimir["tablas"]["imprimir_tablas"] is False
     assert imprimir["tablas"]["ddl"] is False  # sin tablas, nada de sus secciones
     assert imprimir["rutinas"] == {"imprimir_procedures": True, "imprimir_function": True}
-    assert imprimir["grafo"] == {"enabled": True, "max_depth": 2, "direction": "both", "workers": 2}
+    assert imprimir["grafo"] == {
+        "enabled": True,
+        "max_depth": 2,
+        "direction": "both",
+        "workers": 2,
+        "show_columns": True,
+        "columns": {"mode": "compact", "max_items": 8, "show_data_types": False},
+    }
     assert "plantilla_word" not in imprimir
+
+
+@pytest.mark.parametrize(
+    ("graph_columns", "show_columns", "mode"),
+    [
+        ("relations_first", True, "compact"),  # el compact de util_bbdd: primero las de relación, luego el resto
+        ("relations", True, "relations"),
+        ("all", True, "all"),
+        ("compact", False, "relations"),  # «sin columnas», como en el grafo de relaciones de la web
+    ],
+)
+def test_build_imprimir_maps_graph_columns(graph_columns: str, show_columns: bool, mode: str) -> None:
+    options = DocumentationOptions(
+        formats=("word",), graph_columns=graph_columns, graph_max_columns=20, graph_data_types=True
+    )  # type: ignore[arg-type]
+
+    grafo = build_imprimir(options)["grafo"]
+
+    assert grafo["show_columns"] is show_columns
+    assert grafo["columns"] == {"mode": mode, "max_items": 20, "show_data_types": True}
 
 
 def test_options_fields_match_params() -> None:

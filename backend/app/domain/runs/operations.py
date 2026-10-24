@@ -83,6 +83,14 @@ class DocumentationParams(BaseModel):
     graph_direction: Literal["both", "outgoing", "incoming"] = _group(
         "graphs", "both", "Relaciones que muestra cada diagrama."
     )
+    graph_columns: Literal["relations_first", "relations", "all", "compact"] = _group(
+        "graphs",
+        "relations_first",
+        "Columnas en cada tabla del diagrama: primero las de relación y luego el resto, solo las de relación, todas "
+        "o ninguna.",
+    )
+    graph_max_columns: int = _group("graphs", 8, "Columnas máximas por tabla del diagrama.", ge=1, le=50)
+    graph_data_types: bool = _group("graphs", False, "Mostrar el tipo de cada columna en el diagrama.")
     tables_per_document: int = _group("layout", 50, "Tablas por documento Word.", ge=1, le=500)
     html_items_per_page: int = _group("layout", 15, "Elementos por página del índice HTML.", ge=5, le=100)
 
@@ -109,8 +117,10 @@ class RelationshipGraphParams(BaseModel):
     )
     max_depth: int = _group("graph", 1, "Niveles de relación.", ge=1, le=5)
     direction: Literal["both", "outgoing", "incoming"] = _group("graph", "both", "Relaciones a mostrar.")
-    column_mode: Literal["relations", "compact", "all"] = _group(
-        "graph", "relations", "Columnas en cada tabla: solo las de relación, ninguna o todas."
+    column_mode: Literal["relations", "relations_first", "compact", "all"] = _group(
+        "graph",
+        "relations",
+        "Columnas en cada tabla: solo las de relación, primero las de relación y luego el resto, ninguna o todas.",
     )
     max_columns: int = _group("graph", 8, "Columnas máximas por tabla.", ge=1, le=50)
     show_data_types: bool = _group("graph", False, "Mostrar el tipo de cada columna.")

@@ -138,6 +138,31 @@ def test_documentation_generates_word_excel_and_site(
 
 
 @needs_dot
+@pytest.mark.parametrize(("graph_columns", "shown"), [("relations_first", True), ("relations", False)])
+def test_documentation_graph_columns(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+    graph_columns: str,
+    shown: bool,
+) -> None:
+    """``clientes.nombre`` no participa en ninguna relación: solo sale en el diagrama si se piden más columnas."""
+    run_id = launch(
+        user_client, project["id"], "documentation", connection="tienda", word=False, excel=False,
+        graph_columns=graph_columns,
+    )  # fmt: skip
+    run = wait_for(worker, db, run_id, timeout=180)
+
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+    graphs = run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs" / "html" / "documentacion" / "graphs"
+    svg = "".join(p.read_text(encoding="utf-8") for p in graphs.glob("*_clientes_*.svg"))
+    assert ">[PK] id<" in svg
+    assert (">nombre<" in svg) is shown
+
+
+@needs_dot
 def test_site_is_served_by_signed_url_only(
     user_client: TestClient,
     project: dict[str, object],
@@ -233,6 +258,31 @@ def test_graph_of_one_table_and_of_all(
     assert one_files and all(p.endswith(".svg") for p in one_files)
     assert every.status == "succeeded", (every.error_code, every.error_message)
     assert len(all_files) >= 3 and all(p.endswith(".png") for p in all_files)
+
+
+@needs_dot
+@pytest.mark.parametrize(
+    ("column_mode", "shown"), [("relations_first", True), ("relations", False), ("all", True), ("compact", False)]
+)
+def test_graph_column_modes(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+    column_mode: str,
+    shown: bool,
+) -> None:
+    """``clientes.nombre`` no participa en ninguna relación: sale con «primero las de relación» y con «todas»."""
+    run, files = _graph(
+        user_client, project, worker, db, connection="tienda", table="clientes", column_mode=column_mode
+    )
+
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+    directory = run_dir(settings.workspace_dir, str(run.workspace_path))
+    svg = "".join((directory / f).read_text(encoding="utf-8") for f in files)
+    assert ">clientes<" in svg
+    assert (">nombre<" in svg) is shown
 
 
 @needs_dot

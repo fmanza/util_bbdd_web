@@ -151,6 +151,11 @@ export const DOCUMENTATION: Operation = {
       group: 'graphs',
       options: ['both', 'outgoing', 'incoming'],
     }),
+    param('graph_columns', 'string', {
+      default: 'relations_first',
+      group: 'graphs',
+      options: ['relations_first', 'relations', 'all', 'compact'],
+    }),
   ],
 };
 
