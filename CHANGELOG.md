@@ -8,7 +8,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 ### Added
 
 - **Puesta en marcha** local y en producción (`docs/guides/puesta_en_marcha.md`), **guía de usuario**, índice
-  `docs/README.md` y `.env.example`.
+  `docs/README.md` y `.env.example`; actualizar un despliegue local sin perder los datos.
 - **Sitio de documentación con Zensical**: `zensical.toml` (navegación por perfiles, anclas con tildes como en GitHub),
   grupo de dependencias `docs` en `backend/pyproject.toml` y job `docs` del CI (`zensical build --strict`).
 - **Columnas en los diagramas de la documentación**: `graph_columns` (por defecto, primero las de relación y luego el

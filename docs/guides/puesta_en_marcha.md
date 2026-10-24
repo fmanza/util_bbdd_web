@@ -76,6 +76,33 @@ docker compose up -d
 
 Para empezar de cero: `docker compose down -v` (**borra** los volúmenes `data` y `workspace`).
 
+#### Actualizar sin perder los datos
+
+Usuarios, conexiones, proyectos y ejecuciones viven en los volúmenes `data` y `workspace`, y las claves en `secrets/`
+(no versionado). Reconstruir la imagen no toca ni unos ni otras. Desde la carpeta del despliegue:
+
+```bash
+# 1. Copia de seguridad, fuera de la carpeta del repositorio
+docker compose exec web python -m app.cli backup
+docker compose cp web:/data/backups ../copias-ubw
+
+# 2. Código nuevo: desde GitHub o directamente desde un clon local de desarrollo (sin publicar)
+git pull --ff-only
+git pull --ff-only /ruta/al/clon/de/desarrollo develop
+
+# 3. Reconstruir y arrancar (las migraciones se aplican al arrancar)
+docker compose up -d --build
+curl -s http://127.0.0.1:8080/api/health
+```
+
+En el paso 2 usa **una** de las dos líneas. Después, recarga el navegador sin caché (Ctrl+F5): el sitio HTML de la
+documentación se guarda en caché hasta 5 minutos. Las ejecuciones ya terminadas conservan sus ficheros; las mejoras
+de la generación (por ejemplo, de los diagramas) solo aparecen al lanzarlas de nuevo.
+
+No uses `docker compose down -v` (borra los volúmenes) ni regeneres ni borres `secrets/`: sin `fernet_keys.txt` no se
+pueden descifrar las contraseñas de las conexiones. `docker compose down` sin `-v` sí es seguro. Antes de actualizar,
+lee el [CHANGELOG](https://github.com/fmanza/util_bbdd_web/blob/develop/CHANGELOG.md).
+
 ### 3.2. Desarrollar sin Docker (recarga en caliente)
 
 Tres procesos: API, worker y servidor de Vite. Necesitan los **mismos** ajustes. En especial, la misma clave Fernet:
