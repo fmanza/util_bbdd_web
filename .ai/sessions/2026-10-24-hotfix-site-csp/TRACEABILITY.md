@@ -34,8 +34,9 @@ se ven las columnas en el grafo y en HTML no se ve el grafo. «Analizar la situa
   - ADR-007 (enmienda 2026-10-24) y CHANGELOG (`Fixed`).
 - Validación: ruff format/check, mypy, `export_openapi.py --check`, pytest (551 passed, 85 skipped), format:check,
   lint, typecheck, Vitest (105 passed), build y `zensical build --strict`. Navegación verificada en Chromium con las
-  CSP exactas de `_site_csp`. **E2E no ejecutada**: el stack en marcha se despliega desde otra carpeta y no había
-  credenciales de admin E2E.
+  CSP exactas de `_site_csp`.
+- E2E (tras el commit): stack aislado `docker compose -p ubw_e2e` (puerto 8091, imagen `util_bbdd_web:hotfix-e2e`,
+  admin propio y BD de fixtures): 19 passed, 2 skipped (bench), `documentation.spec.ts` incluido.
 
 ## Artefactos generados
 
@@ -43,7 +44,7 @@ se ven las columnas en el grafo y en HTML no se ve el grafo. «Analizar la situa
 |---|---|---|
 | Fix | `backend/app/api/v1/runs.py` | completado |
 | Tests | `backend/tests/unit/test_documentation_units.py`, `backend/tests/api/test_documentation.py` | en verde |
-| E2E | `frontend/e2e/documentation.spec.ts`, `frontend/e2e/fixtures.ts` | sin ejecutar |
+| E2E | `frontend/e2e/documentation.spec.ts`, `frontend/e2e/fixtures.ts` | en verde |
 | ADR | `docs/adr/ADR-007-sitio-html-aislado.md` | enmendado |
 | Logs | `build/logs/hotfix-site-csp-*.txt` | generados |
 
@@ -60,7 +61,7 @@ se ven las columnas en el grafo y en HTML no se ve el grafo. «Analizar la situa
   (hueco pendiente de registrar como G38).
 
 ## Veredicto final
-Veredicto: GO_CONDICIONAL
+Veredicto: GO
 Pendientes al cierre:
-- Ejecutar la E2E `documentation.spec.ts` contra un stack con este código y probar el sitio a mano en Firefox.
+- Probar el sitio a mano en Firefox.
 - `/new-feature`: opciones de columnas del grafo en la documentación y registrar G38 en `UTIL_BBDD_GAPS.md`.
