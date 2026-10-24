@@ -79,6 +79,11 @@ test('documentar una BD SQLite y ver su grafo de relaciones', async ({ page }) =
     return { origin: window.origin, cookie, parentReadable };
   })()`);
   expect(isolation).toEqual({ origin: 'null', cookie: 'blocked', parentReadable: false });
+  // El índice muestra el detalle en su propio iframe (hotfix 2026-10-24: la CSP lo bloqueaba).
+  await site.locator('a[target="detailFrame"][data-name="clientes"]').click();
+  await expect(
+    site.frameLocator('iframe[name="detailFrame"]').getByRole('heading', { name: 'Tabla: clientes' }),
+  ).toBeVisible();
 
   // Grafo de una tabla.
   await page.goto(projectUrl);

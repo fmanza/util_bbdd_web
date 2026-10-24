@@ -19,7 +19,8 @@ Además, un documento con origen opaco hace las peticiones de sus subrecursos co
 1. **Origen opaco con scripts**: el sitio se sirve con la CSP
    `sandbox allow-scripts allow-popups allow-downloads; default-src 'none'; script-src 'self' 'unsafe-inline';
    style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none';
-   form-action 'none'; base-uri 'none'; frame-ancestors 'self'`, y en la SPA dentro de un
+   frame-src 'self'; form-action 'none'; base-uri 'none'` (más `frame-ancestors 'self'` solo en el índice raíz,
+   ver la enmienda), y en la SPA dentro de un
    `iframe sandbox="allow-scripts allow-popups allow-downloads"`, **nunca** con `allow-same-origin`. Los scripts se
    ejecutan, pero no pueden leer la cookie, el DOM de la SPA ni llamar a la API (`connect-src 'none'`).
 2. **URL de capacidad**: `GET /api/v1/runs/{id}/site/{token}/{ruta}`. El token es
@@ -42,6 +43,20 @@ Además, un documento con origen opaco hace las peticiones de sus subrecursos co
   funcione (GAPS G25).
 - El Markdown de los artefactos se convierte con `marked` y se muestra en un `iframe srcdoc` con `sandbox=""` y una
   CSP `default-src 'none'`, sin scripts.
+
+## Enmienda 2026-10-24: iframe de detalle del índice
+
+El `index.html` de util_bbdd muestra el detalle de cada objeto en un iframe propio (`detailFrame`). La CSP original lo
+bloqueaba en el iframe de la SPA y en «Abrir en pestaña nueva»: sin `frame-src` se aplicaba `default-src 'none'`, y
+el `frame-ancestors 'self'` de las páginas de detalle no admite a su padre, el índice, cuyo origen es opaco (ningún
+valor de `frame-ancestors`, ni `*`, admite un ancestro opaco).
+
+- Toda página del sitio lleva `frame-src 'self'`: solo puede enmarcar ficheros del propio sitio, que siguen pasando
+  por la URL firmada y la lista de artefactos registrados, y que heredan el `sandbox`.
+- `frame-ancestors 'self'` solo en el índice raíz (`<carpeta>/index.html`, el de `site_url`). El resto de páginas no
+  lo llevan: una web ajena podría enmarcarlas si conoce la URL. Riesgo aceptado: la URL caduca, el contenido es de
+  solo lectura y sin formularios (`form-action 'none'`) y no sale en el `Referer` (`no-referrer`).
+- La E2E navega al detalle desde el índice y falla ante cualquier bloqueo de iframes (`Framing …`) del sitio.
 
 ## Alternativas descartadas
 

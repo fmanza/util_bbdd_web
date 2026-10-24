@@ -155,15 +155,22 @@ def test_site_is_served_by_signed_url_only(
 
     index = browser.get(site_url)
     script = browser.get(base + "assets/sql-highlight.js")
+    detail = browser.get(base + "tables/pedidos.html")
 
     assert index.status_code == 200
     assert index.headers["content-type"].startswith("text/html")
     csp = index.headers["content-security-policy"]
     assert csp.startswith("sandbox allow-scripts") and "allow-same-origin" not in csp
     assert "connect-src 'none'" in csp
+    assert "frame-src 'self'" in csp and "frame-ancestors 'self'" in csp
     assert index.headers["referrer-policy"] == "no-referrer"
     assert index.headers["x-content-type-options"] == "nosniff"
     assert script.status_code == 200 and script.headers["content-type"].startswith("text/javascript")
+    # El detalle se carga en el iframe del índice (origen opaco): sin frame-ancestors, que lo bloquearía.
+    assert detail.status_code == 200
+    assert detail.headers["content-security-policy"].startswith("sandbox allow-scripts")
+    assert "frame-ancestors" not in detail.headers["content-security-policy"]
+    assert detail.headers["referrer-policy"] == "no-referrer"
 
     token = site_url.split("/")[6]
     forged = token[:-1] + ("0" if token[-1] != "0" else "1")

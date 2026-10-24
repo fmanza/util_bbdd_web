@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from app.api.v1.runs import _site_csp
 from app.core.config import Settings
 from app.core.security import site_token, verify_site_token
 from app.domain.runs.errors import RunParamsError
@@ -176,3 +177,20 @@ def test_site_token_roundtrip_and_tampering(settings: Settings) -> None:
     assert verify_site_token(settings, token, run_id="R1", now=2_001) is None
     assert verify_site_token(settings, token.replace("7.", "8.", 1), run_id="R1", now=1_000) is None
     assert verify_site_token(settings, "7.2000", run_id="R1", now=1_000) is None
+
+
+# --- CSP del sitio -----------------------------------------------------------------------------------------------
+
+
+def test_site_csp_lets_the_index_frame_its_detail_pages() -> None:
+    """Hotfix 2026-10-24: el ``index.html`` de util_bbdd muestra el detalle en un iframe propio (``detailFrame``)."""
+    root = _site_csp("documentacion/index.html")
+    detail = _site_csp("documentacion/tables/pedidos.html")
+
+    for csp in (root, detail):
+        assert csp.startswith("sandbox allow-scripts") and "allow-same-origin" not in csp
+        assert "frame-src 'self'" in csp and "connect-src 'none'" in csp
+    assert "frame-ancestors 'self'" in root
+    # El padre del detalle es el índice, con origen opaco: ningún frame-ancestors lo admite.
+    assert "frame-ancestors" not in detail
+    assert "frame-ancestors" not in _site_csp("documentacion/collections/index.html")

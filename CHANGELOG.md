@@ -18,6 +18,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   listas y enlaces fuera de `docs/` como URL absoluta (reglas en `docs.instructions.md`).
 - La lista de comprobación de SHARED ya no trata `zensical` como término heredado de util_bbdd.
 
+### Fixed
+
+- **Sitio HTML de la documentación**: el panel de detalle (iframe del índice) salía bloqueado en la SPA y en «Abrir en
+  pestaña nueva». CSP con `frame-src 'self'` y `frame-ancestors 'self'` solo en el índice raíz (enmienda de ADR-007).
+
 ## [1.0.0] - 2026-10-23
 
 Fase 10 — Endurecimiento y release 1.0.

@@ -48,12 +48,16 @@ SSE_POLL_SECONDS: Final = 1.0
 #: CSP de las vistas previas: sin scripts, sin peticiones salientes, origen opaco (``sandbox``).
 PREVIEW_CSP: Final = "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-ancestors 'self'"
 #: Sitio HTML de la documentación: sus scripts se ejecutan, pero con origen opaco (sin cookies, sin ``fetch`` a la
-#: API ni acceso a la SPA) y solo cargan recursos del propio servidor (ADR-007).
+#: API ni acceso a la SPA) y solo cargan recursos del propio servidor (ADR-007). ``frame-src 'self'``: el índice
+#: muestra el detalle en un iframe propio (``detailFrame``).
 SITE_CSP: Final = (
     "sandbox allow-scripts allow-popups allow-downloads; default-src 'none'; script-src 'self' 'unsafe-inline'; "
     "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none'; "
-    "form-action 'none'; base-uri 'none'; frame-ancestors 'self'"
+    "frame-src 'self'; form-action 'none'; base-uri 'none'"
 )
+#: ``frame-ancestors`` solo en el índice raíz: el padre de las demás páginas es ese índice, con origen opaco, y ningún
+#: valor de ``frame-ancestors`` lo admite (ADR-007).
+SITE_ROOT_CSP: Final = SITE_CSP + "; frame-ancestors 'self'"
 SITE_ROOT: Final = "outputs/html/"
 _TEXT_MIMES: Final = frozenset({"text/html", "text/css", "text/javascript", "image/svg+xml"})
 
@@ -447,10 +451,15 @@ def get_bulk_result(run_id: str, user: CurrentUser, db: DbSession, settings: Set
 
 _SITE_HEADERS: Final = {
     "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": SITE_CSP,
     "Referrer-Policy": "no-referrer",
     "Cache-Control": "private, max-age=300",
 }
+
+
+def _site_csp(path: str) -> str:
+    """CSP de un fichero del sitio: solo el índice raíz (``<dir>/index.html``, el de ``site_url``) lleva
+    ``frame-ancestors``."""
+    return SITE_ROOT_CSP if path.count("/") == 1 and path.endswith("/index.html") else SITE_CSP
 
 
 @router.get(
@@ -472,7 +481,8 @@ def site_file(run_id: str, token: str, path: str, db: DbSession, settings: Setti
     if artifact.kind != "html":
         raise ArtifactNotFoundError()
     media = f"{artifact.mime}; charset=utf-8" if artifact.mime in _TEXT_MIMES else artifact.mime
-    return FileResponse(file, media_type=media, content_disposition_type="inline", headers=_SITE_HEADERS)
+    headers = {**_SITE_HEADERS, "Content-Security-Policy": _site_csp(path)}
+    return FileResponse(file, media_type=media, content_disposition_type="inline", headers=headers)
 
 
 @router.get(
