@@ -54,6 +54,7 @@ nav = [
     ] },
     "plan/ROADMAP.md",
     "plan/UTIL_BBDD_GAPS.md",
+    "plan/UTIL_BBDD_GAPS_PLAN.md",
   ] },
 ]
 

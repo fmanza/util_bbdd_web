@@ -3,7 +3,8 @@
 Peticiones para util_bbdd detectadas desde la web. **No se parchea util_bbdd desde aquí**: cada hueco tiene un rodeo
 en la capa anticorrupción (`backend/app/integrations/util_bbdd/`) hasta que la librería lo resuelva.
 
-Versión analizada: **util_bbdd 4.0.0** (2026-10-19).
+Versión analizada: **util_bbdd 4.0.0** (2026-10-19). Plan para resolverlos en util_bbdd y retirar los rodeos:
+[UTIL_BBDD_GAPS_PLAN.md](UTIL_BBDD_GAPS_PLAN.md).
 
 | # | Hueco | Impacto en la web | Rodeo actual | Petición a util_bbdd | Estado |
 |---|---|---|---|---|---|

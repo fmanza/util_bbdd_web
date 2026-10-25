@@ -1,0 +1,383 @@
+# Plan de resolución de huecos de util_bbdd
+
+Plan para cerrar los huecos de [UTIL_BBDD_GAPS.md](UTIL_BBDD_GAPS.md) **en util_bbdd** y retirar después los rodeos
+de la capa anticorrupción de la web. Va agrupado por tipo de ejecución (incluida la **Carga** bulk). Cada grupo
+tiene sus fases, y **cada fase es un commit** en un solo repositorio.
+
+- **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25). Pendiente de aprobación antes de IMPLEMENT.
+- **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
+  util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
+- **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
+  En util_bbdd: `.ai/sessions/2026-10-25-web-gaps-plan/`.
+
+---
+
+## 1. Reglas del plan
+
+1. **La web no parchea util_bbdd** (regla 1 de SHARED). Cada hueco se arregla en util_bbdd, se publica una release
+   y solo entonces la web retira su rodeo.
+2. **Una fase = un commit = un repositorio.** Prefijos: `U-` para util_bbdd y `W-` para util_bbdd_web. Cada commit
+   deja en verde los «Comandos de desarrollo» de su repositorio (en util_bbdd: ruff, mypy, pytest y
+   `zensical build --strict` si se toca `docs/`; en la web: backend, contrato OpenAPI y frontend).
+3. **Una release de util_bbdd por ola** (MINOR `4.x.0`, con el wheel adjunto en GitHub Releases). La web sube de
+   versión **en un commit propio** (`W-x.0`), sin mezclarlo con cambios de código.
+4. **SemVer en util_bbdd.** En 4.x solo hay parámetros nuevos opcionales, correcciones y avisos. Los cambios de
+   valor por defecto (G30, G35) llevan antes un `FutureWarning` y se cambian en una MAJOR aparte (ola 8, opcional).
+5. **Rodeo retirado o mantenido.** Cada fase `W-` dice si el rodeo **se retira** o **se mantiene como defensa en
+   profundidad** (los guardianes de seguridad de la web se quedan aunque util_bbdd arregle el hueco).
+6. **Compatibilidad con lo ya guardado.** Lo que la web haya escrito con el rodeo (p. ej. `diff.json` formato 1,
+   `plan.json` de ADR-008) se sigue leyendo después del cambio.
+7. Al cerrar cada fase `W-`, la fila del hueco en `UTIL_BBDD_GAPS.md` pasa a **Resuelto en util_bbdd 4.x.0**.
+
+### Huecos sin trabajo
+
+| # | Motivo |
+|---|---|
+| G9 | Informativo: excepción de `exclude-newer` para asyncpg. Se revisa en cada `W-x.0` y se quita cuando el corte la cubra |
+| G16 | Informativo: `init_command` sigue bloqueado en la web por diseño (`kind=blocked`) |
+| G7 | Informativo: deuda interna de util_bbdd. Fase opcional `U-C5`, sin fase `W-` |
+
+---
+
+## 2. Grupos y fases
+
+Convención de cada fase: **id** · tipo de commit (Conventional Commits) · huecos · cambio · ficheros principales ·
+tests mínimos.
+
+### Grupo 0 — Transversal base (antes que todos los grupos)
+
+Contrato común de progreso y cancelación (G1), que después conecta cada tipo de ejecución, y extras de drivers (G3).
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-0.1 | `feat(audit): contrato de progreso y cancelación cooperativa` | G1 | `ProgressEvent` (operación, fase, actual, total, mensaje), `ProgressCallback` y `CancellationToken` (`is_cancelled()`), y excepción `OperationCancelledError` en la jerarquía. Solo el contrato: nadie lo usa todavía | `audit/progress.py` (nuevo), `audit/__init__.py`, `_core/exceptions.py`, `exceptions.py` | Unitarios del token y del evento; `test_protocol_conformance` |
+| U-0.2 | `chore(deps): extras sqlserver, hsqldb y sqlite-async` | G3 | Extras `sqlserver = ["pymssql>=2.4"]`, `hsqldb = ["jaydebeapi…"]` y `sqlite-async = ["aiosqlite…"]`, con las mismas cotas que ya usa la web | `pyproject.toml`, `docs/` (instalación) | `pip install -e ".[sqlserver,hsqldb,sqlite-async]"` en el CI |
+
+Decisión D1 (AUDIT_PLAN): el contrato vive en `util_bbdd.audit` (capa 3, que ya consumen bulk, dump y migrate) en
+lugar de un paquete nuevo de primer nivel. Así no cambia el diagrama de capas (`gen_arquitectura_capas.py`).
+
+### Grupo D — Documentación (`documentation`)
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-D1 | `fix(doc): ventana de nombre de salida por instancia` | G2 | El caché `_LAST_AUTO_OUTPUT_BY_KEY` pasa de atributo de clase a estado de la instancia (o la clave incluye `directorio_salida`): dos instancias no comparten carpeta. La ventana por defecto se mantiene | `doc/infrastructure/runtime/output_runtime.py`, `doc/database_documentation.py` | Dos instancias en la misma ventana → dos carpetas |
+| U-D2 | `fix(doc): un diagrama que falla no aborta el formato` | G39 (a) | Los renderers HTML y Word capturan también `graphviz.CalledProcessError` y `graphviz.ExecutableNotFound` por diagrama: aviso en el resultado y el resto sigue | `doc/infrastructure/renderers/html_generator.py`, `word_generator.py` | Doble de `graphviz` que lanza `CalledProcessError` → documento completo + aviso |
+| U-D3 | `feat(analysis): opción orthogonal_edges en los diagramas` | G39 (b) | `orthogonal_edges: bool = True` en `GraphvizRelationshipGraphExt` y en `imprimir` (`splines=ortho` o `polyline`) | `analysis/graphviz_ext.py`, `doc/infrastructure/renderers/shared/print_config_manager.py` | DOT generado con cada valor |
+| U-D4 | `fix(doc): validar los estilos de plantilla_word` | G41 | `settings()` comprueba `Title`, `Heading 1`-`3` y `No Spacing` en la plantilla y lanza `DocumentationConfigError` con los que faltan, antes de generar nada | `doc/infrastructure/renderers/shared/print_config_manager.py`, `word_generator.py` | Plantilla sin `Heading 1` → `DocumentationConfigError` y ningún fichero |
+| U-D5 | `fix(doc): diagrama de tabla sin relaciones en HTML` | G38 | `pipe_level_graphs_ext` dibuja la tabla sola (como Word) en lugar de descartar el nivel vacío | `analysis/graphviz_ext.py`, `doc/infrastructure/renderers/html_generator.py` | 3 tablas sin FK → 3 diagramas en HTML |
+| U-D6 | `fix(metadata): schema explícito en Oracle` | G21 | `MetadataContextResolver` respeta el `schema` pedido en Oracle (`ALL_*` filtrado por `OWNER`, nombre desnormalizado) en lugar de usar siempre el usuario | `managers/_metadata_context.py`, `metadata/oracle/` | Unitarios del resolver; integración Oracle (`-m integration`) |
+| U-D7 | `feat(doc,analysis): argumento schema explícito` | G22 | `DatabaseDocumentation(..., schema=None)` y `GraphvizRelationshipGraphExt(..., schema=None)`; si es `None` se mantiene la lectura de `conn_params` | `doc/database_documentation.py`, `analysis/graphviz_ext.py` | SQLite y dobles de manager: el schema llega al `SchemaSnapshot` |
+| U-D8 | `feat(doc): plantilla_excel y colores del tema` | G40 | `imprimir["plantilla_excel"]` (libro base, con hoja de portada opcional), colores del tema en lugar de los RGB fijos y `table_style_excel` separado de `table_style` | `doc/infrastructure/renderers/excel_generator.py`, `print_config_manager.py` | Ningún RGB fijo en el libro; la plantilla aporta tema, fuentes y página |
+| U-D9 | `feat(doc): progreso y cancelación en generate()` | G1 | `DatabaseDocumentation(..., on_progress=None, cancel_token=None)`: eventos por formato y por tabla; cancelación entre tablas | `doc/database_documentation.py`, `doc/application/use_cases/documentation_orchestrator.py` | Secuencia de eventos; cancelar → `OperationCancelledError` sin ficheros a medias |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo |
+|---|---|---|---|---|
+| W-D1 | `fix(backend): documentación con el schema pedido en todos los motores` | G21, G22 | Quitar `with_schema` y el rechazo `invalid_params` de Oracle; pasar `schema=`. El aviso del formulario desaparece | Se retira |
+| W-D2 | `refactor(backend): plantilla Word validada por util_bbdd` | G41 | La subida sigue validando estilos (es UX: el error llega antes). Se quita el «regenerar sin plantilla» y se traduce `DocumentationConfigError` a un error de parámetros | Se retira la regeneración; se mantiene la validación al subir |
+| W-D3 | `fix(backend,frontend): diagramas fallidos sin perder la documentación` | G39 | Quitar el error fatal `graphviz_failed`; mostrar los avisos por diagrama del resultado. Opción «Aristas ortogonales» en el formulario (`orthogonal_edges`) | `docker/dot-wrapper.sh` **se mantiene**: reintenta en polyline en lugar de omitir el diagrama |
+| W-D4 | `refactor(backend): plantilla Excel nativa de util_bbdd` | G40 | `excel_template.py` deja de retocar el libro y pasa `plantilla_excel` + `table_style_excel`. Enmienda de ADR-011. El test «ningún color fijo» se queda | Se retira |
+| W-D5 | `feat(backend,frontend): progreso real y cancelación de la documentación` | G1 | `on_progress` → eventos SSE del run; cancelar pone el token y, si no termina en N s, se mata el subproceso (ADR-002 enmendado) | Kill del subproceso: se mantiene como último recurso |
+| W-D6 | `docs: documentación sin rodeos G2, G38` | G2, G38 | Quitar el aviso de G38 de la guía; `batch_window_seconds=0` y `fichero_salida` explícito **se mantienen** (no cuestan nada). Actualizar GAPS | — |
+
+### Grupo G — Grafo de relaciones (`relationship_graph`)
+
+Reutiliza U-D3 (aristas ortogonales), U-D6/U-D7 (schema) y U-D5 (tabla sola), que salen en la misma release.
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-G1 | `feat(analysis): progreso y cancelación en los grafos` | G1 | `on_progress` / `cancel_token` en `generate_all_tables_graphs_ext` y `generate_graphviz_graph_paginated_ext` (evento por tabla o página) | `analysis/graphviz_ext.py` | Eventos por tabla; cancelación entre tablas |
+| W-G1 | `feat(backend,frontend): grafo con schema, aristas ortogonales y progreso` | G1, G21, G22, G39 | Mismo cambio que W-D1/W-D3/W-D5 aplicado a la operación de grafo | Se retira `with_schema` del grafo |
+
+### Grupo C — Comparación de esquemas (`compare`)
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-C1 | `security(comparar): etiquetas configurables sin datos de conexión` | G23 | `compare(..., source_label=None, target_label=None)`. Sin etiqueta, `_build_label` usa `motor [schema]` (sin host, puerto, usuario ni ruta). Los nombres de fichero de los reporters no llevan datos de conexión | `comparar/comparator.py`, `comparar/reporters/` | Ninguna etiqueta ni nombre de fichero contiene host, usuario ni ruta |
+| U-C2 | `feat(comparar): SchemaDiff.to_dict/from_dict versionado` | G24 | Serialización estable con `format_version` y *round-trip* exacto | `comparar/models.py` | *Round-trip*; versión desconocida → error claro |
+| U-C3 | `security(comparar): Mermaid sin CDN flotante` | G25 | Versión exacta con SRI y `mermaid_src` configurable (URL o fichero local); el script del informe funciona sin Mermaid (pestañas, filtros y búsqueda), con los diagramas como texto | `comparar/reporters/templates/diff_report.html.j2`, reporter HTML | HTML sin red: los controles funcionan; la etiqueta lleva `integrity` |
+| U-C4 | `feat(comparar): progreso y cancelación` | G1 | `on_progress` / `cancel_token` en `compare()` (por tipo de objeto y tabla) | `comparar/comparator.py` | Eventos; cancelación |
+| U-C5 *(opcional)* | `refactor(comparar): aceptar SchemaSnapshot` | G7 | `compare()` acepta también `SchemaSnapshot` (ADR-003 de util_bbdd) sin quitar `Inspector` | `comparar/comparator.py` | Mismo `SchemaDiff` con `Inspector` y con `SchemaSnapshot` |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo |
+|---|---|---|---|---|
+| W-C1 | `refactor(backend): etiquetas de comparación desde util_bbdd` | G23 | Pasar `source_label`/`target_label` = `alias (motor) [schema]`; `relabel` se reduce a nada o se borra | Se retira. Se mantiene el test «ningún host en visor ni informes» |
+| W-C2 | `refactor(backend): diff serializado por util_bbdd` | G24 | `SchemaDiff.to_dict()` para escribir; la lectura acepta el formato 1 propio (runs antiguos) y el de util_bbdd. La evolución entre ejecuciones sigue funcionando con runs mezclados | Escritura retirada; lector del formato 1 **se mantiene** |
+| W-C3 | `security(backend): Mermaid empaquetado en el informe HTML` | G25 | Pasar `mermaid_src` a un asset propio servido con la CSP del visor (o seguir sin Mermaid). Quitar la sustitución por `mermaid-stub.js` | Se retira el stub |
+| W-C4 | `feat(backend,frontend): progreso real de la comparación` | G1 | Como W-D5 | Kill: último recurso |
+
+### Grupo M — Migración DDL (`migrate_plan` / `migrate_apply`)
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-M1 | `feat(migrate): consulta pública de motores de migración` | G4 | `MigrationPlanner.supported_sources()` / `supported_targets()` (o `get_migration_engines()` en `migrate/__init__.py`) que devuelve las constantes | `migrate/planner.py`, `migrate/__init__.py` | Coincide con las constantes privadas |
+| U-M2 | `fix(migrate): la FK recibe el tipo de la columna referenciada` | G28 | Después de transformar, cada columna FK toma el tipo destino de la columna que referencia. Si no puede, aviso de nivel `ERROR` | `migrate/transformers/oracle_to_*.py` (o un paso común en `migrate/ir/`) | Oracle `INT` PK + FK → mismo tipo en MariaDB, MySQL, SQL Server y PostgreSQL |
+| U-M3 | `feat(migrate): MigrationPlan serializable` | G26 | `MigrationPlan.to_dict()/from_dict()` con `format_version` y `statements_sha256`; `execute()` sobre un plan reconstruido | `migrate/ir/models.py` | *Round-trip*; mismo `emit_statements()` |
+| U-M4 | `feat(migrate): check_target y modo seco` | G27 | `MigrationPlan.check_target(connection)` → conflictos (tablas y vistas existentes, vistas inválidas); `execute(..., dry_run=False, stop_on_error=True)` informa de la sentencia que falla (índice y SQL). La atomicidad no es posible en DDL de MySQL/Oracle: se documenta | `migrate/ir/models.py`, `migrate/_audit_events.py` | SQLite/dobles: conflicto detectado; `dry_run` no escribe; fallo → índice |
+| U-M5 | `feat(migrate): progreso y cancelación en execute()` | G1 | Evento por sentencia; cancelación entre sentencias | `migrate/ir/models.py` | Eventos; cancelación |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo |
+|---|---|---|---|---|
+| W-M1 | `refactor(backend): motores de migración desde la API pública` | G4 | `MIGRATE_SOURCE/TARGET` salen de U-M1; borrar el test que lee las constantes privadas | Se retira |
+| W-M2 | `fix(backend): FK con tipos coherentes` | G28 | `fk_mismatches` se queda como comprobación (debería devolver vacío); el bloqueo `fk_blocking` se mantiene para planes antiguos | Se mantiene como defensa |
+| W-M3 | `refactor(backend): aplicar el plan revisado sin replanificar` | G26, G27 | Guardar `plan.to_dict()`; al aplicar, `from_dict()` + comprobación del hash (ADR-008 enmendado) y `check_target()` en lugar del conflicto propio. El modo seco obligatorio y la doble confirmación **no cambian**. Los `plan.json` antiguos se replanifican como hasta ahora | Se retira la replanificación; el control de ADR-008 se mantiene |
+| W-M4 | `feat(backend,frontend): progreso por sentencia en migrate_apply` | G1 | Como W-D5. La cancelación de la aplicación sigue **desactivada** (DDL a medias) salvo entre sentencias con confirmación | — |
+
+### Grupo V — Volcado de datos (`dump`)
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-V1 | `feat(dump): DumpOrchestrator.plan()` | G29 | `plan()` → `DumpPlan` (`load_order`, `cycles`, tablas sin destino, avisos) sin escribir, con el mismo `topological_sort` que `run()` | `dump/orchestrator.py`, `dump/_fk_graph.py`, `dump/_models.py` | `plan().load_order == run().load_order` |
+| U-V2 | `feat(dump): eventos de auditoría durante el volcado` | G6 | `audit_sink` recibe el evento de cada tabla al terminar esa tabla (no todos al final); el evento de cierre se mantiene | `dump/orchestrator.py`, `dump/_audit_events.py` | El sink recibe eventos antes del cierre |
+| U-V3 | `fix(dump): registro y restauración de constraints` | G31 | Diario `constraints_journal.json` en `output_dir` antes de desactivar; `restore_constraints(journal)` público e idempotente | `dump/_constraints.py`, `dump/orchestrator.py` | Proceso interrumpido simulado → `restore_constraints` deja todo activo |
+| U-V4 | `fix(dump): isolate aparta ORA-00001 en Oracle` | G32 | `on_error="isolate"` trata `ORA-00001` como el resto de duplicados | `dump/orchestrator.py`, `dump/_sql_utils.py` | Unitario con error simulado; integración Oracle |
+| U-V5 | `fix(dump): fechas ISO de SQLite al leer` | G33 | Lectura desde SQLite: texto ISO en columnas `DATE`/`DATETIME` → `date`/`datetime` | `dump/_source_reader.py` | SQLite → SQLite con fechas en texto: vuelca |
+| U-V6 | `security(dump): mensajes de error sin datos de negocio` | G34 | `error_msg` sin parámetros de SQLAlchemy ni valores de clave (primera línea + enmascarado) | `dump/_models.py`, `dump/orchestrator.py`, `dump/_constraints.py` | Errores simulados de MySQL, MariaDB y SQL Server sin valores |
+| U-V7 | `feat(dump): aviso si truncate_target no es explícito` | G30 | `FutureWarning` cuando se construye `DumpConfig` sin `truncate_target` explícito; el cambio de valor por defecto se deja para la 5.0 (ola 8) | `dump/_models.py` | Aviso con el valor por defecto; sin aviso si es explícito |
+| U-V8 | `feat(dump): progreso y cancelación cooperativa` | G1 | Evento por tabla y por lote; cancelar entre lotes **restaura constraints e índices** antes de salir | `dump/orchestrator.py` | Cancelar → constraints restauradas y `OperationCancelledError` |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo |
+|---|---|---|---|---|
+| W-V1 | `refactor(backend): vista previa del volcado con plan()` | G29 | `build_preview` usa `DumpOrchestrator.plan()`; el test que comparaba el orden replicado se cambia por uno de contrato | Se retira la réplica del orden |
+| W-V2 | `feat(backend,frontend): avance por tabla y cancelación del volcado` | G1, G6 | Avance por tabla en vivo; el volcado **pasa a ser cancelable** (cooperativo, con restauración) | Se retira «volcado no cancelable» |
+| W-V3 | `fix(backend): restaurar constraints tras un volcado interrumpido` | G31 | Si el run muere (timeout o kill), el worker llama a `restore_constraints(journal)` al detectar el run huérfano; acción manual «Restaurar constraints» para owner | Nuevo control; se quita el aviso de la guía |
+| W-V4 | `fix(backend,frontend): quitar los avisos isolate_oracle y sqlite_dates` | G32, G33 | Fuera los avisos de la vista previa; los tests que reproducían los fallos pasan a comprobar que se vuelca | Se retira |
+| W-V5 | `security(backend): mensajes del volcado` | G34 | `redact_values` **se mantiene** como defensa; `_engine_message` se simplifica | Se mantiene |
+
+G30: la web ya pasa `truncate_target` explícito y con confirmación «VACIAR». No hace falta fase `W-`.
+
+### Grupo B — Carga bulk (`bulk`)
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-B1 | `fix(bulk): contadores de filas fiables` | G37 | `rows_committed` / `last_operation_rows_committed` = suma de `rowcount` confirmado por lote (insert, update y delete, secuencial y paralelo) | `bulk/_execution/executors.py`, `session.py`, `parallel_loader.py`, `bulk/crud.py` | SQLite: contador == filas reales en las 3 operaciones, con lotes y con paralelo |
+| U-B2 | `feat(bulk): ParallelPlan.atomic` | G36 | `ParallelPlan.atomic: bool` (False si hay más de un hilo) documentado; `parallel=ParallelOptions(require_atomic=True)` opcional fuerza un hilo | `bulk/_execution/parallel_planner.py`, `bulk/options.py` | Plan de 1 y de N hilos |
+| U-B3 | `feat(bulk): dry_run explícito y aviso de generar_sql` | G35 | `dry_run: bool \| None = None` en `bulk_*_from_df` / `_from_chunks` (equivalente explícito de `generar_sql=True`); `FutureWarning` si no se pasa ninguno de los dos. El cambio de valor por defecto, en la 5.0 | `bulk/crud.py` | Aviso sin argumentos; `dry_run=True` no escribe |
+| U-B4 | `feat(bulk): progreso y cancelación por lote` | G1 | Evento por lote; cancelar entre lotes (con rollback del lote en curso en modo secuencial) | `bulk/crud.py`, `bulk/_execution/` | Eventos; cancelación sin filas del lote cancelado |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo |
+|---|---|---|---|---|
+| W-B1 | `refactor(backend): resultado de la carga con los contadores de util_bbdd` | G37 | Los contadores son la cifra principal; el recuento antes/después del destino **se mantiene** como verificación (aviso si no coinciden) | Se mantiene como defensa |
+| W-B2 | `refactor(backend): atomicidad desde ParallelPlan.atomic` | G36 | `accept_non_atomic` se pide solo si `plan.atomic is False` | Se retira la deducción propia |
+| W-B3 | `feat(backend,frontend): progreso por lote y cancelación de la carga` | G1 | Como W-D5 | Kill: último recurso |
+
+G35: la web pasa `generar_sql` explícito (y pasará `dry_run`). No hace falta fase `W-` propia: entra en W-B1.
+
+### Grupo T — Transversal: catálogo, conexiones y explorador
+
+No son tipos de ejecución, pero quedan huecos abiertos en GAPS. Van al final porque no bloquean ninguna operación.
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-T1 | `feat(core): matriz de capacidades y estado de drivers` | G5, G10 | `get_engine_capabilities(db_type)` (async, migración origen/destino, readiness, grafos, volcado, bulk) y `get_driver_status(db_type)` (instalado / ausente por driver) | `core/capabilities.py`, `_drivers/` | Todos los motores; driver ausente simulado |
+| U-T2 | `fix(data): drivers obsoletos y driver_info homogéneo` | G8, G14 | Fuera `cx_Oracle`; `driver_info` homogéneo **sin romper**: se añade `default_driver` en todos los motores y la lista de SQL Server se conserva | `data/database_types.json`, `_drivers/_config_loader.py` | Esquema del JSON |
+| U-T3 | `feat(data): kind por parámetro de conexión` | G12 | `kind`: `secret`, `path`, `host`, `port`, `plain`, `blocked` en cada `connection_params` | `data/database_types.json`, `connection/params.py` | Todos los parámetros tienen `kind` |
+| U-T4 | `fix(connection): conservar los opcionales declarados` | G15 | `build_conn_params` conserva los opcionales declarados en `connection_params` (p. ej. `sslmode`) | `connection/builder.py` | `sslmode` en PostgreSQL sobrevive |
+| U-T5 | `security(managers): get_database_info sin secretos` | G11 | `connection_params` con secretos enmascarados (`***`) según `kind` (U-T3) | `managers/sync_mgr.py`, `managers/async_mgr.py` | Ningún secreto en la salida |
+| U-T6 | `feat(managers): ping, versión del servidor y schemas` | G13, G17 | `ping()`, `get_server_version()` y `get_schema_names()` (Oracle desnormalizado) en los dos managers | `managers/` | SQLite; dobles para Oracle |
+| U-T7 | `security(query): validar todos los parámetros de las queries` | G18 | Todos los parámetros interpolados se validan como identificador o número; opción de *bind* para valores | `query/resolver.py`, `validators/` | Valor con `;` o comillas → rechazo |
+| U-T8 | `feat(managers): read_only y max_rows en execute_custom_*` | G19, G20 | `execute_custom_many/one(..., read_only=False, max_rows=None)` con transacción de solo lectura por motor y `fetchmany` | `managers/sync_mgr.py`, `managers/async_mgr.py`, `executors/` | SQLite `PRAGMA query_only`; `max_rows` corta |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo |
+|---|---|---|---|---|
+| W-T1 | `refactor(backend): ficha de motor desde get_engine_capabilities` | G5, G8, G10, G14 | `EngineCapabilities`, `OBSOLETE_DRIVERS`, `find_spec` y la elección de la primera opción, desde la API | Se retiran |
+| W-T2 | `refactor(backend): clasificación de parámetros desde util_bbdd` | G12, G15 | `param_kind` lee `kind`; `KNOWN_PARAMS` y su test se quedan como alarma de parámetros nuevos; `build_params` sin la mezcla | Se retira la mezcla; la alarma se mantiene |
+| W-T3 | `refactor(backend): prueba de conexión y schemas con la API del manager` | G13, G17 | `probe.py` y `metadata.py` usan `ping()`, `get_server_version()` y `get_schema_names()` | Se retira |
+| W-T4 | `security(backend): SQL libre con read_only y max_rows` | G18, G19, G20 | Pasar `read_only=True` y `max_rows`. El guardián `sqlglot`, la transacción propia y la validación de parámetros **se mantienen** | Se mantienen como defensa |
+
+G11: la web no usa `get_database_info()`; no hace falta fase `W-`.
+
+---
+
+## 3. Orden de ejecución simultáneo
+
+Los dos repositorios avanzan **en tubería**: mientras la web adapta la ola *n* (ya publicada), util_bbdd implementa
+la ola *n+1*. El único punto de sincronización es la release (tag + wheel) de util_bbdd.
+
+```mermaid
+flowchart LR
+    subgraph U["util_bbdd"]
+        direction LR
+        U1["Ola 1<br/>U-0 + U-D + U-G"] --> R1(["v4.1.0"])
+        R1 --> U2["Ola 2<br/>U-C"] --> R2(["v4.2.0"])
+        R2 --> U3["Ola 3<br/>U-M"] --> R3(["v4.3.0"])
+        R3 --> U4["Ola 4<br/>U-V"] --> R4(["v4.4.0"])
+        R4 --> U5["Ola 5<br/>U-B"] --> R5(["v4.5.0"])
+        R5 --> U6["Ola 6<br/>U-T"] --> R6(["v4.6.0"])
+    end
+    subgraph W["util_bbdd_web"]
+        direction LR
+        W1["W-1.0 + W-D + W-G"] --> W2["W-2.0 + W-C"] --> W3["W-3.0 + W-M"]
+        W3 --> W4["W-4.0 + W-V"] --> W5["W-5.0 + W-B"] --> W6["W-6.0 + W-T"]
+    end
+    R1 -.wheel.-> W1
+    R2 -.wheel.-> W2
+    R3 -.wheel.-> W3
+    R4 -.wheel.-> W4
+    R5 -.wheel.-> W5
+    R6 -.wheel.-> W6
+```
+
+| Paso | util_bbdd (commits en orden) | util_bbdd_web (commits en orden) | Sincronización |
+|---|---|---|---|
+| 0 | — | `docs(plan)`: este plan (commit de esta sesión) | — |
+| 1 | U-0.1 → U-0.2 → U-D1 → U-D2 → U-D3 → U-D4 → U-D5 → U-D6 → U-D7 → U-D8 → U-D9 → U-G1 → **`release: v4.1.0`** | (libre: se puede publicar la 1.1.0 de la web con lo que tiene sin publicar) | Tag `v4.1.0` + wheel y `.sha256` en la release |
+| 2 | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 | La web arranca cuando existe el wheel 4.1.0 |
+| 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 | Wheel 4.2.0 |
+| 4 | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 | Wheel 4.3.0 |
+| 5 | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 | Wheel 4.4.0 |
+| 6 | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 | Wheel 4.5.0 |
+| 7 | (ola 8 opcional) | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → `release` de la web | Wheel 4.6.0 |
+| 8 *(opcional)* | `feat!: truncate_target=False y generar_sql=False por defecto` (G30, G35; también ventana G2 = 0) → **`release: v5.0.0`** | **W-8.0** `chore(backend): util_bbdd 5.0.0` (sin cambios de código: la web ya pasa todo explícito) | Wheel 5.0.0 |
+
+Reglas de la tubería:
+
+- **Orden dentro de una ola**: el de la tabla. Las fases `U-` de una ola son independientes salvo U-0.1 (las de
+  progreso dependen de ella), U-D3 → U-D5 (mismo fichero), U-D6 → U-D7, U-T3 → U-T5 y U-V3 → U-V8.
+- **La web nunca va por delante**: una fase `W-` solo se empieza con su release publicada. Si una release se
+  retrasa, la web sigue con la ola anterior o se queda parada; no se adelantan rodeos.
+- **Versiones de la web**: un cierre de versión (MINOR `1.x.0`) por ola es opcional. Lo mínimo es uno al final
+  (paso 7).
+- **Si una fase `U-` cambia de alcance** al implementarla, se ajusta su `W-` antes de empezarla y se anota aquí.
+
+---
+
+## 4. AUDIT_PLAN
+
+### Riesgos funcionales
+
+| # | Riesgo | Mitigación en el plan |
+|---|---|---|
+| F1 | Lo guardado con el rodeo (`diff.json` formato 1, `plan.json` de ADR-008) deja de leerse | Regla 6: W-C2 y W-M3 mantienen el lector antiguo; test con un fichero de cada formato |
+| F2 | La web aún fija **4.0.0**: la 4.1.0 trae también los cambios de la 4.0.1 | W-1.0 ejecuta la suite completa y el bench de integración antes de las fases de código |
+| F3 | Los tests de la web que reproducen fallos de util_bbdd (G33, G4, réplica de G29) fallan al subir de versión | Cada `W-x.0` solo sube la versión: si esos tests se rompen, se marcan en ese commit como `xfail(strict=True)` con el hueco, y la fase `W-` que retira el rodeo los convierte en el test nuevo. Ningún test se borra sin sustituto |
+| F4 | Cancelar el volcado o la migración deja el destino a medias | U-V8 restaura constraints antes de salir; W-M4 mantiene la aplicación de DDL no cancelable salvo entre sentencias |
+| F5 | El progreso real cambia el formato de los eventos SSE | Se añaden campos (`current`, `total`); los existentes no cambian. Contrato OpenAPI regenerado en cada W- de progreso |
+
+### Riesgos técnicos
+
+| # | Riesgo | Mitigación |
+|---|---|---|
+| T1 | Cambios de valor por defecto rompen a otros consumidores de util_bbdd (SemVer) | Regla 4: `FutureWarning` en 4.x, cambio solo en 5.0.0 (ola 8, opcional) |
+| T2 | G11 (enmascarar `get_database_info`) cambia una salida pública | Se trata como corrección de seguridad (`security:`) en MINOR, con nota en CHANGELOG. **Decisión D2** abajo |
+| T3 | G21 y U-M2/U-V4 necesitan Oracle real para verificarse | Unitarios con dobles en el CI + `pytest -m integration` contra el bench antes de la release de la ola |
+| T4 | G25: empaquetar Mermaid suma unos 3 MB al wheel | **Decisión D3**: versión fija + SRI + `mermaid_src` configurable (sin empaquetar) |
+| T5 | U-D8 (plantilla Excel) es la fase más grande y toca el mismo libro que retoca la web | Va al final de su ola; W-D4 mantiene el test «sin colores fijos» como contrato |
+| T6 | El wheel de la release no se adjunta (ADR-006, paso 4) | El paso de sincronización exige wheel + `.sha256` antes de `uv lock` |
+| T7 | Cada fase de progreso toca el `runner` de jobs de la web | El adaptador de `on_progress` → eventos se escribe una vez en W-D5 (`backend/app/jobs/context.py`) y las demás lo reutilizan |
+
+### Riesgos de seguridad
+
+| # | Riesgo | Mitigación |
+|---|---|---|
+| S1 | Retirar un guardián de la web porque util_bbdd «ya lo hace» | Regla 5: G18, G19, G20, G23 (test), G28, G34 y G37 mantienen su control en la web |
+| S2 | `restore_constraints` (W-V3) es una acción de escritura nueva | Mismo control que el volcado (ADR-009): `can_write_data` + owner, conexión no `read_only`, auditoría |
+| S3 | El diario de constraints (U-V3) contiene nombres de objetos | Se escribe en el `output_dir` del run (workspace, ADR-005), no en `/tmp` |
+| S4 | `mermaid_src` (U-C3) abre otra vía de carga de scripts | En la web apunta a un asset propio con la CSP actual; nunca a una URL elegida por el usuario |
+
+### Simplificaciones aplicadas
+
+- G2, G30 y G35 **no tienen fase `W-` de código**: la web ya pasa los valores explícitos y es la opción más segura.
+- G7 queda como fase opcional (U-C5) sin efecto en la web.
+- Las fases de progreso de la web reutilizan un único adaptador (T7).
+- G14 se resuelve **sin romper** la forma de SQL Server (`default_driver` añadido).
+
+### Decisiones que necesitan aprobación
+
+| # | Decisión | Propuesta |
+|---|---|---|
+| D1 | Dónde vive el contrato de progreso | `util_bbdd.audit.progress` (sin paquete nuevo) |
+| D2 | G11 en MINOR o en MAJOR | MINOR como `security:` (la contraseña en claro es un defecto) |
+| D3 | Mermaid empaquetado o fijado con SRI | Fijado con SRI + `mermaid_src` configurable |
+| D4 | Ola 8 (5.0.0 con defaults seguros) | Planificarla después de la 4.6.0, en sesión aparte |
+| D5 | Una release de la web por ola o una al final | Una por ola si hay usuarios en producción; si no, una al final |
+
+### Veredicto
+
+**GO_CONDICIONAL** — condiciones:
+
+1. Aprobar D1-D5 (o cambiarlas) antes de IMPLEMENT de la ola 1.
+2. Bench de integración (Oracle, MariaDB, MySQL, PostgreSQL, SQL Server) disponible antes de las releases 4.1.0
+   (G21), 4.3.0 (G28) y 4.4.0 (G32).
+3. Una release de util_bbdd **no se publica** sin el wheel y su `.sha256` (ADR-006).
+
+---
+
+## 5. Instrucciones de ejecución
+
+### 5.1 util_bbdd (cada ola)
+
+Desde la raíz de util_bbdd, una sesión por ola, con el prompt `new_feature` (o `hotfix`/`security_review` según el
+tipo del commit). Ejemplo de la ola 1:
+
+```text
+/new-feature
+
+Objetivo: ola 1 de docs/plan/UTIL_BBDD_GAPS_PLAN.md de util_bbdd_web (fases U-0.1 … U-G1), un commit por fase
+Rutas: las de cada fase en el plan
+Restricciones: solo parámetros opcionales nuevos; sin cambios de valor por defecto; SemVer MINOR 4.1.0
+Fase: IMPLEMENT por fases, con AUDIT_CODE después de cada una
+```
+
+Por cada fase:
+
+```bash
+python -m ruff format src tests
+python -m ruff check src tests
+python -m mypy src tests/unit/test_protocol_conformance.py
+python -m pytest > build/logs/<fase>_pytest.txt
+git add <ficheros de la fase>          # nunca git add -A
+git commit -m "<commit de la fase>"
+```
+
+Al cerrar la ola:
+
+```bash
+python -m pytest -m integration > build/logs/ola<n>_integration.txt   # con el bench levantado
+zensical build --strict
+python scripts/gen_arquitectura_capas.py      # solo si la ola cambia imports entre paquetes
+/version-closure                               # CHANGELOG, pyproject (4.x.0), release: v4.x.0
+python -m build
+git tag v4.x.0 && git push origin v4.x.0
+gh release create v4.x.0 dist/util_bbdd-4.x.0-py3-none-any.whl dist/util_bbdd-4.x.0-py3-none-any.whl.sha256
+```
+
+Al terminar cada fase, la fila del hueco en util_bbdd se apunta en su `CHANGELOG.md` con la referencia «util_bbdd_web
+GAPS Gnn».
+
+### 5.2 util_bbdd_web (cada ola, cuando el wheel existe)
+
+1. **W-x.0: subir la versión** (ADR-006, paso 4). En `backend/pyproject.toml`, `util_bbdd[...]==4.x.0` y la URL del
+   wheel en `[tool.uv.sources]`. Después:
+
+   ```bash
+   cd backend
+   uv lock --upgrade-package util_bbdd
+   uv sync --frozen
+   uv run --frozen ruff check . && uv run --frozen mypy && uv run --frozen pytest
+   uv run --frozen python scripts/export_openapi.py --check
+   git add pyproject.toml uv.lock && git commit -m "chore(backend): util_bbdd 4.x.0"
+   ```
+
+2. **Fases W- de la ola**, en orden, con `/new-feature` (o `/refactor` cuando la fase no cambia comportamiento):
+
+   ```text
+   /new-feature
+
+   Objetivo: fase W-D1 de docs/plan/UTIL_BBDD_GAPS_PLAN.md
+   Rutas: backend/app/integrations/util_bbdd/documentation.py, … (las de la fase)
+   Contrato HTTP: <sin cambios | campos nuevos>
+   util_bbdd: <firma de 4.x.0 verificada en el wheel>
+   Restricciones: un commit; rodeo <se retira | se mantiene> según el plan
+   ```
+
+   Antes de cada commit, los «Comandos de desarrollo» completos de SHARED (backend, contrato OpenAPI +
+   `npm run gen:api` si cambia la API, y frontend). En el mismo commit se actualizan la fila de `UTIL_BBDD_GAPS.md`
+   (**Resuelto en util_bbdd 4.x.0**) y la guía de usuario si cambia lo que se ve.
+
+3. **Cierre de ola** (opcional por D5): `/version-closure` y E2E (`npm run e2e` contra `docker compose up`).
+
+### 5.3 Seguimiento
+
+- Marca en la tabla del paso 3 de este documento la fase terminada (✅ y hash corto del commit).
+- Cada sesión deja su `TRACEABILITY.md` en `.ai/sessions/` del repositorio donde trabaja, con la sección
+  `## Directrices para Futuras IAs`.

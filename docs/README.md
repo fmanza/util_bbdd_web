@@ -38,5 +38,5 @@ Se lee en GitHub o como sitio web con [Zensical](https://zensical.org): desde la
 | [Arquitectura](architecture.md) | Componentes, capas, configuración (`UBW_*`) |
 | [Guía de desarrolladores](guides/onboarding_dev.md) | Flujo de trabajo, contrato API, pruebas y E2E |
 | [ADR](adr/) | Decisiones de arquitectura (ADR-001 a ADR-012) |
-| [ROADMAP](plan/ROADMAP.md) y [huecos de util_bbdd](plan/UTIL_BBDD_GAPS.md) | Plan por fases y limitaciones de la librería |
+| [ROADMAP](plan/ROADMAP.md), [huecos de util_bbdd](plan/UTIL_BBDD_GAPS.md) y [su plan](plan/UTIL_BBDD_GAPS_PLAN.md) | Plan por fases, limitaciones de la librería y plan para resolverlas |
 | [CHANGELOG](https://github.com/fmanza/util_bbdd_web/blob/develop/CHANGELOG.md) | Cambios por versión |

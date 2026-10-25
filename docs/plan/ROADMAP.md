@@ -158,6 +158,11 @@ cabeceras, OpenAPI oculto en producción, dependencias con CVE), rate limiting p
 E2E de miembros, seguridad y CSP en toda la suite, `scripts/load_test.py`, variantes HSQLDB/ODBC verificadas y
 wheel de util_bbdd 4.0.0 en la release `v4.0.0` con hash en `uv.lock`.
 
+## Después de la 1.0: huecos de util_bbdd
+
+Resolver en util_bbdd los huecos de [UTIL_BBDD_GAPS.md](UTIL_BBDD_GAPS.md) y retirar los rodeos de la web, por
+tipo de ejecución y en paralelo en los dos repositorios: [UTIL_BBDD_GAPS_PLAN.md](UTIL_BBDD_GAPS_PLAN.md).
+
 ## Mejoras opcionales (fuera de fase, decidir al planificar)
 
 - Plantillas de ejecución por proyecto.
