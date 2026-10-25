@@ -30,6 +30,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **Documentación que fallaba por un diagrama**: Graphviz 2.43 aborta con aristas ortogonales en algunos grafos y
   util_bbdd perdía la ejecución entera (GAPS G39). La imagen instala un envoltorio de `dot` que repite ese diagrama
   con aristas poligonales; si aun así falla, el código es `graphviz_failed` (antes `unknown`).
+- **Pestañas que abre el sitio HTML** (tarjetas de resumen y enlaces de las colecciones): salían bloqueadas
+  (`ERR_BLOCKED_BY_RESPONSE`). El sitio responde con `Cross-Origin-Opener-Policy: unsafe-none` (enmienda de
+  ADR-007).
 
 ## [1.0.0] - 2026-10-23
 

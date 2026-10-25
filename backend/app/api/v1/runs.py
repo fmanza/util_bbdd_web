@@ -453,6 +453,9 @@ _SITE_HEADERS: Final = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "Cache-Control": "private, max-age=300",
+    # Las pestañas que abre el sitio (target="_blank") heredan su sandbox, y el navegador bloquea una ventana con
+    # sandbox cuya respuesta trae otro COOP (ERR_BLOCKED_BY_RESPONSE). El middleware no lo pisa (ADR-007).
+    "Cross-Origin-Opener-Policy": "unsafe-none",
 }
 
 

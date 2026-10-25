@@ -16,3 +16,4 @@
 | [2026-10-24-hotfix-site-csp](2026-10-24-hotfix-site-csp/TRACEABILITY.md) | hotfix | CSP del sitio HTML: panel de detalle (sin publicar) |
 | [2026-10-24-feat-graph-columns](2026-10-24-feat-graph-columns/TRACEABILITY.md) | new_feature | Columnas en los diagramas de la documentación; G38 (sin publicar) |
 | [2026-10-25-hotfix-graphviz-ortho](2026-10-25-hotfix-graphviz-ortho/TRACEABILITY.md) | hotfix | Envoltorio de `dot` y `graphviz_failed`; G39 (sin publicar) |
+| [2026-10-25-hotfix-site-coop](2026-10-25-hotfix-site-coop/TRACEABILITY.md) | hotfix | COOP `unsafe-none` en el sitio HTML: pestañas nuevas (sin publicar) |

@@ -196,6 +196,13 @@ def test_site_is_served_by_signed_url_only(
     assert detail.headers["content-security-policy"].startswith("sandbox allow-scripts")
     assert "frame-ancestors" not in detail.headers["content-security-policy"]
     assert detail.headers["referrer-policy"] == "no-referrer"
+    # Hotfix 2026-10-25: las pestañas que abre el sitio heredan el sandbox; con COOP distinto de unsafe-none, Chromium
+    # las bloquea (ERR_BLOCKED_BY_RESPONSE). El resto de la aplicación sigue con same-origin.
+    collection = browser.get(base + "collections/tables_all.html")
+    assert collection.status_code == 200
+    for response in (index, detail, collection):
+        assert response.headers["cross-origin-opener-policy"] == "unsafe-none"
+    assert user_client.get(f"/api/v1/runs/{run_id}").headers["cross-origin-opener-policy"] == "same-origin"
 
     token = site_url.split("/")[6]
     forged = token[:-1] + ("0" if token[-1] != "0" else "1")

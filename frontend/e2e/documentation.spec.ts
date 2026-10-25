@@ -84,6 +84,19 @@ test('documentar una BD SQLite y ver su grafo de relaciones', async ({ page }) =
   await expect(
     site.frameLocator('iframe[name="detailFrame"]').getByRole('heading', { name: 'Tabla: clientes' }),
   ).toBeVisible();
+  // Las pestañas que abre el sitio heredan su sandbox (hotfix 2026-10-25: el COOP las bloqueaba).
+  const [collection] = await Promise.all([
+    page.waitForEvent('popup'),
+    site.locator('a.summary-card-link[href*="tables_all"]').click(),
+  ]);
+  await expect(collection.getByText('Todas las tablas y columnas')).toBeVisible();
+  const [detail] = await Promise.all([
+    collection.waitForEvent('popup'),
+    collection.locator('a.detail-link[href*="pedidos"]').first().click(),
+  ]);
+  await expect(detail.getByRole('heading', { name: 'Tabla: pedidos' })).toBeVisible();
+  await detail.close();
+  await collection.close();
 
   // Grafo de una tabla.
   await page.goto(projectUrl);

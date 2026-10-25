@@ -58,6 +58,19 @@ valor de `frame-ancestors`, ni `*`, admite un ancestro opaco).
   solo lectura y sin formularios (`form-action 'none'`) y no sale en el `Referer` (`no-referrer`).
 - La E2E navega al detalle desde el índice y falla ante cualquier bloqueo de iframes (`Framing …`) del sitio.
 
+## Enmienda 2026-10-25: pestañas que abre el sitio
+
+Los enlaces `target="_blank"` del sitio (tarjetas de resumen y enlaces de detalle de las colecciones) abren pestañas
+que heredan su `sandbox`, y el navegador bloquea una ventana con `sandbox` cuya respuesta trae un
+`Cross-Origin-Opener-Policy` distinto de `unsafe-none` (`ERR_BLOCKED_BY_RESPONSE`). El middleware ponía
+`same-origin` en todas las respuestas.
+
+- Las respuestas del sitio llevan `Cross-Origin-Opener-Policy: unsafe-none` (la ruta la pone y el middleware la
+  respeta). La SPA, la API y las vistas previas siguen con `same-origin`.
+- No se usa `allow-popups-to-escape-sandbox`: las pestañas tendrían el origen real, con la cookie y la API.
+- Las páginas del sitio ya tienen origen opaco y sus enlaces llevan `rel="noopener"`; el COOP no les añadía
+  aislamiento útil.
+
 ## Alternativas descartadas
 
 - **`allow-same-origin` + scripts**: el sitio podría leer la cookie CSRF y llamar a la API como el usuario.
