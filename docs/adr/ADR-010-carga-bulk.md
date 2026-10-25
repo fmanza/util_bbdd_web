@@ -29,9 +29,9 @@ usuario, con `BulkCrud` de util_bbdd. Comparado con el volcado (ADR-009):
    update/delete. Cuenta las filas **distintas** del destino que coinciden por PK (lotes de 500, o 200 con PK
    compuesta) y genera el SQL con `generar_sql=True` como artefacto `sql/carga_<op>.sql`. Guarda la huella de
    estructura (operación, tabla, columnas, PK y mapeo), el id de la conexión y el SHA-256 del fichero. No sale en el
-   formulario genérico de ejecuciones porque este solo pinta campos `string`, `integer`, `float`, `boolean` y
-   `connection`: la vista previa necesita elegir un fichero subido (`upload`) y un mapeo de columnas cuyas opciones
-   salen de reflejar la tabla destino. La pestaña *Carga* reúne la subida, el mapeo y el lanzamiento.
+   formulario genérico de ejecuciones porque este solo pinta campos `string`, `integer`, `float`, `boolean`,
+   `connection` y `template` (plantillas de documento, ADR-011): la vista previa necesita elegir un fichero subido
+   (`upload`) y un mapeo de columnas cuyas opciones salen de reflejar la tabla destino. La pestaña *Carga* reúne la subida, el mapeo y el lanzamiento.
 3. **`bulk_apply`** (`form=false`) solo referencia la vista previa y exige, como ADR-009: permiso **«Puede escribir
    datos»** (`can_write_data`, el mismo del volcado) y rol owner; vista previa correcta, **sin errores** y de menos de
    60 minutos; mismo fichero y misma conexión; destino no `read_only` y del mismo motor; `confirm` = alias. Además:
