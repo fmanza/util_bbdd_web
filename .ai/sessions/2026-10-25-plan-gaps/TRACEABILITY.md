@@ -28,6 +28,9 @@ Finalmente se realizará un AUDIT_PLAN de todo y dar las instrucciones necesaria
   implementa la n+1.
 - AUDIT_PLAN: riesgos F1-F5, T1-T7, S1-S4; decisiones D1-D5; veredicto GO_CONDICIONAL.
 - Enlaces añadidos en GAPS, ROADMAP, `docs/README.md` y `zensical.toml`.
+- Decisiones del usuario (2026-10-25): D1 paquete nuevo `util_bbdd.progress` (en lugar de la propuesta
+  `audit.progress`); D2 G11 en MINOR como `security:`; D3 Mermaid con versión fija + SRI + `mermaid_src`;
+  D4 la 5.0.0 fuera de este plan; D5 una MINOR de la web por ola (1.1.0-1.6.0). Plan actualizado.
 
 ## Artefactos generados
 
@@ -42,9 +45,11 @@ Finalmente se realizará un AUDIT_PLAN de todo y dar las instrucciones necesaria
 - **[versionado]**: la web fija util_bbdd por wheel de GitHub Releases (ADR-006); ninguna fase `W-` empieza sin el
   wheel y su `.sha256` publicados.
 - **[semver]**: G30 y G35 son cambios de valor por defecto: en 4.x solo `FutureWarning`; el cambio, en 5.0.0.
+- **[progreso]**: el contrato de G1 es el paquete público `util_bbdd.progress` (capa 2); las fases de progreso de
+  la web lo importan solo desde `backend/app/integrations/util_bbdd/`.
 - **[defensa]**: G18, G19, G20, G23, G28, G34 y G37 mantienen su control en la web aunque util_bbdd los resuelva.
 
 ## Veredicto final
 Veredicto: GO_CONDICIONAL
 Pendientes al cierre:
-- Aprobación de D1-D5 antes de IMPLEMENT de la ola 1.
+- D1-D5 resueltas. Quedan: bench de integración antes de 4.1.0, 4.3.0 y 4.4.0; wheel + `.sha256` en cada release.

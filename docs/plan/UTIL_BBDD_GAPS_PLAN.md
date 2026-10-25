@@ -4,7 +4,7 @@ Plan para cerrar los huecos de [UTIL_BBDD_GAPS.md](UTIL_BBDD_GAPS.md) **en util_
 de la capa anticorrupción de la web. Va agrupado por tipo de ejecución (incluida la **Carga** bulk). Cada grupo
 tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
-- **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25). Pendiente de aprobación antes de IMPLEMENT.
+- **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -22,7 +22,7 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 3. **Una release de util_bbdd por ola** (MINOR `4.x.0`, con el wheel adjunto en GitHub Releases). La web sube de
    versión **en un commit propio** (`W-x.0`), sin mezclarlo con cambios de código.
 4. **SemVer en util_bbdd.** En 4.x solo hay parámetros nuevos opcionales, correcciones y avisos. Los cambios de
-   valor por defecto (G30, G35) llevan antes un `FutureWarning` y se cambian en una MAJOR aparte (ola 8, opcional).
+   valor por defecto (G30, G35) llevan antes un `FutureWarning` y se cambian en una MAJOR aparte (ola 8, fuera de este plan: D4).
 5. **Rodeo retirado o mantenido.** Cada fase `W-` dice si el rodeo **se retira** o **se mantiene como defensa en
    profundidad** (los guardianes de seguridad de la web se quedan aunque util_bbdd arregle el hueco).
 6. **Compatibilidad con lo ya guardado.** Lo que la web haya escrito con el rodeo (p. ej. `diff.json` formato 1,
@@ -50,11 +50,12 @@ Contrato común de progreso y cancelación (G1), que después conecta cada tipo 
 
 | Id | Commit | Huecos | Cambio | Ficheros | Tests |
 |---|---|---|---|---|---|
-| U-0.1 | `feat(audit): contrato de progreso y cancelación cooperativa` | G1 | `ProgressEvent` (operación, fase, actual, total, mensaje), `ProgressCallback` y `CancellationToken` (`is_cancelled()`), y excepción `OperationCancelledError` en la jerarquía. Solo el contrato: nadie lo usa todavía | `audit/progress.py` (nuevo), `audit/__init__.py`, `_core/exceptions.py`, `exceptions.py` | Unitarios del token y del evento; `test_protocol_conformance` |
+| U-0.1 | `feat(progress): contrato de progreso y cancelación cooperativa` | G1 | Paquete público nuevo `util_bbdd.progress` (capa 2, Foundation: solo importa `_core`): `ProgressEvent` (operación, fase, actual, total, mensaje), `ProgressCallback` y `CancellationToken` (`is_cancelled()`); excepción `OperationCancelledError` en la jerarquía. Solo el contrato: nadie lo usa todavía. Se añade a `LAYER` del script de capas y se regenera la figura | `progress/__init__.py` (nuevo), `_core/exceptions.py`, `exceptions.py`, `scripts/gen_arquitectura_capas.py`, `docs/architecture.md`, `docs/api/` + `mkdocs.yml`, `.github/SHARED_INSTRUCTIONS.md` (árbol y submódulos públicos), `docs/guides/api_1_0_migration.md` | Unitarios del token y del evento; `test_protocol_conformance`; `gen_arquitectura_capas.py` sin errores |
 | U-0.2 | `chore(deps): extras sqlserver, hsqldb y sqlite-async` | G3 | Extras `sqlserver = ["pymssql>=2.4"]`, `hsqldb = ["jaydebeapi…"]` y `sqlite-async = ["aiosqlite…"]`, con las mismas cotas que ya usa la web | `pyproject.toml`, `docs/` (instalación) | `pip install -e ".[sqlserver,hsqldb,sqlite-async]"` en el CI |
 
-Decisión D1 (AUDIT_PLAN): el contrato vive en `util_bbdd.audit` (capa 3, que ya consumen bulk, dump y migrate) en
-lugar de un paquete nuevo de primer nivel. Así no cambia el diagrama de capas (`gen_arquitectura_capas.py`).
+Decisión D1 (aprobada): paquete nuevo `util_bbdd.progress`, separado de `audit` (el progreso no es auditoría). Va en
+la capa 2 para que lo puedan importar `analysis`, `comparar`, `migrate`, `bulk` (capa 6), `doc` y `dump` (capa 7) sin
+romper la Regla #6. Al ser un submódulo público nuevo, entra en la lista de submódulos con SemVer.
 
 ### Grupo D — Documentación (`documentation`)
 
@@ -132,7 +133,7 @@ Reutiliza U-D3 (aristas ortogonales), U-D6/U-D7 (schema) y U-D5 (tabla sola), qu
 | U-V4 | `fix(dump): isolate aparta ORA-00001 en Oracle` | G32 | `on_error="isolate"` trata `ORA-00001` como el resto de duplicados | `dump/orchestrator.py`, `dump/_sql_utils.py` | Unitario con error simulado; integración Oracle |
 | U-V5 | `fix(dump): fechas ISO de SQLite al leer` | G33 | Lectura desde SQLite: texto ISO en columnas `DATE`/`DATETIME` → `date`/`datetime` | `dump/_source_reader.py` | SQLite → SQLite con fechas en texto: vuelca |
 | U-V6 | `security(dump): mensajes de error sin datos de negocio` | G34 | `error_msg` sin parámetros de SQLAlchemy ni valores de clave (primera línea + enmascarado) | `dump/_models.py`, `dump/orchestrator.py`, `dump/_constraints.py` | Errores simulados de MySQL, MariaDB y SQL Server sin valores |
-| U-V7 | `feat(dump): aviso si truncate_target no es explícito` | G30 | `FutureWarning` cuando se construye `DumpConfig` sin `truncate_target` explícito; el cambio de valor por defecto se deja para la 5.0 (ola 8) | `dump/_models.py` | Aviso con el valor por defecto; sin aviso si es explícito |
+| U-V7 | `feat(dump): aviso si truncate_target no es explícito` | G30 | `FutureWarning` cuando se construye `DumpConfig` sin `truncate_target` explícito; el cambio de valor por defecto se deja para la 5.0 (ola 8, D4) | `dump/_models.py` | Aviso con el valor por defecto; sin aviso si es explícito |
 | U-V8 | `feat(dump): progreso y cancelación cooperativa` | G1 | Evento por tabla y por lote; cancelar entre lotes **restaura constraints e índices** antes de salir | `dump/orchestrator.py` | Cancelar → constraints restauradas y `OperationCancelledError` |
 
 | Id | Commit | Huecos | Cambio en la web | Rodeo |
@@ -221,13 +222,13 @@ flowchart LR
 |---|---|---|---|
 | 0 | — | `docs(plan)`: este plan (commit de esta sesión) | — |
 | 1 | U-0.1 → U-0.2 → U-D1 → U-D2 → U-D3 → U-D4 → U-D5 → U-D6 → U-D7 → U-D8 → U-D9 → U-G1 → **`release: v4.1.0`** | (libre: se puede publicar la 1.1.0 de la web con lo que tiene sin publicar) | Tag `v4.1.0` + wheel y `.sha256` en la release |
-| 2 | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 | La web arranca cuando existe el wheel 4.1.0 |
-| 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 | Wheel 4.2.0 |
-| 4 | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 | Wheel 4.3.0 |
-| 5 | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 | Wheel 4.4.0 |
-| 6 | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 | Wheel 4.5.0 |
-| 7 | (ola 8 opcional) | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → `release` de la web | Wheel 4.6.0 |
-| 8 *(opcional)* | `feat!: truncate_target=False y generar_sql=False por defecto` (G30, G35; también ventana G2 = 0) → **`release: v5.0.0`** | **W-8.0** `chore(backend): util_bbdd 5.0.0` (sin cambios de código: la web ya pasa todo explícito) | Wheel 5.0.0 |
+| 2 | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 → **`release: v1.1.0`** | La web arranca cuando existe el wheel 4.1.0 |
+| 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 → **`release: v1.2.0`** | Wheel 4.2.0 |
+| 4 | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
+| 5 | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 → **`release: v1.4.0`** | Wheel 4.4.0 |
+| 6 | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
+| 7 | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
+| 8 *(fuera de este plan, D4)* | `feat!: truncate_target=False y generar_sql=False por defecto` (G30, G35; también ventana G2 = 0) → **`release: v5.0.0`**, en otra sesión | **W-8.0** `chore(backend): util_bbdd 5.0.0` (sin cambios de código: la web ya pasa todo explícito) | Wheel 5.0.0 |
 
 Reglas de la tubería:
 
@@ -235,8 +236,8 @@ Reglas de la tubería:
   progreso dependen de ella), U-D3 → U-D5 (mismo fichero), U-D6 → U-D7, U-T3 → U-T5 y U-V3 → U-V8.
 - **La web nunca va por delante**: una fase `W-` solo se empieza con su release publicada. Si una release se
   retrasa, la web sigue con la ola anterior o se queda parada; no se adelantan rodeos.
-- **Versiones de la web**: un cierre de versión (MINOR `1.x.0`) por ola es opcional. Lo mínimo es uno al final
-  (paso 7).
+- **Versiones de la web** (D5): cada ola de la web termina con su commit `release: v1.x.0` (`/version-closure`):
+  1.1.0 tras W-1 (incluye lo que hoy está «Sin publicar»), 1.2.0 tras W-2 … 1.6.0 tras W-6.
 - **Si una fase `U-` cambia de alcance** al implementarla, se ajusta su `W-` antes de empezarla y se anota aquí.
 
 ---
@@ -257,7 +258,7 @@ Reglas de la tubería:
 
 | # | Riesgo | Mitigación |
 |---|---|---|
-| T1 | Cambios de valor por defecto rompen a otros consumidores de util_bbdd (SemVer) | Regla 4: `FutureWarning` en 4.x, cambio solo en 5.0.0 (ola 8, opcional) |
+| T1 | Cambios de valor por defecto rompen a otros consumidores de util_bbdd (SemVer) | Regla 4: `FutureWarning` en 4.x, cambio solo en 5.0.0 (ola 8, fuera de este plan: D4) |
 | T2 | G11 (enmascarar `get_database_info`) cambia una salida pública | Se trata como corrección de seguridad (`security:`) en MINOR, con nota en CHANGELOG. **Decisión D2** abajo |
 | T3 | G21 y U-M2/U-V4 necesitan Oracle real para verificarse | Unitarios con dobles en el CI + `pytest -m integration` contra el bench antes de la release de la ola |
 | T4 | G25: empaquetar Mermaid suma unos 3 MB al wheel | **Decisión D3**: versión fija + SRI + `mermaid_src` configurable (sin empaquetar) |
@@ -281,21 +282,21 @@ Reglas de la tubería:
 - Las fases de progreso de la web reutilizan un único adaptador (T7).
 - G14 se resuelve **sin romper** la forma de SQL Server (`default_driver` añadido).
 
-### Decisiones que necesitan aprobación
+### Decisiones (aprobadas el 2026-10-25)
 
 | # | Decisión | Propuesta |
 |---|---|---|
-| D1 | Dónde vive el contrato de progreso | `util_bbdd.audit.progress` (sin paquete nuevo) |
-| D2 | G11 en MINOR o en MAJOR | MINOR como `security:` (la contraseña en claro es un defecto) |
-| D3 | Mermaid empaquetado o fijado con SRI | Fijado con SRI + `mermaid_src` configurable |
-| D4 | Ola 8 (5.0.0 con defaults seguros) | Planificarla después de la 4.6.0, en sesión aparte |
-| D5 | Una release de la web por ola o una al final | Una por ola si hay usuarios en producción; si no, una al final |
+| D1 | Dónde vive el contrato de progreso | **Paquete nuevo `util_bbdd.progress`** (capa 2). Propuesta original: `util_bbdd.audit.progress`; se eligió el paquete propio por separación de responsabilidades, a cambio de regenerar el diagrama de capas en U-0.1 |
+| D2 | G11 en MINOR o en MAJOR | **MINOR como `security:`** (4.6.0, nota en CHANGELOG) |
+| D3 | Mermaid empaquetado o fijado con SRI | **Versión fija + SRI + `mermaid_src` configurable** |
+| D4 | Ola 8 (5.0.0 con defaults seguros) | **Fuera de este plan**: se planifica en otra sesión tras la 4.6.0 |
+| D5 | Una release de la web por ola o una al final | **Una MINOR de la web por ola** (1.1.0 … 1.6.0) |
 
 ### Veredicto
 
 **GO_CONDICIONAL** — condiciones:
 
-1. Aprobar D1-D5 (o cambiarlas) antes de IMPLEMENT de la ola 1.
+1. ~~Aprobar D1-D5~~ — hecho (2026-10-25).
 2. Bench de integración (Oracle, MariaDB, MySQL, PostgreSQL, SQL Server) disponible antes de las releases 4.1.0
    (G21), 4.3.0 (G28) y 4.4.0 (G32).
 3. Una release de util_bbdd **no se publica** sin el wheel y su `.sha256` (ADR-006).
@@ -374,7 +375,7 @@ GAPS Gnn».
    `npm run gen:api` si cambia la API, y frontend). En el mismo commit se actualizan la fila de `UTIL_BBDD_GAPS.md`
    (**Resuelto en util_bbdd 4.x.0**) y la guía de usuario si cambia lo que se ve.
 
-3. **Cierre de ola** (opcional por D5): `/version-closure` y E2E (`npm run e2e` contra `docker compose up`).
+3. **Cierre de ola** (D5): E2E (`npm run e2e` contra `docker compose up`) y `/version-closure` → `release: v1.x.0`.
 
 ### 5.3 Seguimiento
 
