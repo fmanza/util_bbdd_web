@@ -128,6 +128,20 @@ describe('pestaña Plantillas del proyecto', () => {
     expect(within(select).getByRole('option', { name: 'Por defecto' })).toBeInTheDocument();
   });
 
+  it('una plantilla con estilo elegido puede volver a «Por defecto»', async () => {
+    const fetchMock = stubProject(ADMIN, 'editor', [{ ...OWN, table_style: 'Normal Table' }]);
+    const user = userEvent.setup();
+
+    await openTab(user);
+    const select = await screen.findByRole('combobox', { name: 'Estilo de tabla de Corporativa' });
+    await user.selectOptions(select, 'Por defecto');
+
+    await waitFor(() => expect(callsTo(fetchMock, 'PATCH', `${PROJECT_URL}/${OWN.id}`)).toHaveLength(1));
+    expect(await callsTo(fetchMock, 'PATCH', `${PROJECT_URL}/${OWN.id}`)[0]?.json()).toEqual({
+      table_style: null,
+    });
+  });
+
   it('un lector solo consulta y descarga', async () => {
     stubProject(USER, 'viewer');
     const user = userEvent.setup();

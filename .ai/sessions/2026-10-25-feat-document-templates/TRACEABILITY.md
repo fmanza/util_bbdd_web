@@ -66,6 +66,12 @@ se aplica (en lugar de fallar), ADR-011 + G40 + G41. Después: «IMPLEMENT» y �
     globales y al renombrar, recuento tras el INSERT, fichero borrado si falla la fila). Validación: ruff, mypy,
     `export_openapi.py --check`, pytest 617 passed (87 skipped). ADR-011 actualizado.
 
+- Probando en local: tras elegir un estilo de tabla («Normal Table») no se podía volver a «Por defecto». La opción solo
+  salía con `table_style` nulo y el PATCH trataba `null` como «no cambiar». Ahora `table_style: null` explícito
+  (`TemplateUpdate.default_table_style`, por `model_fields_set`) quita el estilo y la opción «Por defecto» sale
+  siempre. Tests: API (Word de proyecto y Excel global, omitir no cambia, `""` da 422) y Vitest. Validación: ruff,
+  mypy, contrato exportado y cliente regenerado, pytest 618 passed (87 skipped), Vitest 114, build.
+
 ## Artefactos generados
 
 | Artefacto | Ruta | Estado |

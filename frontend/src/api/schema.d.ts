@@ -3289,12 +3289,15 @@ export interface components {
         };
         /**
          * TemplateUpdate
-         * @description Cambio de nombre o de estilo de tabla (uno de ``table_styles``).
+         * @description Cambio de nombre o de estilo de tabla (uno de ``table_styles``); un campo que no se envía no cambia.
          */
         TemplateUpdate: {
             /** Name */
             name?: string | null;
-            /** Table Style */
+            /**
+             * Table Style
+             * @description Estilo de tabla; ``null`` explícito vuelve al estilo por defecto
+             */
             table_style?: string | null;
         };
         /**

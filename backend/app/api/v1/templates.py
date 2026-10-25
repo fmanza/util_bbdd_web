@@ -132,7 +132,12 @@ def create_global(
 )  # fmt: skip
 def update_global(template_id: str, body: TemplateUpdate, admin: AdminUser, db: DbSession, ctx: Context) -> TemplateOut:
     template = service.get_template(db, None, template_id)
-    return _out(service.update_template(db, admin, template, name=body.name, table_style=body.table_style, ctx=ctx))
+    return _out(
+        service.update_template(
+            db, admin, template, name=body.name, table_style=body.table_style, ctx=ctx,
+            default_table_style=body.default_table_style,
+        )
+    )  # fmt: skip
 
 
 @admin_router.delete(
@@ -191,7 +196,12 @@ def update_project_template(
     project_id: int, template_id: str, body: TemplateUpdate, user: CurrentUser, db: DbSession, ctx: Context
 ) -> TemplateOut:
     template = service.get_template(db, _project(db, user, project_id, editor=True), template_id)
-    return _out(service.update_template(db, user, template, name=body.name, table_style=body.table_style, ctx=ctx))
+    return _out(
+        service.update_template(
+            db, user, template, name=body.name, table_style=body.table_style, ctx=ctx,
+            default_table_style=body.default_table_style,
+        )
+    )  # fmt: skip
 
 
 @project_router.delete(

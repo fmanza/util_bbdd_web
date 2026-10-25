@@ -30,9 +30,16 @@ class TemplateOut(BaseModel):
 
 
 class TemplateUpdate(BaseModel):
-    """Cambio de nombre o de estilo de tabla (uno de ``table_styles``)."""
+    """Cambio de nombre o de estilo de tabla (uno de ``table_styles``); un campo que no se envía no cambia."""
 
     model_config = ConfigDict(extra="forbid")
 
     name: Annotated[str | None, Field(min_length=1, max_length=100)] = None
-    table_style: Annotated[str | None, Field(min_length=1, max_length=100)] = None
+    table_style: Annotated[str | None, Field(min_length=1, max_length=100)] = Field(
+        default=None, description="Estilo de tabla; ``null`` explícito vuelve al estilo por defecto"
+    )
+
+    @property
+    def default_table_style(self) -> bool:
+        """Se envió ``table_style: null``: quitar el estilo elegido."""
+        return "table_style" in self.model_fields_set and self.table_style is None

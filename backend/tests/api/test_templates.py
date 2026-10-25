@@ -96,6 +96,25 @@ def test_project_templates_crud_and_roles(
     assert {"template.create", "template.update", "template.delete"} <= actions
 
 
+def test_table_style_can_go_back_to_default(user_client: TestClient, make_user: Callable[..., User]) -> None:
+    """``table_style: null`` explícito quita el estilo elegido; si no se envía, no cambia (Word y Excel global)."""
+    url = project_url(new_project(user_client)["id"])
+    word = upload(user_client, url, "w.docx", word_template()).json()
+    chosen = user_client.patch(f"{url}/{word['id']}", json={"table_style": "Normal Table"})
+    assert chosen.status_code == 200 and chosen.json()["table_style"] == "Normal Table"
+
+    reset = user_client.patch(f"{url}/{word['id']}", json={"table_style": None})
+    assert reset.status_code == 200 and reset.json()["table_style"] is None
+    renamed = user_client.patch(f"{url}/{word['id']}", json={"name": "Otra"})
+    assert renamed.json()["table_style"] is None and renamed.json()["name"] == "Otra"
+    assert user_client.patch(f"{url}/{word['id']}", json={"table_style": ""}).status_code == 422
+
+    admin = login_as(user_client, make_user, "root", role="admin")
+    excel = upload(admin, "/api/v1/admin/document-templates", "e.xlsx", excel_template()).json()
+    response = admin.patch(f"/api/v1/admin/document-templates/{excel['id']}", json={"table_style": None})
+    assert response.status_code == 200 and response.json()["table_style"] is None
+
+
 def test_global_templates_are_managed_by_admins(user_client: TestClient, make_user: Callable[..., User]) -> None:
     admin = login_as(user_client, make_user, "root", role="admin")
     assert upload(user_client, "/api/v1/admin/document-templates", "a.xlsx", excel_template()).status_code == 403

@@ -4877,7 +4877,7 @@
       },
       "TemplateUpdate": {
         "additionalProperties": false,
-        "description": "Cambio de nombre o de estilo de tabla (uno de ``table_styles``).",
+        "description": "Cambio de nombre o de estilo de tabla (uno de ``table_styles``); un campo que no se envía no cambia.",
         "properties": {
           "name": {
             "anyOf": [
@@ -4903,6 +4903,7 @@
                 "type": "null"
               }
             ],
+            "description": "Estilo de tabla; ``null`` explícito vuelve al estilo por defecto",
             "title": "Table Style"
           }
         },

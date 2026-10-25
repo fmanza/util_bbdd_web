@@ -202,9 +202,11 @@ def save_template(
 
 def update_template(
     db: Session, user: User, template: DocumentTemplate, *, name: str | None, table_style: str | None,
-    ctx: RequestContext,
+    ctx: RequestContext, default_table_style: bool = False,
 ) -> DocumentTemplate:  # fmt: skip
     """Cambia el nombre o el estilo de tabla (uno de ``table_styles``).
+
+    Con ``default_table_style`` se quita el estilo elegido: Word usa el de util_bbdd y Excel ``TableStyleMedium2``.
 
     Raises:
         TemplateConflictError: Nombre repetido.
@@ -216,7 +218,9 @@ def update_template(
         if clean != template.name:
             _check_name(db, template.project_id, template.kind, clean, exclude_id=template.id)
             changes["name"] = template.name = clean
-    if table_style is not None and table_style != template.table_style:
+    if default_table_style and template.table_style is not None:
+        changes["table_style"] = template.table_style = None
+    elif table_style is not None and table_style != template.table_style:
         if table_style not in template.table_styles:
             raise TemplateContentError(f"La plantilla no tiene el estilo de tabla «{table_style}».")
         changes["table_style"] = template.table_style = table_style

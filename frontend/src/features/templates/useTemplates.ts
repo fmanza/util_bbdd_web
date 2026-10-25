@@ -17,7 +17,8 @@ export interface TemplateUpload {
 export interface TemplateChange {
   id: string;
   name?: string;
-  table_style?: string;
+  /** `null`: vuelve al estilo por defecto (Word: el de util_bbdd; Excel: `TableStyleMedium2`). */
+  table_style?: string | null;
 }
 
 const templatesKey = (scope: TemplateScope) =>

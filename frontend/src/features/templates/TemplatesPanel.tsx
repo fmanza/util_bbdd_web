@@ -186,14 +186,14 @@ function TemplatesTable({
                     size="xs"
                     aria-label={t('templates.tableStyleOf', { name: template.name })}
                     data={[
-                      // Sin estilo elegido (Word sin «Table Grid»): util_bbdd usa el suyo por defecto.
-                      ...(template.table_style ? [] : [{ value: '', label: t('templates.defaultStyle') }]),
+                      // Sin estilo elegido: Word usa el de util_bbdd y Excel `TableStyleMedium2`.
+                      { value: '', label: t('templates.defaultStyle') },
                       ...template.table_styles,
                     ]}
                     value={template.table_style ?? ''}
                     disabled={update.isPending}
                     onChange={(event) =>
-                      update.mutate({ id: template.id, table_style: event.currentTarget.value })
+                      update.mutate({ id: template.id, table_style: event.currentTarget.value || null })
                     }
                   />
                 ) : (
