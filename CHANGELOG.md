@@ -27,6 +27,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 - **Sitio HTML de la documentación**: el panel de detalle (iframe del índice) salía bloqueado en la SPA y en «Abrir en
   pestaña nueva». CSP con `frame-src 'self'` y `frame-ancestors 'self'` solo en el índice raíz (enmienda de ADR-007).
+- **Documentación que fallaba por un diagrama**: Graphviz 2.43 aborta con aristas ortogonales en algunos grafos y
+  util_bbdd perdía la ejecución entera (GAPS G39). La imagen instala un envoltorio de `dot` que repite ese diagrama
+  con aristas poligonales; si aun así falla, el código es `graphviz_failed` (antes `unknown`).
 
 ## [1.0.0] - 2026-10-23
 

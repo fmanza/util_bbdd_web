@@ -84,6 +84,8 @@ COPY --chown=app:app backend/alembic ./alembic
 COPY --chown=app:app backend/alembic.ini ./alembic.ini
 COPY --chown=app:app --from=frontend-build /fe/dist ./static
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+# Delante de /usr/bin/dot en el PATH: repite sin aristas ortogonales los grafos que abortan Graphviz (GAPS G39).
+COPY --chmod=755 docker/dot-wrapper.sh /usr/local/bin/dot
 
 USER app
 EXPOSE 8080

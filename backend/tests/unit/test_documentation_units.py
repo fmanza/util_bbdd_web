@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -201,6 +204,67 @@ def test_job_errors_never_echo_driver_text() -> None:
     assert "secreto" not in error.message and "10.0.0.1" not in error.message
     assert _job_error(SchemaNotSupportedError("x")).code == "invalid_params"
     assert _job_error(GraphvizMissingError("x")).code == "graphviz_missing"
+
+
+def test_job_error_graphviz_crash_inside_render_error() -> None:
+    """Hotfix 2026-10-25: un ``dot`` abortado llega como ``DocumentationRenderError`` y salía con ``unknown``."""
+    from util_bbdd.exceptions import DocumentationRenderError
+
+    try:
+        try:
+            raise subprocess.CalledProcessError(-6, ["dot", "-Kdot", "-Tsvg"], stderr=b"newtrap: Trapezoid-table")
+        except subprocess.CalledProcessError as crash:
+            raise DocumentationRenderError(
+                "Error generando la documentación html", operation="DOCUMENTATION"
+            ) from crash
+    except DocumentationRenderError as exc:
+        error = _job_error(exc)
+
+    assert error.code == "graphviz_failed"
+    assert "Trapezoid" not in error.message
+    assert _job_error(DocumentationRenderError("x", operation="DOCUMENTATION")).code == "unknown"
+
+
+# --- envoltorio de dot (docker/dot-wrapper.sh, GAPS G39) ---------------------------------------------------------
+
+DOT_WRAPPER = Path(__file__).resolve().parents[3] / "docker" / "dot-wrapper.sh"
+SH = shutil.which("sh")
+needs_wrapper = pytest.mark.skipif(
+    os.name == "nt" or SH is None or not DOT_WRAPPER.exists(),
+    reason="Necesita sh (POSIX) y docker/dot-wrapper.sh (en la imagen backend-dev solo se monta backend/)",
+)
+
+
+def _wrapper(tmp_path: Path, fake_dot: str, args: list[str], stdin: bytes) -> subprocess.CompletedProcess[bytes]:
+    fake = tmp_path / "dot"
+    fake.write_text("#!/bin/sh\n" + fake_dot, encoding="utf-8")
+    fake.chmod(0o755)
+    env = {**os.environ, "UBW_REAL_DOT": str(fake)}
+    command = [str(SH), str(DOT_WRAPPER), *args]
+    # Solo ficheros del repositorio y del tmp_path del test.
+    return subprocess.run(command, input=stdin, capture_output=True, env=env, check=False)  # noqa: S603
+
+
+@needs_wrapper
+def test_dot_wrapper_retries_aborted_graph_without_ortho(tmp_path: Path) -> None:
+    # Como Graphviz 2.43 con splines=ortho: aborta salvo que se pidan aristas poligonales.
+    fake = 'case "$*" in *-Gsplines=polyline*) cat; echo " $*";; *) echo parcial; kill -ABRT $$;; esac\n'
+
+    result = _wrapper(tmp_path, fake, ["-Kdot", "-Tsvg"], b"digraph{a->b}")
+
+    assert result.returncode == 0
+    assert result.stdout == b"digraph{a->b} -Kdot -Tsvg -Gsplines=polyline\n"  # sin la salida del intento abortado
+
+
+@needs_wrapper
+def test_dot_wrapper_passes_through_success_errors_and_files(tmp_path: Path) -> None:
+    ok = _wrapper(tmp_path, 'cat; echo " $*"\n', ["-Tsvg"], b"g")
+    syntax = _wrapper(tmp_path, "echo 'syntax error' >&2; exit 1\n", ["-Tsvg"], b"g")
+    with_file = _wrapper(tmp_path, 'echo "file $*"\n', ["-Tpng", "-O", "grafo.gv"], b"")
+
+    assert (ok.returncode, ok.stdout) == (0, b"g -Tsvg\n")
+    assert (syntax.returncode, syntax.stderr) == (1, b"syntax error\n")  # un error normal no se repite
+    assert with_file.stdout == b"file -Tpng -O grafo.gv\n"
 
 
 # --- token del sitio ---------------------------------------------------------------------------------------------

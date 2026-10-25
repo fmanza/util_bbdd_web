@@ -68,6 +68,7 @@ El detalle muestra una **galería** con las primeras 12 imágenes; el resto est�
 | `invalid_params` | Schema de Oracle distinto del usuario, o tabla que no existe en el schema | Corrige el schema o la tabla |
 | `no_relations` | El grafo no tiene relaciones que dibujar (p. ej. ninguna tabla con FK) | Elige otra tabla o schema |
 | `graphviz_missing` | El servidor no tiene Graphviz | La imagen oficial lo incluye; en otra instalación, instala `graphviz` |
+| `graphviz_failed` | Graphviz no pudo dibujar un diagrama, y con él falla todo el formato (GAPS G39) | Reduce la profundidad o desactiva los diagramas |
 | `connection_failed` | La BD no responde o rechaza las credenciales | Prueba la conexión desde su ficha |
 
 Documentar un schema grande lleva tiempo (cada diagrama es un proceso `dot`); el límite es el de cualquier

@@ -10,6 +10,7 @@ from app.integrations.util_bbdd.documentation import (
     SchemaNotSupportedError,
     generate_documentation,
     generate_graphs,
+    graphviz_failed,
 )
 from app.integrations.util_bbdd.isolated import classify
 from app.jobs.context import JobContext, JobError
@@ -32,6 +33,11 @@ def _job_error(exc: Exception) -> JobError:
         return JobError("graphviz_missing", str(exc))
     if isinstance(exc, LookupError):
         return JobError("invalid_params", str(exc))
+    if graphviz_failed(exc):
+        return JobError(
+            "graphviz_failed",
+            "Graphviz no pudo dibujar un diagrama de relaciones. Reduce la profundidad o desactiva los diagramas.",
+        )
     code = classify(exc)
     return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
 

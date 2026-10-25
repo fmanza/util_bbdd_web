@@ -12,6 +12,7 @@ PostgreSQL, SQL Server y HSQLDB; ``database`` en MySQL/MariaDB). Oracle solo lee
 from __future__ import annotations
 
 import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, Literal
@@ -40,6 +41,22 @@ class SchemaNotSupportedError(ValueError):
 
 class GraphvizMissingError(RuntimeError):
     """Graphviz (``dot``) no está instalado."""
+
+
+def graphviz_failed(exc: BaseException) -> bool:
+    """Si ``exc`` viene de un ``dot`` que terminó con error (``graphviz.CalledProcessError``).
+
+    util_bbdd solo captura ``OSError`` y ``RuntimeError`` por diagrama: el fallo de uno llega envuelto en el error del
+    formato entero (``DocumentationRenderError``), con el de Graphviz en la cadena de causas (GAPS G39).
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, subprocess.CalledProcessError):
+            return True
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return False
 
 
 def with_schema(db_type: str, conn_params: dict[str, Any], schema: str | None) -> dict[str, Any]:
