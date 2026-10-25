@@ -26,6 +26,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   `UBW_TEMPLATES_PER_SCOPE` (20); migración `0009`. Hueco G41 registrado: util_bbdd no valida los estilos de la
   plantilla Word.
 
+- **Almacenamiento administrable** (ADR-012): *Administración → Almacenamiento* cambia sin reiniciar la cuota por usuario y la retención de ejecuciones y ficheros (las variables `UBW_*` pasan a ser el valor por defecto), con vista previa de lo que se purgará y «Aplicar ahora»; cuota propia por usuario en su ficha; **purga por cuota** opcional (`UBW_QUOTA_PURGE`, desactivada por defecto): al llegar a la cuota se purgan las ejecuciones más antiguas del usuario hasta el `UBW_QUOTA_PURGE_TARGET_PCT` (80 %), nunca las de la última hora ni las que use una ejecución en curso; **Mi espacio** en el menú de usuario. Migración `0010`.
+
 ### Security
 
 - Las plantillas se comprueban por contenido antes de distribuirlas: sin macros, objetos incrustados (OLE, ActiveX),

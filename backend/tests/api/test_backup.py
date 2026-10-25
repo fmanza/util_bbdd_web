@@ -35,7 +35,7 @@ def test_backup_and_restore_round_trip(db: Session, migrated: Settings, user: Us
     _seed(migrated)
     result = create_backup(migrated, tmp_path / "copias")
     manifest = verify_backup(result.folder)
-    assert manifest["alembic_revision"] == "0009"
+    assert manifest["alembic_revision"] == "0010"
     assert set(dict(manifest["files"])) == {"config.db", "workspace.tar.gz", "files.tar.gz"}
 
     # Cambios posteriores a la copia: se pierden al restaurar.

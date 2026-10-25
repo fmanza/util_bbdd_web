@@ -50,6 +50,7 @@ nav = [
       "adr/ADR-009-volcado-de-datos.md",
       "adr/ADR-010-carga-bulk.md",
       "adr/ADR-011-plantillas-de-documento.md",
+      "adr/ADR-012-almacenamiento-administrable.md",
     ] },
     "plan/ROADMAP.md",
     "plan/UTIL_BBDD_GAPS.md",

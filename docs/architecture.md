@@ -45,7 +45,7 @@ flowchart TB
 | `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic, copia y restauración (`backup.py`) | 0 → 10 |
 | `api/` | `/api/health`, `/metrics` (Prometheus); `api/v1/` con los routers de negocio | 0 → 10 |
 | `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py`, `isolated.py` (subproceso con timeout), `probe.py`, `metadata.py` (schemas, snapshot, DDL), `sql.py` (guardián `sqlglot`, solo lectura, queries nombradas), `audit_sink.py` | 0 → 4 |
-| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/`, `explorer/` (caché de metadatos, queries nombradas, SQL libre) `uploads/` (ficheros de carga validados) y `templates/` (plantillas de documento, ADR-011) | 1 → 9 |
+| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/`, `explorer/` (caché de metadatos, queries nombradas, SQL libre) `uploads/` (ficheros de carga validados), `templates/` (plantillas de documento, ADR-011) y `storage/` (ajustes administrables, purga por cuota, ADR-012) | 1 → 9 |
 | `cli.py` | `create-admin`, `rotate-secrets` (rotación Fernet), `backup`, `verify-backup` y `restore` | 1 → 10 |
 | `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y operaciones (`noop`) | 0 → 3 |
 | `workspace/` | Carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
@@ -83,15 +83,17 @@ src/
 | `UBW_WORKER_POLL_SECONDS` | `1` | Sondeo de la cola y latido |
 | `UBW_JOB_TIMEOUT_SECONDS` | `3600` | Duración máxima de un job |
 | `UBW_MAX_QUEUED_PER_USER` | `5` | Ejecuciones en cola o en curso por usuario (429) |
-| `UBW_USER_QUOTA_MB` | `1024` | Espacio de workspace por usuario (`0` sin límite) |
-| `UBW_RUN_RETENTION_DAYS` | `30` | Purga de ejecuciones terminadas más antiguas (`0` desactiva) |
-| `UBW_RUN_RETENTION_PER_PROJECT` | `100` | Ejecuciones conservadas por proyecto (`0` desactiva) |
+| `UBW_USER_QUOTA_MB` | `1024` | Espacio de workspace por usuario (`0` sin límite); administrable* |
+| `UBW_RUN_RETENTION_DAYS` | `30` | Purga de ejecuciones terminadas más antiguas (`0` desactiva); administrable* |
+| `UBW_RUN_RETENTION_PER_PROJECT` | `100` | Ejecuciones conservadas por proyecto (`0` desactiva); administrable* |
+| `UBW_QUOTA_PURGE` | `false` | Al llegar a la cuota, purgar las ejecuciones más antiguas del usuario; administrable* |
+| `UBW_QUOTA_PURGE_TARGET_PCT` | `80` | Porcentaje de la cuota hasta el que baja esa purga (10–95); administrable* |
 | `UBW_METADATA_TIMEOUT_SECONDS` | `120` | Lectura de schemas, snapshot o DDL |
 | `UBW_QUERY_TIMEOUT_SECONDS` | `30` | Queries nombradas y SQL libre |
 | `UBW_QUERY_MAX_ROWS` | `1000` | Filas máximas de una consulta (máx. 10 000) |
 | `UBW_UPLOAD_MAX_MB` | `50` | Tamaño máximo de un fichero de carga bulk |
 | `UBW_UPLOAD_MAX_UNCOMPRESSED_MB` | `300` | Tamaño descomprimido máximo de un `.xlsx` |
-| `UBW_UPLOAD_RETENTION_DAYS` | `7` | Purga de ficheros subidos sin uso (`0` desactiva) |
+| `UBW_UPLOAD_RETENTION_DAYS` | `7` | Purga de ficheros subidos sin uso (`0` desactiva); administrable* |
 | `UBW_BULK_MAX_ROWS` | `1000000` | Filas máximas de un fichero de carga |
 | `UBW_TEMPLATE_MAX_MB` | `10` | Tamaño máximo de una plantilla de documento Word o Excel |
 | `UBW_TEMPLATES_PER_SCOPE` | `20` | Plantillas como máximo en el catálogo global y en cada proyecto |
@@ -105,4 +107,7 @@ Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·
 [ADR-004](adr/ADR-004-cifrado-secretos.md) · [ADR-005](adr/ADR-005-workspace-y-ejecuciones.md) ·
 [ADR-006](adr/ADR-006-integracion-util-bbdd.md) · [ADR-007](adr/ADR-007-sitio-html-aislado.md) ·
 [ADR-008](adr/ADR-008-aplicar-migraciones.md) · [ADR-009](adr/ADR-009-volcado-de-datos.md) ·
-[ADR-010](adr/ADR-010-carga-bulk.md) · [ADR-011](adr/ADR-011-plantillas-de-documento.md).
+[ADR-010](adr/ADR-010-carga-bulk.md) · [ADR-011](adr/ADR-011-plantillas-de-documento.md) ·
+[ADR-012](adr/ADR-012-almacenamiento-administrable.md).
+
+\* *Administrable*: la variable es el valor por defecto; un admin puede cambiarlo en *Administración → Almacenamiento* sin reiniciar, y entonces manda el de la web hasta que lo restablezca ([ADR-012](adr/ADR-012-almacenamiento-administrable.md)).

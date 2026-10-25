@@ -23,6 +23,7 @@ from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.projects.errors import ProjectForbiddenError
 from app.domain.projects.service import Membership
+from app.domain.storage.settings import effective_settings, quota_bytes
 from app.domain.uploads.errors import UploadInUseError, UploadNotFoundError, UploadQuotaError, UploadTooLargeError
 from app.domain.uploads.files import check_content, display_name, kind_for
 from app.workspace.layout import safe_path
@@ -30,6 +31,7 @@ from app.workspace.layout import safe_path
 logger = logging.getLogger(__name__)
 
 _CHUNK: Final = 1024 * 1024
+_QUOTA_HINT: Final = "Purga ejecuciones o ficheros antiguos para liberar espacio."
 #: Operaciones que leen un fichero subido (no se borra mientras estén en cola o en curso).
 BULK_OPERATIONS: Final = ("bulk_preview", "bulk_apply")
 
@@ -80,7 +82,8 @@ def save_upload(
     name = display_name(filename)
     kind = kind_for(name)
     limit = settings.upload_max_mb * 1024 * 1024
-    quota = settings.user_quota_mb * 1024 * 1024
+    effective = effective_settings(db, settings)
+    quota = quota_bytes(user, effective)
     project = membership.project
     folder = uploads_folder(settings.workspace_dir, project.owner_id, project.id)
     folder.mkdir(parents=True, exist_ok=True)
@@ -94,11 +97,15 @@ def save_upload(
                 size += len(chunk)
                 if size > limit:
                     raise UploadTooLargeError(f"El máximo es {settings.upload_max_mb} MB.")
-                if quota and used_bytes + size > quota:
-                    raise UploadQuotaError("Purga ejecuciones o ficheros antiguos para liberar espacio.")
+                if quota and not effective.quota_purge and used_bytes + size > quota:
+                    raise UploadQuotaError(_QUOTA_HINT)
                 digest.update(chunk)
                 out.write(chunk)
         check_content(tmp, kind, max_uncompressed=settings.upload_max_uncompressed_mb * 1024 * 1024)
+        if quota and used_bytes + size > quota:  # solo con la purga por cuota: se intenta liberar antes de rechazar
+            used_bytes = _free_space(db, user, effective, ctx, size)
+            if used_bytes + size > quota:
+                raise UploadQuotaError(_QUOTA_HINT)
         final = folder / f"{upload_id}.{kind}"
         tmp.replace(final)
     except BaseException:
@@ -116,6 +123,15 @@ def save_upload(
     )  # fmt: skip
     db.commit()
     return upload
+
+
+def _free_space(db: Session, user: User, settings: Settings, ctx: RequestContext, incoming: int) -> int:
+    """Purga por cuota para que quepan ``incoming`` bytes (ADR-012); devuelve el espacio que queda en uso."""
+    from app.domain.runs.service import usage_bytes  # runs importa este módulo
+    from app.domain.storage.purge import purge_for_quota
+
+    purge_for_quota(db, user, settings, ctx=ctx, incoming=incoming)
+    return usage_bytes(db, user.id)
 
 
 def list_uploads(db: Session, membership: Membership) -> list[Upload]:
@@ -176,12 +192,17 @@ def _remove(upload: Upload, settings: Settings) -> None:
         logger.warning("Ruta de subida fuera del workspace", extra={"upload_id": upload.id})
 
 
+def retention_candidates(db: Session, settings: Settings, *, now: datetime | None = None) -> list[Upload]:
+    """Ficheros más antiguos que ``upload_retention_days`` que no usa ninguna carga activa."""
+    if not settings.upload_retention_days:
+        return []
+    limit = (now or utcnow()) - timedelta(days=settings.upload_retention_days)
+    return [u for u in db.scalars(select(Upload).where(Upload.created_at < limit)).all() if not in_use(db, u)]
+
+
 def purge_old_uploads(db: Session, settings: Settings, *, now: datetime | None = None) -> int:
     """Borra los ficheros más antiguos que ``upload_retention_days`` que no use ninguna carga activa."""
-    if not settings.upload_retention_days:
-        return 0
-    limit = (now or utcnow()) - timedelta(days=settings.upload_retention_days)
-    old = [u for u in db.scalars(select(Upload).where(Upload.created_at < limit)).all() if not in_use(db, u)]
+    old = retention_candidates(db, settings, now=now)
     for upload in old:
         _remove(upload, settings)
         db.delete(upload)

@@ -25,7 +25,7 @@
 | Las ejecuciones se quedan «En cola» | No hay worker (`/api/health` → `"worker": "absent"` o `"stale"`) | `docker compose up -d worker` y `docker compose logs worker` |
 | Ejecución «Fallida» con `interrupted` | El worker se reinició con el job en curso | Relanzar la ejecución |
 | Ejecución «Fallida» con `job_timeout` | Superó `UBW_JOB_TIMEOUT_SECONDS` | Subir el límite o dividir el trabajo |
-| Lanzar ejecución → 409 «Cuota de almacenamiento superada» | El usuario supera `UBW_USER_QUOTA_MB` | Purgar ejecuciones antiguas o subir la cuota |
+| Lanzar ejecución → 409 «Cuota de almacenamiento superada» | El usuario supera su cuota (la global de *Administración → Almacenamiento* o la suya) | Purgar ejecuciones antiguas, subir la cuota o activar la purga por cuota; el usuario ve su uso en *Mi espacio* |
 | Lanzar ejecución → 429 | Más de `UBW_MAX_QUEUED_PER_USER` en cola o en curso | Esperar o cancelar alguna |
 | El progreso no se actualiza en vivo | Un proxy almacena la respuesta SSE | `proxy_buffering off` en nginx (ver despliegue); la UI cae a sondeo cada 2 s |
 | Explorador: 502 «No se pudo consultar la base de datos» | Conexión no permitida, caída o credenciales | El código (`not_allowed`, `connection_failed`…) indica la causa; prueba la conexión |

@@ -1,4 +1,4 @@
-"""``/api/v1/auth``: inicio y cierre de sesión, usuario actual y cambio de contraseña (ADR-003)."""
+"""``/api/v1/auth``: inicio y cierre de sesión, usuario actual, «Mi espacio» (ADR-012) y cambio de contraseña (ADR-003)."""
 
 from __future__ import annotations
 
@@ -17,11 +17,13 @@ from app.api.deps import (
     set_csrf_cookie,
 )
 from app.api.v1.schemas import CsrfToken, LoginRequest, Me, PasswordChange
+from app.api.v1.schemas_storage import MyStorageOut
 from app.core.errors import AppError
 from app.core.middleware import client_ip
 from app.core.ratelimit import Limit, RateLimitedError, SlidingWindowLimiter
 from app.core.security import new_csrf_token, session_csrf_token
 from app.domain.identity import auth
+from app.domain.storage.service import my_storage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -94,6 +96,18 @@ def logout(session: CurrentSession, response: Response, db: DbSession, settings:
 def me(session: CurrentSession) -> Me:
     """Usuario de la sesión actual."""
     return Me.model_validate(session.user)
+
+
+@router.get("/me/storage", response_model=MyStorageOut, summary="Mi espacio", responses=_401)
+def me_storage(session: CurrentSession, db: DbSession, settings: SettingsDep) -> MyStorageOut:
+    """Espacio del usuario de la sesión frente a su cuota (solo cantidades)."""
+    mine = my_storage(db, session.user, settings)
+    usage = mine.usage
+    return MyStorageOut(
+        run_bytes=usage.run_bytes, upload_bytes=usage.upload_bytes, used_bytes=usage.used_bytes,
+        quota_bytes=usage.quota_bytes, quota_source=usage.quota_source, used_pct=usage.used_pct,
+        quota_purge=mine.quota_purge, quota_purge_target_pct=mine.quota_purge_target_pct,
+    )  # fmt: skip
 
 
 @router.post(

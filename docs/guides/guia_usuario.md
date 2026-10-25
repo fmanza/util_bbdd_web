@@ -107,6 +107,7 @@ cancela, y solo puede haber una a la vez por destino.
     - **Destinos permitidos**: hosts y redes a los que se puede conectar.
     - **Queries nombradas**: consultas reutilizables del explorador.
     - **Plantillas**: plantillas Word y Excel globales de la documentación ([Documentación](documentacion.md#plantillas-word-y-excel)).
+    - **Almacenamiento**: cuota, retención y purga por cuota sin reiniciar ([Usuarios y sesiones](usuarios_y_sesiones.md#almacenamiento)).
     - **Auditoría**: inicios de sesión, cambios y escrituras.
 
     Detalle en [Usuarios y sesiones](usuarios_y_sesiones.md) y [Explorador y SQL](explorador.md).

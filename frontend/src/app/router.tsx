@@ -22,6 +22,12 @@ const pages: RouteObject[] = [
           { index: true, element: <HomePage /> },
           { path: 'account/password', element: <ChangePasswordPage /> },
           {
+            path: 'account/storage',
+            lazy: async () => ({
+              Component: (await import('../features/storage/MyStoragePage')).MyStoragePage,
+            }),
+          },
+          {
             path: 'engines',
             lazy: async () => ({ Component: (await import('../features/engines/EnginesPage')).EnginesPage }),
           },
@@ -109,6 +115,12 @@ const pages: RouteObject[] = [
                 path: 'queries',
                 lazy: async () => ({
                   Component: (await import('../features/admin/QueriesPage')).QueriesPage,
+                }),
+              },
+              {
+                path: 'storage',
+                lazy: async () => ({
+                  Component: (await import('../features/admin/StoragePage')).StoragePage,
                 }),
               },
               {

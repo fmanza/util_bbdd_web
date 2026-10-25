@@ -9,6 +9,7 @@ Fase 7: ``users.can_apply_ddl`` (aplicar migraciones DDL en una BD destino, ADR-
 Fase 8: ``users.can_write_data`` (volcar datos en una BD destino, ADR-009).
 Fase 9: ``uploads`` (ficheros CSV/Excel de la carga bulk, ADR-010).
 Plantillas de documento: ``document_templates`` (Word y Excel de la documentación, ADR-011).
+Almacenamiento administrable: ``app_settings`` y ``users.storage_quota_mb`` (ADR-012).
 """
 
 from __future__ import annotations
@@ -81,6 +82,8 @@ class User(Base):
     can_run_sql: Mapped[bool] = mapped_column(default=False)
     can_apply_ddl: Mapped[bool] = mapped_column(default=False)
     can_write_data: Mapped[bool] = mapped_column(default=False)
+    #: Cuota propia en MB (ADR-012): ``None`` = la global, ``0`` = sin límite.
+    storage_quota_mb: Mapped[int | None] = mapped_column(default=None)
     failed_attempts: Mapped[int] = mapped_column(default=0)
     locked_until: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
     password_changed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
@@ -393,3 +396,17 @@ Index(
     func.lower(DocumentTemplate.name),
     unique=True,
 )
+
+
+class AppSetting(Base):
+    """Ajuste que un admin cambia desde la web (ADR-012); sin fila, vale la variable ``UBW_*``.
+
+    Solo admite las claves de ``domain/storage/settings.py`` (no es un almacén genérico ni guarda secretos).
+    """
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[Any] = mapped_column(JSON)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)

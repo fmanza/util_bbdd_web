@@ -30,6 +30,7 @@ from app.domain.runs.errors import (
     TooManyRunsError,
 )
 from app.domain.runs.operations import get_operation, validate_params
+from app.domain.storage.settings import effective_settings, quota_bytes
 from app.domain.templates.service import check_run_templates
 from app.workspace.layout import UnsafePathError, remove_tree, run_dir, run_relative_path, safe_path
 
@@ -172,6 +173,23 @@ def usage_bytes(db: Session, user_id: int) -> int:
     return int(runs or 0) + uploads_bytes(db, user_id)
 
 
+def _check_quota(db: Session, user: User, settings: Settings, ctx: RequestContext) -> None:
+    """Cuota efectiva del usuario (ADR-012); con la purga por cuota activa, antes de rechazar se intenta liberar.
+
+    Raises:
+        QuotaExceededError: Sigue sin sitio.
+    """
+    from app.domain.storage.purge import purge_for_quota  # importa este módulo: aquí para evitar el ciclo
+
+    effective = effective_settings(db, settings)
+    quota = quota_bytes(user, effective)
+    if quota is None or usage_bytes(db, user.id) < quota:
+        return
+    purge_for_quota(db, user, effective, ctx=ctx)
+    if usage_bytes(db, user.id) >= quota:
+        raise QuotaExceededError("Purga ejecuciones antiguas para liberar espacio.")
+
+
 def enqueue(
     db: Session,
     user: User,
@@ -189,7 +207,7 @@ def enqueue(
         ProjectForbiddenError: Rol inferior a ``editor``.
         UnknownOperationError, RunParamsError: Operación o parámetros no válidos (422).
         TooManyRunsError: El usuario ya tiene ``max_queued_per_user`` en cola o en curso (429).
-        QuotaExceededError: El usuario supera ``user_quota_mb`` (409).
+        QuotaExceededError: El usuario supera su cuota (409), aun con la purga por cuota si está activa.
         MigrationForbiddenError, DumpForbiddenError, RunStateError: Reglas de escritura en la BD destino
             (``migrations.check_apply``, ADR-008; ``dumps.check_apply``, ADR-009).
     """
@@ -222,8 +240,7 @@ def enqueue(
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
         raise TooManyRunsError(f"Tienes {active} ejecuciones en cola o en curso; espera a que terminen.")
-    if settings.user_quota_mb and usage_bytes(db, user.id) >= settings.user_quota_mb * 1024 * 1024:
-        raise QuotaExceededError("Purga ejecuciones antiguas para liberar espacio.")
+    _check_quota(db, user, settings, ctx)
     now = utcnow()
     run_id = new_ulid()
     project = membership.project

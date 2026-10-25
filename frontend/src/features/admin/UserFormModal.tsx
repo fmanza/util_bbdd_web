@@ -1,4 +1,14 @@
-import { Button, Group, Modal, PasswordInput, Select, Stack, Switch, TextInput } from '@mantine/core';
+import {
+  Button,
+  Group,
+  Modal,
+  NumberInput,
+  PasswordInput,
+  Select,
+  Stack,
+  Switch,
+  TextInput,
+} from '@mantine/core';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -28,6 +38,10 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
   const [canRunSql, setCanRunSql] = useState(user?.can_run_sql ?? false);
   const [canApplyDdl, setCanApplyDdl] = useState(user?.can_apply_ddl ?? false);
   const [canWriteData, setCanWriteData] = useState(user?.can_write_data ?? false);
+  // Cuota propia en MB (ADR-012): `null` = la global; 0 = sin límite.
+  const ownQuota = user?.storage_quota_mb ?? null;
+  const [globalQuota, setGlobalQuota] = useState(ownQuota === null);
+  const [quotaMb, setQuotaMb] = useState<number>(ownQuota ?? 1024);
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -57,6 +71,8 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
       if (canRunSql !== user.can_run_sql) body.can_run_sql = canRunSql;
       if (canApplyDdl !== user.can_apply_ddl) body.can_apply_ddl = canApplyDdl;
       if (canWriteData !== user.can_write_data) body.can_write_data = canWriteData;
+      const quota = globalQuota ? null : quotaMb;
+      if (quota !== ownQuota) body.storage_quota_mb = quota;
       if (password) body.password = password;
       update.mutate({ id: user.id, body }, { onSuccess: onClose });
     } else {
@@ -132,6 +148,26 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
               description={t('admin.users.canWriteDataHint')}
               checked={canWriteData}
               onChange={(event) => setCanWriteData(event.currentTarget.checked)}
+            />
+          )}
+          {user && (
+            <Switch
+              label={t('admin.users.globalQuota')}
+              description={t('admin.users.globalQuotaHint')}
+              checked={globalQuota}
+              onChange={(event) => setGlobalQuota(event.currentTarget.checked)}
+            />
+          )}
+          {user && !globalQuota && (
+            <NumberInput
+              label={t('admin.users.quotaMb')}
+              description={t('admin.users.quotaMbHint')}
+              min={0}
+              max={10_000_000}
+              allowDecimal={false}
+              allowNegative={false}
+              value={quotaMb}
+              onChange={(next) => typeof next === 'number' && setQuotaMb(next)}
             />
           )}
           <PasswordInput

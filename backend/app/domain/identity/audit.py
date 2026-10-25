@@ -52,6 +52,8 @@ class AuditAction:
     TEMPLATE_CREATE: Final = "template.create"
     TEMPLATE_UPDATE: Final = "template.update"
     TEMPLATE_DELETE: Final = "template.delete"
+    STORAGE_UPDATE: Final = "storage.update"
+    STORAGE_MAINTENANCE: Final = "storage.maintenance"
 
 
 @dataclass(frozen=True)

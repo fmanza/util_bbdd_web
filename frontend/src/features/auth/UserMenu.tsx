@@ -37,6 +37,9 @@ export function UserMenu() {
       </Menu.Target>
       <Menu.Dropdown>
         <Menu.Label>{me.username}</Menu.Label>
+        <Menu.Item component={Link} to="/account/storage">
+          {t('auth.myStorage')}
+        </Menu.Item>
         <Menu.Item component={Link} to="/account/password">
           {t('auth.changePassword')}
         </Menu.Item>

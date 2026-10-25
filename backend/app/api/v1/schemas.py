@@ -70,6 +70,9 @@ class UserOut(_Out):
     can_run_sql: bool
     can_apply_ddl: bool
     can_write_data: bool
+    storage_quota_mb: int | None = Field(
+        default=None, description="Cuota propia en MB (0 = sin límite); null = la global (ADR-012)"
+    )
     locked_until: datetime | None
     password_changed_at: datetime
     created_at: datetime
@@ -94,7 +97,15 @@ class UserUpdate(BaseModel):
     can_run_sql: bool | None = None
     can_apply_ddl: bool | None = None
     can_write_data: bool | None = None
+    storage_quota_mb: Annotated[int | None, Field(ge=0, le=10_000_000)] = Field(
+        default=None, description="Cuota propia en MB (0 = sin límite); ``null`` explícito vuelve a la global"
+    )
     password: Password | None = None
+
+    @property
+    def global_storage_quota(self) -> bool:
+        """Se envió ``storage_quota_mb: null``: quitar la cuota propia."""
+        return "storage_quota_mb" in self.model_fields_set and self.storage_quota_mb is None
 
 
 class UserPage(BaseModel):

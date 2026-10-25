@@ -26,7 +26,11 @@
       "canApplyDdl": "Puede aplicar DDL",
       "canApplyDdlHint": "Permite aplicar migraciones en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada aplicación exige modo seco previo y confirmación.",
       "canWriteData": "Puede escribir datos",
-      "canWriteDataHint": "Permite volcar filas y cargar ficheros en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada escritura exige una vista previa reciente y confirmación."
+      "canWriteDataHint": "Permite volcar filas y cargar ficheros en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada escritura exige una vista previa reciente y confirmación.",
+      "globalQuota": "Usar la cuota global",
+      "globalQuotaHint": "Desactívalo para darle una cuota propia de almacenamiento.",
+      "quotaMb": "Cuota propia (MB)",
+      "quotaMbHint": "Espacio de sus ejecuciones y ficheros subidos; 0 = sin límite."
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -1020,5 +1024,67 @@
     "deleteBody": "Se borrará la plantilla «{{name}}». Las documentaciones ya generadas no cambian.",
     "readOnly": "Solo los editores del proyecto pueden subir, cambiar o borrar plantillas.",
     "defaultStyle": "Por defecto"
+  },
+  "storage": {
+    "title": "Almacenamiento",
+    "intro": "Cuota de espacio por usuario y retención de ejecuciones y ficheros. Cada ajuste parte de su variable UBW_* y se aplica sin reiniciar: la cuota al momento y la retención en la siguiente pasada del worker (cada hora) o con «Aplicar ahora».",
+    "settingsTitle": "Ajustes",
+    "fields": {
+      "user_quota_mb": "Cuota por usuario (MB)",
+      "run_retention_days": "Retención de ejecuciones (días)",
+      "run_retention_per_project": "Ejecuciones por proyecto",
+      "upload_retention_days": "Retención de ficheros de carga (días)",
+      "quota_purge": "Purga por cuota",
+      "quota_purge_target_pct": "Objetivo de la purga"
+    },
+    "help": {
+      "user_quota_mb": "Espacio de las ejecuciones y ficheros de cada usuario; 0 = sin límite.",
+      "run_retention_days": "Se purgan las ejecuciones terminadas hace más días; 0 = nunca.",
+      "run_retention_per_project": "Se conservan las más recientes de cada proyecto; 0 = sin máximo.",
+      "upload_retention_days": "Se borran los ficheros que no use ninguna carga; 0 = nunca.",
+      "quota_purge": "Al llegar a su cuota, se purgan las ejecuciones más antiguas del usuario (nunca las de la última hora ni las que use una ejecución en curso).",
+      "quota_purge_target_pct": "Porcentaje de la cuota hasta el que baja la purga."
+    },
+    "defaultHint": "Por defecto: {{value}} ({{env}}).",
+    "reset": "Restablecer",
+    "willReset": "Volverá al valor por defecto al guardar.",
+    "applyNow": "Aplicar ahora",
+    "applyRequested": "El worker aplicará la retención y la purga en unos segundos.",
+    "confirmTitle": "Confirmar los ajustes",
+    "confirmPurge": "Con estos ajustes, la siguiente pasada purgará {{runs}} ejecuciones ({{runBytes}}) y {{uploads}} ficheros ({{uploadBytes}}) de {{users}} usuarios. Las ejecuciones conservan su historial (run.json), pero sus ficheros se borran.",
+    "confirmNothing": "Con estos ajustes no se purgará nada ahora.",
+    "confirm": "Guardar",
+    "usageTitle": "Uso por usuario",
+    "search": "Buscar usuario",
+    "noUsers": "No hay usuarios con ese nombre.",
+    "user": "Usuario",
+    "used": "Usado",
+    "quota": "Cuota",
+    "percent": "% usado",
+    "unlimited": "Sin límite",
+    "usedOf": "{{name}}: {{pct}} % de su cuota",
+    "sources": {
+      "global": "Global",
+      "user": "Propia",
+      "unlimited": "Sin límite"
+    },
+    "mine": {
+      "title": "Mi espacio",
+      "usedOf": "Usas {{used}} de {{quota}}",
+      "unlimited": "Usas {{used}}; tu cuenta no tiene límite de espacio.",
+      "progress": "{{pct}} % de tu cuota",
+      "source": {
+        "global": "Cuota general de la aplicación.",
+        "user": "Cuota asignada a tu cuenta.",
+        "unlimited": "Sin límite."
+      },
+      "runs": "Ejecuciones: {{bytes}}",
+      "uploads": "Ficheros de carga: {{bytes}}",
+      "nearTitle": "Te queda poco espacio",
+      "nearBody": "Al llegar a la cuota no podrás lanzar ejecuciones ni subir ficheros. Libera espacio purgando ejecuciones antiguas desde su detalle o borrando ficheros en la pestaña Carga de tus proyectos.",
+      "purgeTitle": "Purga automática activa",
+      "purgeBody": "Al llegar a tu cuota se purgan tus ejecuciones terminadas más antiguas hasta bajar al {{pct}} %. Nunca las de la última hora ni las que use una ejecución en curso."
+    },
+    "resetLabel": "Restablecer {{field}}"
   }
 }

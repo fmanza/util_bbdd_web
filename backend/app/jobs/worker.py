@@ -6,7 +6,8 @@ Uso::
 
 El bucle reclama hasta ``UBW_WORKER_CONCURRENCY`` jobs, emite latidos, aplica cancelaciones y timeouts terminando el
 subproceso, cierra como ``worker_crash`` los hijos que mueren sin estado final, recupera huérfanos de un worker
-anterior y aplica la retención del workspace (al arrancar y cada hora). Termina limpio con ``SIGTERM``/``SIGINT``:
+anterior y aplica la retención del workspace y la purga por cuota (al arrancar, cada hora y cuando un admin pulsa
+«Aplicar ahora»), con los ajustes efectivos de ADR-012. Termina limpio con ``SIGTERM``/``SIGINT``:
 los jobs en curso se terminan y quedan como ``interrupted``.
 """
 
@@ -20,15 +21,19 @@ import socket
 import threading
 import time
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from multiprocessing.process import BaseProcess
 from typing import Final
 
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.ulid import new_ulid
+from app.db.models import utcnow
 from app.db.session import new_session
+from app.domain.identity.audit import RequestContext
 from app.domain.runs.service import apply_retention
+from app.domain.storage.purge import purge_over_quota
+from app.domain.storage.settings import effective_settings, maintenance_requested_since
 from app.domain.uploads.service import purge_old_uploads
 from app.jobs import queue
 from app.jobs.runner import finalize_run, run_job
@@ -36,6 +41,8 @@ from app.jobs.runner import finalize_run, run_job
 logger = logging.getLogger(__name__)
 
 RETENTION_INTERVAL: Final = 3600.0
+#: Origen de lo que audita el worker por su cuenta (purga por cuota).
+WORKER_CONTEXT: Final = RequestContext(ip=None, user_agent="worker")
 TERMINATE_GRACE: Final = 5.0
 
 
@@ -54,6 +61,7 @@ class Worker:
         self.children: dict[str, _Child] = {}
         self._ctx = multiprocessing.get_context("spawn")
         self._last_retention = 0.0
+        self._maintained_at: datetime | None = None
 
     @property
     def stale_after(self) -> timedelta:
@@ -79,15 +87,27 @@ class Worker:
 
     def maintenance(self, *, force: bool = False) -> None:
         now = time.monotonic()
-        if not force and now - self._last_retention < RETENTION_INTERVAL:
+        if not force and now - self._last_retention < RETENTION_INTERVAL and not self._requested():
             return
         self._last_retention = now
+        self._maintained_at = utcnow()
         try:
             with new_session() as db:
-                apply_retention(db, self.settings)
-                purge_old_uploads(db, self.settings)
+                effective = effective_settings(db, self.settings)
+                apply_retention(db, effective)
+                purge_old_uploads(db, effective)
+                purge_over_quota(db, effective, ctx=WORKER_CONTEXT)
         except Exception as exc:  # la retención nunca debe parar el worker
             logger.error("Fallo aplicando la retención", extra={"exc_type": type(exc).__name__})
+
+    def _requested(self) -> bool:
+        """Un admin pidió aplicar ya el mantenimiento («Aplicar ahora») después de la última pasada."""
+        try:
+            with new_session() as db:
+                return maintenance_requested_since(db, self._maintained_at)
+        except Exception as exc:  # leer la petición nunca debe parar el worker
+            logger.error("Fallo leyendo la petición de mantenimiento", extra={"exc_type": type(exc).__name__})
+            return False
 
     def _stop_child(self, run_id: str, status: str, code: str, message: str) -> None:
         child = self.children.pop(run_id)

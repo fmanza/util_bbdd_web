@@ -35,7 +35,8 @@
     "audit": "Auditoría",
     "allowlist": "Destinos permitidos",
     "queries": "Queries nombradas",
-    "templates": "Plantillas"
+    "templates": "Plantillas",
+    "storage": "Almacenamiento"
   },
   "auth": {
     "loginIntro": "Inicia sesión con tu usuario.",
@@ -45,6 +46,7 @@
     "logout": "Cerrar sesión",
     "userMenu": "Menú de usuario de {{name}}",
     "required": "Campo obligatorio",
+    "myStorage": "Mi espacio",
     "changePassword": "Cambiar contraseña",
     "changePasswordIntro": "Al cambiarla se cierran tus sesiones abiertas en otros navegadores.",
     "currentPassword": "Contraseña actual",

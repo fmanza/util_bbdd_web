@@ -37,6 +37,9 @@ class UserChanges:
     can_run_sql: bool | None = None
     can_apply_ddl: bool | None = None
     can_write_data: bool | None = None
+    #: Cuota propia en MB (ADR-012); con ``global_storage_quota`` se quita y vuelve a usar la global.
+    storage_quota_mb: int | None = None
+    global_storage_quota: bool = False
 
 
 def get_user(db: Session, user_id: int) -> User:
@@ -150,6 +153,10 @@ def update_user(
     if changes.can_write_data is not None and changes.can_write_data != user.can_write_data:
         user.can_write_data = changes.can_write_data
         changed.append("can_write_data")
+    quota = None if changes.global_storage_quota else changes.storage_quota_mb
+    if (changes.global_storage_quota or quota is not None) and quota != user.storage_quota_mb:
+        user.storage_quota_mb = quota
+        changed.append("storage_quota_mb")
     if changes.password is not None:
         check_policy(changes.password, username=user.username, min_length=settings.password_min_length)
         user.password_hash = hash_password(changes.password)
@@ -194,6 +201,7 @@ def update_user(
                 **({"can_run_sql": user.can_run_sql} if "can_run_sql" in changed else {}),
                 **({"can_apply_ddl": user.can_apply_ddl} if "can_apply_ddl" in changed else {}),
                 **({"can_write_data": user.can_write_data} if "can_write_data" in changed else {}),
+                **({"storage_quota_mb": user.storage_quota_mb} if "storage_quota_mb" in changed else {}),
             },
         )
     db.commit()

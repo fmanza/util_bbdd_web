@@ -145,6 +145,85 @@ export interface paths {
         patch: operations["update_query_api_v1_admin_queries__query_id__patch"];
         trace?: never;
     };
+    "/api/v1/admin/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ajustes de almacenamiento */
+        get: operations["get_storage_api_v1_admin_storage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar ajustes de almacenamiento
+         * @description Un campo que no se envía no cambia; ``null`` vuelve al valor de su variable ``UBW_*``. Se aplica sin reiniciar:
+         *     la cuota al momento y la retención en la siguiente pasada del worker (o con «Aplicar ahora»).
+         */
+        patch: operations["update_storage_api_v1_admin_storage_patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/storage/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aplicar ahora la retención y la purga
+         * @description El worker la aplica en su siguiente ciclo (en lugar de esperar a la pasada horaria).
+         */
+        post: operations["request_maintenance_api_v1_admin_storage_maintenance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/storage/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Qué se purgaría con esos ajustes
+         * @description Los ajustes actuales con los de ``body`` encima; no se borra nada.
+         */
+        post: operations["preview_storage_api_v1_admin_storage_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/storage/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Espacio por usuario */
+        get: operations["storage_usage_api_v1_admin_storage_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit": {
         parameters: {
             query?: never;
@@ -242,6 +321,26 @@ export interface paths {
          * @description Usuario de la sesión actual.
          */
         get: operations["me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi espacio
+         * @description Espacio del usuario de la sesión frente a su cuota (solo cantidades).
+         */
+        get: operations["me_storage_api_v1_auth_me_storage_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1463,6 +1562,15 @@ export interface components {
              */
             file: string;
         };
+        /** BoolSettingOut */
+        BoolSettingOut: {
+            /** Default */
+            default: boolean;
+            /** Overridden */
+            overridden: boolean;
+            /** Value */
+            value: boolean;
+        };
         /** BulkPartitionOut */
         BulkPartitionOut: {
             /** Error */
@@ -2252,6 +2360,24 @@ export interface components {
             /** Unique */
             unique: boolean;
         };
+        /** IntSettingOut */
+        IntSettingOut: {
+            /**
+             * Default
+             * @description Valor de la variable UBW_* (el que se usa si no se cambia aquí)
+             */
+            default: number;
+            /**
+             * Overridden
+             * @description Un admin lo cambió desde la web
+             */
+            overridden: boolean;
+            /**
+             * Value
+             * @description Valor que se aplica
+             */
+            value: number;
+        };
         /** KeyOut */
         KeyOut: {
             /** Columns */
@@ -2434,6 +2560,37 @@ export interface components {
              * @default []
              */
             views: components["schemas"]["ViewValidationOut"][];
+        };
+        /**
+         * MyStorageOut
+         * @description «Mi espacio»: solo cantidades del usuario de la sesión.
+         */
+        MyStorageOut: {
+            /**
+             * Quota Bytes
+             * @description null = sin límite
+             */
+            quota_bytes: number | null;
+            /**
+             * Quota Purge
+             * @description Al llegar a la cuota se purgan sus ejecuciones más antiguas
+             */
+            quota_purge: boolean;
+            /** Quota Purge Target Pct */
+            quota_purge_target_pct: number;
+            /**
+             * Quota Source
+             * @enum {string}
+             */
+            quota_source: "global" | "user" | "unlimited";
+            /** Run Bytes */
+            run_bytes: number;
+            /** Upload Bytes */
+            upload_bytes: number;
+            /** Used Bytes */
+            used_bytes: number;
+            /** Used Pct */
+            used_pct: number | null;
         };
         /** NamedQueryCreate */
         NamedQueryCreate: {
@@ -2800,6 +2957,25 @@ export interface components {
             description?: string | null;
             /** Name */
             name?: string | null;
+        };
+        /**
+         * PurgePreviewOut
+         * @description Lo que purgaría la siguiente pasada con esos ajustes (no se borra nada).
+         */
+        PurgePreviewOut: {
+            /** Run Bytes */
+            run_bytes: number;
+            /** Runs */
+            runs: number;
+            /** Upload Bytes */
+            upload_bytes: number;
+            /** Uploads */
+            uploads: number;
+            /**
+             * Users
+             * @description Usuarios afectados
+             */
+            users: number;
         };
         /**
          * QueryResultOut
@@ -3172,6 +3348,33 @@ export interface components {
             /** Supported */
             supported: boolean;
         };
+        /** StorageSettingsOut */
+        StorageSettingsOut: {
+            quota_purge: components["schemas"]["BoolSettingOut"];
+            quota_purge_target_pct: components["schemas"]["IntSettingOut"];
+            run_retention_days: components["schemas"]["IntSettingOut"];
+            run_retention_per_project: components["schemas"]["IntSettingOut"];
+            upload_retention_days: components["schemas"]["IntSettingOut"];
+            user_quota_mb: components["schemas"]["IntSettingOut"];
+        };
+        /**
+         * StorageUpdate
+         * @description Cambio de ajustes: un campo que no se envía no cambia; ``null`` vuelve al valor de su variable ``UBW_*``.
+         */
+        StorageUpdate: {
+            /** Quota Purge */
+            quota_purge?: boolean | null;
+            /** Quota Purge Target Pct */
+            quota_purge_target_pct?: number | null;
+            /** Run Retention Days */
+            run_retention_days?: number | null;
+            /** Run Retention Per Project */
+            run_retention_per_project?: number | null;
+            /** Upload Retention Days */
+            upload_retention_days?: number | null;
+            /** User Quota Mb */
+            user_quota_mb?: number | null;
+        };
         /**
          * TableDetail
          * @description Detalle de una tabla: columnas, claves, índices y FK salientes y entrantes.
@@ -3336,6 +3539,40 @@ export interface components {
             /** Username */
             username?: string | null;
         };
+        /** UsageOut */
+        UsageOut: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Quota Bytes
+             * @description null = sin límite
+             */
+            quota_bytes: number | null;
+            /**
+             * Quota Source
+             * @enum {string}
+             */
+            quota_source: "global" | "user" | "unlimited";
+            /** Run Bytes */
+            run_bytes: number;
+            /** Upload Bytes */
+            upload_bytes: number;
+            /** Used Bytes */
+            used_bytes: number;
+            /** Used Pct */
+            used_pct: number | null;
+            /** User Id */
+            user_id: number;
+            /** Username */
+            username: string;
+        };
+        /** UsagePage */
+        UsagePage: {
+            /** Items */
+            items: components["schemas"]["UsageOut"][];
+            /** Total */
+            total: number;
+        };
         /**
          * UserCreate
          * @description Alta de usuario.
@@ -3392,6 +3629,11 @@ export interface components {
              */
             role: "admin" | "user";
             /**
+             * Storage Quota Mb
+             * @description Cuota propia en MB (0 = sin límite); null = la global (ADR-012)
+             */
+            storage_quota_mb?: number | null;
+            /**
              * Updated At
              * Format: date-time
              */
@@ -3428,6 +3670,11 @@ export interface components {
             password?: string | null;
             /** Role */
             role?: ("admin" | "user") | null;
+            /**
+             * Storage Quota Mb
+             * @description Cuota propia en MB (0 = sin límite); ``null`` explícito vuelve a la global
+             */
+            storage_quota_mb?: number | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -4049,6 +4296,211 @@ export interface operations {
             };
         };
     };
+    get_storage_api_v1_admin_storage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageSettingsOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_storage_api_v1_admin_storage_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageSettingsOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Valor fuera de rango */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    request_maintenance_api_v1_admin_storage_maintenance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    preview_storage_api_v1_admin_storage_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurgePreviewOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Valor fuera de rango */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    storage_usage_api_v1_admin_storage_usage_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsagePage"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_audit_api_v1_audit_get: {
         parameters: {
             query?: {
@@ -4220,6 +4672,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_storage_api_v1_auth_me_storage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyStorageOut"];
                 };
             };
             /** @description No autenticado */

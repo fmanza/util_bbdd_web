@@ -38,6 +38,7 @@ Salidas en el volumen `workspace`, una carpeta por ejecución:
   `text/plain`. Descargas con `Content-Disposition: attachment` y `nosniff`.
 - **Retención** (`UBW_RUN_RETENTION_DAYS`, `UBW_RUN_RETENTION_PER_PROJECT`) al arrancar el worker y cada hora;
   **purga manual** (`DELETE /runs/{id}`) para liberar cuota (`UBW_USER_QUOTA_MB`). Un run purgado conserva la fila y
-  `runs.manifest` (copia de `run.json`).
+  `runs.manifest` (copia de `run.json`). Desde ADR-012, cuota y retención se administran en la web (las variables son
+  el valor por defecto) y hay una purga por cuota opcional.
 - `RunAuditSink` (`integrations/util_bbdd/audit_sink.py`) cumple `util_bbdd.audit.AuditSink` y escribe en `run.log`
   **sin** `AuditEvent.message` (puede llevar valores de clave). Lo usarán las fases 7–9.

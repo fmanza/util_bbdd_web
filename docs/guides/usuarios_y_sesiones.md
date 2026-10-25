@@ -47,6 +47,7 @@ Menú con tu nombre → *Cambiar contraseña*. Indica la actual y la nueva dos v
 | Editar | *Editar* en la fila | Cambia nombre visible o rol |
 | Desactivar / reactivar | Interruptor *Cuenta activa* | Desactivar cierra sus sesiones al momento; los usuarios no se borran para conservar la auditoría |
 | Restablecer contraseña | Campo *Restablecer contraseña* al editar | Cierra todas sus sesiones y quita el bloqueo por intentos |
+| Cuota de almacenamiento | Desactiva *Usar la cuota global* y pon su *Cuota propia (MB)* (`0` = sin límite) | Sustituye la cuota general de [Almacenamiento](#almacenamiento) para ese usuario |
 | Permisos especiales | *Puede ejecutar SQL libre*, *Puede aplicar DDL* y *Puede escribir datos* al editar | SQL de solo lectura ([explorador](explorador.md)); aplicar migraciones ([migración](migracion.md)) y volcar o cargar datos ([volcado](volcado.md),
 [carga](carga.md)) en proyectos de los que sea propietario |
 
@@ -55,6 +56,19 @@ Reglas:
 - Siempre debe quedar **al menos un administrador activo**.
 - Un administrador no puede desactivarse ni quitarse el rol a sí mismo (pídeselo a otro administrador).
 - El estado *Bloqueado* indica un bloqueo temporal por intentos fallidos.
+
+## Almacenamiento
+
+*Administración → Almacenamiento* (solo `admin`, [ADR-012](../adr/ADR-012-almacenamiento-administrable.md)). Cada ajuste parte de su variable `UBW_*` (se indica junto al campo) y se aplica **sin reiniciar**: la cuota al momento y la retención en la siguiente pasada del worker (cada hora) o al pulsar **Aplicar ahora**. *Restablecer* lo devuelve a la variable.
+
+| Ajuste | Qué hace |
+|---|---|
+| Cuota por usuario (MB) | Espacio de las ejecuciones y ficheros de carga de cada usuario; al llegar, no puede lanzar ni subir (409). `0` = sin límite. Un usuario puede tener una cuota propia |
+| Retención de ejecuciones (días) y Ejecuciones por proyecto | Purgan las ejecuciones terminadas más antiguas o que sobran en cada proyecto |
+| Retención de ficheros de carga (días) | Borra los ficheros que no use ninguna carga |
+| Purga por cuota y su objetivo | Desactivada por defecto. Al llegar a su cuota, se purgan las ejecuciones terminadas más antiguas del usuario hasta bajar al objetivo (80 % por defecto). Nunca las terminadas hace menos de 60 minutos ni las que use una ejecución en curso |
+
+Al **Guardar**, la pantalla enseña cuántas ejecuciones y ficheros (y cuánto espacio) purgará la siguiente pasada con los valores nuevos, y pide confirmación. Purgar una ejecución borra sus ficheros, pero conserva su historial (`run.json`). La tabla **Uso por usuario** muestra el espacio de cada uno frente a su cuota. Cada usuario ve el suyo en su menú → **Mi espacio**.
 
 ## Sesiones activas
 

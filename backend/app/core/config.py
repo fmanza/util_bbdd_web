@@ -36,6 +36,8 @@ class Settings(BaseSettings):
         job_timeout_seconds: Duración máxima de un job; al superarla se mata su subproceso.
         max_queued_per_user: Ejecuciones en cola o en curso por usuario (429 al superarlo).
         user_quota_mb: Espacio de workspace por usuario (MB) de sus ejecuciones; ``0`` sin límite.
+        quota_purge: Al llegar a la cuota, purgar las ejecuciones terminadas más antiguas del usuario (ADR-012).
+        quota_purge_target_pct: Porcentaje de la cuota hasta el que baja esa purga.
         run_retention_days: Se purgan las ejecuciones terminadas más antiguas; ``0`` desactiva.
         run_retention_per_project: Se conservan las N ejecuciones más recientes de cada proyecto; ``0`` desactiva.
         metadata_timeout_seconds: Tiempo máximo de lectura de schemas, snapshot o DDL (se mata el subproceso).
@@ -77,6 +79,8 @@ class Settings(BaseSettings):
     job_timeout_seconds: int = Field(default=3600, ge=1, le=7 * 24 * 3600)
     max_queued_per_user: int = Field(default=5, ge=1, le=1000)
     user_quota_mb: int = Field(default=1024, ge=0)
+    quota_purge: bool = False
+    quota_purge_target_pct: int = Field(default=80, ge=10, le=95)
     run_retention_days: int = Field(default=30, ge=0)
     run_retention_per_project: int = Field(default=100, ge=0)
     metadata_timeout_seconds: float = Field(default=120.0, gt=0, le=1800)

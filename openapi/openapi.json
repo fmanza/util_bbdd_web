@@ -298,6 +298,29 @@
         "title": "Body_create_upload_api_v1_projects__project_id__uploads_post",
         "type": "object"
       },
+      "BoolSettingOut": {
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "boolean"
+          },
+          "overridden": {
+            "title": "Overridden",
+            "type": "boolean"
+          },
+          "value": {
+            "title": "Value",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "value",
+          "default",
+          "overridden"
+        ],
+        "title": "BoolSettingOut",
+        "type": "object"
+      },
       "BulkPartitionOut": {
         "properties": {
           "error": {
@@ -2264,6 +2287,32 @@
         "title": "IndexOut",
         "type": "object"
       },
+      "IntSettingOut": {
+        "properties": {
+          "default": {
+            "description": "Valor de la variable UBW_* (el que se usa si no se cambia aquí)",
+            "title": "Default",
+            "type": "integer"
+          },
+          "overridden": {
+            "description": "Un admin lo cambió desde la web",
+            "title": "Overridden",
+            "type": "boolean"
+          },
+          "value": {
+            "description": "Valor que se aplica",
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "default",
+          "overridden"
+        ],
+        "title": "IntSettingOut",
+        "type": "object"
+      },
       "KeyOut": {
         "properties": {
           "columns": {
@@ -2632,6 +2681,76 @@
           "statements"
         ],
         "title": "MigrationReportOut",
+        "type": "object"
+      },
+      "MyStorageOut": {
+        "description": "«Mi espacio»: solo cantidades del usuario de la sesión.",
+        "properties": {
+          "quota_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null = sin límite",
+            "title": "Quota Bytes"
+          },
+          "quota_purge": {
+            "description": "Al llegar a la cuota se purgan sus ejecuciones más antiguas",
+            "title": "Quota Purge",
+            "type": "boolean"
+          },
+          "quota_purge_target_pct": {
+            "title": "Quota Purge Target Pct",
+            "type": "integer"
+          },
+          "quota_source": {
+            "enum": [
+              "global",
+              "user",
+              "unlimited"
+            ],
+            "title": "Quota Source",
+            "type": "string"
+          },
+          "run_bytes": {
+            "title": "Run Bytes",
+            "type": "integer"
+          },
+          "upload_bytes": {
+            "title": "Upload Bytes",
+            "type": "integer"
+          },
+          "used_bytes": {
+            "title": "Used Bytes",
+            "type": "integer"
+          },
+          "used_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Pct"
+          }
+        },
+        "required": [
+          "run_bytes",
+          "upload_bytes",
+          "used_bytes",
+          "quota_bytes",
+          "quota_source",
+          "used_pct",
+          "quota_purge",
+          "quota_purge_target_pct"
+        ],
+        "title": "MyStorageOut",
         "type": "object"
       },
       "NamedQueryCreate": {
@@ -3529,6 +3648,41 @@
           }
         },
         "title": "ProjectUpdate",
+        "type": "object"
+      },
+      "PurgePreviewOut": {
+        "description": "Lo que purgaría la siguiente pasada con esos ajustes (no se borra nada).",
+        "properties": {
+          "run_bytes": {
+            "title": "Run Bytes",
+            "type": "integer"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "upload_bytes": {
+            "title": "Upload Bytes",
+            "type": "integer"
+          },
+          "uploads": {
+            "title": "Uploads",
+            "type": "integer"
+          },
+          "users": {
+            "description": "Usuarios afectados",
+            "title": "Users",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "run_bytes",
+          "uploads",
+          "upload_bytes",
+          "users"
+        ],
+        "title": "PurgePreviewOut",
         "type": "object"
       },
       "QueryResultOut": {
@@ -4602,6 +4756,127 @@
         "title": "SqlConnection",
         "type": "object"
       },
+      "StorageSettingsOut": {
+        "properties": {
+          "quota_purge": {
+            "$ref": "#/components/schemas/BoolSettingOut"
+          },
+          "quota_purge_target_pct": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          },
+          "run_retention_days": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          },
+          "run_retention_per_project": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          },
+          "upload_retention_days": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          },
+          "user_quota_mb": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          }
+        },
+        "required": [
+          "user_quota_mb",
+          "run_retention_days",
+          "run_retention_per_project",
+          "upload_retention_days",
+          "quota_purge",
+          "quota_purge_target_pct"
+        ],
+        "title": "StorageSettingsOut",
+        "type": "object"
+      },
+      "StorageUpdate": {
+        "additionalProperties": false,
+        "description": "Cambio de ajustes: un campo que no se envía no cambia; ``null`` vuelve al valor de su variable ``UBW_*``.",
+        "properties": {
+          "quota_purge": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Purge"
+          },
+          "quota_purge_target_pct": {
+            "anyOf": [
+              {
+                "description": "Porcentaje de la cuota",
+                "maximum": 95.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Purge Target Pct"
+          },
+          "run_retention_days": {
+            "anyOf": [
+              {
+                "description": "Días; 0 = no se purga por antigüedad",
+                "maximum": 3650.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Retention Days"
+          },
+          "run_retention_per_project": {
+            "anyOf": [
+              {
+                "description": "Ejecuciones; 0 = sin máximo",
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Retention Per Project"
+          },
+          "upload_retention_days": {
+            "anyOf": [
+              {
+                "description": "Días; 0 = no se purgan",
+                "maximum": 365.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Retention Days"
+          },
+          "user_quota_mb": {
+            "anyOf": [
+              {
+                "description": "MB; 0 = sin límite",
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Quota Mb"
+          }
+        },
+        "title": "StorageUpdate",
+        "type": "object"
+      },
       "TableDetail": {
         "description": "Detalle de una tabla: columnas, claves, índices y FK salientes y entrantes.",
         "properties": {
@@ -5031,6 +5306,100 @@
         "title": "UploadOut",
         "type": "object"
       },
+      "UsageOut": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "quota_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null = sin límite",
+            "title": "Quota Bytes"
+          },
+          "quota_source": {
+            "enum": [
+              "global",
+              "user",
+              "unlimited"
+            ],
+            "title": "Quota Source",
+            "type": "string"
+          },
+          "run_bytes": {
+            "title": "Run Bytes",
+            "type": "integer"
+          },
+          "upload_bytes": {
+            "title": "Upload Bytes",
+            "type": "integer"
+          },
+          "used_bytes": {
+            "title": "Used Bytes",
+            "type": "integer"
+          },
+          "used_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Pct"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username",
+          "display_name",
+          "run_bytes",
+          "upload_bytes",
+          "used_bytes",
+          "quota_bytes",
+          "quota_source",
+          "used_pct"
+        ],
+        "title": "UsageOut",
+        "type": "object"
+      },
+      "UsagePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UsageOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "UsagePage",
+        "type": "object"
+      },
       "UserCreate": {
         "description": "Alta de usuario.",
         "properties": {
@@ -5129,6 +5498,18 @@
             ],
             "title": "Role",
             "type": "string"
+          },
+          "storage_quota_mb": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cuota propia en MB (0 = sin límite); null = la global (ADR-012)",
+            "title": "Storage Quota Mb"
           },
           "updated_at": {
             "format": "date-time",
@@ -5268,6 +5649,20 @@
               }
             ],
             "title": "Role"
+          },
+          "storage_quota_mb": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cuota propia en MB (0 = sin límite); ``null`` explícito vuelve a la global",
+            "title": "Storage Quota Mb"
           }
         },
         "title": "UserUpdate",
@@ -5921,6 +6316,218 @@
         ]
       }
     },
+    "/api/v1/admin/storage": {
+      "get": {
+        "operationId": "get_storage_api_v1_admin_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          }
+        },
+        "summary": "Ajustes de almacenamiento",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "description": "Un campo que no se envía no cambia; ``null`` vuelve al valor de su variable ``UBW_*``. Se aplica sin reiniciar:\nla cuota al momento y la retención en la siguiente pasada del worker (o con «Aplicar ahora»).",
+        "operationId": "update_storage_api_v1_admin_storage_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "422": {
+            "description": "Valor fuera de rango"
+          }
+        },
+        "summary": "Cambiar ajustes de almacenamiento",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/storage/maintenance": {
+      "post": {
+        "description": "El worker la aplica en su siguiente ciclo (en lugar de esperar a la pasada horaria).",
+        "operationId": "request_maintenance_api_v1_admin_storage_maintenance_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          }
+        },
+        "summary": "Aplicar ahora la retención y la purga",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/storage/preview": {
+      "post": {
+        "description": "Los ajustes actuales con los de ``body`` encima; no se borra nada.",
+        "operationId": "preview_storage_api_v1_admin_storage_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurgePreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "422": {
+            "description": "Valor fuera de rango"
+          }
+        },
+        "summary": "Qué se purgaría con esos ajustes",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/storage/usage": {
+      "get": {
+        "operationId": "storage_usage_api_v1_admin_storage_usage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsagePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Espacio por usuario",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/audit": {
       "get": {
         "description": "Eventos más recientes primero.",
@@ -6134,6 +6741,31 @@
           }
         },
         "summary": "Usuario actual",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me/storage": {
+      "get": {
+        "description": "Espacio del usuario de la sesión frente a su cuota (solo cantidades).",
+        "operationId": "me_storage_api_v1_auth_me_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyStorageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          }
+        },
+        "summary": "Mi espacio",
         "tags": [
           "auth"
         ]
