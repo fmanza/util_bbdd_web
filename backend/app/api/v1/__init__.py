@@ -1,5 +1,5 @@
 """API v1: auth, users, sessions y audit (Fase 1); engines, connections y admin/allowlist (Fase 2); projects,
-operations y runs (Fase 3); explorer y admin/queries (Fase 4); uploads (Fase 9)…
+operations y runs (Fase 3); explorer y admin/queries (Fase 4); uploads (Fase 9); document-templates (ADR-011)…
 
 Todo método no seguro bajo ``/api/v1`` exige token CSRF (``csrf_protect``).
 """
@@ -19,6 +19,7 @@ from app.api.v1 import (
     projects,
     runs,
     sessions,
+    templates,
     uploads,
     users,
 )
@@ -39,3 +40,6 @@ router.include_router(explorer.router)
 router.include_router(explorer.project_router)
 router.include_router(admin_queries.router)
 router.include_router(uploads.router)
+router.include_router(templates.router)
+router.include_router(templates.admin_router)
+router.include_router(templates.project_router)

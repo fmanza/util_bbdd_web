@@ -28,6 +28,8 @@ from typing import Any, Final
 
 MANIFEST: Final = "run.json"
 RUN_LOG: Final = "logs/run.log"
+#: Plantillas de documento que usó el run y avisos (ADR-011); ``run.json`` los recoge al cerrarlo.
+TEMPLATES_INPUT: Final = "inputs/templates.json"
 OUTPUT_KINDS: Final = (
     "word",
     "excel",

@@ -5,10 +5,11 @@ import { useParams, useSearchParams } from 'react-router';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { BulkTab } from '../bulk/BulkTab';
 import { SqlConsole } from '../explorer/SqlConsole';
+import { TemplatesPanel } from '../templates/TemplatesPanel';
 import { ConnectionsTab, MembersTab, RunsTab, SettingsTab } from './ProjectTabs';
 import { canRole, useProject } from './useProjects';
 
-const TABS = ['runs', 'connections', 'members', 'sql', 'bulk', 'settings'] as const;
+const TABS = ['runs', 'connections', 'members', 'templates', 'sql', 'bulk', 'settings'] as const;
 type Tab = (typeof TABS)[number];
 
 export function ProjectDetailPage() {
@@ -56,6 +57,7 @@ export function ProjectDetailPage() {
           <Tabs.Tab value="runs">{t('projects.tabs.runs')}</Tabs.Tab>
           <Tabs.Tab value="connections">{t('projects.tabs.connections')}</Tabs.Tab>
           <Tabs.Tab value="members">{t('projects.tabs.members')}</Tabs.Tab>
+          <Tabs.Tab value="templates">{t('projects.tabs.templates')}</Tabs.Tab>
           {editor && <Tabs.Tab value="sql">{t('projects.tabs.sql')}</Tabs.Tab>}
           {editor && <Tabs.Tab value="bulk">{t('projects.tabs.bulk')}</Tabs.Tab>}
           {owner && <Tabs.Tab value="settings">{t('projects.tabs.settings')}</Tabs.Tab>}
@@ -68,6 +70,12 @@ export function ProjectDetailPage() {
         </Tabs.Panel>
         <Tabs.Panel value="members" pt="md">
           <MembersTab project={project} />
+        </Tabs.Panel>
+        <Tabs.Panel value="templates" pt="md">
+          {/* Solo al abrir la pestaña: evita pedir las plantillas en cada visita al proyecto. */}
+          {tab === 'templates' && (
+            <TemplatesPanel scope={{ kind: 'project', projectId: project.id }} canEdit={editor} />
+          )}
         </Tabs.Panel>
         {editor && (
           <Tabs.Panel value="sql" pt="md">

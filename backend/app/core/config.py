@@ -45,6 +45,8 @@ class Settings(BaseSettings):
         upload_max_uncompressed_mb: Tamaño descomprimido máximo de un ``.xlsx`` (MB; frena las *zip bombs*).
         upload_retention_days: Días que se conservan los ficheros subidos; ``0`` sin purga.
         bulk_max_rows: Filas máximas de un fichero de carga bulk.
+        template_max_mb: Tamaño máximo de una plantilla de documento Word o Excel (MB, ADR-011).
+        templates_per_scope: Plantillas como máximo en el catálogo global y en cada proyecto.
         rate_limit_enabled: Activa el rate limiting en memoria (Fase 10).
         rate_limit_api_per_minute: Peticiones por minuto a ``/api`` con sesión (por sesión).
         rate_limit_anonymous_per_minute: Peticiones por minuto a ``/api`` sin sesión (por IP).
@@ -84,6 +86,8 @@ class Settings(BaseSettings):
     upload_max_uncompressed_mb: int = Field(default=300, ge=1, le=8192)
     upload_retention_days: int = Field(default=7, ge=0)
     bulk_max_rows: int = Field(default=1_000_000, ge=1, le=50_000_000)
+    template_max_mb: int = Field(default=10, ge=1, le=200)
+    templates_per_scope: int = Field(default=20, ge=1, le=500)
     rate_limit_enabled: bool = True
     rate_limit_api_per_minute: int = Field(default=600, ge=1)
     rate_limit_anonymous_per_minute: int = Field(default=300, ge=1)

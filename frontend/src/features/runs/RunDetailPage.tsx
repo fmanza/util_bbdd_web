@@ -6,6 +6,7 @@ import {
   Center,
   Code,
   Group,
+  List,
   Loader,
   Modal,
   Progress,
@@ -142,6 +143,15 @@ export function RunDetailPage() {
               title={t(`runs.status.${run.status}`)}
             >
               {run.error_message}
+            </Alert>
+          )}
+          {(run.warnings ?? []).length > 0 && (
+            <Alert color="yellow" title={t('runs.warningsTitle')}>
+              <List size="sm">
+                {(run.warnings ?? []).map((warning) => (
+                  <List.Item key={warning}>{warning}</List.Item>
+                ))}
+              </List>
             </Alert>
           )}
           {polling && active && (

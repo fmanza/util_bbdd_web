@@ -172,8 +172,13 @@ def test_build_imprimir_maps_graph_columns(graph_columns: str, show_columns: boo
 
 
 def test_options_fields_match_params() -> None:
-    """Cada opción de la capa de integración tiene su campo en el formulario (y viceversa salvo formatos)."""
-    params = set(get_operation("documentation").model.model_fields) - {"connection", "schema_name"}
+    """Cada opción de la capa de integración tiene su campo en el formulario (y viceversa salvo formatos y plantillas)."""
+    params = set(get_operation("documentation").model.model_fields) - {
+        "connection",
+        "schema_name",
+        "word_template",
+        "excel_template",
+    }
     options = set(DocumentationOptions.__dataclass_fields__) - {"formats"}
 
     assert params - {"word", "excel", "html"} == options

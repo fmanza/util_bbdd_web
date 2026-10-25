@@ -18,6 +18,8 @@ miembro; los administradores de la aplicación tampoco ven los ajenos.
 - **Conexiones** (pestaña *Conexiones*): un editor asocia una conexión **propia o compartida** con un **alias**
   (`origen`, `destino`…). Las ejecuciones usan el alias; los demás miembros pueden usar la conexión **sin ver su
   contraseña**. Asociar una conexión privada tuya es, por tanto, permitir que el proyecto la use.
+- **Plantillas** (pestaña *Plantillas*): plantillas Word y Excel para la documentación; las suben los editores y
+  se ven también las globales ([Plantillas Word y Excel](documentacion.md#plantillas-word-y-excel)).
 - **Borrar** (pestaña *Ajustes*): elimina el proyecto con todas sus ejecuciones y ficheros. No se puede borrar con
   ejecuciones en cola o en curso.
 

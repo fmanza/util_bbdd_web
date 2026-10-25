@@ -24,6 +24,9 @@ dependencies = [
     "sqlglot>=30",  # guardián de solo lectura del SQL libre (Fase 4)
     "python-multipart>=0.0.32",  # subida de ficheros de la carga bulk (Fase 9)
     "prometheus-client>=0.26",  # métricas /metrics (Fase 10)
+    # Plantillas de documento (ADR-011): ya llegaban con util_bbdd; la web las usa directamente.
+    "python-docx>=1.2",
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]

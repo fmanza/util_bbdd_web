@@ -17,6 +17,7 @@ Documenta un schema con `DatabaseDocumentation` de util_bbdd.
 | Información adicional | Datos de la BD (versión), almacenamiento, condiciones del motor, charset y collation |
 | Diagramas | Diagramas de relaciones en Word y HTML, con profundidad (1–3), dirección y columnas de cada tabla (ver abajo) |
 | Presentación | Tablas por documento Word (si hay más, se generan varios) y elementos por página del índice HTML |
+| Plantillas | **Plantilla Word** y **Plantilla Excel** del proyecto o globales; vacío = formato por defecto (ver abajo) |
 
 **Columnas en el diagrama** (independiente de la opción *Columnas* de *Tablas*, que controla la tabla de columnas del
 documento):
@@ -36,6 +37,35 @@ Una tabla **sin relaciones** se dibuja sola en el Word, pero el sitio HTML no mu
 **Schema por motor**: en PostgreSQL, SQL Server y HSQLDB es el schema; en MySQL y MariaDB, la base de datos; en
 SQLite no aplica. En **Oracle**, util_bbdd solo documenta el schema del **usuario de la conexión**: deja el campo
 vacío o pon ese usuario; para otro schema, crea una conexión con su usuario (el formulario lo avisa; GAPS G21).
+
+### Plantillas Word y Excel
+
+Sin plantilla, Word y Excel salen con el formato de util_bbdd. Con una **plantilla** se aplica la imagen corporativa
+([ADR-011](../adr/ADR-011-plantillas-de-documento.md)):
+
+| | Word (`.docx`, `.dotx`) | Excel (`.xlsx`, `.xltx`) |
+|---|---|---|
+| Qué se toma | Su contenido (portada), encabezado, pie, estilos y orientación | Tema (colores y fuentes), encabezado y pie y configuración de página de la primera hoja |
+| Estilo de tabla | Uno de los estilos de tabla de la plantilla | Uno predefinido de Excel (`TableStyleLight1`…`TableStyleDark11`) |
+| Requisitos | Los estilos *Título*, *Título 1* a *Título 3* y *Sin espaciado* (`Title`, `Heading 1`-`3`, `No Spacing`) | Un tema sin imágenes |
+| No se admite | Macros, objetos incrustados, plantilla adjunta o imágenes enlazadas, campos DDE/INCLUDE/LINK | Macros, vínculos a otros libros; portada e imágenes en el encabezado no se copian |
+
+- **Dónde se gestionan**: la pestaña **Plantillas** del proyecto (los editores suben, renombran, eligen el estilo de
+  tabla y borran; todos los miembros ven y descargan) y *Administración → Plantillas* para las **globales**, que salen
+  en todos los proyectos. Máximo 10 MB por plantilla (`UBW_TEMPLATE_MAX_MB`) y 20 por proyecto o en el catálogo
+  global (`UBW_TEMPLATES_PER_SCOPE`).
+- **Plantillas base**: desde la pestaña se descargan un Word con todos los estilos necesarios (en horizontal) y un
+  Excel de ejemplo. Word solo guarda los estilos que se han usado: si al subir una plantilla faltan estilos, el
+  mensaje dice cuáles; úsalos una vez en el documento o parte de la plantilla base.
+- **Al lanzar**: «Plantilla Word» y «Plantilla Excel» aparecen si ese formato está marcado.
+- **Con plantilla Word se respeta su orientación** (sin plantilla se usa horizontal): para tablas anchas, usa una
+  plantilla en horizontal. Su contenido se repite al principio de cada documento si hay más tablas que «Tablas por
+  documento Word».
+- **Si la plantilla no se puede aplicar** (se borró del disco, le falta un estilo, el Excel no se puede retocar), la
+  documentación sale con el **formato por defecto** y la ejecución termina con un **aviso** en su detalle. La
+  ejecución guarda una copia de cada plantilla, y `run.json` registra cuál se usó y si se aplicó; borrar una plantilla
+  no afecta a las documentaciones ya generadas (no se puede borrar mientras la use una en cola o en curso).
+- Limitaciones de util_bbdd 4.0.0: [GAPS G40 y G41](../plan/UTIL_BBDD_GAPS.md).
 
 Al terminar, el detalle de la ejecución muestra la tarjeta **Documentación**:
 

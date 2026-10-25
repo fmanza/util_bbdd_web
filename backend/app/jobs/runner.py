@@ -6,6 +6,7 @@ El proceso hijo solo recibe el ``run_id``: lee la ejecución de ``config.db`` y 
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +22,15 @@ from app.db.session import new_session
 from app.domain.runs.operations import get_operation
 from app.integrations.util_bbdd import library_version
 from app.jobs.context import JobContext, JobError
-from app.workspace.layout import MANIFEST, RUN_LOG, ensure_layout, run_dir, scan_artifacts, write_json_atomic
+from app.workspace.layout import (
+    MANIFEST,
+    RUN_LOG,
+    TEMPLATES_INPUT,
+    ensure_layout,
+    run_dir,
+    scan_artifacts,
+    write_json_atomic,
+)
 
 logger = logging.getLogger("app.jobs.run")
 
@@ -43,8 +52,26 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
 
 
-def _manifest(run: Run, artifacts: list[dict[str, Any]], connections: list[dict[str, Any]]) -> dict[str, Any]:
+def _template_inputs(directory: Path | None) -> dict[str, Any]:
+    """Plantillas y avisos que dejó el job en ``inputs/templates.json`` (ADR-011); vacío si no hay o no se lee."""
+    if directory is None or not (path := directory / TEMPLATES_INPUT).is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        logger.warning("inputs/templates.json ilegible")
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _manifest(
+    run: Run,
+    artifacts: list[dict[str, Any]],
+    connections: list[dict[str, Any]],
+    inputs: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Contenido de ``run.json`` (solo tipos JSON: también se guarda en ``runs.manifest``)."""
+    extra = inputs or {}
     return {
         "id": run.id,
         "operation": run.operation,
@@ -61,6 +88,8 @@ def _manifest(run: Run, artifacts: list[dict[str, Any]], connections: list[dict[
         "started_at": _iso(run.started_at),
         "finished_at": _iso(run.finished_at),
         "artifacts": artifacts,
+        "templates": list(extra.get("templates", [])),
+        "warnings": [str(w) for w in extra.get("warnings", [])],
     }
 
 
@@ -126,7 +155,7 @@ def finalize_run(
             for f in files
             if f.path != MANIFEST
         ]
-        run.manifest = _manifest(run, listed, _connections(db, run))
+        run.manifest = _manifest(run, listed, _connections(db, run), _template_inputs(directory))
         if directory is not None:
             ensure_layout(directory)
             write_json_atomic(directory / MANIFEST, run.manifest)

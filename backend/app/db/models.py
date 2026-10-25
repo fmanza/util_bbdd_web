@@ -8,6 +8,7 @@ Fase 4: caché de metadatos (``metadata_cache``), queries nombradas (``named_que
 Fase 7: ``users.can_apply_ddl`` (aplicar migraciones DDL en una BD destino, ADR-008).
 Fase 8: ``users.can_write_data`` (volcar datos en una BD destino, ADR-009).
 Fase 9: ``uploads`` (ficheros CSV/Excel de la carga bulk, ADR-010).
+Plantillas de documento: ``document_templates`` (Word y Excel de la documentación, ADR-011).
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -351,3 +353,43 @@ class Upload(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
     user: Mapped[User | None] = relationship()
+
+
+class DocumentTemplate(Base):
+    """Plantilla Word o Excel de la documentación (ADR-011): global (``project_id`` nulo, la gestionan los admins) o
+    de un proyecto (la gestionan sus editores).
+
+    Se guarda en ``templates/<id>.<ext>`` (global) o en ``users/<owner>/projects/<id>/templates/<id>.<ext>``
+    (``path``, relativo al workspace): el nombre del usuario solo se muestra. ``table_styles`` son los estilos de
+    tabla que se pueden elegir (los de la plantilla en Word, los predefinidos en Excel); ``table_style``, el elegido.
+    """
+
+    __tablename__ = "document_templates"
+
+    id: Mapped[str] = mapped_column(String(26), primary_key=True)
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True, default=None
+    )
+    kind: Mapped[str] = mapped_column(String(8))
+    name: Mapped[str] = mapped_column(String(100))
+    filename: Mapped[str] = mapped_column(String(255))
+    path: Mapped[str] = mapped_column(String(255))
+    size_bytes: Mapped[int] = mapped_column(default=0)
+    sha256: Mapped[str] = mapped_column(String(64))
+    table_style: Mapped[str | None] = mapped_column(String(100), default=None)
+    table_styles: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
+
+    user: Mapped[User | None] = relationship()
+
+
+#: Nombre único por ámbito (global = 0) y tipo, sin distinguir mayúsculas (migración 0009).
+Index(
+    "uq_document_templates_scope_kind_name",
+    func.coalesce(DocumentTemplate.project_id, 0),
+    DocumentTemplate.kind,
+    func.lower(DocumentTemplate.name),
+    unique=True,
+)

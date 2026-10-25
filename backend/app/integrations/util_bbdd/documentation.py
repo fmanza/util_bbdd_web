@@ -7,15 +7,27 @@
 
 El schema no es un argumento de util_bbdd (GAPS G22): se fija en los ``conn_params`` según el motor (``schema`` en
 PostgreSQL, SQL Server y HSQLDB; ``database`` en MySQL/MariaDB). Oracle solo lee el schema del usuario (GAPS G21).
+
+Plantillas (ADR-011): la de Word va en ``imprimir["plantilla_word"]``; si falla por la plantilla (G41) se genera de
+nuevo sin ella. La de Excel se aplica después (``excel_template``, G40); si falla, el libro queda como lo generó
+util_bbdd. En los dos casos la ejecución termina con un aviso en lugar de un error.
 """
 
 from __future__ import annotations
 
+import logging
 import shutil
 import subprocess
-from dataclasses import dataclass
+import zipfile
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
+
+from docx.opc.exceptions import PackageNotFoundError
+
+from app.integrations.util_bbdd.excel_template import apply_excel_template
+
+logger = logging.getLogger(__name__)
 
 Direction = Literal["both", "outgoing", "incoming"]
 #: Columnas de los diagramas (documentación y grafo de relaciones). En la web ``compact`` es «sin columnas»; el
@@ -33,6 +45,9 @@ _SCHEMA_PARAM: Final[dict[str, str]] = {
     "mariadb": "database",
 }
 _FORMAT_DIRS: Final[dict[str, str]] = {"word": "WORD", "excel": "EXCEL", "html": "HTML"}
+#: Estilos que ``WordGenerator`` usa con nombre (``add_heading`` 0-3 y el DDL): si la plantilla no los tiene, python-docx
+#: lanza ``KeyError`` en mitad del documento (GAPS G41).
+WORD_REQUIRED_STYLES: Final = ("Title", "Heading 1", "Heading 2", "Heading 3", "No Spacing")
 
 
 class SchemaNotSupportedError(ValueError):
@@ -106,12 +121,62 @@ class DocumentationOptions:
     html_items_per_page: int = 15
 
 
-def build_imprimir(options: DocumentationOptions) -> dict[str, Any]:
+@dataclass(frozen=True)
+class DocumentTemplates:
+    """Plantillas de una documentación: copias en la carpeta del run (nunca rutas que elija el usuario)."""
+
+    word: Path | None = None
+    word_table_style: str | None = None
+    excel: Path | None = None
+    excel_table_style: str | None = None
+
+
+@dataclass
+class _Outcome:
+    warnings: list[str] = field(default_factory=list)
+    applied: dict[str, bool] = field(default_factory=dict)
+
+
+def word_template_failed(exc: BaseException) -> bool:
+    """Si ``exc`` viene de la plantilla Word: estilo ausente (G41), fichero que no es un Word o plantilla no encontrada.
+
+    Los fallos de Graphviz no cuentan: generar sin plantilla no los arregla.
+    """
+    from util_bbdd.exceptions import DocumentationConfigError
+
+    if graphviz_failed(exc):
+        return False
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        message = str(current)
+        if (
+            (isinstance(current, KeyError) and "style" in message)
+            or isinstance(current, zipfile.BadZipFile)
+            or isinstance(current, PackageNotFoundError)
+            or (isinstance(current, ValueError) and "not a Word file" in message)
+            or (isinstance(current, DocumentationConfigError) and "Plantilla Word" in message)
+        ):
+            return True
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return False
+
+
+def build_imprimir(
+    options: DocumentationOptions, *, word_template: Path | None = None, table_style: str | None = None
+) -> dict[str, Any]:
     """Configuración ``imprimir`` de ``DatabaseDocumentation`` (``PrintConfigManager``).
 
-    No incluye ``plantilla_word``: es una ruta del servidor.
+    ``word_template`` es la copia de la plantilla en la carpeta del run; ``table_style``, su estilo de tabla de Word.
     """
+    extra: dict[str, Any] = {}
+    if word_template is not None:
+        extra["plantilla_word"] = str(word_template)
+        if table_style:
+            extra["table_style"] = table_style
     return {
+        **extra,
         "tablas": {
             "imprimir_tablas": options.tables,
             "columnas": options.tables and options.table_columns,
@@ -169,11 +234,13 @@ def generate_documentation(
     outputs_dir: Path,
     work_dir: Path,
     name: str,
+    templates: DocumentTemplates | None = None,
 ) -> dict[str, Any]:
     """Genera la documentación y la deja en ``outputs_dir/{word,excel,html/documentacion}``.
 
     Returns:
-        ``{"tables", "views", "routines", "formats": {formato: ruta relativa a outputs_dir}}``.
+        ``{"tables", "views", "routines", "formats": {formato: ruta relativa a outputs_dir}, "warnings": [...],
+        "templates_applied": {"word"|"excel": bool}}`` (solo los formatos con plantilla).
 
     Raises:
         SchemaNotSupportedError, GraphvizMissingError y las excepciones de util_bbdd.
@@ -181,14 +248,72 @@ def generate_documentation(
     if options.graphs and shutil.which("dot") is None:
         raise GraphvizMissingError("Graphviz (dot) no está instalado en el servidor.")
     params = with_schema(db_type, conn_params, schema)
+    chosen = templates or DocumentTemplates()
+    outcome = _Outcome()
     try:
-        return _document(params, db_type, options, outputs_dir, work_dir, name)
+        summary = _document_with_template(params, db_type, options, outputs_dir, work_dir, name, chosen, outcome)
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+    if chosen.excel is not None and "excel" in summary["formats"]:
+        _apply_excel(outputs_dir / "excel", chosen.excel, chosen.excel_table_style, outcome)
+    return {**summary, "warnings": outcome.warnings, "templates_applied": outcome.applied}
+
+
+def _document_with_template(
+    params: dict[str, Any],
+    db_type: str,
+    options: DocumentationOptions,
+    outputs_dir: Path,
+    work_dir: Path,
+    name: str,
+    templates: DocumentTemplates,
+    outcome: _Outcome,
+) -> dict[str, Any]:
+    """Documenta con la plantilla Word; si falla por ella (G41), una sola vez más sin plantilla."""
+    if templates.word is None or "word" not in options.formats:
+        return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options))
+    imprimir = build_imprimir(options, word_template=templates.word, table_style=templates.word_table_style)
+    try:
+        summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir)
+    except Exception as exc:  # frontera de util_bbdd: solo se reintenta si el fallo es de la plantilla
+        if not word_template_failed(exc):
+            raise
+        logger.warning(
+            "Plantilla Word no aplicada", extra={"template_fallback": "word", "exc_type": type(exc).__name__}
+        )
+    else:
+        outcome.applied["word"] = True
+        return summary
+    outcome.applied["word"] = False
+    outcome.warnings.append("La plantilla Word no se pudo aplicar: el documento Word usa el formato por defecto.")
+    shutil.rmtree(work_dir, ignore_errors=True)
+    return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options))
+
+
+def _apply_excel(folder: Path, template: Path, table_style: str | None, outcome: _Outcome) -> None:
+    """Aplica la plantilla Excel a cada libro; el que falla queda como lo generó util_bbdd."""
+    applied = True
+    for book in sorted(folder.glob("*.xlsx")):
+        try:
+            apply_excel_template(book, template, table_style)
+        except Exception as exc:  # plantilla del usuario: cualquier fallo deja el libro original y avisa
+            logger.warning(
+                "Plantilla Excel no aplicada", extra={"template_fallback": "excel", "exc_type": type(exc).__name__}
+            )
+            applied = False
+    outcome.applied["excel"] = applied
+    if not applied:
+        outcome.warnings.append("La plantilla Excel no se pudo aplicar: el libro Excel usa el formato por defecto.")
 
 
 def _document(
-    params: dict[str, Any], db_type: str, options: DocumentationOptions, outputs_dir: Path, work_dir: Path, name: str
+    params: dict[str, Any],
+    db_type: str,
+    options: DocumentationOptions,
+    outputs_dir: Path,
+    work_dir: Path,
+    name: str,
+    imprimir: dict[str, Any],
 ) -> dict[str, Any]:
     from util_bbdd import SyncDatabaseManager
     from util_bbdd.doc import DatabaseDocumentation
@@ -198,7 +323,7 @@ def _document(
             manager,
             directorio_salida=work_dir,
             fichero_salida=Path(name),
-            imprimir=build_imprimir(options),
+            imprimir=imprimir,
             formatos=list(options.formats),
             batch_window_seconds=0,
         ).generate()

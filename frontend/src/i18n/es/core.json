@@ -34,7 +34,8 @@
     "sessions": "Sesiones",
     "audit": "Auditoría",
     "allowlist": "Destinos permitidos",
-    "queries": "Queries nombradas"
+    "queries": "Queries nombradas",
+    "templates": "Plantillas"
   },
   "auth": {
     "loginIntro": "Inicia sesión con tu usuario.",

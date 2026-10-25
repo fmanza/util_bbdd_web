@@ -284,7 +284,8 @@
       "members": "Miembros",
       "settings": "Ajustes",
       "sql": "SQL",
-      "bulk": "Carga"
+      "bulk": "Carga",
+      "templates": "Plantillas"
     },
     "connectionsIntro": "Las ejecuciones usan las conexiones por su alias. Los miembros las usan sin ver nunca la contraseña.",
     "connection": "Conexión",
@@ -396,7 +397,9 @@
         "graph_max_columns": "Columnas máximas por tabla",
         "graph_data_types": "Mostrar tipos de columna",
         "tables_per_document": "Tablas por documento Word",
-        "html_items_per_page": "Elementos por página HTML"
+        "html_items_per_page": "Elementos por página HTML",
+        "word_template": "Plantilla Word",
+        "excel_template": "Plantilla Excel"
       },
       "relationship_graph": {
         "connection": "Conexión",
@@ -465,7 +468,11 @@
       "number": "Debe ser un número válido",
       "range": "Entre {{min}} y {{max}}",
       "oracleTitle": "Oracle: solo el schema del usuario",
-      "oracleSchema": "util_bbdd documenta en Oracle únicamente el schema del usuario de la conexión. Deja el schema vacío o pon ese usuario; para otro schema, crea una conexión con su usuario."
+      "oracleSchema": "util_bbdd documenta en Oracle únicamente el schema del usuario de la conexión. Deja el schema vacío o pon ese usuario; para otro schema, crea una conexión con su usuario.",
+      "noTemplate": "Sin plantilla (formato por defecto)",
+      "projectTemplates": "Del proyecto",
+      "globalTemplates": "Globales",
+      "templatesError": "No se pudieron cargar las plantillas"
     },
     "artifactsBrowser": {
       "empty": "Esta ejecución no ha generado artefactos.",
@@ -495,7 +502,8 @@
       "oracle": "Destino Oracle",
       "load": "Carga",
       "errors": "Errores",
-      "performance": "Rendimiento"
+      "performance": "Rendimiento",
+      "templates": "Plantillas"
     },
     "options": {
       "both": "Ambas direcciones",
@@ -542,7 +550,8 @@
       "sqlTitle": "El script SQL no se ha ejecutado",
       "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
     },
-    "cancelBlocked": "Una escritura en curso en la base de datos destino no se puede cancelar: la dejaría a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría."
+    "cancelBlocked": "Una escritura en curso en la base de datos destino no se puede cancelar: la dejaría a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría.",
+    "warningsTitle": "La ejecución terminó con avisos"
   },
   "explorer": {
     "open": "Explorar",
@@ -973,5 +982,43 @@
       "partitions": "Particiones",
       "error": "Error"
     }
+  },
+  "templates": {
+    "title": "Plantillas de documento",
+    "intro": "Plantillas Word y Excel que se pueden elegir al lanzar la documentación. Sin plantilla, la documentación usa el formato por defecto.",
+    "introGlobal": "Plantillas disponibles en todos los proyectos. Cada proyecto puede añadir las suyas.",
+    "limits": "Word (.docx, .dotx): portada, encabezado, pie y estilos; necesita los estilos Título, Título 1 a 3 y Sin espaciado, y se respeta su orientación. Excel (.xlsx, .xltx): tema (colores y fuentes), encabezado y pie y configuración de página; sin portada ni imágenes en el encabezado. Sin macros, objetos incrustados ni vínculos externos.",
+    "base": "Plantillas base",
+    "baseWord": "Word base",
+    "baseExcel": "Excel base",
+    "upload": "Subir plantilla",
+    "file": "Fichero",
+    "name": "Nombre",
+    "nameHint": "Vacío = el nombre del fichero",
+    "send": "Subir",
+    "empty": "Todavía no hay plantillas.",
+    "kind": "Tipo",
+    "kinds": {
+      "word": "Word",
+      "excel": "Excel"
+    },
+    "scope": "Ámbito",
+    "scopes": {
+      "global": "Global",
+      "project": "Proyecto"
+    },
+    "tableStyle": "Estilo de tabla",
+    "tableStyleOf": "Estilo de tabla de {{name}}",
+    "created": "Subida",
+    "download": "Descargar",
+    "downloadLabel": "Descargar {{name}}",
+    "rename": "Renombrar",
+    "renameLabel": "Renombrar {{name}}",
+    "renameTitle": "Renombrar plantilla",
+    "deleteLabel": "Borrar {{name}}",
+    "deleteTitle": "Borrar plantilla",
+    "deleteBody": "Se borrará la plantilla «{{name}}». Las documentaciones ya generadas no cambian.",
+    "readOnly": "Solo los editores del proyecto pueden subir, cambiar o borrar plantillas.",
+    "defaultStyle": "Por defecto"
   }
 }

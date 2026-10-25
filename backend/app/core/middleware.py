@@ -39,7 +39,8 @@ _COMMON: Final = (
 #: Solo en respuestas sin CSP propia: el sitio HTML y las vistas previas se cargan en un iframe ``sandbox`` con
 #: origen opaco, y sus subrecursos (JS, CSS, imágenes) serían *cross-origin* para ``CORP: same-origin``.
 _CORP: Final = ("Cross-Origin-Resource-Policy", "same-origin")
-_UPLOAD_PATH: Final = re.compile(r"^/api/v1/projects/\d+/uploads$")
+#: Subidas de ficheros: carga bulk y plantillas de documento (ADR-011), con su propio límite por hora.
+_UPLOAD_PATH: Final = re.compile(r"^/api/v1/(projects/\d+/(uploads|document-templates)|admin/document-templates)$")
 _UNLIMITED: Final = frozenset({"/api/health", "/metrics"})
 
 

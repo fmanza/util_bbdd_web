@@ -136,6 +136,7 @@ def _detail(access: service.RunAccess, user: User, settings: Settings) -> RunDet
         my_role=access.membership.role,
         artifacts=artifacts,
         site_url=_site_url(access, user, settings),
+        warnings=[str(w) for w in (run.manifest or {}).get("warnings", [])],
     )
 
 

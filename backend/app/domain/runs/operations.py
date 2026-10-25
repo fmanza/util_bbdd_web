@@ -1,7 +1,8 @@
 """Catálogo de operaciones que se pueden lanzar como ejecución y sus parámetros.
 
 Cada operación declara un modelo Pydantic (``extra="forbid"``) que valida los parámetros al encolar; los campos con
-``ubw_kind="connection"`` son alias de una conexión del proyecto. La implementación vive en ``app/jobs/operations``.
+``ubw_kind="connection"`` son alias de una conexión del proyecto y los ``ubw_kind="template"``, el id de una plantilla
+de documento (``ubw_template_kind``: ``word`` o ``excel``, ADR-011). La implementación vive en ``app/jobs/operations``.
 Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones.
 Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
 Fase 7: ``migrate_plan`` y ``migrate_apply`` (este no sale en el formulario genérico: se lanza desde el plan).
@@ -19,7 +20,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from app.domain.runs.errors import RunParamsError, UnknownOperationError
 
 ALIAS_PATTERN = r"^[a-z0-9_-]{1,32}$"
-ParamType = Literal["string", "integer", "float", "boolean", "connection"]
+ParamType = Literal["string", "integer", "float", "boolean", "connection", "template"]
+ULID_PATTERN = r"^[0-9A-HJKMNP-TV-Z]{26}$"
 
 
 class NoopParams(BaseModel):
@@ -44,6 +46,15 @@ def _connection(description: str) -> Any:
 
 def _group(group: str, default: Any, description: str, **extra: Any) -> Any:
     return Field(default=default, description=description, json_schema_extra={"ubw_group": group}, **extra)
+
+
+def _template(kind: str, description: str) -> Any:
+    return Field(
+        default=None,
+        pattern=ULID_PATTERN,
+        description=description,
+        json_schema_extra={"ubw_group": "templates", "ubw_kind": "template", "ubw_template_kind": kind},
+    )
 
 
 #: Nombres de schema y tabla: identificadores (con ``$``, ``#``, ``.``, ``-`` y espacios), sin comillas ni ``;``, porque
@@ -93,6 +104,15 @@ class DocumentationParams(BaseModel):
     graph_data_types: bool = _group("graphs", False, "Mostrar el tipo de cada columna en el diagrama.")
     tables_per_document: int = _group("layout", 50, "Tablas por documento Word.", ge=1, le=500)
     html_items_per_page: int = _group("layout", 15, "Elementos por página del índice HTML.", ge=5, le=100)
+    word_template: str | None = _template(
+        "word",
+        "Plantilla Word del proyecto o global; vacío = formato por defecto. Con plantilla se respeta su "
+        "orientación y su contenido se repite en cada documento.",
+    )
+    excel_template: str | None = _template(
+        "excel",
+        "Plantilla Excel del proyecto o global (tema, encabezado y pie, estilo de tabla); vacío = formato por defecto.",
+    )
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -100,6 +120,11 @@ class DocumentationParams(BaseModel):
     def _one_format(self) -> DocumentationParams:
         if not (self.word or self.excel or self.html):
             raise ValueError("Elige al menos un formato (Word, Excel o HTML).")
+        # Una plantilla de un formato que no se genera no se usa: se descarta para no bloquear su borrado.
+        if not self.word:
+            self.word_template = None
+        if not self.excel:
+            self.excel_template = None
         return self
 
 
@@ -333,6 +358,7 @@ class OperationParam:
     maximum: float | None
     options: list[str] | None = None
     group: str | None = None
+    template_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -359,6 +385,8 @@ class OperationSpec:
             kind: ParamType
             if prop.get("ubw_kind") == "connection":
                 kind = "connection"
+            elif prop.get("ubw_kind") == "template":
+                kind = "template"
             elif raw_type == "integer":
                 kind = "integer"
             elif raw_type == "number":
@@ -378,6 +406,7 @@ class OperationSpec:
                     maximum=prop.get("maximum"),
                     options=[str(o) for o in options] if options else None,
                     group=prop.get("ubw_group"),
+                    template_kind=prop.get("ubw_template_kind"),
                 )
             )
         return result

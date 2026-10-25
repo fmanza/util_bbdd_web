@@ -16,6 +16,21 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   `graph_data_types`. Hueco G38 registrado: el sitio HTML omite el diagrama de las tablas sin relaciones.
 - **Grafo de relaciones**: opción de columnas «Primero las de relación, luego el resto» (`column_mode=relations_first`;
   el valor por defecto sigue siendo «Solo columnas de relación»).
+- **Plantillas Word y Excel de la documentación** (ADR-011): catálogo global (*Administración → Plantillas*) y
+  pestaña *Plantillas* en cada proyecto (editores), con plantillas base descargables. Al lanzar la documentación,
+  «Plantilla Word» y «Plantilla Excel»; sin plantilla, el formato de siempre. Word con `plantilla_word` de util_bbdd
+  (portada, encabezado, pie, estilos y estilo de tabla); Excel retocado por la web (tema, colores y fuentes,
+  encabezado y pie, página y estilo de tabla predefinido; GAPS G40). Si una plantilla no se puede aplicar, la
+  documentación sale con el formato por defecto y la ejecución termina con un aviso (`warnings` en el detalle y en
+  `run.json`, que registra además las plantillas usadas). Nuevas variables `UBW_TEMPLATE_MAX_MB` (10) y
+  `UBW_TEMPLATES_PER_SCOPE` (20); migración `0009`. Hueco G41 registrado: util_bbdd no valida los estilos de la
+  plantilla Word.
+
+### Security
+
+- Las plantillas se comprueban por contenido antes de distribuirlas: sin macros, objetos incrustados (OLE, ActiveX),
+  vínculos a otros libros, relaciones externas que no sean hipervínculos (p. ej. plantilla adjunta remota), campos
+  DDE/INCLUDE/LINK ni DTD; tamaño descomprimido acotado. Comparten el rate limit de subidas de la carga bulk.
 
 ### Changed
 

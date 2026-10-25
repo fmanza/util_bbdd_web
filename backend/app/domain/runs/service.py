@@ -30,6 +30,7 @@ from app.domain.runs.errors import (
     TooManyRunsError,
 )
 from app.domain.runs.operations import get_operation, validate_params
+from app.domain.templates.service import check_run_templates
 from app.workspace.layout import UnsafePathError, remove_tree, run_dir, run_relative_path, safe_path
 
 logger = logging.getLogger(__name__)
@@ -216,6 +217,8 @@ def enqueue(
         bulks.check_preview(db, membership, clean)
     elif spec.name == "bulk_apply":
         bulks.check_apply(db, user, membership, clean, settings)
+    elif spec.name == "documentation":
+        check_run_templates(db, membership.project, clean)
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
         raise TooManyRunsError(f"Tienes {active} ejecuciones en cola o en curso; espera a que terminen.")

@@ -195,6 +195,11 @@ def test_uploads_have_their_own_limit(app_with: AppFactory, user: User) -> None:
     assert send() == 201
     assert send() == 429
     assert client.get(f"/api/v1/projects/{project}/uploads").status_code == 200
+    # Las plantillas de documento (ADR-011) comparten el límite de subidas.
+    template = client.post(
+        f"/api/v1/projects/{project}/document-templates", files={"file": ("p.docx", b"PK", "application/octet-stream")}
+    )
+    assert template.status_code == 429
 
 
 def test_rate_limit_can_be_disabled(app_with: AppFactory) -> None:

@@ -112,6 +112,12 @@ const pages: RouteObject[] = [
                 }),
               },
               {
+                path: 'templates',
+                lazy: async () => ({
+                  Component: (await import('../features/admin/TemplatesPage')).TemplatesPage,
+                }),
+              },
+              {
                 path: 'audit',
                 lazy: async () => ({ Component: (await import('../features/admin/AuditPage')).AuditPage }),
               },

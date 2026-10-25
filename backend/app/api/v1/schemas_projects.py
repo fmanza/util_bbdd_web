@@ -89,7 +89,7 @@ class ProjectConnectionOut(BaseModel):
 
 class OperationParamOut(_Out):
     name: str
-    type: Literal["string", "integer", "float", "boolean", "connection"]
+    type: Literal["string", "integer", "float", "boolean", "connection", "template"]
     required: bool
     default: Any = None
     description: str
@@ -97,6 +97,9 @@ class OperationParamOut(_Out):
     maximum: float | None
     options: list[str] | None = Field(default=None, description="Valores permitidos (desplegable)")
     group: str | None = Field(default=None, description="Sección del formulario")
+    template_kind: Literal["word", "excel"] | None = Field(
+        default=None, description="Con ``type=template``: tipo de plantilla de documento que se elige"
+    )
 
 
 class OperationOut(BaseModel):
@@ -159,6 +162,9 @@ class RunDetailOut(RunOut):
     artifacts: list[ArtifactOut]
     site_url: str | None = Field(
         default=None, description="URL firmada y temporal del sitio HTML generado (para el iframe con origen opaco)"
+    )
+    warnings: list[str] = Field(
+        default_factory=list, description="Avisos de la ejecución (p. ej. una plantilla que no se pudo aplicar)"
     )
 
 

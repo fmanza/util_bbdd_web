@@ -49,6 +49,7 @@ nav = [
       "adr/ADR-008-aplicar-migraciones.md",
       "adr/ADR-009-volcado-de-datos.md",
       "adr/ADR-010-carga-bulk.md",
+      "adr/ADR-011-plantillas-de-documento.md",
     ] },
     "plan/ROADMAP.md",
     "plan/UTIL_BBDD_GAPS.md",

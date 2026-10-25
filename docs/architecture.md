@@ -45,7 +45,7 @@ flowchart TB
 | `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic, copia y restauración (`backup.py`) | 0 → 10 |
 | `api/` | `/api/health`, `/metrics` (Prometheus); `api/v1/` con los routers de negocio | 0 → 10 |
 | `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py`, `isolated.py` (subproceso con timeout), `probe.py`, `metadata.py` (schemas, snapshot, DDL), `sql.py` (guardián `sqlglot`, solo lectura, queries nombradas), `audit_sink.py` | 0 → 4 |
-| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/`, `explorer/` (caché de metadatos, queries nombradas, SQL libre) y `uploads/` (ficheros de carga validados) | 1 → 9 |
+| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/`, `explorer/` (caché de metadatos, queries nombradas, SQL libre) `uploads/` (ficheros de carga validados) y `templates/` (plantillas de documento, ADR-011) | 1 → 9 |
 | `cli.py` | `create-admin`, `rotate-secrets` (rotación Fernet), `backup`, `verify-backup` y `restore` | 1 → 10 |
 | `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y operaciones (`noop`) | 0 → 3 |
 | `workspace/` | Carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
@@ -93,6 +93,8 @@ src/
 | `UBW_UPLOAD_MAX_UNCOMPRESSED_MB` | `300` | Tamaño descomprimido máximo de un `.xlsx` |
 | `UBW_UPLOAD_RETENTION_DAYS` | `7` | Purga de ficheros subidos sin uso (`0` desactiva) |
 | `UBW_BULK_MAX_ROWS` | `1000000` | Filas máximas de un fichero de carga |
+| `UBW_TEMPLATE_MAX_MB` | `10` | Tamaño máximo de una plantilla de documento Word o Excel |
+| `UBW_TEMPLATES_PER_SCOPE` | `20` | Plantillas como máximo en el catálogo global y en cada proyecto |
 | `UBW_RATE_LIMIT_*` | ver [despliegue](guides/deployment.md#cabeceras-y-rate-limiting) | Límites por sesión, por IP sin sesión, login y subidas |
 | `FORWARDED_ALLOW_IPS` | `127.0.0.1` | Proxies de confianza para `X-Forwarded-*` (uvicorn) |
 | Secret `ubw_metrics_token` | — | Activa `/metrics` con *bearer* (opcional) |
@@ -103,4 +105,4 @@ Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·
 [ADR-004](adr/ADR-004-cifrado-secretos.md) · [ADR-005](adr/ADR-005-workspace-y-ejecuciones.md) ·
 [ADR-006](adr/ADR-006-integracion-util-bbdd.md) · [ADR-007](adr/ADR-007-sitio-html-aislado.md) ·
 [ADR-008](adr/ADR-008-aplicar-migraciones.md) · [ADR-009](adr/ADR-009-volcado-de-datos.md) ·
-[ADR-010](adr/ADR-010-carga-bulk.md).
+[ADR-010](adr/ADR-010-carga-bulk.md) · [ADR-011](adr/ADR-011-plantillas-de-documento.md).

@@ -22,6 +22,7 @@ import { isApiError } from '../../api/client';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { zodResolver } from '../../components/zodResolver';
 import type { ProjectConnection } from '../projects/useProjects';
+import { type DocumentTemplate, useTemplates } from '../templates/useTemplates';
 import { type Operation, type OperationParam, useLaunchRun, useOperations } from './useRuns';
 
 type Values = Record<string, string | boolean>;
@@ -37,7 +38,7 @@ function paramSchema(param: OperationParam, t: TFunction) {
         ctx.addIssue({ code: 'custom', message: t('auth.required') });
         return z.NEVER;
       }
-      return param.type === 'connection' ? null : undefined;
+      return param.type === 'connection' || param.type === 'template' ? null : undefined;
     }
     if (param.type === 'integer' || param.type === 'float') {
       const number = Number(value);
@@ -75,6 +76,21 @@ const ENGINE_GROUPS: Record<string, readonly string[]> = {
   oracle: ['oracle'],
 };
 
+/** Opciones de un parámetro de plantilla: «sin plantilla» y las del tipo pedido, las del proyecto primero. */
+function templateOptions(templates: DocumentTemplate[], kind: string | null | undefined, t: TFunction) {
+  const items = (scope: DocumentTemplate['scope']) =>
+    templates
+      .filter((template) => template.kind === kind && template.scope === scope)
+      .map((template) => ({ value: template.id, label: template.name }));
+  return [
+    { value: '', label: t('runs.launch.noTemplate') },
+    ...[
+      { group: t('runs.launch.projectTemplates'), items: items('project') },
+      { group: t('runs.launch.globalTemplates'), items: items('global') },
+    ].filter((group) => group.items.length > 0),
+  ];
+}
+
 /** Parámetros sin grupo primero; después cada grupo en el orden en que aparece. */
 function sections(params: OperationParam[]): [string | null, OperationParam[]][] {
   const result = new Map<string | null, OperationParam[]>([[null, []]]);
@@ -109,7 +125,12 @@ function LaunchForm({
   });
 
   const connectionParam = operation.params.find((p) => p.type === 'connection')?.name;
+  const templateParams = operation.params.filter((p) => p.type === 'template');
+  const templates = useTemplates({ kind: 'project', projectId }, templateParams.length > 0);
   const values = useWatch({ control: form.control });
+  // Una plantilla solo se ofrece si su formato (`word`, `excel`) se va a generar.
+  const paramVisible = (param: OperationParam) =>
+    param.type !== 'template' || !param.template_kind || values[param.template_kind] === true;
   const chosenAlias = connectionParam ? values[connectionParam] : undefined;
   const chosen = connections.find((c) => c.alias === chosenAlias);
   const targetEngine = values['target_engine'];
@@ -121,7 +142,12 @@ function LaunchForm({
     chosen?.db_type === 'oracle' && operation.params.some((p) => p.name === 'schema');
 
   const onSubmit = form.handleSubmit((values) => {
-    const params = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
+    const hidden = new Set(templateParams.filter((p) => !paramVisible(p)).map((p) => p.name));
+    const params = Object.fromEntries(
+      Object.entries(values)
+        .filter(([, value]) => value !== undefined)
+        .map(([name, value]) => [name, hidden.has(name) ? null : value]),
+    );
     launch.mutate(
       { operation: operation.name, params },
       {
@@ -169,6 +195,18 @@ function LaunchForm({
             />
           );
         }
+        if (param.type === 'template') {
+          return (
+            <NativeSelect
+              label={label}
+              description={param.description}
+              data={templateOptions(templates.data ?? [], param.template_kind, t)}
+              value={typeof field.value === 'string' ? field.value : ''}
+              onChange={(event) => field.onChange(event.currentTarget.value)}
+              error={error ?? (templates.isError ? t('runs.launch.templatesError') : undefined)}
+            />
+          );
+        }
         if (param.options) {
           return (
             <NativeSelect
@@ -211,7 +249,9 @@ function LaunchForm({
         {sections(operation.params)
           .filter(([group]) => groupVisible(group))
           .map(([group, params]) => {
-            const fields = params.map((param) => <div key={param.name}>{renderField(param)}</div>);
+            const shown = params.filter(paramVisible);
+            if (shown.length === 0) return null;
+            const fields = shown.map((param) => <div key={param.name}>{renderField(param)}</div>);
             if (group === null) return <Stack key="__main__">{fields}</Stack>;
             return (
               <Fieldset key={group} legend={t(`runs.groups.${group}`, { defaultValue: group })}>

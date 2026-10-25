@@ -49,6 +49,9 @@ class AuditAction:
     QUERY_DELETE: Final = "query.delete"
     UPLOAD_CREATE: Final = "upload.create"
     UPLOAD_DELETE: Final = "upload.delete"
+    TEMPLATE_CREATE: Final = "template.create"
+    TEMPLATE_UPDATE: Final = "template.update"
+    TEMPLATE_DELETE: Final = "template.delete"
 
 
 @dataclass(frozen=True)

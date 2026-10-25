@@ -17,3 +17,4 @@
 | [2026-10-24-feat-graph-columns](2026-10-24-feat-graph-columns/TRACEABILITY.md) | new_feature | Columnas en los diagramas de la documentación; G38 (sin publicar) |
 | [2026-10-25-hotfix-graphviz-ortho](2026-10-25-hotfix-graphviz-ortho/TRACEABILITY.md) | hotfix | Envoltorio de `dot` y `graphviz_failed`; G39 (sin publicar) |
 | [2026-10-25-hotfix-site-coop](2026-10-25-hotfix-site-coop/TRACEABILITY.md) | hotfix | COOP `unsafe-none` en el sitio HTML: pestañas nuevas (sin publicar) |
+| [2026-10-25-feat-document-templates](2026-10-25-feat-document-templates/TRACEABILITY.md) | new_feature | Plantillas Word y Excel de la documentación; ADR-011, G40 y G41 (sin publicar) |

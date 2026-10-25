@@ -227,6 +227,62 @@
         "title": "AuditPage",
         "type": "object"
       },
+      "Body_create_global_api_v1_admin_document_templates_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "Plantilla .docx, .dotx, .xlsx o .xltx",
+            "title": "File",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nombre visible; vacío = el del fichero",
+            "title": "Name"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_global_api_v1_admin_document_templates_post",
+        "type": "object"
+      },
+      "Body_create_project_template_api_v1_projects__project_id__document_templates_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "Plantilla .docx, .dotx, .xlsx o .xltx",
+            "title": "File",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nombre visible; vacío = el del fichero",
+            "title": "Name"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_project_template_api_v1_projects__project_id__document_templates_post",
+        "type": "object"
+      },
       "Body_create_upload_api_v1_projects__project_id__uploads_post": {
         "properties": {
           "file": {
@@ -2851,13 +2907,30 @@
             "title": "Required",
             "type": "boolean"
           },
+          "template_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "word",
+                  "excel"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Con ``type=template``: tipo de plantilla de documento que se elige",
+            "title": "Template Kind"
+          },
           "type": {
             "enum": [
               "string",
               "integer",
               "float",
               "boolean",
-              "connection"
+              "connection",
+              "template"
             ],
             "title": "Type",
             "type": "string"
@@ -3916,6 +3989,14 @@
               }
             ],
             "title": "Username"
+          },
+          "warnings": {
+            "description": "Avisos de la ejecución (p. ej. una plantilla que no se pudo aplicar)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -4697,6 +4778,137 @@
         "title": "TableItem",
         "type": "object"
       },
+      "TemplateOut": {
+        "description": "Plantilla Word o Excel (sin la ruta en el servidor).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "word",
+              "excel"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "global",
+              "project"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "table_style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Estilo de tabla que se aplica a la documentación",
+            "title": "Table Style"
+          },
+          "table_styles": {
+            "description": "Estilos de tabla que se pueden elegir",
+            "items": {
+              "type": "string"
+            },
+            "title": "Table Styles",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "kind",
+          "name",
+          "filename",
+          "size_bytes",
+          "sha256",
+          "table_style",
+          "table_styles",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TemplateOut",
+        "type": "object"
+      },
+      "TemplateUpdate": {
+        "additionalProperties": false,
+        "description": "Cambio de nombre o de estilo de tabla (uno de ``table_styles``).",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "table_style": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table Style"
+          }
+        },
+        "title": "TemplateUpdate",
+        "type": "object"
+      },
       "UploadInfoOut": {
         "description": "Lo necesario para mapear columnas: columnas, primeras filas y hojas (Excel) o separador y codificación (CSV).",
         "properties": {
@@ -5347,6 +5559,158 @@
           }
         },
         "summary": "Quitar destino permitido",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/document-templates": {
+      "post": {
+        "description": "Se comprueba el contenido real: tipo, macros, objetos y vínculos externos y, en Word, los estilos.",
+        "operationId": "create_global_api_v1_admin_document_templates_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_global_api_v1_admin_document_templates_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "409": {
+            "description": "Nombre repetido o límite de plantillas"
+          },
+          "413": {
+            "description": "Demasiado grande"
+          },
+          "415": {
+            "description": "No es .docx, .dotx, .xlsx ni .xltx (o tiene macros)"
+          },
+          "422": {
+            "description": "Contenido no válido, no seguro o (Word) le faltan estilos"
+          }
+        },
+        "summary": "Subir una plantilla global",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/document-templates/{template_id}": {
+      "delete": {
+        "operationId": "delete_global_api_v1_admin_document_templates__template_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "409": {
+            "description": "La usa una documentación en cola o en curso"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Borrar una plantilla global",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "operationId": "update_global_api_v1_admin_document_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "409": {
+            "description": "Nombre repetido"
+          },
+          "422": {
+            "description": "Estilo de tabla que no está en la plantilla"
+          }
+        },
+        "summary": "Cambiar una plantilla global",
         "tags": [
           "admin"
         ]
@@ -6700,6 +7064,152 @@
         ]
       }
     },
+    "/api/v1/document-templates": {
+      "get": {
+        "operationId": "list_global_api_v1_document_templates_get",
+        "parameters": [
+          {
+            "description": "Solo plantillas de este tipo",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "word",
+                    "excel"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Solo plantillas de este tipo",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateOut"
+                  },
+                  "title": "Response List Global Api V1 Document Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plantillas globales",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/v1/document-templates/base/{kind}": {
+      "get": {
+        "description": "Punto de partida con todos los estilos necesarios (Word en horizontal; Excel con encabezado y pie).",
+        "operationId": "download_base_api_v1_document_templates_base__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "word",
+                "excel"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Word con los estilos que usa la documentación, o Excel de ejemplo"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plantilla base",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/v1/document-templates/{template_id}/file": {
+      "get": {
+        "operationId": "download_global_api_v1_document_templates__template_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Descargar una plantilla global",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
     "/api/v1/engines": {
       "get": {
         "description": "Motores soportados por util_bbdd, drivers instalados y capacidades verificadas.",
@@ -7328,6 +7838,312 @@
         "summary": "Ejecutar SQL libre",
         "tags": [
           "explorer"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/document-templates": {
+      "get": {
+        "operationId": "list_project_api_v1_projects__project_id__document_templates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Solo plantillas de este tipo",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "word",
+                    "excel"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Solo plantillas de este tipo",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateOut"
+                  },
+                  "title": "Response List Project Api V1 Projects  Project Id  Document Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plantillas del proyecto y globales",
+        "tags": [
+          "templates"
+        ]
+      },
+      "post": {
+        "description": "Editores. Se comprueba el contenido real como en las globales.",
+        "operationId": "create_project_template_api_v1_projects__project_id__document_templates_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_project_template_api_v1_projects__project_id__document_templates_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Rol inferior a editor o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "409": {
+            "description": "Nombre repetido o límite de plantillas"
+          },
+          "413": {
+            "description": "Demasiado grande"
+          },
+          "415": {
+            "description": "No es .docx, .dotx, .xlsx ni .xltx (o tiene macros)"
+          },
+          "422": {
+            "description": "Contenido no válido, no seguro o (Word) le faltan estilos"
+          }
+        },
+        "summary": "Subir una plantilla al proyecto",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/document-templates/{template_id}": {
+      "delete": {
+        "operationId": "delete_project_template_api_v1_projects__project_id__document_templates__template_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Rol inferior a editor o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "409": {
+            "description": "La usa una documentación en cola o en curso"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Borrar una plantilla del proyecto",
+        "tags": [
+          "templates"
+        ]
+      },
+      "patch": {
+        "operationId": "update_project_template_api_v1_projects__project_id__document_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Rol inferior a editor o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "409": {
+            "description": "Nombre repetido"
+          },
+          "422": {
+            "description": "Estilo de tabla que no está en la plantilla"
+          }
+        },
+        "summary": "Cambiar una plantilla del proyecto",
+        "tags": [
+          "templates"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/document-templates/{template_id}/file": {
+      "get": {
+        "operationId": "download_project_template_api_v1_projects__project_id__document_templates__template_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no es visible"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Descargar una plantilla del proyecto o global",
+        "tags": [
+          "templates"
         ]
       }
     },
