@@ -20,7 +20,6 @@ from app.core.config import Settings
 from app.db.models import AuditEntry, DocumentTemplate, User
 from app.domain.identity.audit import CLI_CONTEXT
 from app.domain.templates import service
-from app.integrations.util_bbdd.excel_template import FIXED_COLORS
 from app.jobs.worker import Worker
 from app.workspace.layout import run_dir
 from tests.api.test_documentation import launch, project  # noqa: F401  (fixture)
@@ -36,6 +35,8 @@ from tests.unit.test_templates_units import (
     word_template,
 )
 
+#: Paleta fija de ``ExcelGenerator`` de util_bbdd: con plantilla, ninguno de estos colores debe quedar (G40).
+FIXED_COLORS = {"4472C4", "4F81BD", "366092", "5B9BD5", "2F75B5", "D9E1F2"}
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -338,7 +339,7 @@ def test_documentation_applies_word_and_excel_templates(
     workbook = load_workbook(book)
     assert workbook.loaded_theme == custom_theme()
     assert {t.tableStyleInfo.name for s in workbook.worksheets for t in s.tables.values()} == {"TableStyleLight9"}
-    assert _fixed_fills(book) == set()  # util_bbdd 4.0.0 no usa otros colores fijos (G40)
+    assert _fixed_fills(book) == set()  # contrato con util_bbdd 4.1.0: plantilla_excel no deja colores fijos (G40)
     assert (directory / "inputs" / "plantilla_word.docx").is_file()
     manifest = json.loads((directory / "run.json").read_text(encoding="utf-8"))
     assert [(t["kind"], t["applied"], t["scope"]) for t in manifest["templates"]] == [

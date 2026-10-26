@@ -9,9 +9,9 @@ El schema se pasa como argumento (``schema=``, util_bbdd 4.1.0; GAPS G22): en Po
 schema; en MySQL/MariaDB, la base de datos; en Oracle, el owner (también otro que el usuario, si tiene permiso de
 lectura; GAPS G21). En SQLite no aplica (solo existe ``main``).
 
-Plantillas (ADR-011): la de Word va en ``imprimir["plantilla_word"]``; si falla por la plantilla (G41) se genera de
-nuevo sin ella. La de Excel se aplica después (``excel_template``, G40); si falla, el libro queda como lo generó
-util_bbdd. En los dos casos la ejecución termina con un aviso en lugar de un error.
+Plantillas (ADR-011): van en ``imprimir["plantilla_word"]`` y ``imprimir["plantilla_excel"]`` (util_bbdd 4.1.0, G40 y
+G41), que las valida al construir ``DatabaseDocumentation``. Si una falla, se genera de nuevo sin esa plantilla y la
+ejecución termina con un aviso en lugar de un error.
 """
 
 from __future__ import annotations
@@ -25,8 +25,6 @@ from pathlib import Path
 from typing import Any, Final, Literal
 
 from docx.opc.exceptions import PackageNotFoundError
-
-from app.integrations.util_bbdd.excel_template import apply_excel_template
 
 logger = logging.getLogger(__name__)
 
@@ -142,18 +140,43 @@ def word_template_failed(exc: BaseException) -> bool:
     return False
 
 
+def excel_template_failed(exc: BaseException) -> bool:
+    """Si ``exc`` viene de la plantilla Excel (util_bbdd 4.1.0: no existe, no es un libro, sin hojas o con un tema que
+    referencia otros ficheros; ``DocumentationConfigError`` «… plantilla Excel …»)."""
+    from util_bbdd.exceptions import DocumentationConfigError
+
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, DocumentationConfigError) and "plantilla excel" in str(current).lower():
+            return True
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return False
+
+
 def build_imprimir(
-    options: DocumentationOptions, *, word_template: Path | None = None, table_style: str | None = None
+    options: DocumentationOptions,
+    *,
+    word_template: Path | None = None,
+    table_style: str | None = None,
+    excel_template: Path | None = None,
+    excel_table_style: str | None = None,
 ) -> dict[str, Any]:
     """Configuración ``imprimir`` de ``DatabaseDocumentation`` (``PrintConfigManager``).
 
-    ``word_template`` es la copia de la plantilla en la carpeta del run; ``table_style``, su estilo de tabla de Word.
+    Las plantillas son copias en la carpeta del run; ``table_style`` es el estilo de tabla de Word y
+    ``excel_table_style``, el del Excel (``table_style_excel``, util_bbdd 4.1.0).
     """
     extra: dict[str, Any] = {}
     if word_template is not None:
         extra["plantilla_word"] = str(word_template)
         if table_style:
             extra["table_style"] = table_style
+    if excel_template is not None:
+        extra["plantilla_excel"] = str(excel_template)
+        if excel_table_style:
+            extra["table_style_excel"] = excel_table_style
     return {
         **extra,
         "tablas": {
@@ -235,8 +258,6 @@ def generate_documentation(
         )
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
-    if chosen.excel is not None and "excel" in summary["formats"]:
-        _apply_excel(outputs_dir / "excel", chosen.excel, chosen.excel_table_style, outcome)
     return {**summary, "warnings": outcome.warnings, "templates_applied": outcome.applied}
 
 
@@ -251,41 +272,43 @@ def _document_with_template(
     outcome: _Outcome,
     schema: str | None,
 ) -> dict[str, Any]:
-    """Documenta con la plantilla Word; si falla por ella (G41), una sola vez más sin plantilla."""
-    if templates.word is None or "word" not in options.formats:
-        return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options), schema)
-    imprimir = build_imprimir(options, word_template=templates.word, table_style=templates.word_table_style)
-    try:
-        summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir, schema)
-    except Exception as exc:  # frontera de util_bbdd: solo se reintenta si el fallo es de la plantilla
-        if not word_template_failed(exc):
-            raise
-        logger.warning(
-            "Plantilla Word no aplicada", extra={"template_fallback": "word", "exc_type": type(exc).__name__}
+    """Documenta con las plantillas; si falla por una (G40, G41), se repite sin ella (como mucho, sin las dos)."""
+    word = templates.word if "word" in options.formats else None
+    excel = templates.excel if "excel" in options.formats else None
+    while True:
+        imprimir = build_imprimir(
+            options,
+            word_template=word,
+            table_style=templates.word_table_style,
+            excel_template=excel,
+            excel_table_style=templates.excel_table_style,
         )
-    else:
-        outcome.applied["word"] = True
-        return summary
-    outcome.applied["word"] = False
-    outcome.warnings.append("La plantilla Word no se pudo aplicar: el documento Word usa el formato por defecto.")
-    shutil.rmtree(work_dir, ignore_errors=True)
-    return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options), schema)
-
-
-def _apply_excel(folder: Path, template: Path, table_style: str | None, outcome: _Outcome) -> None:
-    """Aplica la plantilla Excel a cada libro; el que falla queda como lo generó util_bbdd."""
-    applied = True
-    for book in sorted(folder.glob("*.xlsx")):
         try:
-            apply_excel_template(book, template, table_style)
-        except Exception as exc:  # plantilla del usuario: cualquier fallo deja el libro original y avisa
-            logger.warning(
-                "Plantilla Excel no aplicada", extra={"template_fallback": "excel", "exc_type": type(exc).__name__}
-            )
-            applied = False
-    outcome.applied["excel"] = applied
-    if not applied:
-        outcome.warnings.append("La plantilla Excel no se pudo aplicar: el libro Excel usa el formato por defecto.")
+            summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir, schema)
+        except Exception as exc:  # frontera de util_bbdd: solo se reintenta si el fallo es de una plantilla
+            if word is not None and word_template_failed(exc):
+                word = None
+                _fallback(outcome, "word", exc)
+            elif excel is not None and excel_template_failed(exc):
+                excel = None
+                _fallback(outcome, "excel", exc)
+            else:
+                raise
+            shutil.rmtree(work_dir, ignore_errors=True)
+            continue
+        if word is not None:
+            outcome.applied["word"] = True
+        if excel is not None:
+            outcome.applied["excel"] = True
+        return summary
+
+
+def _fallback(outcome: _Outcome, kind: Literal["word", "excel"], exc: BaseException) -> None:
+    label = "Word" if kind == "word" else "Excel"
+    logger.warning(f"Plantilla {label} no aplicada", extra={"template_fallback": kind, "exc_type": type(exc).__name__})
+    outcome.applied[kind] = False
+    target = "el documento Word" if kind == "word" else "el libro Excel"
+    outcome.warnings.append(f"La plantilla {label} no se pudo aplicar: {target} usa el formato por defecto.")
 
 
 def _document(

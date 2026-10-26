@@ -40,6 +40,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Changed
 
+- **Plantilla Excel aplicada por util_bbdd** (W-D4, GAPS G40; util_bbdd 4.1.0): `plantilla_excel` y
+  `table_style_excel` sustituyen al retoque del libro que hacía la web, con el mismo resultado (tema, colores y fuentes
+  del tema, encabezado, pie y página, estilo de tabla). Si una plantilla Word o Excel no se puede usar, la
+  documentación se genera de nuevo sin esa plantilla y la ejecución termina con aviso, como hasta ahora.
+
 - **Documentación y grafo de relaciones con el schema pedido** (W-D1, GAPS G21 y G22): el schema llega a util_bbdd
   como argumento (`schema=`) en lugar de fijarse en los `conn_params` según el motor. En Oracle se puede documentar o
   dibujar otro owner que el usuario de la conexión (si tiene permiso de lectura); desaparecen el rechazo

@@ -12,9 +12,7 @@ from pathlib import Path
 import docx
 import pytest
 from docx.opc.exceptions import PackageNotFoundError
-from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill
-from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl import Workbook
 from openpyxl.writer.theme import theme_xml
 
 from app.domain.templates.errors import TemplateContentError, TemplateTypeError
@@ -22,9 +20,9 @@ from app.domain.templates.files import base_template, check_template, display_na
 from app.integrations.util_bbdd.documentation import (
     DocumentationOptions,
     build_imprimir,
+    excel_template_failed,
     word_template_failed,
 )
-from app.integrations.util_bbdd.excel_template import FIXED_COLORS, ExcelTemplateError, apply_excel_template
 
 MB = 1024 * 1024
 MARKER = "PORTADA-UBW"
@@ -278,71 +276,6 @@ def test_base_templates_pass_the_checks(tmp_path: Path, kind: str) -> None:
     assert check_template(path, kind, max_uncompressed=50 * MB).table_style  # type: ignore[arg-type]
 
 
-# --- retoque del Excel -------------------------------------------------------------------------------------------
-
-
-def _generated_like_util_bbdd(path: Path) -> None:
-    """Libro con lo que deja ``ExcelGenerator`` de util_bbdd 4.0.0: rellenos fijos, fuentes sin nombre y tablas."""
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet["A1"] = "Tablas"
-    sheet["A1"].font = Font(size=12, bold=True, color="FFFFFF")
-    sheet["A1"].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    sheet.append(["Nombre", "Tipo"])
-    sheet.append(["clientes", "TABLE"])
-    sheet["A3"].fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    sheet["B3"].fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
-    sheet.merge_cells("C1:D1")
-    table = Table(displayName="T1", ref="A2:B3")
-    table.tableStyleInfo = TableStyleInfo(name="TableStyleMedium2", showRowStripes=True)
-    sheet.add_table(table)
-    workbook.save(path)
-
-
-def test_excel_template_retouches_the_generated_workbook(tmp_path: Path) -> None:
-    book = tmp_path / "documentacion.xlsx"
-    _generated_like_util_bbdd(book)
-    template = _write(tmp_path, "t.xlsx", excel_template())
-
-    apply_excel_template(book, template, "TableStyleLight9")
-
-    workbook = load_workbook(book)
-    sheet = workbook.active
-    assert workbook.loaded_theme == custom_theme()
-    assert (sheet["A1"].fill.fgColor.theme, sheet["A1"].fill.fgColor.tint) == (4, -0.25)
-    assert (sheet["A3"].fill.fgColor.theme, sheet["A3"].fill.fgColor.tint) == (4, 0.8)
-    assert sheet["B3"].fill.fgColor.rgb.endswith("FFC000")  # color que no es de la paleta fija: se queda
-    assert (sheet["A1"].font.name, sheet["A1"].font.scheme, sheet["A1"].font.color.rgb) == (
-        "Arial",
-        "minor",
-        "00FFFFFF",
-    )
-    assert sheet.tables["T1"].tableStyleInfo.name == "TableStyleLight9"
-    assert sheet.oddHeader.left.text == "Empresa" and sheet.oddFooter.right.text == "Página &P"
-    assert sheet.page_setup.orientation == "landscape"
-    assert not list(tmp_path.glob(".tmp-*"))
-
-
-def test_unknown_table_style_falls_back_and_broken_template_leaves_the_book(tmp_path: Path) -> None:
-    book = tmp_path / "documentacion.xlsx"
-    _generated_like_util_bbdd(book)
-    apply_excel_template(book, _write(tmp_path, "t.xlsx", excel_template()), "Table Grid")
-    assert load_workbook(book).active.tables["T1"].tableStyleInfo.name == "TableStyleMedium2"
-
-    before = book.read_bytes()
-    with pytest.raises(Exception):  # noqa: B017 - cualquier fallo de openpyxl vale: lo que importa es el libro
-        apply_excel_template(book, _write(tmp_path, "roto.xlsx", b"no es un libro"), None)
-    assert book.read_bytes() == before
-    with_image = custom_theme().replace(b"<a:fillStyleLst>", b'<a:fillStyleLst><a:blip r:embed="rId1"/>', 1)
-    with pytest.raises(ExcelTemplateError):
-        apply_excel_template(book, _write(tmp_path, "img.xlsx", excel_template(theme=with_image)), None)
-    assert book.read_bytes() == before
-
-
-def test_fixed_colors_are_the_office_palette() -> None:
-    assert set(FIXED_COLORS) == {"4472C4", "4F81BD", "366092", "5B9BD5", "2F75B5", "D9E1F2"}
-
-
 # --- plantilla Word en util_bbdd ---------------------------------------------------------------------------------
 
 
@@ -352,6 +285,9 @@ def test_build_imprimir_only_adds_the_template_when_there_is_one(tmp_path: Path)
     assert "plantilla_word" not in build_imprimir(options) and "table_style" not in build_imprimir(options)
     imprimir = build_imprimir(options, word_template=tmp_path / "p.docx", table_style="Light Grid")
     assert (imprimir["plantilla_word"], imprimir["table_style"]) == (str(tmp_path / "p.docx"), "Light Grid")
+    assert "plantilla_excel" not in imprimir and "table_style_excel" not in imprimir
+    excel = build_imprimir(options, excel_template=tmp_path / "p.xlsx", excel_table_style="TableStyleLight9")
+    assert (excel["plantilla_excel"], excel["table_style_excel"]) == (str(tmp_path / "p.xlsx"), "TableStyleLight9")
 
 
 def _wrapped(inner: BaseException) -> RuntimeError:
@@ -381,3 +317,14 @@ def test_word_template_rejected_by_util_bbdd_4_1_is_recognized() -> None:
     assert word_template_failed(DocumentationConfigError("La plantilla Word no es un documento .docx válido: p.docx"))
     assert word_template_failed(DocumentationConfigError("Plantilla Word no encontrada: p.docx"))
     assert not word_template_failed(DocumentationConfigError("La plantilla Excel no es un libro .xlsx/.xltx válido"))
+
+
+def test_excel_template_failures_are_recognized() -> None:
+    """util_bbdd 4.1.0 valida la plantilla Excel al construir ``DatabaseDocumentation`` (U-D8) con estos mensajes."""
+    from util_bbdd.exceptions import DocumentationConfigError
+
+    assert excel_template_failed(DocumentationConfigError("La plantilla Excel no es un libro .xlsx/.xltx válido: p"))
+    assert excel_template_failed(DocumentationConfigError("El tema de la plantilla Excel p.xlsx referencia imágenes"))
+    assert excel_template_failed(_wrapped(DocumentationConfigError("Plantilla Excel no encontrada: p.xlsx")))
+    assert not excel_template_failed(DocumentationConfigError("A la plantilla Word p.docx le faltan estilos"))
+    assert not excel_template_failed(RuntimeError("conexión rechazada"))

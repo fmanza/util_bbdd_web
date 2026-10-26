@@ -61,11 +61,11 @@ Sin plantilla, Word y Excel salen con el formato de util_bbdd. Con una **plantil
 - **Con plantilla Word se respeta su orientación** (sin plantilla se usa horizontal): para tablas anchas, usa una
   plantilla en horizontal. Su contenido se repite al principio de cada documento si hay más tablas que «Tablas por
   documento Word».
-- **Si la plantilla no se puede aplicar** (se borró del disco, le falta un estilo, el Excel no se puede retocar), la
+- **Si la plantilla no se puede aplicar** (se borró del disco, le falta un estilo, el Excel no es un libro válido), la
   documentación sale con el **formato por defecto** y la ejecución termina con un **aviso** en su detalle. La
   ejecución guarda una copia de cada plantilla, y `run.json` registra cuál se usó y si se aplicó; borrar una plantilla
   no afecta a las documentaciones ya generadas (no se puede borrar mientras la use una en cola o en curso).
-- Limitaciones de util_bbdd 4.0.0: [GAPS G40 y G41](../plan/UTIL_BBDD_GAPS.md).
+- El Excel no tiene portada ni imágenes en el encabezado, y solo admite estilos de tabla predefinidos (GAPS G40).
 
 Al terminar, el detalle de la ejecución muestra la tarjeta **Documentación**:
 

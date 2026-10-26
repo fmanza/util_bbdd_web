@@ -52,8 +52,12 @@ encabezado y pie y sus colores corporativos, sin cambiar lo que pasa cuando no e
    tema (`accent1`/`accent5` con su tono: con el tema de Office se ven igual), hace que las fuentes sin nombre sigan
    la fuente del tema, copia el encabezado, el pie (sin imágenes `&G`) y la configuración de página de su primera
    hoja a todas, y aplica el estilo de tabla. Se guarda en un temporal y solo sustituye al libro si todo va bien.
+   **Desde util_bbdd 4.1.0** (G40 resuelto) lo hace util_bbdd: la copia va en `plantilla_excel` y su estilo en
+   `table_style_excel`, con el mismo resultado; `excel_template.py` solo conserva los estilos elegibles y la
+   comprobación del tema que se usan al subir.
 7. **Formato por defecto con aviso**: si la plantilla no está (o cambió), si la de Word falla por la plantilla (estilo
-   ausente, fichero ilegible) o si falla el retoque del Excel, la documentación sale **con el formato por defecto** y
+   ausente, fichero ilegible) o si falla la del Excel (con 4.1.0, la rechaza util_bbdd al construir la documentación;
+   entonces se genera de nuevo sin ella), la documentación sale **con el formato por defecto** y
    la ejecución termina bien con un aviso: `warnings` en `run.json` y en `RunDetailOut`, que el detalle muestra.
    En Word se reintenta **una sola vez** y solo si la cadena de causas apunta a la plantilla (nunca por Graphviz ni
    por la conexión); como util_bbdd aborta los formatos que faltaban, se regenera todo sin plantilla. Desde
@@ -67,8 +71,8 @@ encabezado y pie y sus colores corporativos, sin cambiar lo que pasa cuando no e
 - **Negativas**:
     - Excel sin portada, sin imágenes en el encabezado y solo con estilos de tabla predefinidos (openpyxl no copia
       hojas entre libros); los colores que no estén en la tabla de G40 no cambian.
-    - El cambio de colores depende de cómo genera util_bbdd 4.0.0 el Excel: un test que documenta una base SQLite real
-      comprueba que no queda ninguno de esos colores. Al actualizar util_bbdd, si cambian, el test falla.
+    - El cambio de colores depende de la paleta de `ExcelGenerator`: un test que documenta una base SQLite real
+      comprueba que con plantilla no queda ninguno de esos colores (contrato con util_bbdd 4.1.0).
     - Con plantilla Word se pierde la orientación horizontal automática, y su contenido (portada) se repite en cada
       documento cuando hay más tablas que «Tablas por documento Word».
     - Si la plantilla Word falla durante la generación, los metadatos se leen dos veces (solo en ese caso). Con
