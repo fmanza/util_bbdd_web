@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from app.core.config import Settings
 from app.db.models import Run
@@ -66,6 +66,11 @@ class JobContext:
             )
             db.commit()
         self.logger.info("Progreso", extra={"phase": phase, "progress": message, "pct": pct})
+
+    def cancel_requested(self) -> bool:
+        """Si un usuario pidió cancelar el run (para la parada cooperativa de util_bbdd, GAPS G1)."""
+        with new_session() as db:
+            return bool(db.scalar(select(Run.cancel_requested).where(Run.id == self.run_id)))
 
     def connection_params(self, alias: str) -> tuple[str, dict[str, Any]]:
         """``(db_type, conn_params)`` de la conexión del proyecto con ``alias``: secreto descifrado y allowlist aplicada.

@@ -305,3 +305,27 @@ def test_graph_errors_are_sanitized(
     assert (missing.status, missing.error_code) == ("failed", "invalid_params")
     assert "no_existe" in str(missing.error_message)
     assert (lonely.status, lonely.error_code) == ("failed", "no_relations")
+
+
+def test_cancelled_documentation_stops_by_itself(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+) -> None:
+    """GAPS G1 (util_bbdd 4.1.0): la documentación para entre tablas y el run termina ``cancelled`` sin matarlo."""
+    run_id = launch(user_client, project["id"], "documentation", connection="tienda", graphs=False)
+    worker.tick()  # lanza el subproceso
+    assert user_client.post(f"/api/v1/runs/{run_id}/cancel").json()["cancel_requested"] is True
+    process = worker.children[run_id].process
+
+    from tests.api.test_runs import wait_for as wait
+
+    run = wait(worker, db, run_id, timeout=120)
+
+    assert (run.status, run.error_code) == ("cancelled", "cancelled")
+    process.join(30)
+    assert process.exitcode == 0  # terminó solo: el worker no lo mató (terminate daría -15)
+    log = (run_dir(settings.workspace_dir, str(run.workspace_path)) / "logs" / "run.log").read_text(encoding="utf-8")
+    assert "Documentación cancelada entre tablas" in log

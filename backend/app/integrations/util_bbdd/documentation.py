@@ -26,6 +26,8 @@ from typing import Any, Final, Literal
 
 from docx.opc.exceptions import PackageNotFoundError
 
+from app.integrations.util_bbdd.progress import RunProgress
+
 logger = logging.getLogger(__name__)
 
 Direction = Literal["both", "outgoing", "incoming"]
@@ -238,8 +240,12 @@ def generate_documentation(
     work_dir: Path,
     name: str,
     templates: DocumentTemplates | None = None,
+    progress: RunProgress | None = None,
 ) -> dict[str, Any]:
     """Genera la documentación y la deja en ``outputs_dir/{word,excel,html/documentacion}``.
+
+    Con ``progress`` (GAPS G1, util_bbdd 4.1.0) el run muestra el avance por formato y tabla y se puede cancelar entre
+    tablas (``OperationCancelledError``).
 
     Returns:
         ``{"tables", "views", "routines", "formats": {formato: ruta relativa a outputs_dir}, "warnings": [...],
@@ -254,7 +260,16 @@ def generate_documentation(
     outcome = _Outcome()
     try:
         summary = _document_with_template(
-            conn_params, db_type, options, outputs_dir, work_dir, name, chosen, outcome, target_schema(db_type, schema)
+            conn_params,
+            db_type,
+            options,
+            outputs_dir,
+            work_dir,
+            name,
+            chosen,
+            outcome,
+            target_schema(db_type, schema),
+            progress,
         )
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -271,6 +286,7 @@ def _document_with_template(
     templates: DocumentTemplates,
     outcome: _Outcome,
     schema: str | None,
+    progress: RunProgress | None = None,
 ) -> dict[str, Any]:
     """Documenta con las plantillas; si falla por una (G40, G41), se repite sin ella (como mucho, sin las dos)."""
     word = templates.word if "word" in options.formats else None
@@ -284,7 +300,7 @@ def _document_with_template(
             excel_table_style=templates.excel_table_style,
         )
         try:
-            summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir, schema)
+            summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir, schema, progress)
         except Exception as exc:  # frontera de util_bbdd: solo se reintenta si el fallo es de una plantilla
             if word is not None and word_template_failed(exc):
                 word = None
@@ -320,6 +336,7 @@ def _document(
     name: str,
     imprimir: dict[str, Any],
     schema: str | None,
+    progress: RunProgress | None = None,
 ) -> dict[str, Any]:
     from util_bbdd import SyncDatabaseManager
     from util_bbdd.doc import DatabaseDocumentation
@@ -333,6 +350,8 @@ def _document(
             formatos=list(options.formats),
             batch_window_seconds=0,
             schema=schema,
+            on_progress=progress,
+            cancel_token=progress.token if progress is not None else None,
         ).generate()
     produced: dict[str, str] = {}
     base = work_dir / name

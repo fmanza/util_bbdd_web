@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Added
 
+- **Progreso real y cancelación cooperativa de la documentación** (W-D5, GAPS G1; util_bbdd 4.1.0): el detalle muestra
+  el avance por formato y tabla («Word: 3 de 12 (clientes)») con su porcentaje, y cancelar para la generación al
+  terminar la tabla en curso (el worker solo termina el proceso si no para en 60 s; ADR-002 enmendado).
+
 - **«Relaciones en ángulo recto»** en la documentación y en el grafo de relaciones (W-D3, GAPS G39; util_bbdd 4.1.0):
   desmarcada, los diagramas usan curvas, para los grafos en los que el enrutado ortogonal de Graphviz falla. Desde
   4.1.0 un diagrama que hace fallar a `dot` deja un aviso en su lugar y la documentación sigue.

@@ -26,6 +26,7 @@ from app.integrations.util_bbdd.documentation import (
     graphviz_failed,
 )
 from app.integrations.util_bbdd.isolated import classify
+from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.jobs.context import JobContext, JobError
 from app.workspace.layout import TEMPLATES_INPUT, write_json_atomic
 
@@ -41,6 +42,8 @@ def _job_error(exc: Exception) -> JobError:
     """Error saneado: código estable y mensaje propio (nunca el texto del driver)."""
     if isinstance(exc, JobError):
         return exc
+    if is_cancellation(exc):
+        return JobError("cancelled", "Cancelada por un usuario.")
     if isinstance(exc, GraphvizMissingError):
         return JobError("graphviz_missing", str(exc))
     if isinstance(exc, LookupError):
@@ -55,6 +58,8 @@ def _job_error(exc: Exception) -> JobError:
 
 
 _LABELS = {"word": ("Word", "el documento Word"), "excel": ("Excel", "el libro Excel")}
+#: Fases de util_bbdd en el mensaje de progreso del run.
+_PHASES = {"metadata": "Leyendo el catálogo", "word": "Word", "excel": "Excel", "html": "HTML"}
 
 
 def _copy_template(ctx: JobContext, project: Project | None, template_id: str, kind: Kind) -> tuple[Any, Path] | None:
@@ -135,9 +140,18 @@ def run_documentation(ctx: JobContext) -> None:
             work_dir=ctx.run_dir / "work",
             name="documentacion",
             templates=templates,
+            progress=RunProgress(
+                lambda message, pct: ctx.progress("running", message, pct),
+                ctx.cancel_requested,
+                ("metadata", *formats),
+                _PHASES,
+            ),
         )
     except Exception as exc:  # frontera de util_bbdd: el log solo lleva el tipo
         _record(ctx, entries, warnings)
+        if is_cancellation(exc):
+            ctx.logger.info("Documentación cancelada entre tablas")
+            raise _job_error(exc) from None
         ctx.logger.error("Documentación fallida", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     applied: dict[str, bool] = summary.pop("templates_applied")

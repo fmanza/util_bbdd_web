@@ -43,3 +43,19 @@ ofrece callbacks de progreso ni cancelación (GAPS G1) y `DatabaseDocumentation`
   segundo; la API lo emite por SSE con `EventSourceResponse` nativo de FastAPI (sin dependencias), comprobando el acceso
   antes de abrir el stream.
 - `docker compose up` arranca `web` y `worker` (ya no es un perfil); `/api/health` informa `worker: ok|stale|absent`.
+
+## Enmienda (2026-10-26): progreso y cancelación cooperativa con util_bbdd 4.1.0
+
+util_bbdd 4.1.0 publica `util_bbdd.progress` (GAPS G1): las operaciones aceptan `on_progress` y `cancel_token`, avisan
+de su avance por unidad de trabajo y paran entre unidades con `OperationCancelledError`.
+
+- **Puente** `app/integrations/util_bbdd/progress.py` (`RunProgress`): cada evento se publica con `ctx.progress`
+  (mensaje «Word: 3 de 12 (clientes)» y porcentaje repartido entre las fases) y, como mucho cada 2 s, se lee
+  `runs.cancel_requested` (`JobContext.cancel_requested`); si está pedido, cancela el token.
+- **Parada cooperativa**: la operación termina la unidad en curso y lanza `OperationCancelledError`; el job la
+  convierte en `JobError("cancelled")` y el runner cierra el run como `cancelled`.
+- **El worker** deja a las operaciones cooperativas (`COOPERATIVE_OPERATIONS`: de momento `documentation`)
+  `COOPERATIVE_CANCEL_GRACE` (60 s) antes de terminar el subproceso; si no paran a tiempo, `terminate`/`kill` como
+  antes. El resto de operaciones no cambia. El subproceso por job se mantiene (aislamiento de memoria y estado).
+- Las demás operaciones se suman al conectar util_bbdd su progreso (plan de huecos, olas 2-5).
+

@@ -25,10 +25,12 @@ from datetime import datetime, timedelta
 from multiprocessing.process import BaseProcess
 from typing import Final
 
+from sqlalchemy import select
+
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.core.ulid import new_ulid
-from app.db.models import utcnow
+from app.db.models import Run, utcnow
 from app.db.session import new_session
 from app.domain.identity.audit import RequestContext
 from app.domain.runs.service import apply_retention
@@ -44,12 +46,19 @@ RETENTION_INTERVAL: Final = 3600.0
 #: Origen de lo que audita el worker por su cuenta (purga por cuota).
 WORKER_CONTEXT: Final = RequestContext(ip=None, user_agent="worker")
 TERMINATE_GRACE: Final = 5.0
+#: Operaciones que paran por sí mismas al pedir la cancelación (``util_bbdd.progress``, GAPS G1): el worker les deja
+#: ``COOPERATIVE_CANCEL_GRACE`` segundos antes de terminar el subproceso (ADR-002).
+COOPERATIVE_OPERATIONS: Final = frozenset({"documentation"})
+COOPERATIVE_CANCEL_GRACE: Final = 60.0
 
 
 @dataclass
 class _Child:
     process: BaseProcess
     started: float
+    operation: str = ""
+    #: Cuándo vio el worker la cancelación de una operación cooperativa (``None``: aún no).
+    cancel_seen: float | None = None
 
 
 class Worker:
@@ -137,7 +146,15 @@ class Worker:
         """Cancelaciones pedidas y timeouts."""
         with new_session() as db:
             to_cancel = queue.cancel_requested(db, list(self.children))
+        now = time.monotonic()
         for run_id in to_cancel:
+            child = self.children[run_id]
+            if child.operation in COOPERATIVE_OPERATIONS:
+                if child.cancel_seen is None:
+                    child.cancel_seen = now
+                    logger.info("Cancelación cooperativa pedida", extra={"run_id": run_id})
+                if now - child.cancel_seen < COOPERATIVE_CANCEL_GRACE:
+                    continue
             self._stop_child(run_id, "cancelled", "cancelled", "Cancelada por un usuario.")
         limit = self.settings.job_timeout_seconds
         for run_id, child in list(self.children.items()):
@@ -150,9 +167,11 @@ class Worker:
                 run_id = queue.claim_next(db, self.id)
             if run_id is None:
                 return
+            with new_session() as db:
+                operation = db.scalar(select(Run.operation).where(Run.id == run_id)) or ""
             process = self._ctx.Process(target=run_job, args=(run_id,), name=f"job-{run_id}")
             process.start()
-            self.children[run_id] = _Child(process=process, started=time.monotonic())
+            self.children[run_id] = _Child(process=process, started=time.monotonic(), operation=operation)
             logger.info("Job lanzado", extra={"run_id": run_id, "pid": process.pid})
 
     def tick(self) -> None:

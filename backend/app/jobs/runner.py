@@ -196,6 +196,10 @@ def run_job(run_id: str) -> None:
         implementation = IMPLEMENTATIONS[ctx.operation]
         implementation(ctx)
     except JobError as exc:
+        if exc.code == "cancelled":  # parada cooperativa (util_bbdd 4.1.0): la operación paró entre unidades
+            logger.info("Ejecución cancelada")
+            finalize_run(run_id, "cancelled", error_code="cancelled", error_message=exc.message)
+            return
         logger.info("Ejecución fallida", extra={"code": exc.code})
         finalize_run(run_id, "failed", error_code=exc.code, error_message=exc.message)
         return
