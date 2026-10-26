@@ -179,15 +179,23 @@ def test_unknown_alias_is_rejected_on_enqueue(user_client: TestClient, project: 
     assert "otra" in response.text
 
 
+@pytest.mark.parametrize("legacy_baseline", [False, True], ids=["mismo_formato", "base_de_la_1_1_0"])
 def test_evolution_between_two_comparisons(
     user_client: TestClient,
     project: dict[str, object],
     worker: Worker,  # noqa: F811
     db: Session,
     settings: Settings,
+    legacy_baseline: bool,
 ) -> None:
     before = compare(user_client, project["id"], html=False, excel=False, sql=False, markdown=False)
-    wait_for(worker, db, before, timeout=120)
+    run = wait_for(worker, db, before, timeout=120)
+    if legacy_baseline:  # W-C2: la base es un run de la 1.1.0, con el formato 1 propio de la web
+        diff_file = run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs/diff/schema_diff.json"
+        data = json.loads(diff_file.read_text(encoding="utf-8"))
+        assert (data.pop("format"), data.pop("format_version")) == ("util_bbdd.schema_diff", 1)
+        data |= {"format": 1, "has_differences": True, "total_differences": 0, "total_leaf_differences": 0}
+        diff_file.write_text(json.dumps(data), encoding="utf-8")
     # Se crea ``facturas`` en el destino (resuelta) y se borra ``pedidos.total`` (nueva diferencia).
     con = sqlite3.connect(settings.files_dir / "destino.db")
     con.executescript(

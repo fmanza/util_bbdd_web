@@ -1,7 +1,7 @@
 """Diff de una ejecución ``compare`` (Fase 6): lectura del JSON guardado y evolución entre dos comparaciones.
 
-El JSON (``outputs/diff/schema_diff.json``) lo escribe la capa de integración con los campos del ``SchemaDiff`` de
-util_bbdd. La evolución compara las **diferencias hoja** de dos comparaciones: cada una se identifica por su tipo, la
+El JSON (``outputs/diff/schema_diff.json``) lo escribe la capa de integración (``SchemaDiff.to_dict()`` desde la 1.2.0,
+formato 1 propio antes) y lo lee ``read_diff``, que admite los dos. La evolución compara las **diferencias hoja** de dos comparaciones: cada una se identifica por su tipo, la
 tabla, el objeto y el atributo, de modo que «la columna ``x.y`` difiere en el tipo» es la misma diferencia en las dos
 fechas aunque cambien sus valores.
 """
@@ -9,6 +9,7 @@ fechas aunque cambien sus valores.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Final
 
@@ -18,6 +19,9 @@ from app.core.config import Settings
 from app.db.models import Run
 from app.domain.runs.errors import ArtifactNotFoundError, DiffNotAvailableError, DiffTooLargeError
 from app.domain.runs.service import get_artifact_by_path
+from app.integrations.util_bbdd.compare import read_diff
+
+logger = logging.getLogger(__name__)
 
 DIFF_PATH: Final = "outputs/diff/schema_diff.json"
 #: Tamaño máximo del JSON que se sirve al visor (los informes no tienen límite).
@@ -39,8 +43,11 @@ def load_diff(db: Session, run: Run, settings: Settings) -> dict[str, Any]:
         raise DiffNotAvailableError() from None
     if artifact.size_bytes > DIFF_MAX_BYTES:
         raise DiffTooLargeError()
-    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    return data
+    try:
+        return read_diff(json.loads(path.read_text(encoding="utf-8")))
+    except ValueError:  # JSON dañado o formato desconocido (json.JSONDecodeError también es ValueError)
+        logger.warning("Diff guardado ilegible", extra={"run_id": run.id}, exc_info=True)
+        raise DiffNotAvailableError() from None
 
 
 @dataclass(frozen=True)

@@ -1,7 +1,8 @@
 """Comparación de esquemas con util_bbdd (Fase 6); se ejecuta dentro del subproceso del job.
 
 - ``SchemaComparator().compare(inspector_origen, inspector_destino, *, source_schema, target_schema, include_*)``
-  devuelve un ``SchemaDiff`` (dataclasses inmutables, sin serialización propia: GAPS G24).
+  devuelve un ``SchemaDiff``; se guarda con ``SchemaDiff.to_dict()`` y se relee con ``SchemaDiff.from_dict()``
+  (util_bbdd 4.2.0, GAPS G24). ``read_diff`` sigue leyendo el formato 1 propio de la web (runs hasta la 1.1.0).
 - Etiquetas: ``alias (motor) [schema]`` con ``source_label``/``target_label`` (util_bbdd 4.2.0, G23). Sin ellas
   util_bbdd ya no pone host, usuario ni ruta (``motor [schema]``), pero el alias es lo que reconoce el usuario.
 - ``SchemaDiffReporter(sql_dialect, sql_source_inspector, sql_source_schema).render(diff, dir, formato, filename)``
@@ -14,10 +15,10 @@
 
 from __future__ import annotations
 
-import dataclasses
 import json
 import logging
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -35,8 +36,9 @@ MERMAID_STUB: Final = (
     "run: function () { return Promise.resolve(); } };\n"
 )
 
-#: Versión del JSON del diff que guarda la web (``outputs/diff/schema_diff.json``).
-DIFF_FORMAT: Final = 1
+#: Formato 1 propio de la web (hasta 1.1.0): ``dataclasses.asdict`` del ``SchemaDiff`` + ``format`` y contadores.
+#: Desde 1.2.0 ``outputs/diff/schema_diff.json`` es ``SchemaDiff.to_dict()``; el formato 1 solo se lee.
+LEGACY_DIFF_FORMAT: Final = 1
 DIFF_FILE: Final = "schema_diff.json"
 REPORT_FORMATS: Final = ("html", "excel", "word", "markdown", "sql")
 _EXTENSIONS: Final[dict[str, str]] = {
@@ -128,15 +130,41 @@ def resolve_schema(side: str, schema: str | None, available: list[str], dialect:
 
 
 def diff_to_dict(diff: Any) -> dict[str, Any]:
-    """JSON del diff: los campos del ``SchemaDiff`` más los contadores derivados y la versión del formato."""
-    data: dict[str, Any] = dataclasses.asdict(diff)
-    data.update(
-        format=DIFF_FORMAT,
-        has_differences=diff.has_differences,
-        total_differences=diff.total_differences,
-        total_leaf_differences=diff.total_leaf_differences,
-    )
+    """JSON del diff que se guarda: el de util_bbdd (``format="util_bbdd.schema_diff"`` y ``format_version``)."""
+    data: dict[str, Any] = diff.to_dict()
     return data
+
+
+def read_diff(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Diff guardado → campos del ``SchemaDiff`` más ``has_differences``, ``total_differences`` y
+    ``total_leaf_differences``, que es lo que leen el visor y la evolución.
+
+    Acepta ``SchemaDiff.to_dict()`` de util_bbdd (runs desde la 1.2.0) y el formato 1 propio (runs anteriores), así la
+    evolución funciona entre runs de las dos épocas.
+
+    Raises:
+        ValueError: Ni uno ni otro (fichero dañado o de una versión de util_bbdd que esta no lee).
+    """
+    if not isinstance(data, Mapping):
+        raise ValueError(f"El diff guardado no es un objeto JSON: {type(data).__name__}")
+    if data.get("format") == LEGACY_DIFF_FORMAT:
+        return dict(data)
+    from util_bbdd.comparar import SchemaDiff
+    from util_bbdd.exceptions import SchemaDiffValidationError
+
+    try:
+        diff = SchemaDiff.from_dict(data)
+    except SchemaDiffValidationError as exc:
+        raise ValueError(str(exc)) from exc
+    return {**diff_to_dict(diff), **_counters(diff)}
+
+
+def _counters(diff: Any) -> dict[str, Any]:
+    return {
+        "has_differences": diff.has_differences,
+        "total_differences": diff.total_differences,
+        "total_leaf_differences": diff.total_leaf_differences,
+    }
 
 
 def compare_schemas(
@@ -203,13 +231,7 @@ def compare_schemas(
                 if fmt == "html":
                     localize_mermaid(path)
                 reports[fmt] = path.relative_to(outputs_dir).as_posix()
-    return {
-        "summary": data["summary"],
-        "has_differences": data["has_differences"],
-        "total_differences": data["total_differences"],
-        "total_leaf_differences": data["total_leaf_differences"],
-        "reports": reports,
-    }
+    return {"summary": diff.summary, **_counters(diff), "reports": reports}
 
 
 class SideError(RuntimeError):

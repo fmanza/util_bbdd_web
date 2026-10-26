@@ -14,6 +14,10 @@ util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (
 - **Etiquetas de la comparación desde util_bbdd** (W-C1, GAPS G23): la web pasa `alias (motor) [schema]` como
   `source_label`/`target_label` en lugar de reescribir el `SchemaDiff` después (`relabel`, retirado). El visor y los
   informes muestran lo mismo que antes.
+- **Diff guardado con el formato de util_bbdd** (W-C2, GAPS G24): `outputs/diff/schema_diff.json` es
+  `SchemaDiff.to_dict()` (`format="util_bbdd.schema_diff"`, `format_version=1`) y se relee con `from_dict()`. Los runs
+  anteriores, con el formato 1 propio, se siguen leyendo, y la evolución funciona entre runs de las dos épocas. Un diff
+  ilegible responde como «diff no disponible» en lugar de un error 500.
 
 ## [1.1.0] - 2026-10-26
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from app.integrations.util_bbdd.compare import (
     SideError,
     diff_to_dict,
     localize_mermaid,
+    read_diff,
     resolve_schema,
     sql_dialect_for,
 )
@@ -118,10 +120,11 @@ def test_labels_and_json_have_no_infrastructure(tmp_path: Path) -> None:
     diff = SchemaComparator().compare(
         inspect(engines[0]), inspect(engines[1]), source_label=source.label, target_label=target.label
     )
-    data = diff_to_dict(diff)
+    data = read_diff(json.loads(json.dumps(diff_to_dict(diff))))
 
     assert data["source_label"] == "origen (sqlite) [main]" and data["target_label"] == "destino (sqlite)"
     assert str(tmp_path) not in repr(data) and "sqlite:///" not in repr(data)
+    assert (data["format"], data["format_version"]) == ("util_bbdd.schema_diff", 1)
     assert (data["has_differences"], data["total_leaf_differences"]) == (True, 1)
     for engine in engines:
         engine.dispose()
@@ -229,3 +232,64 @@ def test_localize_mermaid_leaves_other_reports_alone(tmp_path: Path) -> None:
     assert localize_mermaid(html) is False
     assert html.read_text(encoding="utf-8") == "<script>var x = 1;</script>"
     assert not (tmp_path / MERMAID_STUB_PATH).exists()
+
+
+#: ``schema_diff.json`` de un run de la 1.1.0 (formato 1 propio de la web: ``dataclasses.asdict`` + contadores).
+_LEGACY_DIFF: dict[str, Any] = {
+    "source_label": "origen (sqlite)",
+    "target_label": "destino (sqlite)",
+    "table_diffs": [
+        {
+            "table_name": "clientes",
+            "status": "modified",
+            "column_diffs": [
+                {"column_name": "nombre", "attribute": "nullable", "source_value": "False", "target_value": "True"}
+            ],
+            "index_diffs": [],
+            "fk_diffs": [],
+            "comment_diffs": [],
+        }
+    ],
+    "view_diffs": [],
+    "routine_diffs": [],
+    "summary": "Tablas: 0 añadidas, 0 eliminadas, 1 modificadas",
+    "source_short_label": "origen",
+    "target_short_label": "destino",
+    "format": 1,
+    "has_differences": True,
+    "total_differences": 1,
+    "total_leaf_differences": 1,
+}
+
+
+def test_read_diff_keeps_the_legacy_format() -> None:
+    """GAPS G24 / W-C2: los runs de la 1.1.0 se siguen leyendo, y su evolución con uno nuevo es la misma."""
+    from util_bbdd.comparar import ColumnDiff, SchemaDiff, TableDiff
+
+    legacy = read_diff(_LEGACY_DIFF)
+    current = SchemaDiff(
+        source_label="origen (sqlite)",
+        target_label="destino (sqlite)",
+        table_diffs=(
+            TableDiff("clientes", "modified", column_diffs=(ColumnDiff("nombre", "nullable", "False", "True"),)),
+        ),
+    )
+    result = evolution(read_diff(diff_to_dict(current)), legacy)
+
+    assert legacy == _LEGACY_DIFF
+    assert result.labels_match and [i.name for i in result.persisting] == ["nombre"]
+    assert not result.new and not result.resolved
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        [],
+        {"format": 2},
+        {"format": "util_bbdd.schema_diff", "format_version": 99, "source_label": "a", "target_label": "b"},
+        {"format": "util_bbdd.schema_diff", "format_version": 1, "source_label": "a"},
+    ],
+)
+def test_read_diff_rejects_unknown_or_broken_files(data: Any) -> None:
+    with pytest.raises(ValueError):
+        read_diff(data)
