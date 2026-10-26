@@ -52,7 +52,7 @@ Detalle en [Puesta en marcha › En producción](docs/guides/puesta_en_marcha.md
 | Frontend | React 19 + TypeScript 5.9, Vite 8, React Router 8, TanStack Query 5, Mantine 9, i18next |
 | Backend | Python 3.12, FastAPI, Pydantic 2, SQLAlchemy 2.1, Alembic, prometheus-client |
 | Persistencia | SQLite (WAL) en el volumen `data`; salidas en el volumen `workspace` |
-| Librería | util_bbdd 4.0.0 (wheel de la release v4.0.0 en GitHub, hash fijado en `uv.lock`, ADR-006) |
+| Librería | util_bbdd 4.1.0 (wheel de la release v4.1.0 en GitHub, hash fijado en `uv.lock`, ADR-006) |
 | Contenedor | Dockerfile multi-stage, usuario no root, sistema de ficheros de solo lectura, sin capacidades |
 
 ## Documentación

@@ -1140,8 +1140,8 @@ wheels = [
 
 [[package]]
 name = "util-bbdd"
-version = "4.0.0"
-source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.0.0/util_bbdd-4.0.0-py3-none-any.whl" }
+version = "4.1.0"
+source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.1.0/util_bbdd-4.1.0-py3-none-any.whl" }
 dependencies = [
     { name = "jinja2" },
     { name = "openpyxl" },
@@ -1150,7 +1150,7 @@ dependencies = [
     { name = "sqlalchemy" },
 ]
 wheels = [
-    { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.0.0/util_bbdd-4.0.0-py3-none-any.whl", hash = "sha256:a9a71aec8bc5659bf93ebc7ae80101068df8564e9c8b5345957cd19acc729f60" },
+    { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.1.0/util_bbdd-4.1.0-py3-none-any.whl", hash = "sha256:706ad06faef695a713025674520e04afba0a2f6e1e7d90005d67e2cd47753fa1" },
 ]
 
 [package.optional-dependencies]
@@ -1176,18 +1176,28 @@ postgresql = [
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
 ]
+sqlite-async = [
+    { name = "aiosqlite" },
+]
+sqlserver = [
+    { name = "pymssql" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "aiomysql", marker = "extra == 'mariadb'", specifier = ">=0.3" },
     { name = "aiomysql", marker = "extra == 'mysql'", specifier = ">=0.3" },
+    { name = "aioodbc", marker = "extra == 'sqlserver-odbc'", specifier = ">=0.5" },
+    { name = "aioodbc", marker = "extra == 'test-drivers'", specifier = ">=0.5" },
     { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.22" },
+    { name = "aiosqlite", marker = "extra == 'sqlite-async'", specifier = ">=0.22" },
     { name = "asyncpg", marker = "extra == 'postgresql'", specifier = ">=0.32" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=26.10" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.6" },
     { name = "cairosvg", marker = "extra == 'doc-svg'", specifier = ">=2.9" },
     { name = "graphviz", marker = "extra == 'analysis'", specifier = ">=0.21" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=9.0" },
+    { name = "jaydebeapi", marker = "extra == 'hsqldb'", specifier = ">=1.2" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "mariadb", marker = "extra == 'mariadb'", specifier = ">=1.1" },
     { name = "matplotlib", marker = "extra == 'analysis-matplotlib'", specifier = ">=3.11" },
@@ -1199,32 +1209,37 @@ requires-dist = [
     { name = "oracledb", marker = "extra == 'dev'", specifier = ">=26" },
     { name = "oracledb", marker = "extra == 'oracle'", specifier = ">=26" },
     { name = "pandas", specifier = ">=3.0" },
-    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=3.0" },
+    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=3.0.5,<3.1" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'postgresql'", specifier = ">=3.3" },
     { name = "psycopg-pool", marker = "extra == 'postgresql'", specifier = ">=3.3" },
     { name = "psycopg2-binary", marker = "extra == 'dev'", specifier = ">=2.9" },
+    { name = "pymssql", marker = "extra == 'sqlserver'", specifier = ">=2.4" },
+    { name = "pymssql", marker = "extra == 'test-drivers'", specifier = ">=2.4" },
     { name = "pymysql", extras = ["rsa"], marker = "extra == 'mysql'", specifier = ">=1.2" },
+    { name = "pyodbc", marker = "extra == 'sqlserver-odbc'", specifier = ">=5.2" },
+    { name = "pyodbc", marker = "extra == 'test-drivers'", specifier = ">=5.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.1" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.4" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.1" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.17" },
     { name = "sqlalchemy", specifier = ">=2.1" },
+    { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'test-drivers'", specifier = ">=2.1" },
     { name = "sqlglot", marker = "extra == 'dev'", specifier = ">=30,<31" },
     { name = "sqlglot", marker = "extra == 'migrate'", specifier = ">=30,<31" },
     { name = "types-networkx", marker = "extra == 'dev'" },
     { name = "types-openpyxl", marker = "extra == 'dev'" },
     { name = "types-pymysql", marker = "extra == 'dev'" },
+    { name = "util-bbdd", extras = ["analysis", "analysis-matplotlib", "dev", "docs", "mariadb", "migrate", "mysql", "oracle", "postgresql", "test-drivers"], marker = "extra == 'dev-full'" },
     { name = "zensical", marker = "extra == 'docs'", specifier = ">=0.0.71" },
 ]
-provides-extras = ["oracle", "mariadb", "mysql", "postgresql", "migrate", "analysis", "analysis-matplotlib", "doc-svg", "dev", "docs"]
+provides-extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlserver-odbc", "hsqldb", "sqlite-async", "migrate", "analysis", "analysis-matplotlib", "doc-svg", "test-drivers", "dev-full", "dev", "docs"]
 
 [[package]]
 name = "util-bbdd-web"
 version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "aiosqlite" },
     { name = "alembic" },
     { name = "cryptography" },
     { name = "fastapi" },
@@ -1233,12 +1248,11 @@ dependencies = [
     { name = "pwdlib", extra = ["argon2"] },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pymssql" },
     { name = "python-docx" },
     { name = "python-multipart" },
     { name = "sqlalchemy" },
     { name = "sqlglot" },
-    { name = "util-bbdd", extra = ["analysis", "mariadb", "migrate", "mysql", "oracle", "postgresql"] },
+    { name = "util-bbdd", extra = ["analysis", "mariadb", "migrate", "mysql", "oracle", "postgresql", "sqlite-async", "sqlserver"] },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1266,7 +1280,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aioodbc", marker = "extra == 'odbc'", specifier = ">=0.5" },
-    { name = "aiosqlite", specifier = ">=0.21" },
     { name = "alembic", specifier = ">=1.16" },
     { name = "cryptography", specifier = ">=50" },
     { name = "fastapi", specifier = ">=0.115" },
@@ -1276,13 +1289,12 @@ requires-dist = [
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3" },
     { name = "pydantic", specifier = ">=2.11" },
     { name = "pydantic-settings", specifier = ">=2.10" },
-    { name = "pymssql", specifier = ">=2.3" },
     { name = "pyodbc", marker = "extra == 'odbc'", specifier = ">=5.2" },
     { name = "python-docx", specifier = ">=1.2" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "sqlalchemy", specifier = ">=2.1" },
     { name = "sqlglot", specifier = ">=30" },
-    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v4.0.0/util_bbdd-4.0.0-py3-none-any.whl" },
+    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlite-async", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v4.1.0/util_bbdd-4.1.0-py3-none-any.whl" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]
 provides-extras = ["hsqldb", "odbc"]

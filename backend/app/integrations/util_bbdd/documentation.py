@@ -155,7 +155,8 @@ def word_template_failed(exc: BaseException) -> bool:
             or isinstance(current, zipfile.BadZipFile)
             or isinstance(current, PackageNotFoundError)
             or (isinstance(current, ValueError) and "not a Word file" in message)
-            or (isinstance(current, DocumentationConfigError) and "Plantilla Word" in message)
+            # util_bbdd 4.1.0 valida la plantilla al construir: «A la plantilla Word … le faltan estilos…»
+            or (isinstance(current, DocumentationConfigError) and "plantilla word" in message.lower())
         ):
             return True
         seen.add(id(current))

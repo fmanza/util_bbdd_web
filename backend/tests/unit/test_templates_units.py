@@ -371,3 +371,13 @@ def test_word_template_failures_are_recognized() -> None:
     assert not word_template_failed(_wrapped(KeyError("tabla")))
     assert not word_template_failed(_wrapped(subprocess.CalledProcessError(1, ["dot"])))
     assert not word_template_failed(RuntimeError("conexión rechazada"))
+
+
+def test_word_template_rejected_by_util_bbdd_4_1_is_recognized() -> None:
+    """util_bbdd 4.1.0 valida la plantilla al construir ``DatabaseDocumentation`` (U-D4) con estos mensajes."""
+    from util_bbdd.exceptions import DocumentationConfigError
+
+    assert word_template_failed(DocumentationConfigError("A la plantilla Word p.docx le faltan estilos: Heading 1"))
+    assert word_template_failed(DocumentationConfigError("La plantilla Word no es un documento .docx válido: p.docx"))
+    assert word_template_failed(DocumentationConfigError("Plantilla Word no encontrada: p.docx"))
+    assert not word_template_failed(DocumentationConfigError("La plantilla Excel no es un libro .xlsx/.xltx válido"))

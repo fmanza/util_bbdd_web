@@ -36,6 +36,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Changed
 
+- **util_bbdd 4.1.0** (ola 1 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md), W-1.0): wheel de la release
+  `v4.1.0` con hash en `uv.lock`. SQL Server (pymssql) y SQLite async (aiosqlite) llegan con los extras `sqlserver` y
+  `sqlite-async` en lugar de dependencias propias (G3 resuelto). util_bbdd valida la plantilla Word al construir la
+  documentación; la web la reconoce y sigue documentando sin plantilla con un aviso, como hasta ahora.
+
 - Markdown de `docs/` compatible con GitHub y con Python-Markdown: anidado a 4 espacios, línea en blanco antes de
   listas y enlaces fuera de `docs/` como URL absoluta (reglas en `docs.instructions.md`).
 - La lista de comprobación de SHARED ya no trata `zensical` como término heredado de util_bbdd.

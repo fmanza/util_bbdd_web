@@ -173,7 +173,7 @@ def test_noop_succeeds_with_artifacts_manifest_and_log(
     assert directory.name.endswith(f"_noop_{run_id}")
     manifest = json.loads((directory / "run.json").read_text(encoding="utf-8"))
     assert manifest["status"] == "succeeded"
-    assert manifest["versions"]["util_bbdd"] == "4.0.0"
+    assert manifest["versions"]["util_bbdd"] == "4.1.0"
     assert {a["path"] for a in manifest["artifacts"]} >= {"outputs/markdown/resumen.md", "outputs/graphs/pasos.svg"}
     log = (directory / "logs" / "run.log").read_text(encoding="utf-8")
     assert "Ejecución terminada" in log

@@ -14,11 +14,9 @@ dependencies = [
     "pydantic-settings>=2.10",
     "sqlalchemy>=2.1",
     "alembic>=1.16",
-    # util_bbdd fijado por versión (ADR-006): wheel de la release v4.0.0 en GitHub, hash en uv.lock.
-    "util_bbdd[oracle,mariadb,mysql,postgresql,migrate,analysis]==4.0.0",
-    # Drivers sin extra en util_bbdd (UTIL_BBDD_GAPS.md G3).
-    "pymssql>=2.3",
-    "aiosqlite>=0.21",
+    # util_bbdd fijado por versión (ADR-006): wheel de la release v4.1.0 en GitHub, hash en uv.lock. Desde 4.1.0,
+    # SQL Server (pymssql) y SQLite async (aiosqlite) llegan con sus extras (UTIL_BBDD_GAPS.md G3).
+    "util_bbdd[oracle,mariadb,mysql,postgresql,sqlserver,sqlite-async,migrate,analysis]==4.1.0",
     "pwdlib[argon2]>=0.3",  # Argon2id para contraseñas (ADR-003)
     "cryptography>=50",  # Fernet para secretos de conexión (ADR-004)
     "sqlglot>=30",  # guardián de solo lectura del SQL libre (Fase 4)
@@ -51,12 +49,12 @@ docs = [
 package = false
 # Cadena de suministro: solo versiones publicadas antes de esta fecha (≥ 2 semanas). Se adelanta a mano al actualizar.
 exclude-newer = "2026-10-05T00:00:00Z"
-# Excepciones justificadas: util_bbdd 4.0.0 exige asyncpg>=0.32, publicado después del corte; opentelemetry-api
+# Excepciones justificadas: util_bbdd 4.x exige asyncpg>=0.32, publicado después del corte; opentelemetry-api
 # 1.45.1 (2026-10-06) corrige CVE-2026-114603 (ReDoS en ``tracestate``; llega con FastAPI, Fase 10).
 exclude-newer-package = { asyncpg = "2026-10-19T00:00:00Z", opentelemetry-api = "2026-10-09T00:00:00Z" }
 
 [tool.uv.sources]
-util_bbdd = { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.0.0/util_bbdd-4.0.0-py3-none-any.whl" }
+util_bbdd = { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.1.0/util_bbdd-4.1.0-py3-none-any.whl" }
 
 [tool.ruff]
 line-length = 120
