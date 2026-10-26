@@ -5,7 +5,7 @@ de la capa anticorrupción de la web. Va agrupado por tipo de ejecución (inclui
 tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
-  hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 de util_bbdd hecha (v4.2.0, 2026-10-26; registro en §6); W-2 en curso.
+  hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -434,3 +434,14 @@ Release `v4.1.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 | release | `5f7e0c1` | pytest 6478 passed, 596 skipped; mypy, ruff y `zensical build --strict` limpios; wheel probado en un venv limpio |
 
 Release `v4.2.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SHA-256 `5357688d…529f`).
+
+### W-2 — util_bbdd_web con util_bbdd 4.2.0 (2026-10-26, rama `claude/practical-ride-44fot0`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-2.0 | `aed4164` | Pin 4.2.0 (lock con uv 0.12.22). La regex del sustituto de Mermaid admite `integrity`/`crossorigin` (U-C3) |
+| W-C1 | `b62d66a` | `source_label`/`target_label` = `alias (motor) [schema]`; `relabel` retirado; test de rutas del servidor mantenido |
+| W-C2 | `a43129b` | Escritura con `SchemaDiff.to_dict()`; `read_diff` con `from_dict()` y lector del formato 1 propio; evolución entre runs de las dos épocas |
+| W-C3 | `c39ac14` | **Cambio**: `mermaid_src=None` en lugar de un asset propio (dependencia nueva, ~3 MB por informe); stub retirado; diagramas como texto |
+| W-C4 | `51ad8de` | `RunProgress` en la comparación; `compare` en `COOPERATIVE_OPERATIONS`; los informes no se interrumpen |
+| release | este commit | util_bbdd_web **1.2.0** (D5). Sin `docker compose build`, `/api/health` ni E2E (sin Docker en la sesión) |

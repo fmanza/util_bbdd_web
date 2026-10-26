@@ -3,7 +3,7 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
-## [Unreleased]
+## [1.2.0] - 2026-10-26
 
 util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (comparación de esquemas).
 
