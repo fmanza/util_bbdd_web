@@ -1,26 +1,36 @@
-"""Fase 7: hash y JSON del plan, opciones del planner, lectura del rastro de auditoría y fallos del job."""
+"""Fase 7: hash y JSON del plan, opciones del planner, plan guardado (util_bbdd 4.3.0), destino y fallos del job."""
 
 from __future__ import annotations
 
+import dataclasses
 import json
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import get_operation, validate_params
+from app.integrations.util_bbdd import migrate
 from app.integrations.util_bbdd.migrate import (
     ApplyReport,
+    PlanChangedError,
     PlannerOptions,
-    _record_failure,
+    PlanOutdatedError,
+    TargetConflictError,
+    apply_plan,
+    create_plan,
     fk_mismatches,
     plan_to_dict,
+    replan,
+    restore_plan,
     statements_hash,
 )
 from app.jobs.context import JobError
 from app.jobs.operations.migrate import _raise_for_report
-from tests.unit._migration_source import oracle_int_pk_and_fk
+from tests.unit._migration_source import fake_manager, oracle_int_pk_and_fk
 
 
 def test_statements_hash_is_order_and_boundary_sensitive() -> None:
@@ -161,30 +171,137 @@ def test_dry_run_with_blocking_fk_fails() -> None:
     assert info.value.code == "fk_type_mismatch" and "P.C → R.ID" in info.value.message
 
 
-def test_record_failure_reads_the_audit_trail(tmp_path: Path) -> None:
-    audit = tmp_path / "migracion.jsonl"
-    events = [
-        {"kind": "statement", "status": "ok", "message": "CREATE TABLE a", "attributes": {"position": 1}},
-        {"kind": "statement", "status": "ok", "message": "CREATE TABLE b", "attributes": {"position": 2}},
-        {"kind": "statement", "status": "failed", "message": "CREATE TABLE c", "attributes": {"position": 3}},
-        {"kind": "run", "status": "failed"},
-    ]
-    audit.write_text("\n".join(json.dumps(e) for e in events), encoding="utf-8")
-    report = ApplyReport(mode="apply", statements_hash="h", statements=5)
+def _oracle_plan(target: str = "mariadb") -> Any:
+    from util_bbdd.migrate import MigrationPlanner
 
+    return MigrationPlanner(source_engine="oracle", target_engine=target).plan(oracle_int_pk_and_fk(), "S")
+
+
+def _managers(monkeypatch: pytest.MonkeyPatch, **by_engine: Any) -> None:
+    """``SyncDatabaseManager(db_type, …)`` devuelve el manager falso de ese motor."""
+    import util_bbdd
+
+    monkeypatch.setattr(util_bbdd, "SyncDatabaseManager", lambda db_type, *_, **__: nullcontext(by_engine[db_type]))
+
+
+def test_util_bbdd_hash_is_the_web_hash() -> None:
+    """``plan.json`` de la 1.2.0 y ``migration_plan.json`` se comparan con el mismo algoritmo (G26)."""
+    plan = _oracle_plan()
+
+    assert plan.statements_sha256() == statements_hash(list(plan.emit_statements()))
+
+
+def test_create_plan_saves_the_util_bbdd_plan_without_connection_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _managers(monkeypatch, oracle=oracle_int_pk_and_fk())
+    params = {"host": "10.1.2.3", "user": "scott", "password": "secreto"}
+
+    summary = create_plan(
+        "oracle", params, schema="S", target_engine="mariadb", options=PlannerOptions(), outputs_dir=tmp_path
+    )
+
+    viewer = json.loads((tmp_path / "plan" / "plan.json").read_text(encoding="utf-8"))
+    raw = (tmp_path / "plan" / "migration_plan.json").read_text(encoding="utf-8")
+    stored = json.loads(raw)
+    assert stored["format"] == "util_bbdd.migration_plan"
+    assert stored["statements_sha256"] == viewer["statements_hash"] == summary["statements_hash"]
+    assert not any(value in raw for value in ("10.1.2.3", "scott", "secreto"))
+    assert restore_plan(stored, viewer["statements_hash"]).emit_statements() == viewer["statements"]
+
+
+def test_restore_plan_rejects_another_hash_or_unreadable_data() -> None:
+    stored = json.loads(json.dumps(_oracle_plan().to_dict()))
+
+    with pytest.raises(PlanChangedError):
+        restore_plan(stored, "0" * 64)
+    with pytest.raises(PlanOutdatedError):
+        restore_plan({**stored, "statements_sha256": "0" * 64}, stored["statements_sha256"])
+    with pytest.raises(PlanOutdatedError):
+        restore_plan({**stored, "format_version": 99}, stored["statements_sha256"])
+
+
+def test_plans_before_1_3_0_are_planned_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    expected = _oracle_plan().statements_sha256()
+    _managers(monkeypatch, oracle=oracle_int_pk_and_fk())
+
+    plan = replan(("oracle", {}), "mariadb", schema="S", options=PlannerOptions(), expected_hash=expected)
+
+    assert plan.statements_sha256() == expected
+    with pytest.raises(PlanChangedError):
+        replan(("oracle", {}), "mariadb", schema="S", options=PlannerOptions(), expected_hash="0" * 64)
+
+
+def test_dry_run_reports_existing_tables_and_views_without_writing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from util_bbdd.metadata.model import TableMeta, ViewMeta
+
+    target = fake_manager("mariadb", TableMeta("clientes", None), ViewMeta("PEDIDOS", "SELECT 1", None, False))
+    _managers(monkeypatch, mariadb=target)
+    plan = _oracle_plan()
+
+    report = apply_plan(plan, ("mariadb", {}), mode="dry_run", outputs_dir=tmp_path)
+
+    assert [name.lower() for name in report.conflicts] == ["clientes", "pedidos"]
+    assert report.statements == len(plan.emit_statements()) and report.applied == 0
+    target.get_sqlalchemy_engine.assert_not_called()
+    with pytest.raises(TargetConflictError):
+        apply_plan(plan, ("mariadb", {}), mode="apply", outputs_dir=tmp_path)
+
+
+def _target_cursor(target: MagicMock) -> MagicMock:
+    cursor: MagicMock = target.get_sqlalchemy_engine.return_value.raw_connection.return_value.cursor.return_value
+    return cursor
+
+
+def test_apply_runs_the_restored_plan_and_counts_the_statements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = fake_manager("mariadb")
+    _managers(monkeypatch, mariadb=target)
+    plan = restore_plan(_oracle_plan().to_dict(), _oracle_plan().statements_sha256())
+
+    report = apply_plan(plan, ("mariadb", {}), mode="apply", outputs_dir=tmp_path)
+
+    assert report.error is None and report.applied == report.statements == _target_cursor(target).execute.call_count
+    assert (tmp_path / "audit" / "migracion.jsonl").exists()
+
+
+def test_partial_apply_takes_the_failed_statement_from_util_bbdd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     class DriverError(Exception):
         pass
 
-    try:
-        try:
-            raise DriverError("ORA-00955: name is already used\npostgresql://u:secreto@h/d [SQL: CREATE ...]")
-        except DriverError as cause:
-            raise RuntimeError("Sentencia 3/5 del plan falló") from cause
-    except RuntimeError as exc:
-        _record_failure(report, audit, exc)
+    target = fake_manager("mariadb")
+    _target_cursor(target).execute.side_effect = [
+        None,
+        DriverError("(1050) Table already exists\nmysql://u:secreto@h/d [SQL: CREATE ...]"),
+    ]
+    _managers(monkeypatch, mariadb=target)
+    plan = _oracle_plan()
 
-    assert (report.applied, report.failed_position, report.failed_statement) == (2, 3, "CREATE TABLE c")
-    assert report.error == "ORA-00955: name is already used"
+    report = apply_plan(plan, ("mariadb", {}), mode="apply", outputs_dir=tmp_path)
+
+    assert (report.applied, report.failed_position) == (1, 2)
+    assert report.failed_statement == plan.emit_statements()[1].strip().splitlines()[0]
+    assert report.error == "(1050) Table already exists"
+
+
+def test_blocked_or_fk_blocking_plans_never_reach_the_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    target = fake_manager("mariadb")
+    _managers(monkeypatch, mariadb=target)
+    plan = _oracle_plan()
+    monkeypatch.setattr(migrate, "plan_to_dict", lambda *_: {"statements_hash": "h", "fk_mismatches": [{}],
+                                                             "fk_blocking": True})  # fmt: skip
+
+    with pytest.raises(migrate.FkTypeMismatchError):
+        apply_plan(plan, ("mariadb", {}), mode="apply", outputs_dir=tmp_path)
+    plan.warnings[0] = dataclasses.replace(plan.warnings[0], severity="ERROR")
+    with pytest.raises(migrate.PlanBlockedError):
+        apply_plan(plan, ("mariadb", {}), mode="apply", outputs_dir=tmp_path)
+    target.get_sqlalchemy_engine.assert_not_called()
 
 
 def test_dry_run_with_conflicts_or_invalid_views_fails() -> None:

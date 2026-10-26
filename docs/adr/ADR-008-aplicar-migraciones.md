@@ -69,3 +69,14 @@ no es atómico» y escribir el alias.
 - **FK con tipos coherentes (G28, W-M2)**: util_bbdd da a cada columna FK el tipo destino de la columna referenciada
   (`FK_TYPE_ALIGNED`, `INFO`) o bloquea el plan (`FK_TYPE_UNRESOLVED`, `ERROR`). `fk_mismatches` y `fk_blocking` **se
   mantienen** como defensa: los planes guardados antes de la 1.3.0 se siguen bloqueando con destino MariaDB/MySQL.
+- **Aplicar el plan revisado sin replanificar (G26, W-M3)**: `migrate_plan` guarda además
+  `outputs/plan/migration_plan.json` (`MigrationPlan.to_dict()`). `migrate_apply` lo reconstruye con `from_dict()`
+  (que ya exige el `statements_sha256` guardado) y comprueba que su hash sea el `statements_hash` de `plan.json`, el
+  que se revisó en el visor; no vuelve a leer el origen. Así se cumple la alternativa que se descartó al principio
+  («aplicar las sentencias guardadas») sin usar funciones privadas. Los planes anteriores a la 1.3.0 (sin ese fichero)
+  se siguen replanificando como antes. Un plan que otra versión de util_bbdd no reconstruye termina en `plan_changed`.
+- **Destino con `check_target` (G27, W-M3)**: los conflictos incluyen ahora las **vistas** del plan que ya existen (en
+  MySQL/MariaDB `CREATE OR REPLACE VIEW` las sustituía sin avisar); la validación de vistas sale del mismo
+  `TargetCheck`. El informe de una aplicación fallida toma la sentencia, su posición y las aplicadas de
+  `MigrationStatementError` en lugar de leer el rastro de auditoría, que se sigue escribiendo.
+- El modo seco obligatorio de menos de 60 minutos y la doble confirmación (casilla y alias) **no cambian**.

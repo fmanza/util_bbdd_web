@@ -16,6 +16,13 @@ util_bbdd 4.3.0 y ola 3 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (
   `MigrationPlanner.supported_sources()`/`supported_targets()` en lugar de una copia de sus constantes privadas. La
   ficha de motores muestra lo mismo que antes.
 
+- **Aplicar el plan revisado sin replanificar** (W-M3, GAPS G26 y G27): `migrate_plan` guarda también
+  `outputs/plan/migration_plan.json` (`MigrationPlan.to_dict()`) y `migrate_apply` lo reconstruye y comprueba su hash
+  contra el `plan.json` revisado, sin volver a leer el origen (ya no hace falta que la conexión origen siga en el
+  proyecto). Los planes anteriores a la 1.3.0 se replanifican como antes. El destino se comprueba con
+  `check_target()`: **las vistas que ya existen también son conflicto** (antes MySQL/MariaDB las sustituían). El modo
+  seco y la doble confirmación no cambian.
+
 ### Fixed
 
 - **FK con el tipo de la columna referenciada** (W-M2, GAPS G28): con util_bbdd 4.3.0, Oracle `INT` en PK y FK ya no

@@ -396,6 +396,22 @@ def _recheck(db: Session, settings: Settings, project: dict[str, object], run_id
     return recheck(ctx, MigrateApplyParams.model_validate(run.params))
 
 
+def test_worker_uses_the_util_bbdd_plan_when_it_exists(
+    project: dict[str, object], db: Session, settings: Settings, allowed: User
+) -> None:
+    """Desde la 1.3.0 el job reconstruye ``migration_plan.json``; los planes anteriores (sin él) se replanifican."""
+    stored = {"format": "util_bbdd.migration_plan", "format_version": 1}
+    new_plan = seed_run(
+        db, settings, project_id=int(str(project["id"])), user_id=allowed.id, operation="migrate_plan",
+        params={"source_connection": "origen", "source_schema": None, "target_engine": "mysql"},
+        files={"outputs/plan/plan.json": json.dumps(PLAN), "outputs/plan/migration_plan.json": json.dumps(stored)},
+    )  # fmt: skip
+    old_plan = seed_plan(db, settings, project, allowed)
+
+    assert _recheck(db, settings, project, seed_dry_run(db, settings, project, allowed, new_plan))[2] == stored
+    assert _recheck(db, settings, project, seed_dry_run(db, settings, project, allowed, old_plan))[2] is None
+
+
 def test_worker_rechecks_permission_owner_target_and_engine(
     user_client: TestClient,
     project: dict[str, object],

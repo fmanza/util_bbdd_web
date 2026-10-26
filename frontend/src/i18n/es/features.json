@@ -759,7 +759,7 @@
       "noTargets": "El proyecto no tiene conexiones {{engine}} que no sean de solo lectura.",
       "target": "Conexión destino",
       "chooseTarget": "Elige la conexión…",
-      "steps": "Primero el modo seco: comprueba que el origen no ha cambiado, que el destino no tiene ya esas tablas y valida las vistas, sin dejar cambios. Con un modo seco correcto de la última hora se puede aplicar.",
+      "steps": "Primero el modo seco: comprueba que se aplicará exactamente el plan revisado, que el destino no tiene ya esas tablas o vistas y valida las vistas, sin dejar cambios. Con un modo seco correcto de la última hora se puede aplicar.",
       "dryRun": "Modo seco",
       "open": "Aplicar…",
       "needsDryRun": "Lanza un modo seco correcto sobre esta conexión para poder aplicar.",

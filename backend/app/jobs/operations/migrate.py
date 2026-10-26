@@ -9,7 +9,7 @@ from app.core.errors import AppError
 from app.db.models import Run, User
 from app.db.session import new_session
 from app.domain.projects.service import get_membership, get_project_connection
-from app.domain.runs.migrations import REPORT_PATH, load_plan
+from app.domain.runs.migrations import REPORT_PATH, load_plan, load_stored_plan
 from app.domain.runs.operations import MigrateApplyParams, MigratePlanParams
 from app.integrations.util_bbdd.isolated import classify
 from app.integrations.util_bbdd.migrate import (
@@ -18,9 +18,12 @@ from app.integrations.util_bbdd.migrate import (
     PlanBlockedError,
     PlanChangedError,
     PlannerOptions,
+    PlanOutdatedError,
     TargetConflictError,
     apply_plan,
     create_plan,
+    replan,
+    restore_plan,
 )
 from app.jobs.context import JobContext, JobError
 from app.jobs.operations.documentation import _MESSAGES
@@ -66,11 +69,11 @@ def run_plan(ctx: JobContext) -> None:
     )  # fmt: skip
 
 
-def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any], dict[str, Any]]:
+def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any], dict[str, Any], Any | None]:
     """Vuelve a comprobar en el worker permiso, rol owner, plan y destino (pudieron cambiar desde que se encoló).
 
     Returns:
-        ``(parámetros del plan, plan.json)``.
+        ``(parámetros del plan, plan.json, migration_plan.json o None si el plan es anterior a la 1.3.0)``.
     """
     with new_session() as db:
         run = db.get(Run, ctx.run_id)
@@ -88,6 +91,7 @@ def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any
             raise JobError("invalid_params", "El plan ya no existe.")
         try:
             plan = load_plan(db, plan_run, ctx.settings)
+            stored = load_stored_plan(db, plan_run, ctx.settings)
         except AppError:
             raise JobError("invalid_params", "El plan ya no está disponible (¿purgado?).") from None
         try:
@@ -100,7 +104,7 @@ def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any
             raise JobError("forbidden", "La conexión destino es de solo lectura.")
         if link.connection.db_type != plan.get("target_engine"):
             raise JobError("invalid_params", f"La conexión destino ya no es {plan.get('target_engine')}.")
-        return dict(plan_run.params), plan
+        return dict(plan_run.params), plan, stored
 
 
 def _write_report(ctx: JobContext, report: dict[str, Any]) -> None:
@@ -112,31 +116,41 @@ def _write_report(ctx: JobContext, report: dict[str, Any]) -> None:
 def run_apply(ctx: JobContext) -> None:
     params = MigrateApplyParams.model_validate(ctx.params)
     ctx.progress("preparing", "Comprobando permiso, plan y destino")
-    plan_params, plan = _recheck(ctx, params)
+    plan_params, plan, stored = _recheck(ctx, params)
     plan_model = MigratePlanParams.model_validate(plan_params)
-    source = ctx.connection_params(plan_model.source_connection)
     target = ctx.connection_params(params.target_connection)
     verb = "Validando (modo seco)" if params.mode == "dry_run" else "Aplicando"
     ctx.progress("running", f"{verb} {len(plan['statements'])} sentencias en «{params.target_connection}»")
     try:
-        report = apply_plan(
-            source,
-            target,
-            schema=plan["source_schema"],
-            options=_options(plan_model),
-            expected_hash=plan["statements_hash"],
-            mode=params.mode,
-            outputs_dir=ctx.run_dir / "outputs",
-        )
+        if stored is not None:
+            migration = restore_plan(stored, plan["statements_hash"])
+        else:  # plan anterior a la 1.3.0: se replanifica contra el origen (ADR-008)
+            migration = replan(
+                ctx.connection_params(plan_model.source_connection),
+                plan["target_engine"],
+                schema=plan["source_schema"],
+                options=_options(plan_model),
+                expected_hash=plan["statements_hash"],
+            )
+        report = apply_plan(migration, target, mode=params.mode, outputs_dir=ctx.run_dir / "outputs")
+    except PlanOutdatedError:
+        raise JobError(
+            "plan_changed", "El plan se generó con otra versión de util_bbdd o está dañado: vuelve a planificar."
+        ) from None
     except PlanChangedError:
-        raise JobError("plan_changed", "El origen ha cambiado desde el plan: vuelve a planificar.") from None
+        changed = "El origen ha cambiado desde el plan" if stored is None else "El plan guardado no es el revisado"
+        raise JobError("plan_changed", f"{changed}: vuelve a planificar.") from None
     except PlanBlockedError:
         raise JobError("plan_blocked", "El plan tiene avisos de severidad ERROR.") from None
     except FkTypeMismatchError:
         raise JobError("fk_type_mismatch", "El plan tiene claves foráneas entre tipos distintos.") from None
     except TargetConflictError as exc:
         _write_report(ctx, ApplyReport(params.mode, plan["statements_hash"], 0, conflicts=exc.tables).to_dict())
-        raise JobError("target_conflict", f"El destino ya tiene tablas del plan: {', '.join(exc.tables)}.") from None
+        raise JobError(
+            "target_conflict", f"El destino ya tiene tablas o vistas del plan: {', '.join(exc.tables)}."
+        ) from None
+    except JobError:
+        raise
     except Exception as exc:  # frontera de util_bbdd
         ctx.logger.error("Migración fallida", extra={"exc_type": type(exc).__name__, "mode": params.mode})
         raise _job_error(exc) from None
@@ -155,7 +169,9 @@ def _raise_for_report(report: ApplyReport) -> None:
     """Convierte en fallo lo que impide aplicar (modo seco) o lo que falló a medias (aplicar)."""
     if report.mode == "dry_run":
         if report.conflicts:
-            raise JobError("target_conflict", f"El destino ya tiene tablas del plan: {', '.join(report.conflicts)}.")
+            raise JobError(
+                "target_conflict", f"El destino ya tiene tablas o vistas del plan: {', '.join(report.conflicts)}."
+            )
         if report.fk_blocking:
             pairs = ", ".join(
                 f"{m['table']}.{m['column']} → {m['ref_table']}.{m['ref_column']}" for m in report.fk_mismatches

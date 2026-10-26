@@ -20,6 +20,8 @@ from app.integrations.util_bbdd.migrate import (
     TargetConflictError,
     apply_plan,
     create_plan,
+    replan,
+    restore_plan,
 )
 from tests.integration.test_bench_engines import PASSWORD
 from tests.integration.test_bench_explorer import CHILD, PARENT, SCHEMAS, _ddl, _execute, _params
@@ -68,14 +70,14 @@ def _plan(source: str, target: str, out: Path) -> dict[str, Any]:
         outputs_dir=out,
     )  # fmt: skip
     data: dict[str, Any] = json.loads((out / "plan" / "plan.json").read_text(encoding="utf-8"))
+    data["_stored"] = json.loads((out / "plan" / "migration_plan.json").read_text(encoding="utf-8"))
     return data
 
 
-def _apply(source: str, target: str, plan: dict[str, Any], mode: Any, out: Path) -> migrate.ApplyReport:
-    return apply_plan(
-        (source, _params(source)), (target, _params(target)), schema=plan["source_schema"],
-        options=PlannerOptions(), expected_hash=plan["statements_hash"], mode=mode, outputs_dir=out,
-    )  # fmt: skip
+def _apply(target: str, plan: dict[str, Any], mode: Any, out: Path) -> migrate.ApplyReport:
+    """Como el job desde la 1.3.0: el plan revisado se reconstruye (``migration_plan.json``) sin leer el origen."""
+    restored = restore_plan(plan["_stored"], plan["statements_hash"])
+    return apply_plan(restored, (target, _params(target)), mode=mode, outputs_dir=out)
 
 
 @pytest.mark.parametrize(("source", "target"), PAIRS)
@@ -86,18 +88,18 @@ def test_plan_dry_run_apply_and_conflicts(source: str, target: str, source_table
         assert plan["error_count"] == 0, plan["warnings"]
         assert {t["name"].lower() for t in plan["tables"]} == {PARENT, CHILD}
 
-        dry = _apply(source, target, plan, "dry_run", tmp_path / "dry")
+        dry = _apply(target, plan, "dry_run", tmp_path / "dry")
         assert dry.conflicts == [] and dry.applied == 0
 
-        done = _apply(source, target, plan, "apply", tmp_path / "apply")
+        done = _apply(target, plan, "apply", tmp_path / "apply")
         assert done.error is None and done.applied == done.statements == len(plan["statements"])
         audit = (tmp_path / "apply" / "audit" / "migracion.jsonl").read_text(encoding="utf-8")
         assert sum(1 for line in audit.splitlines() if json.loads(line)["kind"] == "statement") == done.statements
 
-        again = _apply(source, target, plan, "dry_run", tmp_path / "again")
+        again = _apply(target, plan, "dry_run", tmp_path / "again")
         assert {c.lower() for c in again.conflicts} == {PARENT, CHILD}
         with pytest.raises(TargetConflictError):
-            _apply(source, target, plan, "apply", tmp_path / "blocked")
+            _apply(target, plan, "apply", tmp_path / "blocked")
     finally:
         _drop(target)
         _drop(source)
@@ -112,22 +114,28 @@ def test_oracle_int_foreign_key_gets_the_primary_key_type(source_tables: None, t
         assert plan["fk_mismatches"] == [] and plan["fk_blocking"] is False
         assert any(w["code"] == "FK_TYPE_ALIGNED" for w in plan["warnings"])
 
-        dry = _apply(source, target, plan, "dry_run", tmp_path / "dry")
+        dry = _apply(target, plan, "dry_run", tmp_path / "dry")
         assert dry.fk_mismatches == [] and dry.fk_blocking is False
     finally:
         _drop(target)
         _drop(source)
 
 
-def test_changed_source_invalidates_the_plan(source_tables: None, tmp_path: Path) -> None:
+def test_changed_source_invalidates_only_plans_before_1_3_0(source_tables: None, tmp_path: Path) -> None:
     source, target = "postgresql", "mysql"
     _prepare(source, target)
     try:
         plan = _plan(source, target, tmp_path / "plan")
         _execute(source, [f"ALTER TABLE {PARENT} ADD COLUMN email VARCHAR(50)"])
 
+        # Plan anterior a la 1.3.0: se replanifica y el hash ya no coincide (ADR-008).
         with pytest.raises(PlanChangedError):
-            _apply(source, target, plan, "dry_run", tmp_path / "dry")
+            replan(
+                (source, _params(source)), target, schema=plan["source_schema"], options=PlannerOptions(),
+                expected_hash=plan["statements_hash"],
+            )  # fmt: skip
+        # Desde la 1.3.0 se aplica lo revisado, aunque el origen cambie después (G26).
+        assert _apply(target, plan, "dry_run", tmp_path / "dry").conflicts == []
     finally:
         _drop(target)
         _drop(source)
@@ -143,12 +151,12 @@ def test_view_with_a_table_name_is_a_conflict_and_a_real_partial_failure(
         order = [t["name"] for t in plan["tables"]]
         _execute(target, [f"CREATE VIEW {order[-1]} AS SELECT 1 AS x"])
 
-        dry = _apply(source, target, plan, "dry_run", tmp_path / "dry")
+        dry = _apply(target, plan, "dry_run", tmp_path / "dry")
         assert dry.conflicts == [order[-1]]
 
         # Sin la comprobación de conflictos, la última sentencia falla y las anteriores quedan aplicadas (G27).
-        monkeypatch.setattr(migrate, "_target_tables", lambda *_: [])
-        report = _apply(source, target, plan, "apply", tmp_path / "apply")
+        monkeypatch.setattr(migrate, "_check_target", lambda *_, **__: ([], []))
+        report = _apply(target, plan, "apply", tmp_path / "apply")
         assert report.error is not None and "secreto" not in report.error
         assert report.failed_position == len(plan["statements"])
         assert report.applied == len(plan["statements"]) - 1
@@ -184,12 +192,10 @@ def test_conflicts_are_checked_in_pg_schema(source_tables: None, tmp_path: Path)
         create_plan(source, _params(source), schema=SCHEMAS[source], target_engine=target, options=options,
                     outputs_dir=out)  # fmt: skip
         plan = json.loads((out / "plan" / "plan.json").read_text(encoding="utf-8"))
+        plan["_stored"] = json.loads((out / "plan" / "migration_plan.json").read_text(encoding="utf-8"))
 
         def run(mode: Any, folder: str) -> migrate.ApplyReport:
-            return apply_plan(
-                (source, _params(source)), (target, _params(target)), schema=plan["source_schema"], options=options,
-                expected_hash=plan["statements_hash"], mode=mode, outputs_dir=tmp_path / folder,
-            )  # fmt: skip
+            return _apply(target, plan, mode, tmp_path / folder)
 
         assert [c.lower() for c in run("dry_run", "dry").conflicts] == [PARENT]
         with pytest.raises(TargetConflictError):

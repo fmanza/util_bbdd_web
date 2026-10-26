@@ -10,7 +10,8 @@ Escribir en una BD destino exige, **al encolar**:
    ``DRY_RUN_MAX_AGE``, y ``confirm`` igual al alias del destino.
 5. Ninguna otra escritura (migración o volcado) activa sobre ese destino en el proyecto.
 
-El job vuelve a planificar y compara el hash de las sentencias antes de tocar el destino.
+El job reconstruye el plan revisado (``migration_plan.json``, util_bbdd 4.3.0) o, si es anterior a la 1.3.0, vuelve a
+planificar, y en los dos casos compara el hash de las sentencias antes de tocar el destino.
 """
 
 from __future__ import annotations
@@ -31,6 +32,8 @@ from app.domain.runs.targets import active_write
 from app.integrations.util_bbdd.catalog import migration_engines
 
 PLAN_PATH: Final = "outputs/plan/plan.json"
+#: ``MigrationPlan.to_dict()`` (util_bbdd 4.3.0, GAPS G26); no existe en los planes anteriores a la 1.3.0.
+UTIL_BBDD_PLAN_PATH: Final = "outputs/plan/migration_plan.json"
 REPORT_PATH: Final = "outputs/plan/report.json"
 PLAN_MAX_BYTES: Final = 20 * 1024 * 1024
 DRY_RUN_MAX_AGE: Final = timedelta(minutes=60)
@@ -72,6 +75,21 @@ def load_plan(db: Session, run: Run, settings: Settings) -> dict[str, Any]:
         raise PlanTooLargeError()
     data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return data
+
+
+def load_stored_plan(db: Session, run: Run, settings: Settings) -> Any | None:
+    """``MigrationPlan.to_dict()`` guardado por la ``migrate_plan``; ``None`` si el plan es anterior a la 1.3.0.
+
+    Raises:
+        PlanTooLargeError: El JSON supera ``PLAN_MAX_BYTES``.
+    """
+    try:
+        artifact, path = get_artifact_by_path(db, run, UTIL_BBDD_PLAN_PATH, settings)
+    except ArtifactNotFoundError:
+        return None
+    if artifact.size_bytes > PLAN_MAX_BYTES:
+        raise PlanTooLargeError()
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def can_apply(user: User, membership: Membership) -> bool:

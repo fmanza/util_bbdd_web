@@ -42,8 +42,10 @@ Requisitos (si no se cumplen, el panel *Aplicar en una base de datos destino* ex
 
 Elige la conexión destino y pulsa **Modo seco**. Sin dejar cambios, comprueba que:
 
-- el origen **no ha cambiado** desde el plan (si cambió, vuelve a planificar);
-- el destino **no tiene ya** tablas o vistas con los nombres de las tablas del plan;
+- el plan que se aplicará es **exactamente el revisado**: desde la versión 1.3.0 se guarda completo y se aplica sin
+  volver a leer el origen (los planes anteriores se vuelven a planificar y, si el origen cambió, hay que planificar
+  de nuevo);
+- el destino **no tiene ya** tablas o vistas con los nombres de las tablas o vistas del plan;
 - las **vistas** se pueden crear (en PostgreSQL y SQL Server, creándolas en una transacción que se deshace; en el
   resto, comprobando la sintaxis);
 - no hay FK entre tipos distintos que el destino rechace.
@@ -72,7 +74,7 @@ tablas.
 | Código | Causa | Qué hacer |
 |---|---|---|
 | 403 al lanzar | Sin el permiso «Puede aplicar DDL» o sin ser propietario | Pídelo a un administrador o al propietario |
-| `plan_changed` | El origen cambió desde el plan | Planifica de nuevo y revisa |
+| `plan_changed` | El plan guardado no es el revisado, se generó con otra versión de util_bbdd o (planes anteriores a la 1.3.0) el origen cambió | Planifica de nuevo y revisa |
 | `target_conflict` | El destino ya tiene tablas o vistas con esos nombres | Bórralas o usa otro schema/BD destino |
 | `fk_type_mismatch` | FK entre tipos distintos con destino MariaDB/MySQL (planes anteriores a la 1.3.0) | Planifica de nuevo |
 | `view_invalid` | Una vista no se puede crear en el destino | Revisa su SQL (o usa *Copiar sin cambios*) |

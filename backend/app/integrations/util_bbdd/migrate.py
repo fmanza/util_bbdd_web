@@ -1,11 +1,15 @@
 """Migración DDL con util_bbdd (Fase 7, ADR-008); se ejecuta dentro del subproceso del job.
 
 - ``MigrationPlanner(source_engine, target_engine, **opciones).plan(manager_origen, schema) -> MigrationPlan``.
-- ``MigrationPlan`` no se serializa ni se reconstruye (GAPS G26): para aplicar **exactamente** lo revisado se vuelve
-  a planificar y se compara el hash SHA-256 de ``emit_statements()`` con el del plan guardado.
+- El plan se guarda dos veces: ``plan.json`` (formato propio del visor, con ``statements_hash``) y
+  ``migration_plan.json`` (``MigrationPlan.to_dict()``, util_bbdd 4.3.0, GAPS G26). Al aplicar, ``restore_plan``
+  reconstruye el plan revisado con ``from_dict()`` y exige que ``statements_sha256()`` sea el ``statements_hash`` del
+  visor: se ejecuta exactamente lo revisado sin volver a leer el origen. Los planes anteriores a la 1.3.0 (sin
+  ``migration_plan.json``) se replanifican y se comparan igual (``replan``); los dos hashes usan el mismo algoritmo.
 - ``MigrationPlan.execute`` aplica sentencia a sentencia con ``commit`` y **no es atómico** (G27): si una falla, las
-  anteriores quedan. El modo seco (``dry_run``) comprueba conflictos con tablas existentes y valida vistas
-  (``validate_views``: transacción deshecha en PostgreSQL/SQL Server, solo sintaxis en el resto) sin dejar cambios.
+  anteriores quedan y ``MigrationStatementError`` dice cuál. El modo seco comprueba el destino con ``check_target``
+  (tablas y vistas que ya existen; vistas validadas: transacción deshecha en PostgreSQL/SQL Server, solo sintaxis en
+  el resto) y cuenta las sentencias con ``execute(dry_run=True)``, sin conectar para escribir.
 - Desde util_bbdd 4.3.0 la FK recibe el tipo destino de la columna referenciada (aviso ``FK_TYPE_ALIGNED``) o el plan
   queda bloqueado (``FK_TYPE_UNRESOLVED``, ``ERROR``; G28). ``fk_mismatches`` se mantiene como defensa para los planes
   guardados antes (Oracle ``INT``: PK → ``INT(11)``, FK → ``DOUBLE``) y ante regresiones: el visor avisa y, con
@@ -28,6 +32,8 @@ PLAN_FORMAT: Final = 1
 FK_STRICT_TARGETS: Final = frozenset({"mariadb", "mysql"})
 _INT_WIDTH = re.compile(r"^(TINYINT|SMALLINT|MEDIUMINT|INT|INTEGER|BIGINT)\(\d+\)")
 PLAN_FILE: Final = "plan.json"
+#: ``MigrationPlan.to_dict()`` de util_bbdd (desde la 1.3.0); los planes anteriores no lo tienen.
+UTIL_BBDD_PLAN_FILE: Final = "migration_plan.json"
 AUDIT_FILE: Final = "migracion.jsonl"
 
 
@@ -40,7 +46,11 @@ class FkTypeMismatchError(RuntimeError):
 
 
 class PlanChangedError(RuntimeError):
-    """El origen ha cambiado desde el plan revisado (el hash de las sentencias no coincide)."""
+    """El plan a aplicar no emite las sentencias revisadas (el hash no coincide): el origen cambió desde el plan."""
+
+
+class PlanOutdatedError(RuntimeError):
+    """``migration_plan.json`` no se puede reconstruir: otra versión de util_bbdd emite otro DDL, o está dañado."""
 
 
 class TargetConflictError(RuntimeError):
@@ -207,7 +217,7 @@ def create_plan(
     options: PlannerOptions,
     outputs_dir: Path,
 ) -> dict[str, Any]:
-    """Planifica y guarda ``outputs/plan/plan.json`` y ``outputs/sql/migracion_<destino>.sql``.
+    """Planifica y guarda ``outputs/plan/plan.json``, ``outputs/plan/migration_plan.json`` y el script SQL.
 
     Returns:
         Resumen: tablas, vistas, rutinas, avisos por severidad, hash y rutas de los ficheros.
@@ -222,6 +232,7 @@ def create_plan(
     data = plan_to_dict(plan, statements)
     (outputs_dir / "plan").mkdir(parents=True, exist_ok=True)
     (outputs_dir / "plan" / PLAN_FILE).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    (outputs_dir / "plan" / UTIL_BBDD_PLAN_FILE).write_text(json.dumps(plan.to_dict(), ensure_ascii=False), "utf-8")
     sql_path = outputs_dir / "sql" / f"migracion_{target_engine}.sql"
     sql_path.parent.mkdir(parents=True, exist_ok=True)
     sql_path.write_text(ddl, encoding="utf-8")
@@ -256,18 +267,58 @@ class ApplyReport:
         return asdict(self)
 
 
-def _target_tables(manager: Any, plan: Any, schema: str | None) -> list[str]:
-    """Tablas del plan cuyo nombre ya usa una tabla o vista del destino.
+def restore_plan(data: Any, expected_hash: str) -> Any:
+    """``MigrationPlan`` revisado, reconstruido desde ``migration_plan.json`` (sin leer el origen).
 
-    ``schema``: donde crea las tablas el script (``pg_schema`` con destino PostgreSQL, que emite ``SET search_path``);
-    ``None`` = el schema por defecto de la conexión.
+    Raises:
+        PlanOutdatedError: util_bbdd no lo acepta (otra versión emite otro DDL, o el fichero está dañado).
+        PlanChangedError: No emite las sentencias del ``plan.json`` revisado.
     """
-    from sqlalchemy import inspect
+    from util_bbdd.exceptions import MigrationPlanValidationError
+    from util_bbdd.migrate import MigrationPlan
 
-    inspector = inspect(manager.get_sqlalchemy_engine())
-    names = [*inspector.get_table_names(schema=schema), *inspector.get_view_names(schema=schema)]
-    existing = {name.lower() for name in names}
-    return sorted(table.name for table in plan.tables if table.name.lower() in existing)
+    try:
+        plan = MigrationPlan.from_dict(data)
+    except MigrationPlanValidationError:
+        raise PlanOutdatedError() from None
+    current = plan.statements_sha256()
+    if current != expected_hash:
+        raise PlanChangedError(current)
+    return plan
+
+
+def replan(
+    source: tuple[str, dict[str, Any]],
+    target_engine: str,
+    *,
+    schema: str,
+    options: PlannerOptions,
+    expected_hash: str,
+) -> Any:
+    """Vuelve a planificar un plan anterior a la 1.3.0 (sin ``migration_plan.json``) y comprueba el hash.
+
+    Raises:
+        PlanChangedError: El origen cambió desde el plan revisado.
+    """
+    from util_bbdd import SyncDatabaseManager
+
+    source_type, source_params = source
+    with SyncDatabaseManager(source_type, source_params, use_pool=False) as source_manager:
+        plan = _plan(source_type, target_engine, source_manager, schema, options)
+    current = statements_hash(list(plan.emit_statements()))
+    if current != expected_hash:
+        raise PlanChangedError(current)
+    return plan
+
+
+def _check_target(plan: Any, manager: Any, *, validate_views: bool) -> tuple[list[str], list[dict[str, Any]]]:
+    """Tablas y vistas del plan que ya existen en el destino y, si se pide, la validación de las vistas.
+
+    ``check_target`` busca en el ``pg_schema`` del plan con destino PostgreSQL (el script emite ``SET search_path``) y,
+    en el resto, en el schema por defecto de la conexión.
+    """
+    check = plan.check_target(manager, validate_views=validate_views)
+    return sorted({conflict.name for conflict in check.conflicts}), _view_results(list(check.views))
 
 
 def _view_results(results: list[Any]) -> list[dict[str, Any]]:
@@ -283,80 +334,63 @@ def _view_results(results: list[Any]) -> list[dict[str, Any]]:
 
 
 def apply_plan(
-    source: tuple[str, dict[str, Any]],
+    plan: Any,
     target: tuple[str, dict[str, Any]],
     *,
-    schema: str,
-    options: PlannerOptions,
-    expected_hash: str,
     mode: Literal["dry_run", "apply"],
     outputs_dir: Path,
 ) -> ApplyReport:
-    """Vuelve a planificar, comprueba el hash y, según ``mode``, valida (sin cambios) o aplica en el destino.
+    """Según ``mode``, comprueba el destino sin cambios (modo seco) o aplica el plan ya verificado.
+
+    ``plan`` sale de ``restore_plan`` o ``replan`` (hash ya comprobado).
 
     Raises:
-        PlanChangedError: El origen cambió desde el plan revisado.
         PlanBlockedError: El plan tiene avisos ``ERROR``.
-        TargetConflictError: Solo en ``apply``: el destino ya tiene tablas del plan (en ``dry_run`` se informan).
+        TargetConflictError: Solo en ``apply``: el destino ya tiene tablas o vistas del plan (en ``dry_run`` se
+            informan).
         FkTypeMismatchError: Solo en ``apply`` con destino MariaDB/MySQL (en ``dry_run`` se informa).
     """
     from util_bbdd import SyncDatabaseManager
     from util_bbdd.audit import JsonLinesAuditSink
+    from util_bbdd.exceptions import MigrationStatementError
 
-    source_type, source_params = source
-    target_type, target_params = target
-    with SyncDatabaseManager(source_type, source_params, use_pool=False) as source_manager:
-        plan = _plan(source_type, target_type, source_manager, schema, options)
-    statements = list(plan.emit_statements())
-    current = statements_hash(statements)
-    if current != expected_hash:
-        raise PlanChangedError(current)
     if plan.error_count:
         raise PlanBlockedError(str(plan.error_count))
+    statements = list(plan.emit_statements())
     checked = plan_to_dict(plan, statements)
     report = ApplyReport(
         mode=mode,
-        statements_hash=current,
-        statements=len(statements),
+        statements_hash=checked["statements_hash"],
+        statements=plan.execute(None, dry_run=True).total,  # las que se envían (sin las de solo comentarios)
         fk_mismatches=checked["fk_mismatches"],
         fk_blocking=checked["fk_blocking"],
     )
     if mode == "apply" and report.fk_blocking:
         raise FkTypeMismatchError(str(len(report.fk_mismatches)))
+    target_type, target_params = target
     with SyncDatabaseManager(target_type, target_params, use_pool=False) as target_manager:
-        target_schema = options.pg_schema if target_type == "postgresql" else None
-        report.conflicts = _target_tables(target_manager, plan, target_schema)
+        report.conflicts, report.views = _check_target(
+            plan, target_manager, validate_views=mode == "dry_run" and bool(plan.views)
+        )
         if mode == "dry_run":
-            if plan.views:
-                report.views = _view_results(plan.validate_views(target_manager, include_tables=True))
             return report
         if report.conflicts:
             raise TargetConflictError(report.conflicts)
-        audit_path = outputs_dir / "audit" / AUDIT_FILE
-        sink = JsonLinesAuditSink(audit_path)
+        sink = JsonLinesAuditSink(outputs_dir / "audit" / AUDIT_FILE)
         try:
-            plan.execute(target_manager, audit_sink=sink)
-        except Exception as exc:
-            _record_failure(report, audit_path, exc)
+            result = plan.execute(target_manager, audit_sink=sink)
+        except MigrationStatementError as exc:
+            _record_failure(report, exc)
+        else:
+            report.applied = result.applied
         finally:
             sink.close()
-    if report.error is None:
-        report.applied = report.statements
     return report
 
 
-def _record_failure(report: ApplyReport, audit_path: Path, exc: Exception) -> None:
-    """Rellena el informe con la sentencia que falló (del rastro de auditoría) y el mensaje del motor recortado."""
-    applied = 0
-    for line in audit_path.read_text(encoding="utf-8").splitlines() if audit_path.exists() else []:
-        event = json.loads(line)
-        if event.get("kind") != "statement":
-            continue
-        attributes = dict(event.get("attributes") or {})
-        if event.get("status") == "ok":
-            applied += 1
-        else:
-            report.failed_position = attributes.get("position")
-            report.failed_statement = str(event.get("message") or "")[:200] or None
-    report.applied = applied
+def _record_failure(report: ApplyReport, exc: Any) -> None:
+    """Rellena el informe con la sentencia que falló (``MigrationStatementError``) y el mensaje del motor recortado."""
+    report.applied = exc.result.applied if exc.result is not None else max(exc.position - 1, 0)
+    report.failed_position = exc.position
+    report.failed_statement = exc.statement.strip().splitlines()[0][:200] if exc.statement.strip() else None
     report.error = _engine_message(exc.__cause__ or exc)
