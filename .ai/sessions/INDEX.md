@@ -20,3 +20,4 @@
 | [2026-10-25-feat-document-templates](2026-10-25-feat-document-templates/TRACEABILITY.md) | new_feature | Plantillas Word y Excel de la documentación; ADR-011, G40 y G41 (sin publicar) |
 | [2026-10-26-feat-storage-admin](2026-10-26-feat-storage-admin/TRACEABILITY.md) | new_feature | Almacenamiento administrable, cuota por usuario, purga por cuota y Mi espacio; ADR-012 (sin publicar) |
 | [2026-10-25-plan-gaps](2026-10-25-plan-gaps/TRACEABILITY.md) | new_feature (PLAN + AUDIT_PLAN) | Plan de resolución de huecos de util_bbdd por tipo de ejecución, en paralelo con util_bbdd; GO_CONDICIONAL |
+| [2026-10-26-gaps-ola1](2026-10-26-gaps-ola1/TRACEABILITY.md) | new_feature + version_closure | W-1 del plan de huecos con util_bbdd 4.1.0 → 1.1.0 |

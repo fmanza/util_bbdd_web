@@ -419,5 +419,6 @@ Release `v4.1.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 | W-D4 | `473890d` | `plantilla_excel`/`table_style_excel`; el reintento sin plantilla cubre Word y Excel |
 | W-D5 | `254abff` | `RunProgress` (puente común, T7), cancelación cooperativa y margen de 60 s en el worker (ADR-002 enmendado) |
 | W-G1 | `d6cf670` | Progreso y cancelación del grafo de todas las tablas |
-| W-D6 | este commit | Guía (G38), GAPS G2 y G38 resueltos |
+| W-D6 | `8bfdce6` | Guía (G38), GAPS G2 y G38 resueltos |
+| release | este commit | util_bbdd_web **1.1.0** (D5). Sin `docker compose build` ni `/api/health` (sin Docker en la sesión) |
 
