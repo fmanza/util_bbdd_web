@@ -471,8 +471,6 @@
       "noConnection": "Sin conexión",
       "number": "Debe ser un número válido",
       "range": "Entre {{min}} y {{max}}",
-      "oracleTitle": "Oracle: solo el schema del usuario",
-      "oracleSchema": "util_bbdd documenta en Oracle únicamente el schema del usuario de la conexión. Deja el schema vacío o pon ese usuario; para otro schema, crea una conexión con su usuario.",
       "noTemplate": "Sin plantilla (formato por defecto)",
       "projectTemplates": "Del proyecto",
       "globalTemplates": "Globales",

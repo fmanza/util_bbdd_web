@@ -5,8 +5,9 @@
   (``<dir>/<nombre>/{WORD,EXCEL,HTML}``) se recoloca en ``outputs/{word,excel,html}/`` del run.
 - ``GraphvizRelationshipGraphExt``: grafo paginado de una tabla o de todas las que tienen relaciones.
 
-El schema no es un argumento de util_bbdd (GAPS G22): se fija en los ``conn_params`` según el motor (``schema`` en
-PostgreSQL, SQL Server y HSQLDB; ``database`` en MySQL/MariaDB). Oracle solo lee el schema del usuario (GAPS G21).
+El schema se pasa como argumento (``schema=``, util_bbdd 4.1.0; GAPS G22): en PostgreSQL, SQL Server y HSQLDB es el
+schema; en MySQL/MariaDB, la base de datos; en Oracle, el owner (también otro que el usuario, si tiene permiso de
+lectura; GAPS G21). En SQLite no aplica (solo existe ``main``).
 
 Plantillas (ADR-011): la de Word va en ``imprimir["plantilla_word"]``; si falla por la plantilla (G41) se genera de
 nuevo sin ella. La de Excel se aplica después (``excel_template``, G40); si falla, el libro queda como lo generó
@@ -37,21 +38,10 @@ _GRAPH_COLUMN_MODE: Final[dict[str, str]] = {"relations_first": "compact", "rela
 
 #: Procesos ``dot`` simultáneos por job (util_bbdd usa por defecto todos los núcleos hasta 8).
 GRAPH_WORKERS: Final = 2
-_SCHEMA_PARAM: Final[dict[str, str]] = {
-    "postgresql": "schema",
-    "sqlserver": "schema",
-    "hsqldb": "schema",
-    "mysql": "database",
-    "mariadb": "database",
-}
 _FORMAT_DIRS: Final[dict[str, str]] = {"word": "WORD", "excel": "EXCEL", "html": "HTML"}
 #: Estilos que ``WordGenerator`` usa con nombre (``add_heading`` 0-3 y el DDL): si la plantilla no los tiene, python-docx
 #: lanza ``KeyError`` en mitad del documento (GAPS G41).
 WORD_REQUIRED_STYLES: Final = ("Title", "Heading 1", "Heading 2", "Heading 3", "No Spacing")
-
-
-class SchemaNotSupportedError(ValueError):
-    """El motor no permite documentar ese schema con util_bbdd (Oracle: solo el del usuario)."""
 
 
 class GraphvizMissingError(RuntimeError):
@@ -74,24 +64,11 @@ def graphviz_failed(exc: BaseException) -> bool:
     return False
 
 
-def with_schema(db_type: str, conn_params: dict[str, Any], schema: str | None) -> dict[str, Any]:
-    """``conn_params`` con el schema a documentar.
-
-    Raises:
-        SchemaNotSupportedError: Oracle con un schema distinto del usuario de la conexión.
-    """
-    if not schema:
-        return conn_params
-    if db_type == "oracle":
-        user = str(conn_params.get("user", "")).strip().strip('"')
-        if schema.strip('"').upper() != user.upper():
-            raise SchemaNotSupportedError(
-                "En Oracle util_bbdd solo documenta el schema del usuario de la conexión "
-                f"({user.upper()}); crea una conexión con ese usuario."
-            )
-        return conn_params
-    key = _SCHEMA_PARAM.get(db_type)
-    return {**conn_params, key: schema} if key else conn_params
+def target_schema(db_type: str, schema: str | None) -> str | None:
+    """Schema que se pasa a util_bbdd: ``None`` si no se eligió o en SQLite (solo ``main``)."""
+    if db_type == "sqlite" or not schema or not schema.strip():
+        return None
+    return schema.strip()
 
 
 @dataclass(frozen=True)
@@ -244,15 +221,16 @@ def generate_documentation(
         "templates_applied": {"word"|"excel": bool}}`` (solo los formatos con plantilla).
 
     Raises:
-        SchemaNotSupportedError, GraphvizMissingError y las excepciones de util_bbdd.
+        GraphvizMissingError y las excepciones de util_bbdd.
     """
     if options.graphs and shutil.which("dot") is None:
         raise GraphvizMissingError("Graphviz (dot) no está instalado en el servidor.")
-    params = with_schema(db_type, conn_params, schema)
     chosen = templates or DocumentTemplates()
     outcome = _Outcome()
     try:
-        summary = _document_with_template(params, db_type, options, outputs_dir, work_dir, name, chosen, outcome)
+        summary = _document_with_template(
+            conn_params, db_type, options, outputs_dir, work_dir, name, chosen, outcome, target_schema(db_type, schema)
+        )
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
     if chosen.excel is not None and "excel" in summary["formats"]:
@@ -269,13 +247,14 @@ def _document_with_template(
     name: str,
     templates: DocumentTemplates,
     outcome: _Outcome,
+    schema: str | None,
 ) -> dict[str, Any]:
     """Documenta con la plantilla Word; si falla por ella (G41), una sola vez más sin plantilla."""
     if templates.word is None or "word" not in options.formats:
-        return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options))
+        return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options), schema)
     imprimir = build_imprimir(options, word_template=templates.word, table_style=templates.word_table_style)
     try:
-        summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir)
+        summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir, schema)
     except Exception as exc:  # frontera de util_bbdd: solo se reintenta si el fallo es de la plantilla
         if not word_template_failed(exc):
             raise
@@ -288,7 +267,7 @@ def _document_with_template(
     outcome.applied["word"] = False
     outcome.warnings.append("La plantilla Word no se pudo aplicar: el documento Word usa el formato por defecto.")
     shutil.rmtree(work_dir, ignore_errors=True)
-    return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options))
+    return _document(params, db_type, options, outputs_dir, work_dir, name, build_imprimir(options), schema)
 
 
 def _apply_excel(folder: Path, template: Path, table_style: str | None, outcome: _Outcome) -> None:
@@ -315,6 +294,7 @@ def _document(
     work_dir: Path,
     name: str,
     imprimir: dict[str, Any],
+    schema: str | None,
 ) -> dict[str, Any]:
     from util_bbdd import SyncDatabaseManager
     from util_bbdd.doc import DatabaseDocumentation
@@ -327,6 +307,7 @@ def _document(
             imprimir=imprimir,
             formatos=list(options.formats),
             batch_window_seconds=0,
+            schema=schema,
         ).generate()
     produced: dict[str, str] = {}
     base = work_dir / name
@@ -370,16 +351,16 @@ def generate_graphs(
         ``{"files": [nombres], "tables": n, "errors": n}``.
 
     Raises:
-        GraphvizMissingError, SchemaNotSupportedError, LookupError (tabla inexistente) y las de util_bbdd.
+        GraphvizMissingError, LookupError (tabla inexistente) y las de util_bbdd.
     """
     from util_bbdd import SyncDatabaseManager
     from util_bbdd.analysis.graphviz_ext import GraphvizRelationshipGraphExt
 
     if shutil.which("dot") is None:
         raise GraphvizMissingError("Graphviz (dot) no está instalado en el servidor.")
-    params = with_schema(db_type, conn_params, schema)
+    graph_schema = target_schema(db_type, schema)
     output_dir.mkdir(parents=True, exist_ok=True)
-    with SyncDatabaseManager(db_type, params, use_pool=False) as manager:
+    with SyncDatabaseManager(db_type, conn_params, use_pool=False) as manager:
         graph = GraphvizRelationshipGraphExt(
             manager,
             show_columns=options.column_mode != "compact",
@@ -389,9 +370,10 @@ def generate_graphs(
             max_depth=options.max_depth,
             direction=options.direction,
             render_workers=GRAPH_WORKERS,
+            schema=graph_schema,
         )
         if options.table:
-            tables = {t.name for t in manager.get_schema_metadata(kinds={_tables_kind()}).tables()}
+            tables = {t.name for t in manager.get_schema_metadata(graph_schema, kinds={_tables_kind()}).tables()}
             if options.table not in tables:
                 raise LookupError(f"La tabla «{options.table}» no existe en el schema.")
             files = graph.generate_graphviz_graph_paginated_ext(

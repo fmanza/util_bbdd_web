@@ -1,4 +1,4 @@
-"""Fase 5: parámetros de documentación y grafos, ``imprimir`` de util_bbdd, schema por motor y token del sitio."""
+"""Fase 5: parámetros de documentación y grafos, ``imprimir`` de util_bbdd, schema explícito y token del sitio."""
 
 from __future__ import annotations
 
@@ -18,9 +18,8 @@ from app.integrations.util_bbdd import documentation
 from app.integrations.util_bbdd.documentation import (
     DocumentationOptions,
     GraphvizMissingError,
-    SchemaNotSupportedError,
     build_imprimir,
-    with_schema,
+    target_schema,
 )
 from app.jobs.context import JobError
 from app.jobs.operations.documentation import _job_error
@@ -102,34 +101,59 @@ def test_params_carry_groups_and_options() -> None:
 
 
 @pytest.mark.parametrize(
-    ("db_type", "key"),
+    ("db_type", "schema", "expected"),
     [
-        ("postgresql", "schema"),
-        ("sqlserver", "schema"),
-        ("hsqldb", "schema"),
-        ("mysql", "database"),
-        ("mariadb", "database"),
+        ("postgresql", "ventas", "ventas"),
+        ("mysql", " ventas ", "ventas"),
+        ("oracle", "HR", "HR"),  # otro owner que el usuario: util_bbdd 4.1.0 lo respeta (G21)
+        ("postgresql", None, None),
+        ("postgresql", "  ", None),
+        ("sqlite", "main", None),  # SQLite solo tiene main
     ],
 )
-def test_with_schema_sets_engine_key(db_type: str, key: str) -> None:
-    base = {"host": "h", "user": "u"}
-
-    assert with_schema(db_type, base, "ventas") == {**base, key: "ventas"}
-    assert with_schema(db_type, base, None) is base
-    assert "schema" not in base and "database" not in base
+def test_target_schema(db_type: str, schema: str | None, expected: str | None) -> None:
+    assert target_schema(db_type, schema) == expected
 
 
-def test_with_schema_sqlite_ignores_it() -> None:
-    assert with_schema("sqlite", {"database": "x.db"}, "main") == {"database": "x.db"}
+def test_schema_reaches_util_bbdd_as_an_argument(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """GAPS G22 (util_bbdd 4.1.0): el schema va en ``DatabaseDocumentation(schema=)``, no en los ``conn_params``."""
+    import util_bbdd
+    import util_bbdd.doc
 
+    seen: dict[str, object] = {}
 
-def test_with_schema_oracle_only_user_schema() -> None:
+    class _Manager:
+        def __init__(self, db_type: str, params: dict[str, object], **_: object) -> None:
+            seen["params"] = params
+
+        def __enter__(self) -> _Manager:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+    class _Documentation:
+        def __init__(self, manager: object, **kwargs: object) -> None:
+            seen["schema"] = kwargs.get("schema")
+
+        def generate(self) -> object:
+            return type("R", (), {"tables": 0, "views": 0, "routines": 0})()
+
+    monkeypatch.setattr(util_bbdd, "SyncDatabaseManager", _Manager)
+    monkeypatch.setattr(util_bbdd.doc, "DatabaseDocumentation", _Documentation)
     params = {"user": "ventas", "service_name": "FREEPDB1"}
 
-    assert with_schema("oracle", params, "VENTAS") is params
-    assert with_schema("oracle", params, '"ventas"') is params
-    with pytest.raises(SchemaNotSupportedError, match="VENTAS"):
-        with_schema("oracle", params, "HR")
+    documentation.generate_documentation(
+        "oracle",
+        params,
+        schema="HR",
+        options=DocumentationOptions(formats=("excel",), graphs=False),
+        outputs_dir=tmp_path / "out",
+        work_dir=tmp_path / "work",
+        name="doc",
+    )
+
+    assert seen == {"params": params, "schema": "HR"}
 
 
 def test_build_imprimir_maps_options() -> None:
@@ -207,7 +231,6 @@ def test_job_errors_never_echo_driver_text() -> None:
 
     assert isinstance(error, JobError)
     assert "secreto" not in error.message and "10.0.0.1" not in error.message
-    assert _job_error(SchemaNotSupportedError("x")).code == "invalid_params"
     assert _job_error(GraphvizMissingError("x")).code == "graphviz_missing"
 
 

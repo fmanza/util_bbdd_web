@@ -41,10 +41,10 @@ describe('formulario de documentación', () => {
 
     expect(await within(dialog).findByRole('group', { name: 'Formatos' })).toBeInTheDocument();
     expect(within(dialog).getByRole('group', { name: 'Diagramas' })).toBeInTheDocument();
-    expect(within(dialog).queryByText('Oracle: solo el schema del usuario')).not.toBeInTheDocument();
 
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Conexión' }), 'ventas');
-    expect(await within(dialog).findByText('Oracle: solo el schema del usuario')).toBeInTheDocument();
+    // util_bbdd 4.1.0 lee en Oracle otro owner que el usuario (GAPS G21): ya no hay aviso
+    expect(within(dialog).queryByText('Oracle: solo el schema del usuario')).not.toBeInTheDocument();
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Dirección' }), 'outgoing');
     const columns = within(dialog).getByRole('combobox', { name: 'Columnas en el diagrama' });
     expect(columns).toHaveValue('relations_first');

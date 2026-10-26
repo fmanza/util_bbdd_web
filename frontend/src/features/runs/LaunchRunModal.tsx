@@ -1,5 +1,4 @@
 import {
-  Alert,
   Button,
   Fieldset,
   Group,
@@ -124,22 +123,17 @@ function LaunchForm({
     defaultValues: Object.fromEntries(operation.params.map((p) => [p.name, defaultValue(p)])),
   });
 
-  const connectionParam = operation.params.find((p) => p.type === 'connection')?.name;
   const templateParams = operation.params.filter((p) => p.type === 'template');
   const templates = useTemplates({ kind: 'project', projectId }, templateParams.length > 0);
   const values = useWatch({ control: form.control });
   // Una plantilla solo se ofrece si su formato (`word`, `excel`) se va a generar.
   const paramVisible = (param: OperationParam) =>
     param.type !== 'template' || !param.template_kind || values[param.template_kind] === true;
-  const chosenAlias = connectionParam ? values[connectionParam] : undefined;
-  const chosen = connections.find((c) => c.alias === chosenAlias);
   const targetEngine = values['target_engine'];
   const groupVisible = (group: string | null) =>
     group === null ||
     !ENGINE_GROUPS[group] ||
     (typeof targetEngine === 'string' && ENGINE_GROUPS[group].includes(targetEngine));
-  const oracleSchemaWarning =
-    chosen?.db_type === 'oracle' && operation.params.some((p) => p.name === 'schema');
 
   const onSubmit = form.handleSubmit((values) => {
     const hidden = new Set(templateParams.filter((p) => !paramVisible(p)).map((p) => p.name));
@@ -259,11 +253,6 @@ function LaunchForm({
               </Fieldset>
             );
           })}
-        {oracleSchemaWarning && (
-          <Alert color="yellow" title={t('runs.launch.oracleTitle')}>
-            {t('runs.launch.oracleSchema')}
-          </Alert>
-        )}
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
             {t('common.cancel')}

@@ -35,8 +35,8 @@ Con **Columnas máximas por tabla** (1–50, 8 por defecto) se limita cada tabla
 Una tabla **sin relaciones** se dibuja sola en el Word, pero el sitio HTML no muestra su diagrama (GAPS G38).
 
 **Schema por motor**: en PostgreSQL, SQL Server y HSQLDB es el schema; en MySQL y MariaDB, la base de datos; en
-SQLite no aplica. En **Oracle**, util_bbdd solo documenta el schema del **usuario de la conexión**: deja el campo
-vacío o pon ese usuario; para otro schema, crea una conexión con su usuario (el formulario lo avisa; GAPS G21).
+SQLite no aplica. En **Oracle**, el owner: vacío usa el usuario de la conexión, y se puede poner otro owner si el
+usuario tiene permiso de lectura sobre sus objetos (desde util_bbdd 4.1.0).
 
 ### Plantillas Word y Excel
 

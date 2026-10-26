@@ -1,7 +1,7 @@
 """Documentación y grafos (Fase 5) contra los contenedores bench (fuera del CI; ver ``test_bench_engines.py``).
 
-Comprueba, por motor, que el schema llega a util_bbdd por ``conn_params`` (GAPS G22) y que Oracle se limita al
-schema del usuario (G21).
+Comprueba, por motor, que el schema llega a util_bbdd como argumento (``schema=``, GAPS G22) y que en Oracle se puede
+leer otro owner que el usuario de la conexión (G21; util_bbdd 4.1.0).
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ import pytest
 from app.integrations.util_bbdd.documentation import (
     DocumentationOptions,
     GraphOptions,
-    SchemaNotSupportedError,
     generate_documentation,
     generate_graphs,
 )
@@ -63,8 +62,12 @@ def test_graph_of_the_parent_table(db_type: str, tmp_path: Path) -> None:  # noq
     assert CHILD in svg
 
 
-def test_oracle_other_schema_is_rejected(db_type: str, tmp_path: Path) -> None:  # noqa: F811
+def test_oracle_other_owner_is_read(db_type: str, tmp_path: Path) -> None:  # noqa: F811
+    """G21 (util_bbdd 4.1.0): ``SYS.DUAL`` se dibuja con la conexión del usuario del bench."""
     if db_type != "oracle":
         pytest.skip("Solo Oracle (GAPS G21)")
-    with pytest.raises(SchemaNotSupportedError):
-        generate_graphs(db_type, _params(db_type), schema="SYS", options=GraphOptions(), output_dir=tmp_path)
+    summary = generate_graphs(
+        db_type, _params(db_type), schema="SYS", options=GraphOptions(table="DUAL"), output_dir=tmp_path
+    )
+
+    assert summary["files"]

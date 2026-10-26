@@ -21,7 +21,6 @@ from app.integrations.util_bbdd.documentation import (
     DocumentTemplates,
     GraphOptions,
     GraphvizMissingError,
-    SchemaNotSupportedError,
     generate_documentation,
     generate_graphs,
     graphviz_failed,
@@ -42,8 +41,6 @@ def _job_error(exc: Exception) -> JobError:
     """Error saneado: código estable y mensaje propio (nunca el texto del driver)."""
     if isinstance(exc, JobError):
         return exc
-    if isinstance(exc, SchemaNotSupportedError):
-        return JobError("invalid_params", str(exc))
     if isinstance(exc, GraphvizMissingError):
         return JobError("graphviz_missing", str(exc))
     if isinstance(exc, LookupError):
