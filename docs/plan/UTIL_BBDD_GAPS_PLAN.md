@@ -6,7 +6,7 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
-  Ola 3 y W-M1…W-M4 hechas (util_bbdd 4.3.0); falta la release 1.3.0 de la web.
+  Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -226,7 +226,7 @@ flowchart LR
 | 1 ✅ | U-0.1 → U-0.2 → U-D1 → U-D2 → U-D3 → U-D4 → U-D5 → U-D6 → U-D7 → U-D8 → U-D9 → U-G1 → **`release: v4.1.0`** (`4b67b05`) | (libre: se puede publicar la 1.1.0 de la web con lo que tiene sin publicar) | Tag `v4.1.0` + wheel y `.sha256` en la release |
 | 2 (web ✅) | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 → **`release: v1.1.0`** | La web arranca cuando existe el wheel 4.1.0 |
 | 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 → **`release: v1.2.0`** | Wheel 4.2.0 |
-| 4 (U-M ✅) | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
+| 4 (web ✅) | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
 | 5 | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 → **`release: v1.4.0`** | Wheel 4.4.0 |
 | 6 | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
@@ -466,4 +466,6 @@ Release `v4.2.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 | W-M1 | `de05b61` | `migration_engines()` (catálogo) desde `MigrationPlanner.supported_sources/targets()`; el dominio la usa al validar el origen. El test de las constantes privadas pasa a ser de contrato: el `Literal` `MigrationEngine` debe coincidir con `supported_targets()` |
 | W-M2 | `38fd027` | `fk_mismatches`/`fk_blocking` se mantienen (planes antiguos); test con un plan real de 4.3.0 (Oracle `INT` → 4 destinos) sin desajustes; el bench aplica Oracle → MariaDB. Guía, i18n y ADR-008 (enmienda) |
 | W-M3 | `69e3eaa` | `migration_plan.json` (`to_dict()`) junto a `plan.json`; `restore_plan` (`from_dict()` + hash del `plan.json` revisado) y `replan` solo para planes anteriores a la 1.3.0 (sin conexión origen en los nuevos). `check_target` sustituye al `Inspector` (conflictos también de vistas); el recuento sale de `execute(dry_run=True)`; el fallo, de `MigrationStatementError` |
-| W-M4 | este commit | `RunProgress` (fase `statements`) en `execute()`; `migrate_apply` cancelable en curso **solo entre sentencias** (confirmación en la UI, informe con `cancelled` y aplicadas); el worker no la mata al cancelar (`CANCEL_BETWEEN_STEPS_ONLY`), solo por timeout. Campo `cancelled` en el informe (OpenAPI) |
+| W-M4 | `de8bc33` | `RunProgress` (fase `statements`) en `execute()`; `migrate_apply` cancelable en curso **solo entre sentencias** (confirmación en la UI, informe con `cancelled` y aplicadas); el worker no la mata al cancelar (`CANCEL_BETWEEN_STEPS_ONLY`), solo por timeout. Campo `cancelled` en el informe (OpenAPI) |
+| E2E | `5e9fc9c` | Los specs buscan al usuario antes de «Editar» (la lista pagina de 50 y los usuarios de E2E anteriores los empujaban a la página 2) |
+| release | este commit | util_bbdd_web **1.3.0** (D5). `docker compose up --build` + `/api/health` 200, bench de integración (80 passed; SQL Server en el puerto 51833) y E2E (23 specs) en verde |
