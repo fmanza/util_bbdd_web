@@ -12,10 +12,12 @@ from app.domain.runs.diff import evolution, leaf_items
 from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import get_operation, validate_params
 from app.integrations.util_bbdd.compare import (
+    CompareOptions,
     SchemaNotFoundError,
     Side,
     SideError,
     diff_to_dict,
+    progress_phases,
     read_diff,
     resolve_schema,
     sql_dialect_for,
@@ -263,3 +265,16 @@ def test_read_diff_keeps_the_legacy_format() -> None:
 def test_read_diff_rejects_unknown_or_broken_files(data: Any) -> None:
     with pytest.raises(ValueError):
         read_diff(data)
+
+
+@pytest.mark.parametrize(
+    ("options", "phases"),
+    [
+        (CompareOptions(), ("metadata", "tables", "views")),
+        (CompareOptions(routines=True), ("metadata", "tables", "views", "routines")),
+        (CompareOptions(tables=False, routines=True), ("views", "routines")),
+    ],
+)
+def test_progress_phases_follow_the_options(options: CompareOptions, phases: tuple[str, ...]) -> None:
+    """GAPS G1: las fases del porcentaje son las que ``SchemaComparator.compare()`` emite con esas opciones."""
+    assert progress_phases(options) == phases

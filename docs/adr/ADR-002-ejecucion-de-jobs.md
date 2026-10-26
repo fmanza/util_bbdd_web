@@ -58,5 +58,7 @@ de su avance por unidad de trabajo y paran entre unidades con `OperationCancelle
   `relationship_graph`; el grafo de una sola tabla es una unidad y no para a mitad)
   `COOPERATIVE_CANCEL_GRACE` (60 s) antes de terminar el subproceso; si no paran a tiempo, `terminate`/`kill` como
   antes. El resto de operaciones no cambia. El subproceso por job se mantiene (aislamiento de memoria y estado).
-- Las demás operaciones se suman al conectar util_bbdd su progreso (plan de huecos, olas 2-5).
+- Las demás operaciones se suman al conectar util_bbdd su progreso (plan de huecos, olas 2-5). Con util_bbdd 4.2.0
+  se suma `compare` (fases `metadata`, `tables`, `views` y `routines`); los informes, que se generan después, no se
+  interrumpen.
 

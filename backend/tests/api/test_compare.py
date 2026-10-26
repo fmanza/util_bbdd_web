@@ -266,3 +266,26 @@ def test_purged_comparison_has_no_diff(
 
     assert user_client.get(f"/api/v1/runs/{run_id}/diff").status_code == 404
     assert json.loads(user_client.get(f"/api/v1/runs/{run_id}").text)["status"] == "purged"
+
+
+def test_cancelled_comparison_stops_by_itself(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+) -> None:
+    """GAPS G1 (util_bbdd 4.2.0): la comparación para entre tablas y el run termina ``cancelled`` sin matarlo."""
+    run_id = compare(user_client, project["id"])
+    worker.tick()  # lanza el subproceso
+    assert user_client.post(f"/api/v1/runs/{run_id}/cancel").json()["cancel_requested"] is True
+    process = worker.children[run_id].process
+
+    run = wait_for(worker, db, run_id, timeout=120)
+
+    assert (run.status, run.error_code) == ("cancelled", "cancelled")
+    process.join(30)
+    assert process.exitcode == 0  # terminó solo: el worker no lo mató (terminate daría -15)
+    directory = run_dir(settings.workspace_dir, str(run.workspace_path))
+    assert "Comparación cancelada entre tablas" in (directory / "logs" / "run.log").read_text(encoding="utf-8")
+    assert not (directory / "outputs/diff/schema_diff.json").exists()

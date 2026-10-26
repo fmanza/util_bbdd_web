@@ -62,9 +62,10 @@ almacena), la página se actualiza cada 2 segundos.
 | Purgada | Sus ficheros se borraron (a mano o por retención); se conserva el resumen |
 
 **Cancelar** (editores): una ejecución en cola se cancela al momento; una en curso se detiene en unos segundos
-(el worker termina su proceso). La **documentación** y el **grafo de todas las tablas** paran por sí mismos al
-terminar la tabla en curso, y su detalle muestra el avance («Word: 3 de 12», «Grafos: 5 de 40»); si no paran en un
-minuto, el worker termina su proceso.
+(el worker termina su proceso). La **documentación**, el **grafo de todas las tablas** y la **comparación** paran por
+sí mismos al terminar la tabla en curso, y su detalle muestra el avance («Word: 3 de 12», «Grafos: 5 de 40»,
+«Tablas: 7 de 30 (pedidos)»); si no paran en un minuto, el worker termina su proceso. La comparación ya no para
+mientras genera los informes, al final.
 
 ## Historial y artefactos
 

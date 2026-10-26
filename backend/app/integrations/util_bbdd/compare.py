@@ -9,6 +9,8 @@
   genera los informes con nombre fijo. El HTML se deja en ``outputs/html/comparacion/index.html`` para servirlo por la
   URL firmada del sitio (ADR-007), con ``mermaid_src=None`` (util_bbdd 4.2.0, G25): la CSP del sitio no admite
   orígenes externos y el informe funciona sin Mermaid (pestañas, filtros, búsqueda); los diagramas se ven como texto.
+- Progreso y cancelación (util_bbdd 4.2.0, GAPS G1): ``RunProgress`` como ``on_progress`` y su token; la comparación
+  para entre tablas (``OperationCancelledError``). Los informes, que van después, no se interrumpen.
 - El script SQL **solo se genera**: transforma el destino para igualarlo al origen y no se ejecuta nunca aquí.
 """
 
@@ -19,6 +21,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
+
+from app.integrations.util_bbdd.progress import RunProgress
 
 #: Formato 1 propio de la web (hasta 1.1.0): ``dataclasses.asdict`` del ``SchemaDiff`` + ``format`` y contadores.
 #: Desde 1.2.0 ``outputs/diff/schema_diff.json`` es ``SchemaDiff.to_dict()``; el formato 1 solo se lee.
@@ -113,6 +117,12 @@ def resolve_schema(side: str, schema: str | None, available: list[str], dialect:
     return real[matches[0]]
 
 
+def progress_phases(options: CompareOptions) -> tuple[str, ...]:
+    """Fases de ``SchemaComparator.compare()`` que emiten eventos con estas opciones, en orden."""
+    phases: tuple[str, ...] = ("metadata", "tables") if options.tables else ()
+    return phases + (("views",) if options.views else ()) + (("routines",) if options.routines else ())
+
+
 def diff_to_dict(diff: Any) -> dict[str, Any]:
     """JSON del diff que se guarda: el de util_bbdd (``format="util_bbdd.schema_diff"`` y ``format_version``)."""
     data: dict[str, Any] = diff.to_dict()
@@ -152,12 +162,19 @@ def _counters(diff: Any) -> dict[str, Any]:
 
 
 def compare_schemas(
-    source: Side, target: Side, *, options: CompareOptions, outputs_dir: Path, on_phase: Any = None
+    source: Side,
+    target: Side,
+    *,
+    options: CompareOptions,
+    outputs_dir: Path,
+    on_phase: Any = None,
+    progress: RunProgress | None = None,
 ) -> dict[str, Any]:
     """Compara, guarda ``outputs/diff/schema_diff.json`` y genera los informes pedidos.
 
     Args:
         on_phase: ``callable(fase, mensaje)`` opcional para el progreso.
+        progress: Progreso por fase y tabla y cancelación cooperativa (fases ``progress_phases(options)``).
 
     Returns:
         ``{"summary", "has_differences", "total_differences", "total_leaf_differences", "reports": {formato: ruta}}``
@@ -196,6 +213,8 @@ def compare_schemas(
                 include_routines=options.routines,
                 source_label=source.label,
                 target_label=target.label,
+                on_progress=progress,
+                cancel_token=progress.token if progress is not None else None,
             )
             data = diff_to_dict(diff)
             diff_dir = outputs_dir / "diff"

@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (comparación de esquemas).
 
+### Added
+
+- **Progreso real y cancelación cooperativa de la comparación** (W-C4, GAPS G1; util_bbdd 4.2.0): el detalle muestra
+  el avance («Leyendo el catálogo: 1 de 2 (destino)», «Tablas: 7 de 30 (pedidos)») con su porcentaje, y cancelar para
+  la comparación al terminar la tabla en curso (el worker solo termina el proceso si no para en 60 s). Los informes,
+  que se generan al final, no se interrumpen.
+
 ### Changed
 
 - **util_bbdd 4.2.0** (W-2.0): wheel de la release v4.2.0 (hash en `backend/uv.lock`). Su informe HTML de comparación

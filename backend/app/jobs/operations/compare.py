@@ -10,18 +10,24 @@ from app.integrations.util_bbdd.compare import (
     Side,
     SideError,
     compare_schemas,
+    progress_phases,
 )
 from app.integrations.util_bbdd.isolated import classify
+from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.jobs.context import JobContext, JobError
 from app.jobs.operations.documentation import _MESSAGES
 
 _SIDES = {"source": "origen", "target": "destino"}
+#: Fases de util_bbdd en el mensaje de progreso del run.
+_PHASES = {"metadata": "Leyendo el catálogo", "tables": "Tablas", "views": "Vistas", "routines": "Rutinas"}
 
 
 def _job_error(exc: Exception) -> JobError:
     """Error saneado: código estable, lado afectado y mensaje propio (nunca el texto del driver)."""
     if isinstance(exc, JobError):
         return exc
+    if is_cancellation(exc):
+        return JobError("cancelled", "Cancelada por un usuario.")
     if isinstance(exc, SchemaNotFoundError):
         return JobError("invalid_params", str(exc))
     if isinstance(exc, SideError):
@@ -62,8 +68,17 @@ def run(ctx: JobContext) -> None:
             options=options,
             outputs_dir=ctx.run_dir / "outputs",
             on_phase=lambda phase, message: ctx.progress(phase, message),
+            progress=RunProgress(
+                lambda message, pct: ctx.progress("running", message, pct),
+                ctx.cancel_requested,
+                progress_phases(options),
+                _PHASES,
+            ),
         )
     except Exception as exc:  # frontera de util_bbdd: el log solo lleva el tipo
+        if is_cancellation(exc):
+            ctx.logger.info("Comparación cancelada entre tablas")
+            raise _job_error(exc) from None
         cause = exc.cause if isinstance(exc, SideError) else exc
         ctx.logger.error("Comparación fallida", extra={"exc_type": type(cause).__name__})
         raise _job_error(exc) from None
