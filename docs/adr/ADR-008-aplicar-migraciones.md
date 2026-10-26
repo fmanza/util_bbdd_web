@@ -63,3 +63,9 @@ no es atómico» y escribir el alias.
 - **Permiso solo por rol del proyecto** (owner): un owner cualquiera podría escribir en una BD de producción
   compartida; el permiso global lo decide un admin.
 - **Transacción alrededor de todo el script**: imposible en MySQL, MariaDB y Oracle (commit implícito del DDL).
+
+## Enmienda (2026-10-26): util_bbdd 4.3.0
+
+- **FK con tipos coherentes (G28, W-M2)**: util_bbdd da a cada columna FK el tipo destino de la columna referenciada
+  (`FK_TYPE_ALIGNED`, `INFO`) o bloquea el plan (`FK_TYPE_UNRESOLVED`, `ERROR`). `fk_mismatches` y `fk_blocking` **se
+  mantienen** como defensa: los planes guardados antes de la 1.3.0 se siguen bloqueando con destino MariaDB/MySQL.

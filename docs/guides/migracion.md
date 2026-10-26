@@ -26,10 +26,11 @@ El plan **no escribe en ninguna base de datos**. Su detalle muestra:
 - **Tablas** con el tipo de cada columna en origen y destino;
 - **Sentencias** con resaltado; el script completo se descarga desde *Artefactos*.
 
-**Claves foráneas entre tipos distintos**: util_bbdd puede dar tipos distintos a una FK y a la columna que referencia
-(p. ej. Oracle `INT`: la PK pasa a `INT(11)` y la FK a `DOUBLE`). El plan lo avisa; con destino MariaDB o MySQL, que
-siempre rechazan esas FK, **no se puede aplicar**: da precisión a esas columnas en el origen (`NUMBER(10)`) y vuelve
-a planificar.
+**Claves foráneas**: cada columna FK recibe el tipo destino de la columna que referencia (aviso `INFO`
+`FK_TYPE_ALIGNED`; p. ej. Oracle `INT` en PK y FK pasa a `INT(11)` en las dos). Si no se puede (columna referenciada
+inexistente u omitida), el aviso `FK_TYPE_UNRESOLVED` es `ERROR` e impide aplicar. Los planes generados antes de la
+versión 1.3.0 pueden tener FK entre tipos distintos: el plan lo avisa y, con destino MariaDB o MySQL, que siempre
+rechazan esas FK, **no se puede aplicar** hasta volver a planificar.
 
 ## 2. Modo seco
 
@@ -73,6 +74,6 @@ tablas.
 | 403 al lanzar | Sin el permiso «Puede aplicar DDL» o sin ser propietario | Pídelo a un administrador o al propietario |
 | `plan_changed` | El origen cambió desde el plan | Planifica de nuevo y revisa |
 | `target_conflict` | El destino ya tiene tablas o vistas con esos nombres | Bórralas o usa otro schema/BD destino |
-| `fk_type_mismatch` | FK entre tipos distintos con destino MariaDB/MySQL | Da precisión a las columnas en el origen y planifica de nuevo |
+| `fk_type_mismatch` | FK entre tipos distintos con destino MariaDB/MySQL (planes anteriores a la 1.3.0) | Planifica de nuevo |
 | `view_invalid` | Una vista no se puede crear en el destino | Revisa su SQL (o usa *Copiar sin cambios*) |
 | `apply_partial` | Falló una sentencia al aplicar | Lee el informe; deshaz lo aplicado o corrige y aplica lo que falta a mano |

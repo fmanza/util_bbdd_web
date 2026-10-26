@@ -20,6 +20,7 @@ from app.integrations.util_bbdd.migrate import (
 )
 from app.jobs.context import JobError
 from app.jobs.operations.migrate import _raise_for_report
+from tests.unit._migration_source import oracle_int_pk_and_fk
 
 
 def test_statements_hash_is_order_and_boundary_sensitive() -> None:
@@ -130,6 +131,21 @@ def test_fk_mismatches_ignore_int_display_width_and_catch_real_differences() -> 
     assert [(m["foreign_key"], m["column_type"], m["ref_type"]) for m in found] == [
         ("fk2", "DOUBLE", "INT(11)"),
         ("fk3", "VARCHAR(20)", "VARCHAR(10)"),
+    ]
+
+
+@pytest.mark.parametrize("target", ["mariadb", "mysql", "sqlserver", "postgresql"])
+def test_util_bbdd_gives_the_fk_the_referenced_type(target: str) -> None:
+    """G28 resuelto en util_bbdd 4.3.0: Oracle ``INT`` en PK y FK ya no deja FK entre tipos distintos."""
+    from util_bbdd.migrate import MigrationPlanner
+
+    plan = MigrationPlanner(source_engine="oracle", target_engine=target).plan(oracle_int_pk_and_fk(), "S")
+
+    data = plan_to_dict(plan, list(plan.emit_statements()))
+    assert data["fk_mismatches"] == [] and data["fk_blocking"] is False and data["error_count"] == 0
+    aligned = [w for w in data["warnings"] if w["code"] == "FK_TYPE_ALIGNED"]
+    assert [(w["table"].upper(), str(w["column"]).upper(), w["severity"]) for w in aligned] == [
+        ("PEDIDOS", "CLIENTE_ID", "INFO")
     ]
 
 

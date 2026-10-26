@@ -749,7 +749,7 @@
       "title": "Claves foráneas entre tipos distintos",
       "blockingTitle": "Claves foráneas que el destino rechazará",
       "warning": "util_bbdd ha dado tipos distintos a estas columnas y a las que referencian. El destino puede rechazar la FK al aplicar.",
-      "blocking": "MariaDB y MySQL rechazan una FK entre tipos distintos: el plan no se puede aplicar. Da precisión a esas columnas en el origen (p. ej. NUMBER(10) en Oracle) y vuelve a planificar."
+      "blocking": "MariaDB y MySQL rechazan una FK entre tipos distintos: el plan no se puede aplicar. Vuelve a planificar: desde la versión 1.3.0 cada FK recibe el tipo de la columna que referencia."
     },
     "apply": {
       "title": "Aplicar en una base de datos destino",

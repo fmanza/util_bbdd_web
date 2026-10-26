@@ -26,8 +26,11 @@ from tests.integration.test_bench_explorer import CHILD, PARENT, SCHEMAS, _ddl, 
 
 pytestmark = pytest.mark.integration
 
-#: Combinaciones que se aplican de verdad. Oracle → MariaDB se prueba aparte: su FK queda entre tipos distintos.
-PAIRS = [("postgresql", "mysql"), ("mysql", "postgresql"), ("sqlserver", "postgresql"), ("mariadb", "oracle")]
+#: Combinaciones que se aplican de verdad. Oracle → MariaDB: con util_bbdd 4.3.0 su FK ya tiene el tipo de la PK (G28).
+PAIRS = [
+    ("postgresql", "mysql"), ("mysql", "postgresql"), ("sqlserver", "postgresql"), ("mariadb", "oracle"),
+    ("oracle", "mariadb"),
+]  # fmt: skip
 ENGINES = ("oracle", "mariadb", "mysql", "sqlserver", "postgresql")
 
 
@@ -100,20 +103,17 @@ def test_plan_dry_run_apply_and_conflicts(source: str, target: str, source_table
         _drop(source)
 
 
-def test_oracle_int_foreign_key_is_blocked_for_mariadb(source_tables: None, tmp_path: Path) -> None:
-    """G28: Oracle ``INT`` es ``NUMBER`` sin precisión; util_bbdd da ``INT(11)`` a la PK y ``DOUBLE`` a la FK."""
+def test_oracle_int_foreign_key_gets_the_primary_key_type(source_tables: None, tmp_path: Path) -> None:
+    """G28 (util_bbdd 4.3.0): Oracle ``INT`` es ``NUMBER`` sin precisión; la FK recibe el tipo de la PK."""
     source, target = "oracle", "mariadb"
     _prepare(source, target)
     try:
         plan = _plan(source, target, tmp_path / "plan")
-        assert plan["fk_blocking"] is True
-        assert plan["fk_mismatches"][0]["column"].lower() == "cliente_id"
+        assert plan["fk_mismatches"] == [] and plan["fk_blocking"] is False
+        assert any(w["code"] == "FK_TYPE_ALIGNED" for w in plan["warnings"])
 
         dry = _apply(source, target, plan, "dry_run", tmp_path / "dry")
-        assert dry.fk_blocking is True
-        with pytest.raises(migrate.FkTypeMismatchError):
-            _apply(source, target, plan, "apply", tmp_path / "apply")
-        assert not (tmp_path / "apply" / "audit").exists()  # no se tocó el destino
+        assert dry.fk_mismatches == [] and dry.fk_blocking is False
     finally:
         _drop(target)
         _drop(source)

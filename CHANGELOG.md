@@ -16,6 +16,13 @@ util_bbdd 4.3.0 y ola 3 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (
   `MigrationPlanner.supported_sources()`/`supported_targets()` en lugar de una copia de sus constantes privadas. La
   ficha de motores muestra lo mismo que antes.
 
+### Fixed
+
+- **FK con el tipo de la columna referenciada** (W-M2, GAPS G28): con util_bbdd 4.3.0, Oracle `INT` en PK y FK ya no
+  deja FK entre tipos distintos (aviso `FK_TYPE_ALIGNED`), y Oracle → MariaDB/MySQL se puede aplicar. La comprobación
+  propia (`fk_mismatches`, bloqueo con MariaDB/MySQL) se mantiene para los planes anteriores; su texto pide volver a
+  planificar.
+
 ## [1.2.0] - 2026-10-26
 
 util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (comparación de esquemas).

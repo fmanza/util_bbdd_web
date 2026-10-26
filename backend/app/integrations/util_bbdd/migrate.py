@@ -6,9 +6,10 @@
 - ``MigrationPlan.execute`` aplica sentencia a sentencia con ``commit`` y **no es atómico** (G27): si una falla, las
   anteriores quedan. El modo seco (``dry_run``) comprueba conflictos con tablas existentes y valida vistas
   (``validate_views``: transacción deshecha en PostgreSQL/SQL Server, solo sintaxis en el resto) sin dejar cambios.
-- util_bbdd puede emitir FK entre columnas de tipos distintos (Oracle ``INT``: PK → ``INT(11)``, FK → ``DOUBLE``; G28).
-  La web las detecta (``fk_mismatches``): el visor avisa siempre y, con destino MariaDB/MySQL (que siempre las
-  rechaza), el modo seco falla.
+- Desde util_bbdd 4.3.0 la FK recibe el tipo destino de la columna referenciada (aviso ``FK_TYPE_ALIGNED``) o el plan
+  queda bloqueado (``FK_TYPE_UNRESOLVED``, ``ERROR``; G28). ``fk_mismatches`` se mantiene como defensa para los planes
+  guardados antes (Oracle ``INT``: PK → ``INT(11)``, FK → ``DOUBLE``) y ante regresiones: el visor avisa y, con
+  destino MariaDB/MySQL (que siempre las rechaza), el modo seco falla.
 """
 
 from __future__ import annotations
@@ -98,7 +99,10 @@ def _normalized_type(target_type: str) -> str:
 
 
 def fk_mismatches(tables: list[dict[str, Any]]) -> list[dict[str, str]]:
-    """FK del plan cuya columna y columna referenciada tienen tipos destino distintos (GAPS G28)."""
+    """FK del plan cuya columna y columna referenciada tienen tipos destino distintos (GAPS G28).
+
+    Con util_bbdd 4.3.0 debería devolver siempre una lista vacía; se mantiene como defensa (planes anteriores).
+    """
     types = {
         (table["name"].lower(), col["name"].lower()): col["target_type"] for table in tables for col in table["columns"]
     }
