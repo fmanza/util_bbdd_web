@@ -4,7 +4,8 @@ Plan para cerrar los huecos de [UTIL_BBDD_GAPS.md](UTIL_BBDD_GAPS.md) **en util_
 de la capa anticorrupción de la web. Va agrupado por tipo de ejecución (incluida la **Carga** bulk). Cada grupo
 tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
-- **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4).
+- **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 de
+  util_bbdd hecha (v4.1.0, 2026-10-26; registro en §6): falta el tag y el wheel en GitHub Releases para empezar W-1.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -221,7 +222,7 @@ flowchart LR
 | Paso | util_bbdd (commits en orden) | util_bbdd_web (commits en orden) | Sincronización |
 |---|---|---|---|
 | 0 | — | `docs(plan)`: este plan (commit de esta sesión) | — |
-| 1 | U-0.1 → U-0.2 → U-D1 → U-D2 → U-D3 → U-D4 → U-D5 → U-D6 → U-D7 → U-D8 → U-D9 → U-G1 → **`release: v4.1.0`** | (libre: se puede publicar la 1.1.0 de la web con lo que tiene sin publicar) | Tag `v4.1.0` + wheel y `.sha256` en la release |
+| 1 ✅ | U-0.1 → U-0.2 → U-D1 → U-D2 → U-D3 → U-D4 → U-D5 → U-D6 → U-D7 → U-D8 → U-D9 → U-G1 → **`release: v4.1.0`** (`4b67b05`) | (libre: se puede publicar la 1.1.0 de la web con lo que tiene sin publicar) | Tag `v4.1.0` + wheel y `.sha256` en la release |
 | 2 | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 → **`release: v1.1.0`** | La web arranca cuando existe el wheel 4.1.0 |
 | 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 → **`release: v1.2.0`** | Wheel 4.2.0 |
 | 4 | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
@@ -382,3 +383,28 @@ GAPS Gnn».
 - Marca en la tabla del paso 3 de este documento la fase terminada (✅ y hash corto del commit).
 - Cada sesión deja su `TRACEABILITY.md` en `.ai/sessions/` del repositorio donde trabaja, con la sección
   `## Directrices para Futuras IAs`.
+
+---
+
+## 6. Registro de ejecución
+
+### Ola 1 — util_bbdd 4.1.0 (2026-10-26, rama `claude/practical-ride-44fot0`)
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-0.1 | `fb23060` | Contrato en el paquete público `util_bbdd.progress` (D1): `ProgressEvent`, `ProgressCallback`, `CancellationToken`, `ProgressReporter`; `util_bbdd.exceptions.OperationCancelledError` (`cancelled_operation`, `phase`) |
+| U-0.2 | `22aaba0` | Extras `sqlserver` (pymssql), `sqlserver-odbc` (pyodbc + aioodbc), `hsqldb`, `sqlite-async`: W-1.0 puede quitar `pymssql` y `aiosqlite` propios de `backend/pyproject.toml` |
+| U-D1 | `d8aeaf9` | **Cambio de alcance**: la agrupación de nombres entre instancias es una función documentada; se corrigió la clave (motor, host, puerto, BD) en lugar de pasarla a estado por instancia. La web sigue con `fichero_salida` y `batch_window_seconds=0` (sin cambios) |
+| U-D2 | `6c68c69` | `CalledProcessError` de `dot` → `RuntimeError` por diagrama: el documento sigue con un aviso en el lugar del diagrama |
+| U-D3 | `0b09bee` | `imprimir["grafo"]["orthogonal_edges"]`; con `False` las aristas son curvas (`splines=true`), no polilíneas. `GraphvizRelationshipGraphExt(orthogonal_edges=)` ya existía |
+| U-D4 | `532521c` | `DocumentationConfigError` al construir si faltan `Title`, `Heading 1`-`3` o `No Spacing` |
+| U-D5 | `776c749` | `pipe_level_graphs_ext(...)["isolated"]` y grupo «Sin relaciones» en el HTML |
+| U-D6 | `6a543fa` | Oracle admite `schema` en `conn_params` (owner de metadatos; no va al driver ni cambia `CURRENT_SCHEMA`). Sin verificar contra un Oracle real |
+| U-D7 | `c81d291` | `DatabaseDocumentation(schema=)` y `GraphvizRelationshipGraphExt(schema=)`: W-D1/W-G1 pasan `schema` y quitan `with_schema` |
+| U-D8 | `1e0588f` | `imprimir["plantilla_excel"]` + `imprimir["table_style_excel"]`; sin portada (openpyxl no copia hojas entre libros) |
+| U-D9 | `6ae2637` | `DatabaseDocumentation(on_progress=, cancel_token=)`: fase `metadata` y, por formato (`word`, `excel`, `html`), `0/N` y un evento por tabla |
+| U-G1 | `eb14fb1` | `generate_all_tables_graphs_ext(on_progress=, cancel_token=)`: operación `graph`, fase `tables` |
+| release | `4b67b05` | pytest 6452 passed, 596 skipped, 1 fallo previo de pandas 3.1.0 ajeno a la ola; mypy, ruff y `zensical build --strict` limpios; wheel construido y probado en un venv limpio |
+
+Pendiente antes de W-1.0: merge en util_bbdd, tag `v4.1.0` y wheel + `.sha256` en GitHub Releases (§5.1).
+
