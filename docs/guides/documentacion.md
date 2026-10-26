@@ -32,7 +32,7 @@ documento):
 Con **Columnas máximas por tabla** (1–50, 8 por defecto) se limita cada tabla; las que no caben se resumen en
 «… N columna(s) más». **Mostrar tipos de columna** añade el tipo de cada una.
 
-Una tabla **sin relaciones** se dibuja sola en el Word, pero el sitio HTML no muestra su diagrama (GAPS G38).
+Una tabla **sin relaciones** se dibuja sola, en el Word y en el sitio HTML (grupo «Sin relaciones»).
 
 **Schema por motor**: en PostgreSQL, SQL Server y HSQLDB es el schema; en MySQL y MariaDB, la base de datos; en
 SQLite no aplica. En **Oracle**, el owner: vacío usa el usuario de la conexión, y se puede poner otro owner si el

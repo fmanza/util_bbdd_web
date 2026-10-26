@@ -223,7 +223,7 @@ flowchart LR
 |---|---|---|---|
 | 0 | — | `docs(plan)`: este plan (commit de esta sesión) | — |
 | 1 ✅ | U-0.1 → U-0.2 → U-D1 → U-D2 → U-D3 → U-D4 → U-D5 → U-D6 → U-D7 → U-D8 → U-D9 → U-G1 → **`release: v4.1.0`** (`4b67b05`) | (libre: se puede publicar la 1.1.0 de la web con lo que tiene sin publicar) | Tag `v4.1.0` + wheel y `.sha256` en la release |
-| 2 | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 → **`release: v1.1.0`** | La web arranca cuando existe el wheel 4.1.0 |
+| 2 (web ✅) | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 → **`release: v1.1.0`** | La web arranca cuando existe el wheel 4.1.0 |
 | 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 → **`release: v1.2.0`** | Wheel 4.2.0 |
 | 4 | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
 | 5 | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 → **`release: v1.4.0`** | Wheel 4.4.0 |
@@ -406,5 +406,18 @@ GAPS Gnn».
 | U-G1 | `eb14fb1` | `generate_all_tables_graphs_ext(on_progress=, cancel_token=)`: operación `graph`, fase `tables` |
 | release | `4b67b05` | pytest 6452 passed, 596 skipped, 1 fallo previo de pandas 3.1.0 ajeno a la ola; mypy, ruff y `zensical build --strict` limpios; wheel construido y probado en un venv limpio |
 
-Pendiente antes de W-1.0: merge en util_bbdd, tag `v4.1.0` y wheel + `.sha256` en GitHub Releases (§5.1).
+Release `v4.1.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SHA-256 `706ad06f…3fa1`).
+
+### W-1 — util_bbdd_web con util_bbdd 4.1.0 (2026-10-26, rama `claude/practical-ride-44fot0`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-1.0 | `60ae275` | Pin 4.1.0 (lock con uv 0.12.22, el de la imagen); `pymssql`/`aiosqlite` por los extras; `word_template_failed` reconoce los mensajes nuevos de la plantilla Word |
+| W-D1 | `fec28c6` | `schema=` en documentación **y grafo** (incluye la parte de schema de W-G1); fuera `with_schema` y el aviso de Oracle |
+| W-D2 | `8cfd07f` | **Cambio**: se mantiene el reintento sin plantilla (ya no relee la BD); solo documentación |
+| W-D3 | `2f31d20` | «Relaciones en ángulo recto» en los dos formularios; `graphviz_failed` y `dot-wrapper.sh` se mantienen como defensa |
+| W-D4 | `473890d` | `plantilla_excel`/`table_style_excel`; el reintento sin plantilla cubre Word y Excel |
+| W-D5 | `254abff` | `RunProgress` (puente común, T7), cancelación cooperativa y margen de 60 s en el worker (ADR-002 enmendado) |
+| W-G1 | `d6cf670` | Progreso y cancelación del grafo de todas las tablas |
+| W-D6 | este commit | Guía (G38), GAPS G2 y G38 resueltos |
 
