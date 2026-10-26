@@ -10,6 +10,9 @@
   anteriores quedan y ``MigrationStatementError`` dice cuál. El modo seco comprueba el destino con ``check_target``
   (tablas y vistas que ya existen; vistas validadas: transacción deshecha en PostgreSQL/SQL Server, solo sintaxis en
   el resto) y cuenta las sentencias con ``execute(dry_run=True)``, sin conectar para escribir.
+- Progreso por sentencia y cancelación **solo entre sentencias** (util_bbdd 4.3.0, G1): ``RunProgress`` como
+  ``on_progress`` y su token. Al cancelar, las sentencias ya aplicadas quedan (el DDL no se deshace) y el informe dice
+  cuántas (``cancelled``).
 - Desde util_bbdd 4.3.0 la FK recibe el tipo destino de la columna referenciada (aviso ``FK_TYPE_ALIGNED``) o el plan
   queda bloqueado (``FK_TYPE_UNRESOLVED``, ``ERROR``; G28). ``fk_mismatches`` se mantiene como defensa para los planes
   guardados antes (Oracle ``INT``: PK → ``INT(11)``, FK → ``DOUBLE``) y ante regresiones: el visor avisa y, con
@@ -262,6 +265,8 @@ class ApplyReport:
     failed_position: int | None = None
     failed_statement: str | None = None
     error: str | None = None
+    #: Se canceló entre dos sentencias: ``applied`` quedaron aplicadas.
+    cancelled: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -339,10 +344,13 @@ def apply_plan(
     *,
     mode: Literal["dry_run", "apply"],
     outputs_dir: Path,
+    progress: Any | None = None,
 ) -> ApplyReport:
     """Según ``mode``, comprueba el destino sin cambios (modo seco) o aplica el plan ya verificado.
 
-    ``plan`` sale de ``restore_plan`` o ``replan`` (hash ya comprobado).
+    ``plan`` sale de ``restore_plan`` o ``replan`` (hash ya comprobado). ``progress`` (``RunProgress``, solo al aplicar)
+    recibe un evento por sentencia; si se cancela su token, la aplicación para antes de la siguiente sentencia y el
+    informe vuelve con ``cancelled`` y las aplicadas.
 
     Raises:
         PlanBlockedError: El plan tiene avisos ``ERROR``.
@@ -352,7 +360,7 @@ def apply_plan(
     """
     from util_bbdd import SyncDatabaseManager
     from util_bbdd.audit import JsonLinesAuditSink
-    from util_bbdd.exceptions import MigrationStatementError
+    from util_bbdd.exceptions import MigrationStatementError, OperationCancelledError
 
     if plan.error_count:
         raise PlanBlockedError(str(plan.error_count))
@@ -377,15 +385,38 @@ def apply_plan(
         if report.conflicts:
             raise TargetConflictError(report.conflicts)
         sink = JsonLinesAuditSink(outputs_dir / "audit" / AUDIT_FILE)
+        sent = _SentStatements(progress)
         try:
-            result = plan.execute(target_manager, audit_sink=sink)
+            result = plan.execute(
+                target_manager,
+                audit_sink=sink,
+                on_progress=sent,
+                cancel_token=progress.token if progress is not None else None,
+            )
         except MigrationStatementError as exc:
             _record_failure(report, exc)
+        except OperationCancelledError:
+            report.cancelled = True
+            report.applied = sent.count  # con stop_on_error, todas las enviadas se aplicaron
         else:
             report.applied = result.applied
         finally:
             sink.close()
     return report
+
+
+class _SentStatements:
+    """``on_progress`` que cuenta las sentencias enviadas (``current`` de la fase ``statements``) y reenvía el evento."""
+
+    def __init__(self, progress: Any | None) -> None:
+        self.count = 0
+        self._progress = progress
+
+    def __call__(self, event: Any) -> None:
+        if event.phase == "statements":
+            self.count = max(self.count, event.current)
+        if self._progress is not None:
+            self._progress(event)
 
 
 def _record_failure(report: ApplyReport, exc: Any) -> None:

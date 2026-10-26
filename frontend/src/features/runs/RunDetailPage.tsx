@@ -37,7 +37,7 @@ import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiv
 /** Operaciones que no se relanzan (la API responde 409): aplicar una migración exige un modo seco nuevo. */
 const NOT_RELAUNCHABLE = new Set(['migrate_apply', 'dump_apply', 'bulk_apply']);
 /** Escrituras en una BD destino: en curso no se cancelan (la API responde 409). */
-const NOT_CANCELLABLE_RUNNING = new Set(['migrate_apply', 'dump_apply', 'bulk_apply']);
+const NOT_CANCELLABLE_RUNNING = new Set(['dump_apply', 'bulk_apply']);
 
 export function RunDetailPage() {
   const { t } = useTranslation();
@@ -48,6 +48,7 @@ export function RunDetailPage() {
   const relaunch = useRelaunchRun(runId);
   const purge = usePurgeRun(runId);
   const [confirmPurge, setConfirmPurge] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   if (isPending) {
     return (
@@ -63,6 +64,9 @@ export function RunDetailPage() {
   const editor = canRole(run.my_role, 'editor');
   const active = isActive(run.status);
   const applying = NOT_CANCELLABLE_RUNNING.has(run.operation) && run.status === 'running';
+  // Aplicar una migración se cancela solo entre sentencias y las aplicadas quedan: se confirma antes (ADR-008).
+  const applyingDdl =
+    run.operation === 'migrate_apply' && run.params['mode'] === 'apply' && run.status === 'running';
   const params = Object.entries(run.params);
 
   return (
@@ -82,7 +86,7 @@ export function RunDetailPage() {
             <Button
               color="orange"
               variant="light"
-              onClick={() => cancel.mutate()}
+              onClick={() => (applyingDdl ? setConfirmCancel(true) : cancel.mutate())}
               loading={cancel.isPending}
               disabled={run.cancel_requested}
             >
@@ -218,6 +222,28 @@ export function RunDetailPage() {
       ) : (
         <ArtifactBrowser runId={run.id} artifacts={run.artifacts} />
       )}
+
+      <Modal
+        opened={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
+        title={t('runs.cancelApplyTitle')}
+      >
+        <Stack>
+          <Text>{t('runs.cancelApplyBody')}</Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setConfirmCancel(false)}>
+              {t('runs.keepRunning')}
+            </Button>
+            <Button
+              color="orange"
+              loading={cancel.isPending}
+              onClick={() => cancel.mutate(undefined, { onSuccess: () => setConfirmCancel(false) })}
+            >
+              {t('runs.cancelApply')}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal opened={confirmPurge} onClose={() => setConfirmPurge(false)} title={t('runs.purgeTitle')}>
         <Stack>

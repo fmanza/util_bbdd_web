@@ -289,6 +289,36 @@ def test_partial_apply_takes_the_failed_statement_from_util_bbdd(
     assert report.error == "(1050) Table already exists"
 
 
+def test_apply_reports_each_statement_and_stops_between_statements_when_cancelled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """G1 (util_bbdd 4.3.0): un evento por sentencia; cancelar para antes de la siguiente y las aplicadas quedan."""
+    from app.integrations.util_bbdd.progress import RunProgress
+
+    target = fake_manager("mariadb")
+    _managers(monkeypatch, mariadb=target)
+    plan = _oracle_plan()
+    reported: list[tuple[str, int | None]] = []
+    polls = iter([False, True])  # se pide cancelar después de la primera sentencia
+    progress = RunProgress(
+        lambda message, pct: reported.append((message, pct)),
+        lambda: next(polls, True),
+        ["statements"],
+        {"statements": "Sentencias"},
+        poll_seconds=0,
+    )
+
+    report = apply_plan(plan, ("mariadb", {}), mode="apply", outputs_dir=tmp_path, progress=progress)
+
+    assert report.cancelled and report.error is None
+    assert report.applied == _target_cursor(target).execute.call_count == 1 < report.statements
+    assert reported[0] == (f"Sentencias: 0 de {report.statements}", 0)
+    assert reported[1][0].startswith(f"Sentencias: 1 de {report.statements} (CREATE TABLE")
+    with pytest.raises(JobError) as info:
+        _raise_for_report(report)
+    assert info.value.code == "cancelled" and f"aplicadas 1 de {report.statements}" in info.value.message
+
+
 def test_blocked_or_fk_blocking_plans_never_reach_the_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     target = fake_manager("mariadb")
     _managers(monkeypatch, mariadb=target)

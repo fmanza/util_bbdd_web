@@ -2523,6 +2523,12 @@ export interface components {
              */
             applied: number;
             /**
+             * Cancelled
+             * @description Cancelada entre dos sentencias: las aplicadas quedan
+             * @default false
+             */
+            cancelled: boolean;
+            /**
              * Conflicts
              * @default []
              */

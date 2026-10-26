@@ -369,17 +369,19 @@ def test_admin_grants_can_apply_ddl(
 # --- auditoría de la Fase 7: cancelación y comprobaciones en el worker --------------------------------------------
 
 
-def test_running_apply_cannot_be_cancelled_but_queued_can(
+def test_running_apply_is_cancelled_between_statements_and_queued_at_once(
     user_client: TestClient, project: dict[str, object], db: Session, settings: Settings, allowed: User
 ) -> None:
+    """Desde la 1.3.0 una aplicación en curso se cancela, pero solo entre sentencias: lo marca y el job para (W-M4)."""
     plan_id = seed_plan(db, settings, project, allowed)
     running = seed_dry_run(db, settings, project, allowed, plan_id, status="running")
     queued = seed_dry_run(db, settings, project, allowed, plan_id, status="queued")
 
-    refused = user_client.post(f"/api/v1/runs/{running}/cancel")
+    accepted = user_client.post(f"/api/v1/runs/{running}/cancel")
 
-    assert refused.status_code == 409 and "a medias" in refused.text
-    assert user_client.post(f"/api/v1/runs/{queued}/cancel").status_code == 202
+    assert accepted.status_code == 202
+    assert accepted.json()["status"] == "running" and accepted.json()["cancel_requested"] is True
+    assert user_client.post(f"/api/v1/runs/{queued}/cancel").json()["status"] == "cancelled"
 
 
 def _recheck(db: Session, settings: Settings, project: dict[str, object], run_id: str) -> Any:

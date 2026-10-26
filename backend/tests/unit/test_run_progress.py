@@ -130,6 +130,30 @@ def test_worker_gives_cooperative_operations_time_to_stop(monkeypatch: pytest.Mo
     assert stopped == ["noop", "doc"]  # sin parar a tiempo, se termina el subproceso (ADR-002)
 
 
+def test_worker_never_kills_a_migration_apply_when_cancelled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``migrate_apply`` para sola entre sentencias (W-M4): cancelar no mata el subproceso; el timeout sí."""
+    from app.jobs import worker as worker_module
+
+    class _Process:
+        def is_alive(self) -> bool:
+            return True
+
+    stopped: list[tuple[str, str]] = []
+    monkeypatch.setattr(worker_module.queue, "cancel_requested", lambda _db, ids: list(ids))
+    w: Any = worker_module.Worker.__new__(worker_module.Worker)
+    w.settings = type("S", (), {"job_timeout_seconds": 3600})()
+    w.children = {"ddl": worker_module._Child(process=_Process(), started=0.0, operation="migrate_apply")}  # type: ignore[arg-type]
+    w._stop_child = lambda run_id, _status, code, _msg: stopped.append((run_id, code)) or w.children.pop(run_id)
+
+    monkeypatch.setattr(worker_module.time, "monotonic", lambda: 1.0 + 10 * worker_module.COOPERATIVE_CANCEL_GRACE)
+    w.enforce()
+    assert stopped == [] and w.children["ddl"].cancel_seen is not None
+
+    monkeypatch.setattr(worker_module.time, "monotonic", lambda: 3601.0)
+    w.enforce()
+    assert stopped == [("ddl", "job_timeout")]
+
+
 def test_graph_of_all_tables_stops_between_tables_when_cancelled(tmp_path: Path) -> None:
     """Grafo de todas las tablas con util_bbdd real: la cancelación lo para tabla a tabla (W-G1)."""
     import shutil

@@ -25,6 +25,7 @@ from app.integrations.util_bbdd.migrate import (
     replan,
     restore_plan,
 )
+from app.integrations.util_bbdd.progress import RunProgress
 from app.jobs.context import JobContext, JobError
 from app.jobs.operations.documentation import _MESSAGES
 
@@ -132,7 +133,17 @@ def run_apply(ctx: JobContext) -> None:
                 options=_options(plan_model),
                 expected_hash=plan["statements_hash"],
             )
-        report = apply_plan(migration, target, mode=params.mode, outputs_dir=ctx.run_dir / "outputs")
+        progress = (
+            RunProgress(
+                lambda message, pct: ctx.progress("running", message, pct),
+                ctx.cancel_requested,
+                ["statements"],
+                {"statements": "Sentencias"},
+            )
+            if params.mode == "apply"
+            else None
+        )
+        report = apply_plan(migration, target, mode=params.mode, outputs_dir=ctx.run_dir / "outputs", progress=progress)
     except PlanOutdatedError:
         raise JobError(
             "plan_changed", "El plan se generó con otra versión de util_bbdd o está dañado: vuelve a planificar."
@@ -156,6 +167,8 @@ def run_apply(ctx: JobContext) -> None:
         raise _job_error(exc) from None
     _write_report(ctx, report.to_dict())
     ctx.logger.info("Migración", extra={"mode": params.mode, "applied": report.applied, "conflicts": report.conflicts})
+    if params.mode == "dry_run" and ctx.cancel_requested():  # el modo seco no escribe: para al terminar
+        raise JobError("cancelled", "Cancelada por un usuario.")
     _raise_for_report(report)
     message = (
         f"Modo seco correcto: {report.statements} sentencias listas para aplicar"
@@ -183,6 +196,11 @@ def _raise_for_report(report: ApplyReport) -> None:
         if invalid:
             raise JobError("view_invalid", f"Vistas que no se pueden crear en el destino: {', '.join(invalid)}.")
         return
+    if report.cancelled:
+        raise JobError(
+            "cancelled",
+            f"Cancelada entre sentencias: quedaron aplicadas {report.applied} de {report.statements} en el destino.",
+        )
     if report.error is not None:
         raise JobError(
             "apply_partial",

@@ -304,8 +304,9 @@ def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, 
     )  # fmt: skip
 
 
-#: Operaciones que escriben en una BD destino: en curso no se cancelan (ADR-008, ADR-009); en cola sí.
-NOT_CANCELLABLE_RUNNING: Final = frozenset({"migrate_apply", "dump_apply", "bulk_apply"})
+#: Operaciones que escriben en una BD destino: en curso no se cancelan (ADR-009); en cola sí. ``migrate_apply`` sí se
+#: cancela en curso desde la 1.3.0, pero solo entre sentencias (util_bbdd 4.3.0; el worker no la mata, ADR-008).
+NOT_CANCELLABLE_RUNNING: Final = frozenset({"dump_apply", "bulk_apply"})
 
 
 def cancel(db: Session, user: User, access: RunAccess, *, ctx: RequestContext) -> Run:

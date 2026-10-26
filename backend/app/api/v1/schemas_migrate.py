@@ -116,3 +116,4 @@ class MigrationReportOut(_Plan):
     failed_position: int | None = None
     failed_statement: str | None = None
     error: str | None = Field(default=None, description="Mensaje del motor recortado")
+    cancelled: bool = Field(default=False, description="Cancelada entre dos sentencias: las aplicadas quedan")

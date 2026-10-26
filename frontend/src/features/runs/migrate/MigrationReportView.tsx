@@ -80,6 +80,14 @@ export function MigrationReportView({ run }: { run: RunDetail }) {
                 {t('migrate.report.applied', { applied: report.data.applied, total: report.data.statements })}
               </Text>
             )}
+            {report.data.cancelled && (
+              <Alert color="orange" title={t('migrate.report.cancelledTitle')}>
+                {t('migrate.report.cancelled', {
+                  applied: report.data.applied,
+                  total: report.data.statements,
+                })}
+              </Alert>
+            )}
             {report.data.error && (
               <Alert
                 color="red"

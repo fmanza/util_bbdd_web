@@ -50,6 +50,9 @@ TERMINATE_GRACE: Final = 5.0
 #: ``COOPERATIVE_CANCEL_GRACE`` segundos antes de terminar el subproceso (ADR-002).
 COOPERATIVE_OPERATIONS: Final = frozenset({"documentation", "relationship_graph", "compare"})
 COOPERATIVE_CANCEL_GRACE: Final = 60.0
+#: Operaciones que solo paran por sí mismas: al cancelarlas el worker **nunca** termina el subproceso (cortaría una
+#: sentencia DDL a medias); solo el ``job_timeout`` lo hace (ADR-008).
+CANCEL_BETWEEN_STEPS_ONLY: Final = frozenset({"migrate_apply"})
 
 
 @dataclass
@@ -149,6 +152,11 @@ class Worker:
         now = time.monotonic()
         for run_id in to_cancel:
             child = self.children[run_id]
+            if child.operation in CANCEL_BETWEEN_STEPS_ONLY:
+                if child.cancel_seen is None:
+                    child.cancel_seen = now
+                    logger.info("Cancelación entre sentencias pedida", extra={"run_id": run_id})
+                continue
             if child.operation in COOPERATIVE_OPERATIONS:
                 if child.cancel_seen is None:
                     child.cancel_seen = now

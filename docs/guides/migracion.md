@@ -62,9 +62,11 @@ El detalle de la aplicación tiene el informe y el rastro de auditoría (`output
 sentencia con su duración y resultado). Las aplicaciones no se relanzan: para repetir, lanza un modo seco nuevo
 desde el plan. No se puede aplicar dos veces a la vez sobre el mismo destino.
 
-Una aplicación **en curso no se puede cancelar** (en cola sí): pararla dejaría el destino a medias y sin informe. Si
-se agota el tiempo máximo de las ejecuciones (`UBW_JOB_TIMEOUT_SECONDS`), el proceso se detiene igualmente: lo
-aplicado hasta entonces está en `migracion.jsonl`.
+Mientras se aplica, el detalle muestra el avance por sentencia («Sentencias: 3 de 12 (CREATE TABLE …)»). Una
+aplicación **en curso se puede cancelar, pero solo entre sentencias**: tras confirmarlo, termina la sentencia en
+curso y se detiene antes de la siguiente. Las ya aplicadas **quedan en el destino** (el DDL no se deshace) y el
+informe dice cuántas. La web nunca corta una sentencia a medias; solo el tiempo máximo de las ejecuciones
+(`UBW_JOB_TIMEOUT_SECONDS`) detiene el proceso igualmente: lo aplicado hasta entonces está en `migracion.jsonl`.
 
 Con destino PostgreSQL y **Schema destino**, los conflictos se buscan en ese schema, que es donde el script crea las
 tablas.

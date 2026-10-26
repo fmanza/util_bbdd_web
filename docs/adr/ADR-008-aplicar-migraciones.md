@@ -80,3 +80,10 @@ no es atómico» y escribir el alias.
   `TargetCheck`. El informe de una aplicación fallida toma la sentencia, su posición y las aplicadas de
   `MigrationStatementError` en lugar de leer el rastro de auditoría, que se sigue escribiendo.
 - El modo seco obligatorio de menos de 60 minutos y la doble confirmación (casilla y alias) **no cambian**.
+- **Progreso y cancelación entre sentencias (G1, W-M4)**: `execute(on_progress=, cancel_token=)` con el puente
+  `RunProgress` (ADR-002): un evento por sentencia. `migrate_apply` **deja de ser no cancelable en curso**: cancelar
+  (con confirmación en la UI) pone el token y util_bbdd para antes de la siguiente sentencia; el informe lleva
+  `cancelled` y las aplicadas, y el run termina `cancelled`. El worker **no termina nunca** el subproceso de una
+  `migrate_apply` por una cancelación (`CANCEL_BETWEEN_STEPS_ONLY`), así que no se corta una sentencia a medias; el
+  `job_timeout` sí, como antes. El modo seco comprueba la cancelación al terminar. El volcado y la carga siguen sin
+  cancelarse en curso (ADR-009).

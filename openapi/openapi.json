@@ -2595,6 +2595,12 @@
             "title": "Applied",
             "type": "integer"
           },
+          "cancelled": {
+            "default": false,
+            "description": "Cancelada entre dos sentencias: las aplicadas quedan",
+            "title": "Cancelled",
+            "type": "boolean"
+          },
           "conflicts": {
             "default": [],
             "items": {

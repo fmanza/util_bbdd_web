@@ -555,6 +555,10 @@
       "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
     },
     "cancelBlocked": "Una escritura en curso en la base de datos destino no se puede cancelar: la dejaría a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría.",
+    "cancelApplyTitle": "Cancelar la aplicación",
+    "cancelApplyBody": "La aplicación se detendrá antes de la siguiente sentencia. Las sentencias ya aplicadas quedan en el destino (el DDL no se deshace) y el informe dirá cuántas.",
+    "cancelApply": "Cancelar entre sentencias",
+    "keepRunning": "Seguir aplicando",
     "warningsTitle": "La ejecución terminó con avisos"
   },
   "explorer": {
@@ -798,6 +802,8 @@
       "applied": "Sentencias aplicadas: {{applied}} de {{total}}.",
       "failedTitle": "Falló la sentencia {{n}}",
       "partial": "Las sentencias anteriores quedaron aplicadas en el destino.",
+      "cancelledTitle": "Cancelada entre sentencias",
+      "cancelled": "Se aplicaron {{applied}} de {{total}} sentencias antes de cancelar; quedan en el destino.",
       "dryOkTitle": "Modo seco correcto",
       "dryOk": "Se puede aplicar desde el plan durante la próxima hora."
     }

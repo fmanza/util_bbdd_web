@@ -62,3 +62,8 @@ de su avance por unidad de trabajo y paran entre unidades con `OperationCancelle
   se suma `compare` (fases `metadata`, `tables`, `views` y `routines`); los informes, que se generan después, no se
   interrumpen.
 
+## Enmienda (2026-10-26): migración DDL con util_bbdd 4.3.0
+
+`migrate_apply` usa el mismo puente (`RunProgress`, fase `statements`), pero **no** entra en `COOPERATIVE_OPERATIONS`:
+va en `CANCEL_BETWEEN_STEPS_ONLY`, donde el worker no termina el subproceso al cancelar (cortaría una sentencia DDL a
+medias). Solo el timeout de las ejecuciones lo termina (ADR-008).

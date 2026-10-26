@@ -7,6 +7,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 util_bbdd 4.3.0 y ola 3 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (migración DDL).
 
+### Added
+
+- **Progreso por sentencia y cancelación entre sentencias al aplicar una migración** (W-M4, GAPS G1; util_bbdd
+  4.3.0): el detalle muestra «Sentencias: 3 de 12 (CREATE TABLE …)» con su porcentaje. Una aplicación en curso ya se
+  puede cancelar, tras confirmarlo: para antes de la siguiente sentencia, las aplicadas quedan en el destino y el
+  informe dice cuántas (campo `cancelled` del informe). El worker nunca corta una sentencia a medias; solo el tiempo
+  máximo de las ejecuciones detiene el proceso.
+
 ### Changed
 
 - **util_bbdd 4.3.0** (W-3.0): wheel de la release v4.3.0 (hash en `backend/uv.lock`). Sin cambios de código: la

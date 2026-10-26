@@ -218,25 +218,31 @@ describe('auditoría de la Fase 7', () => {
     expect(await within(dialog).findByText(/más de 60 minutos/)).toBeInTheDocument();
   });
 
-  it('una aplicación en curso no ofrece cancelar', async () => {
+  it('una aplicación en curso se cancela entre sentencias tras confirmarlo', async () => {
     stubEventSource();
-    stubApi({
+    const running = {
+      ...dryRun(new Date().toISOString()),
+      status: 'running',
+      finished_at: null,
+      params: { plan_run: PLAN_ID, target_connection: 'destino', mode: 'apply' },
+      my_role: 'owner',
+    };
+    const fetchMock = stubApi({
       ...session(ALLOWED),
-      [`GET /api/v1/runs/${DRY_ID}`]: {
-        body: {
-          ...dryRun(new Date().toISOString()),
-          status: 'running',
-          finished_at: null,
-          params: { plan_run: PLAN_ID, target_connection: 'destino', mode: 'apply' },
-          my_role: 'owner',
-        },
-      },
+      [`GET /api/v1/runs/${DRY_ID}`]: { body: running },
+      [`POST /api/v1/runs/${DRY_ID}/cancel`]: { status: 202, body: { ...running, cancel_requested: true } },
     });
+    const user = userEvent.setup();
 
     renderRoute(`/runs/${DRY_ID}`);
 
-    expect(await screen.findByText(/no se puede cancelar: la dejaría a medias/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Cancelar' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cancelar la aplicación' });
+    expect(within(dialog).getByText(/quedan en el destino/)).toBeInTheDocument();
+    expect(callsTo(fetchMock, 'POST', `/api/v1/runs/${DRY_ID}/cancel`)).toHaveLength(0);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar entre sentencias' }));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', `/api/v1/runs/${DRY_ID}/cancel`)).toHaveLength(1));
+    expect(screen.queryByText(/no se puede cancelar/)).not.toBeInTheDocument();
   });
 });
 
@@ -276,6 +282,33 @@ describe('informe de la aplicación', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver el plan' })).toHaveAttribute('href', `/runs/${PLAN_ID}`);
     expect(screen.queryByRole('button', { name: 'Relanzar' })).not.toBeInTheDocument();
+  });
+
+  it('dice cuántas sentencias quedaron aplicadas al cancelar', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${DRY_ID}`]: {
+        body: {
+          ...dryRun(new Date().toISOString()),
+          status: 'cancelled',
+          params: { plan_run: PLAN_ID, target_connection: 'destino', mode: 'apply' },
+          my_role: 'owner',
+          error_code: 'cancelled',
+          error_message: 'Cancelada entre sentencias: quedaron aplicadas 1 de 2 en el destino.',
+        },
+      },
+      [`GET /api/v1/runs/${DRY_ID}/migration-report`]: {
+        body: { mode: 'apply', statements_hash: 'a'.repeat(64), statements: 2, applied: 1, cancelled: true },
+      },
+    });
+
+    renderRoute(`/runs/${DRY_ID}`);
+
+    expect(await screen.findByText('Cancelada entre sentencias')).toBeInTheDocument();
+    expect(
+      screen.getByText('Se aplicaron 1 de 2 sentencias antes de cancelar; quedan en el destino.'),
+    ).toBeInTheDocument();
   });
 });
 

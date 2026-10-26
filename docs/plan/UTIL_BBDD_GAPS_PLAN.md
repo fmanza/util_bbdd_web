@@ -6,7 +6,7 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
-  Ola 3 hecha (util_bbdd 4.3.0); W-3 en curso.
+  Ola 3 y W-M1…W-M4 hechas (util_bbdd 4.3.0); falta la release 1.3.0 de la web.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -465,4 +465,5 @@ Release `v4.2.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 | W-3.0 | `ac04574` | Pin 4.3.0 (lock con uv 0.12.22, el de la imagen). Sin cambios de código; solo los tests de versión |
 | W-M1 | `de05b61` | `migration_engines()` (catálogo) desde `MigrationPlanner.supported_sources/targets()`; el dominio la usa al validar el origen. El test de las constantes privadas pasa a ser de contrato: el `Literal` `MigrationEngine` debe coincidir con `supported_targets()` |
 | W-M2 | `38fd027` | `fk_mismatches`/`fk_blocking` se mantienen (planes antiguos); test con un plan real de 4.3.0 (Oracle `INT` → 4 destinos) sin desajustes; el bench aplica Oracle → MariaDB. Guía, i18n y ADR-008 (enmienda) |
-| W-M3 | este commit | `migration_plan.json` (`to_dict()`) junto a `plan.json`; `restore_plan` (`from_dict()` + hash del `plan.json` revisado) y `replan` solo para planes anteriores a la 1.3.0 (sin conexión origen en los nuevos). `check_target` sustituye al `Inspector` (conflictos también de vistas); el recuento sale de `execute(dry_run=True)`; el fallo, de `MigrationStatementError` |
+| W-M3 | `69e3eaa` | `migration_plan.json` (`to_dict()`) junto a `plan.json`; `restore_plan` (`from_dict()` + hash del `plan.json` revisado) y `replan` solo para planes anteriores a la 1.3.0 (sin conexión origen en los nuevos). `check_target` sustituye al `Inspector` (conflictos también de vistas); el recuento sale de `execute(dry_run=True)`; el fallo, de `MigrationStatementError` |
+| W-M4 | este commit | `RunProgress` (fase `statements`) en `execute()`; `migrate_apply` cancelable en curso **solo entre sentencias** (confirmación en la UI, informe con `cancelled` y aplicadas); el worker no la mata al cancelar (`CANCEL_BETWEEN_STEPS_ONLY`), solo por timeout. Campo `cancelled` en el informe (OpenAPI) |
