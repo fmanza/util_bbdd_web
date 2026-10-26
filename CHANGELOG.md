@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+util_bbdd 4.3.0 y ola 3 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (migración DDL).
+
+### Changed
+
+- **util_bbdd 4.3.0** (W-3.0): wheel de la release v4.3.0 (hash en `backend/uv.lock`). Sin cambios de código: la
+  web no usaba el valor de retorno de `MigrationPlan.execute()` (ahora `ExecutionResult`) y la sentencia que falla
+  sigue llegando como causa de la excepción (`MigrationStatementError`, subclase de la de antes).
+
 ## [1.2.0] - 2026-10-26
 
 util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (comparación de esquemas).

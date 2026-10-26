@@ -6,6 +6,7 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
+  Ola 3 hecha (util_bbdd 4.3.0); W-3 en curso.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -225,7 +226,7 @@ flowchart LR
 | 1 ✅ | U-0.1 → U-0.2 → U-D1 → U-D2 → U-D3 → U-D4 → U-D5 → U-D6 → U-D7 → U-D8 → U-D9 → U-G1 → **`release: v4.1.0`** (`4b67b05`) | (libre: se puede publicar la 1.1.0 de la web con lo que tiene sin publicar) | Tag `v4.1.0` + wheel y `.sha256` en la release |
 | 2 (web ✅) | U-C1 → U-C2 → U-C3 → U-C4 → (U-C5) → **`release: v4.2.0`** | **W-1.0** `chore(backend): util_bbdd 4.1.0` (incluye retirar los drivers propios de G3 si se pasan a extras) → W-D1 → W-D2 → W-D3 → W-D4 → W-D5 → W-G1 → W-D6 → **`release: v1.1.0`** | La web arranca cuando existe el wheel 4.1.0 |
 | 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 → **`release: v1.2.0`** | Wheel 4.2.0 |
-| 4 | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
+| 4 (U-M ✅) | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
 | 5 | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 → **`release: v1.4.0`** | Wheel 4.4.0 |
 | 6 | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
@@ -445,3 +446,20 @@ Release `v4.2.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 | W-C3 | `c39ac14` | **Cambio**: `mermaid_src=None` en lugar de un asset propio (dependencia nueva, ~3 MB por informe); stub retirado; diagramas como texto |
 | W-C4 | `51ad8de` | `RunProgress` en la comparación; `compare` en `COOPERATIVE_OPERATIONS`; los informes no se interrumpen |
 | release | este commit | util_bbdd_web **1.2.0** (D5). Sin `docker compose build`, `/api/health` ni E2E (sin Docker en la sesión) |
+
+### Ola 3 — util_bbdd 4.3.0 (2026-10-26)
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-M1 | `3b06e7d` | `MigrationPlanner.supported_sources()` / `supported_targets()` (estáticos, tuplas en orden alfabético). Las constantes privadas siguen existiendo |
+| U-M2 | `c2a5bd3` | La FK toma el tipo destino de la columna referenciada (aviso `FK_TYPE_ALIGNED`, INFO); si no puede, `FK_TYPE_UNRESOLVED` (ERROR, bloquea `execute()`). Verificado en el banco: Oracle `INT` → MariaDB, MySQL, SQL Server y PostgreSQL |
+| U-M3 | `de9127b` | `MigrationPlan.to_dict()` (`format="util_bbdd.migration_plan"`, `format_version=1`), `from_dict()` (vuelve a emitir y exige el mismo `statements_sha256`; si no, `MigrationPlanValidationError`) y `statements_sha256()`: mismo algoritmo que el `statements_hash` de la web (sentencias unidas con NUL) |
+| U-M4 | `ee5ef17` | `check_target(conn, *, schema=None, validate_views=False) -> TargetCheck` (tablas **y vistas** existentes; `schema=None` = `pg_schema` con destino PostgreSQL). `execute(..., dry_run=False, stop_on_error=True) -> ExecutionResult`; el fallo lanza `MigrationStatementError` (`position`, `total`, `statement`, `result`) `from` el error del driver |
+| U-M5 | `e8c564e` | `execute(on_progress=, cancel_token=)`: operación `migrate`, fase `statements` (`0` de N y un evento por sentencia enviada); cancelación antes de cada sentencia con `OperationCancelledError` (las anteriores quedan) |
+| release | `0b6d3da` | Release `v4.3.0` con wheel y `.sha256` (SHA-256 `3af894d5…70be`, comprobado contra `uv.lock`) |
+
+### W-3 — util_bbdd_web con util_bbdd 4.3.0 (2026-10-26, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-3.0 | este commit | Pin 4.3.0 (lock con uv 0.12.22, el de la imagen). Sin cambios de código; solo los tests de versión |
