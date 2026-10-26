@@ -4,8 +4,8 @@ Plan para cerrar los huecos de [UTIL_BBDD_GAPS.md](UTIL_BBDD_GAPS.md) **en util_
 de la capa anticorrupción de la web. Va agrupado por tipo de ejecución (incluida la **Carga** bulk). Cada grupo
 tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
-- **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 de
-  util_bbdd hecha (v4.1.0, 2026-10-26; registro en §6): falta el tag y el wheel en GitHub Releases para empezar W-1.
+- **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
+  hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 de util_bbdd hecha (v4.2.0, 2026-10-26; registro en §6); W-2 en curso.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -422,3 +422,15 @@ Release `v4.1.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 | W-D6 | `8bfdce6` | Guía (G38), GAPS G2 y G38 resueltos |
 | release | este commit | util_bbdd_web **1.1.0** (D5). Sin `docker compose build` ni `/api/health` (sin Docker en la sesión) |
 
+### Ola 2 — util_bbdd 4.2.0 (2026-10-26, rama `claude/practical-ride-44fot0`)
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-C1 | `22c0282` | Etiqueta por defecto `motor [schema]` sin host, puerto, usuario ni ruta; `compare(source_label=, target_label=)`, que también nombran los ficheros de informe. W-C1 pasa `alias (motor) [schema]` y retira `relabel` |
+| U-C2 | `8edbf8e` | `SchemaDiff.to_dict()` (`format="util_bbdd.schema_diff"`, `format_version=1`) y `from_dict()` con `SchemaDiffValidationError`. W-C2 escribe con `to_dict()` y mantiene el lector del formato 1 propio |
+| U-C3 | `3bbd60e` | `mermaid@10.9.8` con SRI; el script del informe funciona sin Mermaid; `mermaid_src` (URL http(s)/relativa, `Path` incrustado o `None`). **Afecta a W-2.0**: la etiqueta lleva `integrity`/`crossorigin` y la regex del sustituto de la web dejó de reconocerla |
+| U-C4 | `60e3c5f` | `compare(on_progress=, cancel_token=)`: operación `compare`, fases `metadata` (0-2 de 2), `tables` (por tabla), `views`, `routines` |
+| U-C5 | — | Opcional (G7); no se hace en esta ola |
+| release | `5f7e0c1` | pytest 6478 passed, 596 skipped; mypy, ruff y `zensical build --strict` limpios; wheel probado en un venv limpio |
+
+Release `v4.2.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SHA-256 `5357688d…529f`).

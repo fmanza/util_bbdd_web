@@ -25,7 +25,8 @@ from typing import Any, Final
 logger = logging.getLogger(__name__)
 
 #: ``<script src>`` de Mermaid en un CDN dentro del informe HTML de util_bbdd (G25).
-_MERMAID_CDN = re.compile(r'<script\s+src="https://[^"]*mermaid[^"]*"\s*>\s*</script>', re.IGNORECASE)
+#: Desde util_bbdd 4.2.0 la etiqueta lleva ``integrity`` y ``crossorigin`` (versión fija con SRI).
+_MERMAID_CDN = re.compile(r'<script\s+src="https://[^"]*mermaid[^"]*"[^>]*>\s*</script>', re.IGNORECASE)
 MERMAID_STUB_PATH: Final = "assets/mermaid-stub.js"
 MERMAID_STUB: Final = (
     "// Sustituto local de Mermaid (util_bbdd_web, GAPS G25): el informe lo carga de un CDN que la CSP del sitio\n"

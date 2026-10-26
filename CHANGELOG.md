@@ -3,6 +3,15 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (comparación de esquemas).
+
+### Changed
+
+- **util_bbdd 4.2.0** (W-2.0): wheel de la release v4.2.0 (hash en `backend/uv.lock`). Su informe HTML de comparación
+  carga Mermaid con versión fija y SRI; el sustituto local de la web reconoce también esa etiqueta.
+
 ## [1.1.0] - 2026-10-26
 
 util_bbdd 4.1.0 y ola 1 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (documentación y grafos), más lo
