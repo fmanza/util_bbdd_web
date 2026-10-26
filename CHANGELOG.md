@@ -25,18 +25,19 @@ pendiente desde la 1.0.0 (puesta en marcha, plantillas de documento, almacenamie
   grupo de dependencias `docs` en `backend/pyproject.toml` y job `docs` del CI (`zensical build --strict`).
 - **Columnas en los diagramas de la documentación**: `graph_columns` (por defecto, primero las de relación y luego el
   resto; antes solo las de relación, y una tabla sin FK salía «Sin columnas visibles»), `graph_max_columns` y
-  `graph_data_types`. Hueco G38 registrado: el sitio HTML omite el diagrama de las tablas sin relaciones.
+  `graph_data_types`. Con util_bbdd 4.1.0 las tablas sin relaciones también tienen diagrama en el sitio HTML (G38).
 - **Grafo de relaciones**: opción de columnas «Primero las de relación, luego el resto» (`column_mode=relations_first`;
   el valor por defecto sigue siendo «Solo columnas de relación»).
 - **Plantillas Word y Excel de la documentación** (ADR-011): catálogo global (*Administración → Plantillas*) y
   pestaña *Plantillas* en cada proyecto (editores), con plantillas base descargables. Al lanzar la documentación,
   «Plantilla Word» y «Plantilla Excel»; sin plantilla, el formato de siempre. Word con `plantilla_word` de util_bbdd
-  (portada, encabezado, pie, estilos y estilo de tabla); Excel retocado por la web (tema, colores y fuentes,
-  encabezado y pie, página y estilo de tabla predefinido; GAPS G40). Si una plantilla no se puede aplicar, la
+  (portada, encabezado, pie, estilos y estilo de tabla); Excel con `plantilla_excel` y `table_style_excel` de
+  util_bbdd 4.1.0 (tema, colores y fuentes, encabezado y pie, página y estilo de tabla predefinido; sin portada,
+  GAPS G40). Si una plantilla no se puede aplicar, la
   documentación sale con el formato por defecto y la ejecución termina con un aviso (`warnings` en el detalle y en
   `run.json`, que registra además las plantillas usadas). Nuevas variables `UBW_TEMPLATE_MAX_MB` (10) y
-  `UBW_TEMPLATES_PER_SCOPE` (20); migración `0009`. Hueco G41 registrado: util_bbdd no valida los estilos de la
-  plantilla Word.
+  `UBW_TEMPLATES_PER_SCOPE` (20); migración `0009`. La web exige al subir los estilos que usa la documentación y
+  util_bbdd 4.1.0 los valida antes de leer la base de datos (G41).
 
 - **Almacenamiento administrable** (ADR-012): *Administración → Almacenamiento* cambia sin reiniciar la cuota por usuario y la retención de ejecuciones y ficheros (las variables `UBW_*` pasan a ser el valor por defecto), con vista previa de lo que se purgará y «Aplicar ahora»; cuota propia por usuario en su ficha; **purga por cuota** opcional (`UBW_QUOTA_PURGE`, desactivada por defecto): al llegar a la cuota se purgan las ejecuciones más antiguas del usuario hasta el `UBW_QUOTA_PURGE_TARGET_PCT` (80 %), nunca las de la última hora ni las que use una ejecución en curso; **Mi espacio** en el menú de usuario. Migración `0010`.
 
@@ -72,8 +73,10 @@ pendiente desde la 1.0.0 (puesta en marcha, plantillas de documento, almacenamie
 - **Sitio HTML de la documentación**: el panel de detalle (iframe del índice) salía bloqueado en la SPA y en «Abrir en
   pestaña nueva». CSP con `frame-src 'self'` y `frame-ancestors 'self'` solo en el índice raíz (enmienda de ADR-007).
 - **Documentación que fallaba por un diagrama**: Graphviz 2.43 aborta con aristas ortogonales en algunos grafos y
-  util_bbdd perdía la ejecución entera (GAPS G39). La imagen instala un envoltorio de `dot` que repite ese diagrama
-  con aristas poligonales; si aun así falla, el código es `graphviz_failed` (antes `unknown`).
+  util_bbdd 4.0 perdía la ejecución entera (GAPS G39). La imagen instala un envoltorio de `dot` que repite ese diagrama
+  con aristas poligonales, y con util_bbdd 4.1.0 un diagrama que aun así falla deja un aviso en su lugar y el
+  documento sigue (ver «Relaciones en ángulo recto»); `graphviz_failed` (antes `unknown`) queda para el caso raro de
+  que fallen todos.
 - **Pestañas que abre el sitio HTML** (tarjetas de resumen y enlaces de las colecciones): salían bloqueadas
   (`ERR_BLOCKED_BY_RESPONSE`). El sitio responde con `Cross-Origin-Opener-Policy: unsafe-none` (enmienda de
   ADR-007).
