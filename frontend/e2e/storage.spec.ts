@@ -51,6 +51,8 @@ test('el admin cambia y restablece un ajuste y da una cuota propia que el usuari
   await dialog.getByLabel(/^Contraseña/).fill(password);
   await dialog.getByRole('button', { name: 'Crear usuario' }).click();
   await expect(dialog).toBeHidden();
+  // Con más de 50 usuarios (una página) el nuevo puede no estar en la primera: se busca.
+  await page.getByLabel('Buscar por usuario o nombre').fill(username);
   await page.getByRole('button', { name: `Editar ${username}` }).click();
   dialog = page.getByRole('dialog');
   await dialog.getByRole('switch', { name: /Usar la cuota global/ }).click({ force: true });

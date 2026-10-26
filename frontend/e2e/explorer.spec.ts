@@ -22,6 +22,8 @@ async function login(page: Page) {
 
 async function setOwnSqlPermission(page: Page, value: boolean) {
   await page.goto('/admin/users');
+  // Con más de 50 usuarios (una página) el admin E2E puede no estar en la primera: se busca.
+  await page.getByLabel('Buscar por usuario o nombre').fill(ADMIN_USER ?? '');
   await page.getByRole('button', { name: `Editar ${ADMIN_USER}` }).click();
   const dialog = page.getByRole('dialog');
   const toggle = dialog.getByRole('switch', { name: /Puede ejecutar SQL libre/ });
