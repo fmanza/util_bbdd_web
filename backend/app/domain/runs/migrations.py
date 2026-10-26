@@ -28,12 +28,12 @@ from app.domain.projects.service import Membership, get_project_connection
 from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError, RunStateError
 from app.domain.runs.service import get_artifact_by_path
 from app.domain.runs.targets import active_write
+from app.integrations.util_bbdd.catalog import migration_engines
 
 PLAN_PATH: Final = "outputs/plan/plan.json"
 REPORT_PATH: Final = "outputs/plan/report.json"
 PLAN_MAX_BYTES: Final = 20 * 1024 * 1024
 DRY_RUN_MAX_AGE: Final = timedelta(minutes=60)
-SOURCE_ENGINES: Final = frozenset({"oracle", "mariadb", "mysql", "sqlserver", "postgresql"})
 
 
 class MigrationForbiddenError(AppError):
@@ -83,7 +83,7 @@ def check_plan(db: Session, membership: Membership, params: dict[str, Any]) -> N
     """``migrate_plan``: el origen es un motor de migración y distinto del destino."""
     link = get_project_connection(db, membership.project, params["source_connection"])
     db_type = link.connection.db_type
-    if db_type not in SOURCE_ENGINES:
+    if db_type not in migration_engines()[0]:
         raise _params_error("source_connection", f"util_bbdd no migra desde {db_type}.")
     if db_type == params["target_engine"]:
         raise _params_error("target_engine", "El motor destino debe ser distinto del origen.")

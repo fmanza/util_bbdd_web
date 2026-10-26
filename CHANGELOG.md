@@ -12,6 +12,9 @@ util_bbdd 4.3.0 y ola 3 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (
 - **util_bbdd 4.3.0** (W-3.0): wheel de la release v4.3.0 (hash en `backend/uv.lock`). Sin cambios de código: la
   web no usaba el valor de retorno de `MigrationPlan.execute()` (ahora `ExecutionResult`) y la sentencia que falla
   sigue llegando como causa de la excepción (`MigrationStatementError`, subclase de la de antes).
+- **Motores de migración desde util_bbdd** (W-M1, GAPS G4): el catálogo y la validación de `migrate_plan` leen
+  `MigrationPlanner.supported_sources()`/`supported_targets()` en lugar de una copia de sus constantes privadas. La
+  ficha de motores muestra lo mismo que antes.
 
 ## [1.2.0] - 2026-10-26
 

@@ -1,7 +1,7 @@
 """Catálogo de motores de util_bbdd traducido a tipos propios (Fase 2).
 
 Combina ``get_db_type_info_static`` (ficha y ``connection_params``), ``is_async_supported``, los motores de
-migración (GAPS G4) y el readiness estático en una matriz de capacidades (GAPS G5). Clasifica cada parámetro de
+migración (``MigrationPlanner.supported_sources/targets``, util_bbdd 4.3.0, GAPS G4) y el readiness estático en una matriz de capacidades (GAPS G5). Clasifica cada parámetro de
 conexión como secreto, host, ruta o bloqueado, porque util_bbdd no lo indica (GAPS G12).
 """
 
@@ -14,11 +14,6 @@ from typing import Any, Literal
 
 ParamType = Literal["string", "integer", "float", "boolean", "object"]
 ParamKind = Literal["plain", "secret", "host", "path", "blocked"]
-
-#: Motores de ``MigrationPlanner`` (copia de ``util_bbdd.migrate.planner._SUPPORTED_SOURCE/_TARGET``, privadas; un
-#: test las compara con la librería, GAPS G4).
-MIGRATE_SOURCE: frozenset[str] = frozenset({"oracle", "mariadb", "mysql", "sqlserver", "postgresql"})
-MIGRATE_TARGET: frozenset[str] = frozenset({"mariadb", "mysql", "sqlserver", "postgresql", "oracle"})
 
 #: Drivers que aparecen en ``database_types.json`` pero no se pueden instalar (GAPS G8).
 OBSOLETE_DRIVERS: frozenset[str] = frozenset({"cx_Oracle"})
@@ -107,6 +102,14 @@ class EngineDetail(EngineSummary):
     install_command: str | None
     system_requirements: tuple[str, ...]
     params: tuple[ParamSpec, ...]
+
+
+@cache
+def migration_engines() -> tuple[frozenset[str], frozenset[str]]:
+    """Motores origen y destino de ``MigrationPlanner`` (API pública desde util_bbdd 4.3.0, GAPS G4)."""
+    from util_bbdd.migrate import MigrationPlanner
+
+    return frozenset(MigrationPlanner.supported_sources()), frozenset(MigrationPlanner.supported_targets())
 
 
 class UnknownEngineError(LookupError):
@@ -210,8 +213,8 @@ def engine_detail(db_type: str) -> EngineDetail:
         drivers=drivers,
         capabilities=EngineCapabilities(
             async_supported=bool(is_async_supported(db_type)),
-            migrate_source=db_type in MIGRATE_SOURCE,
-            migrate_target=db_type in MIGRATE_TARGET,
+            migrate_source=db_type in migration_engines()[0],
+            migrate_target=db_type in migration_engines()[1],
             readiness=_readiness_supported(db_type),
         ),
         url_docs=info.get("url_docs"),

@@ -22,8 +22,6 @@ from typing import Any, Final, Literal
 
 from app.integrations.util_bbdd.sql import _engine_message
 
-SOURCE_ENGINES: Final = ("oracle", "mariadb", "mysql", "sqlserver", "postgresql")
-TARGET_ENGINES: Final = ("mariadb", "mysql", "sqlserver", "postgresql", "oracle")
 PLAN_FORMAT: Final = 1
 #: Destinos que rechazan siempre una FK entre tipos distintos (InnoDB).
 FK_STRICT_TARGETS: Final = frozenset({"mariadb", "mysql"})

@@ -462,4 +462,5 @@ Release `v4.2.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 
 | Fase | Commit | Notas |
 |---|---|---|
-| W-3.0 | este commit | Pin 4.3.0 (lock con uv 0.12.22, el de la imagen). Sin cambios de código; solo los tests de versión |
+| W-3.0 | `ac04574` | Pin 4.3.0 (lock con uv 0.12.22, el de la imagen). Sin cambios de código; solo los tests de versión |
+| W-M1 | este commit | `migration_engines()` (catálogo) desde `MigrationPlanner.supported_sources/targets()`; el dominio la usa al validar el origen. El test de las constantes privadas pasa a ser de contrato: el `Literal` `MigrationEngine` debe coincidir con `supported_targets()` |

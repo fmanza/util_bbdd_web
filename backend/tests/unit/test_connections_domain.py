@@ -21,12 +21,11 @@ from app.domain.connections.errors import ConnectionParamsError, InvalidAllowlis
 from app.domain.connections.params import resolve_paths, validate_params, with_timeouts
 from app.integrations.util_bbdd.catalog import (
     KNOWN_PARAMS,
-    MIGRATE_SOURCE,
-    MIGRATE_TARGET,
     InvalidParamsError,
     build_params,
     engine_detail,
     list_engines,
+    migration_engines,
 )
 
 # --- cifrado -----------------------------------------------------------------------------------------------------
@@ -216,11 +215,17 @@ def test_every_util_bbdd_param_is_classified() -> None:
     assert {p.kind for p in engine_detail("sqlite").params if p.name == "database"} == {"path"}
 
 
-def test_migration_engines_match_util_bbdd() -> None:
-    from util_bbdd.migrate import planner
+def test_migration_engines_come_from_util_bbdd_and_match_the_form() -> None:
+    from typing import get_args
 
-    assert planner._SUPPORTED_SOURCE == MIGRATE_SOURCE
-    assert planner._SUPPORTED_TARGET == MIGRATE_TARGET
+    from app.domain.runs.operations import MigrationEngine
+
+    sources, targets = migration_engines()
+
+    assert {"oracle", "postgresql"} <= sources and "sqlite" not in sources
+    assert set(get_args(MigrationEngine)) == targets, "El Literal del formulario debe ofrecer los destinos de util_bbdd"
+    assert engine_detail("oracle").capabilities.migrate_source
+    assert not engine_detail("sqlite").capabilities.migrate_target
 
 
 def test_build_params_reports_missing_required_without_secrets() -> None:
