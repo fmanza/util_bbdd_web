@@ -388,9 +388,18 @@ class GraphOptions:
 
 
 def generate_graphs(
-    db_type: str, conn_params: dict[str, Any], *, schema: str | None, options: GraphOptions, output_dir: Path
+    db_type: str,
+    conn_params: dict[str, Any],
+    *,
+    schema: str | None,
+    options: GraphOptions,
+    output_dir: Path,
+    progress: RunProgress | None = None,
 ) -> dict[str, Any]:
     """Grafo de ``options.table`` (paginado si hay muchas relaciones) o de todas las tablas con relaciones.
+
+    Con ``progress`` (GAPS G1, util_bbdd 4.1.0), el grafo de todas las tablas avisa tabla a tabla y se puede cancelar
+    entre tablas (``OperationCancelledError``); el de una tabla es una sola unidad.
 
     Returns:
         ``{"files": [nombres], "tables": n, "errors": n}``.
@@ -430,7 +439,11 @@ def generate_graphs(
             )
             return {"files": [p.name for p in files], "tables": 1, "errors": 0}
         results = graph.generate_all_tables_graphs_ext(
-            output_dir=output_dir, format=options.format, max_subnodes=options.max_subnodes
+            output_dir=output_dir,
+            format=options.format,
+            max_subnodes=options.max_subnodes,
+            on_progress=progress,
+            cancel_token=progress.token if progress is not None else None,
         )
     names = [Path(f).name for r in results.values() for f in r.get("files", [])]
     errors = sum(1 for r in results.values() if r.get("status") == "error")

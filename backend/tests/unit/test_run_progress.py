@@ -128,3 +128,34 @@ def test_worker_gives_cooperative_operations_time_to_stop(monkeypatch: pytest.Mo
     monkeypatch.setattr(worker_module.time, "monotonic", lambda: 1.0 + worker_module.COOPERATIVE_CANCEL_GRACE)
     w.enforce()
     assert stopped == ["noop", "doc"]  # sin parar a tiempo, se termina el subproceso (ADR-002)
+
+
+def test_graph_of_all_tables_stops_between_tables_when_cancelled(tmp_path: Path) -> None:
+    """Grafo de todas las tablas con util_bbdd real: la cancelación lo para tabla a tabla (W-G1)."""
+    import shutil
+
+    if shutil.which("dot") is None:
+        pytest.skip("Graphviz (dot) no está instalado")
+    database = tmp_path / "tienda.db"
+    con = sqlite3.connect(database)
+    con.executescript(
+        """
+        CREATE TABLE a (id INTEGER PRIMARY KEY);
+        CREATE TABLE b (id INTEGER PRIMARY KEY, a_id INTEGER REFERENCES a(id));
+        """
+    )
+    con.close()
+    reported: list[tuple[str, int | None]] = []
+    graphs_bridge = RunProgress(lambda m, p: reported.append((m, p)), lambda: True, ("tables",), poll_seconds=0)
+
+    with pytest.raises(OperationCancelledError):
+        documentation.generate_graphs(
+            "sqlite",
+            {"database": str(database)},
+            schema=None,
+            options=documentation.GraphOptions(),
+            output_dir=tmp_path / "graphs",
+            progress=graphs_bridge,
+        )
+
+    assert not list((tmp_path / "graphs").glob("*.svg"))

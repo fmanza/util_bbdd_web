@@ -220,7 +220,8 @@ def test_orthogonal_edges_reach_util_bbdd(monkeypatch: pytest.MonkeyPatch, tmp_p
         def __init__(self, manager: object, **kwargs: object) -> None:
             seen.update(kwargs)
 
-        def generate_all_tables_graphs_ext(self, **_: object) -> dict[str, object]:
+        def generate_all_tables_graphs_ext(self, **kwargs: object) -> dict[str, object]:
+            seen["cancel_token"] = kwargs.get("cancel_token")
             return {}
 
     monkeypatch.setattr(documentation.shutil, "which", lambda _: "/usr/bin/dot")
@@ -235,7 +236,7 @@ def test_orthogonal_edges_reach_util_bbdd(monkeypatch: pytest.MonkeyPatch, tmp_p
         output_dir=tmp_path,
     )
 
-    assert (seen["orthogonal_edges"], seen["schema"]) == (False, "ventas")
+    assert (seen["orthogonal_edges"], seen["schema"], seen["cancel_token"]) == (False, "ventas", None)
 
 
 def test_options_fields_match_params() -> None:

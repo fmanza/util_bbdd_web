@@ -48,7 +48,7 @@ WORKER_CONTEXT: Final = RequestContext(ip=None, user_agent="worker")
 TERMINATE_GRACE: Final = 5.0
 #: Operaciones que paran por sí mismas al pedir la cancelación (``util_bbdd.progress``, GAPS G1): el worker les deja
 #: ``COOPERATIVE_CANCEL_GRACE`` segundos antes de terminar el subproceso (ADR-002).
-COOPERATIVE_OPERATIONS: Final = frozenset({"documentation"})
+COOPERATIVE_OPERATIONS: Final = frozenset({"documentation", "relationship_graph"})
 COOPERATIVE_CANCEL_GRACE: Final = 60.0
 
 

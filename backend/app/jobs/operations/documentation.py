@@ -181,8 +181,17 @@ def run_relationship_graph(ctx: JobContext) -> None:
             schema=params.schema_name,
             options=GraphOptions(**params.model_dump(include=set(GraphOptions.__dataclass_fields__))),
             output_dir=ctx.outputs("graphs"),
+            progress=RunProgress(
+                lambda message, pct: ctx.progress("running", message, pct),
+                ctx.cancel_requested,
+                ("tables",),
+                {"tables": "Grafos"},
+            ),
         )
     except Exception as exc:  # frontera de util_bbdd
+        if is_cancellation(exc):
+            ctx.logger.info("Grafo cancelado entre tablas")
+            raise _job_error(exc) from None
         ctx.logger.error("Grafo fallido", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     if not summary["files"]:

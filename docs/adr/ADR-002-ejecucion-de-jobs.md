@@ -54,7 +54,8 @@ de su avance por unidad de trabajo y paran entre unidades con `OperationCancelle
   `runs.cancel_requested` (`JobContext.cancel_requested`); si está pedido, cancela el token.
 - **Parada cooperativa**: la operación termina la unidad en curso y lanza `OperationCancelledError`; el job la
   convierte en `JobError("cancelled")` y el runner cierra el run como `cancelled`.
-- **El worker** deja a las operaciones cooperativas (`COOPERATIVE_OPERATIONS`: de momento `documentation`)
+- **El worker** deja a las operaciones cooperativas (`COOPERATIVE_OPERATIONS`: `documentation` y
+  `relationship_graph`; el grafo de una sola tabla es una unidad y no para a mitad)
   `COOPERATIVE_CANCEL_GRACE` (60 s) antes de terminar el subproceso; si no paran a tiempo, `terminate`/`kill` como
   antes. El resto de operaciones no cambia. El subproceso por job se mantiene (aislamiento de memoria y estado).
 - Las demás operaciones se suman al conectar util_bbdd su progreso (plan de huecos, olas 2-5).
