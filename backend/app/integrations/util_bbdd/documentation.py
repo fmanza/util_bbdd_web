@@ -94,6 +94,7 @@ class DocumentationOptions:
     graph_columns: GraphColumns = "relations_first"
     graph_max_columns: int = 8
     graph_data_types: bool = False
+    graph_orthogonal: bool = True
     tables_per_document: int = 50
     html_items_per_page: int = 15
 
@@ -185,6 +186,7 @@ def build_imprimir(
             "direction": options.graph_direction,
             "workers": GRAPH_WORKERS,
             "show_columns": options.graph_columns != "compact",
+            "orthogonal_edges": options.graph_orthogonal,  # util_bbdd 4.1.0 (G39)
             "columns": {
                 "mode": _GRAPH_COLUMN_MODE.get(options.graph_columns, "relations"),
                 "max_items": options.graph_max_columns,
@@ -338,6 +340,7 @@ class GraphOptions:
     column_mode: GraphColumns = "relations"
     max_columns: int = 8
     show_data_types: bool = False
+    orthogonal_edges: bool = True
     max_subnodes: int = 10
     format: Literal["svg", "png"] = "svg"
 
@@ -367,6 +370,7 @@ def generate_graphs(
             column_mode=_GRAPH_COLUMN_MODE.get(options.column_mode, "relations"),
             max_columns=options.max_columns,
             show_data_types=options.show_data_types,
+            orthogonal_edges=options.orthogonal_edges,
             max_depth=options.max_depth,
             direction=options.direction,
             render_workers=GRAPH_WORKERS,

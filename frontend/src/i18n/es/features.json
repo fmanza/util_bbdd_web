@@ -400,6 +400,7 @@
         "graph_columns": "Columnas en el diagrama",
         "graph_max_columns": "Columnas máximas por tabla",
         "graph_data_types": "Mostrar tipos de columna",
+        "graph_orthogonal": "Relaciones en ángulo recto",
         "tables_per_document": "Tablas por documento Word",
         "html_items_per_page": "Elementos por página HTML",
         "word_template": "Plantilla Word",
@@ -414,6 +415,7 @@
         "column_mode": "Columnas",
         "max_columns": "Columnas máximas",
         "show_data_types": "Mostrar tipos",
+        "orthogonal_edges": "Relaciones en ángulo recto",
         "max_subnodes": "Tablas por imagen",
         "format": "Formato"
       },

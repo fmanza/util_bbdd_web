@@ -170,6 +170,7 @@ def test_build_imprimir_maps_options() -> None:
         "direction": "both",
         "workers": 2,
         "show_columns": True,
+        "orthogonal_edges": True,
         "columns": {"mode": "compact", "max_items": 8, "show_data_types": False},
     }
     assert "plantilla_word" not in imprimir
@@ -193,6 +194,48 @@ def test_build_imprimir_maps_graph_columns(graph_columns: str, show_columns: boo
 
     assert grafo["show_columns"] is show_columns
     assert grafo["columns"] == {"mode": mode, "max_items": 20, "show_data_types": True}
+
+
+def test_orthogonal_edges_reach_util_bbdd(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """GAPS G39 (util_bbdd 4.1.0): sin ángulo recto, ``imprimir["grafo"]`` y el grafo reciben ``orthogonal_edges``."""
+    import util_bbdd
+    import util_bbdd.analysis.graphviz_ext as graphviz_ext
+
+    options = DocumentationOptions(formats=("word",), graph_orthogonal=False)
+    assert build_imprimir(options)["grafo"]["orthogonal_edges"] is False
+
+    seen: dict[str, object] = {}
+
+    class _Manager:
+        def __init__(self, *_: object, **__: object) -> None:
+            pass
+
+        def __enter__(self) -> _Manager:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+    class _Graph:
+        def __init__(self, manager: object, **kwargs: object) -> None:
+            seen.update(kwargs)
+
+        def generate_all_tables_graphs_ext(self, **_: object) -> dict[str, object]:
+            return {}
+
+    monkeypatch.setattr(documentation.shutil, "which", lambda _: "/usr/bin/dot")
+    monkeypatch.setattr(util_bbdd, "SyncDatabaseManager", _Manager)
+    monkeypatch.setattr(graphviz_ext, "GraphvizRelationshipGraphExt", _Graph)
+
+    documentation.generate_graphs(
+        "postgresql",
+        {},
+        schema="ventas",
+        options=documentation.GraphOptions(orthogonal_edges=False),
+        output_dir=tmp_path,
+    )
+
+    assert (seen["orthogonal_edges"], seen["schema"]) == (False, "ventas")
 
 
 def test_options_fields_match_params() -> None:

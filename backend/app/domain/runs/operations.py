@@ -102,6 +102,11 @@ class DocumentationParams(BaseModel):
     )
     graph_max_columns: int = _group("graphs", 8, "Columnas máximas por tabla del diagrama.", ge=1, le=50)
     graph_data_types: bool = _group("graphs", False, "Mostrar el tipo de cada columna en el diagrama.")
+    graph_orthogonal: bool = _group(
+        "graphs",
+        True,
+        "Relaciones en ángulo recto; desactívalo (curvas) si Graphviz no puede dibujar algún diagrama (GAPS G39).",
+    )
     tables_per_document: int = _group("layout", 50, "Tablas por documento Word.", ge=1, le=500)
     html_items_per_page: int = _group("layout", 15, "Elementos por página del índice HTML.", ge=5, le=100)
     word_template: str | None = _template(
@@ -149,6 +154,9 @@ class RelationshipGraphParams(BaseModel):
     )
     max_columns: int = _group("graph", 8, "Columnas máximas por tabla.", ge=1, le=50)
     show_data_types: bool = _group("graph", False, "Mostrar el tipo de cada columna.")
+    orthogonal_edges: bool = _group(
+        "graph", True, "Relaciones en ángulo recto; desactívalo (curvas) si Graphviz no puede dibujar el grafo."
+    )
     max_subnodes: int = _group(
         "graph", 10, "Tablas relacionadas por imagen (las demás van en otras imágenes).", ge=2, le=50
     )

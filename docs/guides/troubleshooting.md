@@ -53,7 +53,7 @@
 | Migración: `apply_partial` | Falló una sentencia; las anteriores quedaron aplicadas | Lee el informe y corrige el destino a mano |
 | Comparación: el visor da 413 | El diff supera 20 MB | Descarga los informes |
 | Ejecución fallida con `graphviz_missing` | Falta Graphviz en el servidor | Usa la imagen oficial o instala `graphviz` |
-| Ejecución fallida con `graphviz_failed` | `dot` terminó con error en un diagrama y util_bbdd aborta el formato entero (GAPS G39). La imagen oficial ya repite sin aristas ortogonales los diagramas que abortan Graphviz | Reduce la profundidad de los diagramas o desactívalos; fuera de la imagen oficial, instala `docker/dot-wrapper.sh` como `dot` |
+| Ejecución fallida con `graphviz_failed`, o un diagrama con «No se pudo generar el diagrama» | `dot` terminó con error en un diagrama (GAPS G39). Desde util_bbdd 4.1.0 ese diagrama queda con un aviso y el documento sigue; la imagen oficial además repite sin aristas ortogonales los diagramas que abortan Graphviz | Desmarca «Relaciones en ángulo recto» en el formulario, reduce la profundidad o desactiva los diagramas; fuera de la imagen oficial, instala `docker/dot-wrapper.sh` como `dot` |
 | Explorador: el schema tarda en abrirse | Primera lectura de un schema grande | Espera (hasta `UBW_METADATA_TIMEOUT_SECONDS`); después va desde la caché |
 | Una tabla nueva no aparece | El árbol viene de la caché | **Refrescar** |
 | SQL libre: 403 | Sin permiso «Puede ejecutar SQL libre» o sin rol editor | Un admin activa el permiso en *Usuarios* |
