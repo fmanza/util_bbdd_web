@@ -56,7 +56,9 @@ encabezado y pie y sus colores corporativos, sin cambiar lo que pasa cuando no e
    ausente, fichero ilegible) o si falla el retoque del Excel, la documentación sale **con el formato por defecto** y
    la ejecución termina bien con un aviso: `warnings` en `run.json` y en `RunDetailOut`, que el detalle muestra.
    En Word se reintenta **una sola vez** y solo si la cadena de causas apunta a la plantilla (nunca por Graphviz ni
-   por la conexión); como util_bbdd aborta los formatos que faltaban, se regenera todo sin plantilla.
+   por la conexión); como util_bbdd aborta los formatos que faltaban, se regenera todo sin plantilla. Desde
+   util_bbdd 4.1.0 (G41 resuelto) la plantilla Word se valida al construir `DatabaseDocumentation`
+   (`DocumentationConfigError` «… plantilla Word …»), antes de leer la base de datos: el reintento no repite la lectura.
 
 ## Consecuencias
 
@@ -69,7 +71,8 @@ encabezado y pie y sus colores corporativos, sin cambiar lo que pasa cuando no e
       comprueba que no queda ninguno de esos colores. Al actualizar util_bbdd, si cambian, el test falla.
     - Con plantilla Word se pierde la orientación horizontal automática, y su contenido (portada) se repite en cada
       documento cuando hay más tablas que «Tablas por documento Word».
-    - Si la plantilla Word falla, los metadatos se leen dos veces (solo en ese caso).
+    - Si la plantilla Word falla durante la generación, los metadatos se leen dos veces (solo en ese caso). Con
+      util_bbdd 4.1.0, una plantilla sin los estilos necesarios o ilegible falla antes de leerlos.
     - `python-docx` y `openpyxl` pasan a ser dependencias directas de la web (ya llegaban con util_bbdd).
 
 ## Alternativas descartadas
