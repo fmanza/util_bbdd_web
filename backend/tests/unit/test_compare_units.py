@@ -17,7 +17,6 @@ from app.integrations.util_bbdd.compare import (
     SideError,
     diff_to_dict,
     localize_mermaid,
-    relabel,
     resolve_schema,
     sql_dialect_for,
 )
@@ -102,31 +101,30 @@ def test_sql_dialect(option: str, target: str, expected: str) -> None:
     assert sql_dialect_for(option, target) == expected
 
 
-def _diff() -> Any:
-    from util_bbdd.comparar import ColumnDiff, SchemaDiff, TableDiff
+def test_labels_and_json_have_no_infrastructure(tmp_path: Path) -> None:
+    """G23: la web pasa ``alias (motor) [schema]`` a util_bbdd; ni el diff ni su JSON llevan la ruta del fichero."""
+    from sqlalchemy import create_engine, inspect, text
+    from util_bbdd.comparar import SchemaComparator
 
-    return SchemaDiff(
-        source_label="postgresql://ana@10.0.0.7:5432/ventas [public]",
-        target_label="sqlite:////srv/ubw/files/destino.db",
-        table_diffs=(
-            TableDiff("clientes", "modified", column_diffs=(ColumnDiff("nombre", "nullable", "False", "True"),)),
-        ),
-        summary="Tablas: 0 añadidas, 0 eliminadas, 1 modificadas",
-        source_short_label="pg_7_ventas",
-        target_short_label="destino",
+    engines = []
+    for name, ddl in (("origen.db", "CREATE TABLE t (a INTEGER)"), ("destino.db", "CREATE TABLE t (a TEXT)")):
+        engine = create_engine(f"sqlite:///{tmp_path / name}")
+        with engine.begin() as conn:
+            conn.execute(text(ddl))
+        engines.append(engine)
+    source = Side("sqlite", {"database": str(tmp_path / "origen.db")}, "main", "origen")
+    target = Side("sqlite", {"database": str(tmp_path / "destino.db")}, None, "destino")
+
+    diff = SchemaComparator().compare(
+        inspect(engines[0]), inspect(engines[1]), source_label=source.label, target_label=target.label
     )
+    data = diff_to_dict(diff)
 
-
-def test_relabel_and_json_have_no_infrastructure() -> None:
-    source = Side("postgresql", {"password": "x"}, "public", "origen")
-    target = Side("sqlite", {}, None, "destino")
-
-    data = diff_to_dict(relabel(_diff(), source, target))
-
-    text = repr(data)
-    assert data["source_label"] == "origen (postgresql) [public]" and data["target_label"] == "destino (sqlite)"
-    assert "10.0.0.7" not in text and "/srv/ubw" not in text and "ana@" not in text
-    assert (data["format"], data["has_differences"], data["total_leaf_differences"]) == (1, True, 1)
+    assert data["source_label"] == "origen (sqlite) [main]" and data["target_label"] == "destino (sqlite)"
+    assert str(tmp_path) not in repr(data) and "sqlite:///" not in repr(data)
+    assert (data["has_differences"], data["total_leaf_differences"]) == (True, 1)
+    for engine in engines:
+        engine.dispose()
 
 
 def test_job_errors_name_the_side_without_driver_text() -> None:

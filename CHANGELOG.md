@@ -11,6 +11,9 @@ util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (
 
 - **util_bbdd 4.2.0** (W-2.0): wheel de la release v4.2.0 (hash en `backend/uv.lock`). Su informe HTML de comparación
   carga Mermaid con versión fija y SRI; el sustituto local de la web reconoce también esa etiqueta.
+- **Etiquetas de la comparación desde util_bbdd** (W-C1, GAPS G23): la web pasa `alias (motor) [schema]` como
+  `source_label`/`target_label` en lugar de reescribir el `SchemaDiff` después (`relabel`, retirado). El visor y los
+  informes muestran lo mismo que antes.
 
 ## [1.1.0] - 2026-10-26
 

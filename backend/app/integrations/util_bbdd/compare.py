@@ -2,8 +2,8 @@
 
 - ``SchemaComparator().compare(inspector_origen, inspector_destino, *, source_schema, target_schema, include_*)``
   devuelve un ``SchemaDiff`` (dataclasses inmutables, sin serialización propia: GAPS G24).
-- Las etiquetas de util_bbdd llevan host, usuario y, en SQLite, la ruta del fichero en el servidor (G23): se
-  sustituyen por ``alias (motor) [schema]`` **antes** de serializar y de generar los informes.
+- Etiquetas: ``alias (motor) [schema]`` con ``source_label``/``target_label`` (util_bbdd 4.2.0, G23). Sin ellas
+  util_bbdd ya no pone host, usuario ni ruta (``motor [schema]``), pero el alias es lo que reconoce el usuario.
 - ``SchemaDiffReporter(sql_dialect, sql_source_inspector, sql_source_schema).render(diff, dir, formato, filename)``
   genera los informes con nombre fijo. El HTML se deja en ``outputs/html/comparacion/index.html`` para servirlo por la
   URL firmada del sitio (ADR-007). Ese HTML carga Mermaid de un CDN que la CSP bloquea, y sin ``mermaid`` aborta todo su
@@ -127,17 +127,6 @@ def resolve_schema(side: str, schema: str | None, available: list[str], dialect:
     return real[matches[0]]
 
 
-def relabel(diff: Any, source: Side, target: Side) -> Any:
-    """``SchemaDiff`` con etiquetas sin datos de infraestructura (GAPS G23)."""
-    return dataclasses.replace(
-        diff,
-        source_label=source.label,
-        target_label=target.label,
-        source_short_label=source.alias,
-        target_short_label=target.alias,
-    )
-
-
 def diff_to_dict(diff: Any) -> dict[str, Any]:
     """JSON del diff: los campos del ``SchemaDiff`` más los contadores derivados y la versión del formato."""
     data: dict[str, Any] = dataclasses.asdict(diff)
@@ -193,8 +182,9 @@ def compare_schemas(
                 include_foreign_keys=options.foreign_keys,
                 include_comments=options.comments,
                 include_routines=options.routines,
+                source_label=source.label,
+                target_label=target.label,
             )
-            diff = relabel(diff, source, target)
             data = diff_to_dict(diff)
             diff_dir = outputs_dir / "diff"
             diff_dir.mkdir(parents=True, exist_ok=True)
