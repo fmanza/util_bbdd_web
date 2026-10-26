@@ -44,7 +44,8 @@ Si los esquemas son iguales en lo comparado, la ejecución termina **Correcta** 
 
 La tarjeta **Informes de la comparación** tiene las descargas (Excel, Word, Markdown y SQL) y el **informe HTML**
 navegable, aislado como el sitio de documentación ([ADR-007](../adr/ADR-007-sitio-html-aislado.md)). Sus diagramas
-Mermaid se muestran como texto: util_bbdd los carga de Internet y la web no lo permite (GAPS G25).
+Mermaid se muestran como texto: el informe se genera sin Mermaid, que util_bbdd cargaría de Internet y la web no
+permite (GAPS G25). Pestañas, filtros y búsqueda funcionan.
 
 > **El script SQL no se ejecuta.** Transforma el destino para igualarlo al origen e incluye `DROP` de lo que solo
 > existe en el destino. Revísalo antes de aplicarlo a mano. Aplicar cambios desde la web llegará con la migración DDL.

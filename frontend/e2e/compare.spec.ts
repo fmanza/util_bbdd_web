@@ -85,9 +85,13 @@ test('comparar dos BD SQLite, navegar por el diff y ver la evolución', async ({
   await expect(page.getByText('El script SQL no se ha ejecutado')).toBeVisible();
   const report = page.frameLocator('iframe[title="Informe HTML de la comparación"]');
   await expect(report.locator('code', { hasText: /^facturas$/ }).first()).toBeVisible({ timeout: 30_000 });
-  // El script del informe arranca con el sustituto local de Mermaid (G25), sin salir a Internet y en origen opaco.
+  // El script del informe arranca sin Mermaid (G25: mermaid_src=None), sin salir a Internet y en origen opaco.
   const frame = page.frames().find((f) => f.url().includes('/comparacion/index.html'));
-  expect(await frame?.evaluate('[typeof window.mermaid, window.origin]')).toEqual(['object', 'null']);
+  expect(
+    await frame?.evaluate(
+      "[typeof window.mermaid, document.documentElement.classList.contains('no-mermaid'), window.origin]",
+    ),
+  ).toEqual(['undefined', true, 'null']);
   await expect(page.getByRole('link', { name: /Descargar comparacion\.sql/ })).toBeVisible();
 
   // Segunda comparación y evolución respecto a la primera (los esquemas no han cambiado).

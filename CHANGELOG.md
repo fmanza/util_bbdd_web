@@ -19,6 +19,12 @@ util_bbdd 4.2.0 y ola 2 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (
   anteriores, con el formato 1 propio, se siguen leyendo, y la evolución funciona entre runs de las dos épocas. Un diff
   ilegible responde como «diff no disponible» en lugar de un error 500.
 
+### Security
+
+- **Informe HTML de comparación sin scripts externos** (W-C3, GAPS G25): se genera con `mermaid_src=None` (util_bbdd
+  4.2.0) en lugar de reescribir la etiqueta de Mermaid del CDN por un sustituto local (`assets/mermaid-stub.js`,
+  retirado). Pestañas, filtros y búsqueda funcionan; los diagramas siguen como texto.
+
 ## [1.1.0] - 2026-10-26
 
 util_bbdd 4.1.0 y ola 1 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (documentación y grafos), más lo

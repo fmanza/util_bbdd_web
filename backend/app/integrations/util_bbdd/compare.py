@@ -7,34 +7,18 @@
   util_bbdd ya no pone host, usuario ni ruta (``motor [schema]``), pero el alias es lo que reconoce el usuario.
 - ``SchemaDiffReporter(sql_dialect, sql_source_inspector, sql_source_schema).render(diff, dir, formato, filename)``
   genera los informes con nombre fijo. El HTML se deja en ``outputs/html/comparacion/index.html`` para servirlo por la
-  URL firmada del sitio (ADR-007). Ese HTML carga Mermaid de un CDN que la CSP bloquea, y sin ``mermaid`` aborta todo su
-  script (pestañas, filtros, búsqueda): se cambia esa etiqueta por un sustituto local vacío (G25); los diagramas se
-  ven como texto.
+  URL firmada del sitio (ADR-007), con ``mermaid_src=None`` (util_bbdd 4.2.0, G25): la CSP del sitio no admite
+  orígenes externos y el informe funciona sin Mermaid (pestañas, filtros, búsqueda); los diagramas se ven como texto.
 - El script SQL **solo se genera**: transforma el destino para igualarlo al origen y no se ejecuta nunca aquí.
 """
 
 from __future__ import annotations
 
 import json
-import logging
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
-
-logger = logging.getLogger(__name__)
-
-#: ``<script src>`` de Mermaid en un CDN dentro del informe HTML de util_bbdd (G25).
-#: Desde util_bbdd 4.2.0 la etiqueta lleva ``integrity`` y ``crossorigin`` (versión fija con SRI).
-_MERMAID_CDN = re.compile(r'<script\s+src="https://[^"]*mermaid[^"]*"[^>]*>\s*</script>', re.IGNORECASE)
-MERMAID_STUB_PATH: Final = "assets/mermaid-stub.js"
-MERMAID_STUB: Final = (
-    "// Sustituto local de Mermaid (util_bbdd_web, GAPS G25): el informe lo carga de un CDN que la CSP del sitio\n"
-    "// bloquea, y sin `mermaid` su script no arranca. Los diagramas se quedan como texto.\n"
-    "window.mermaid = { initialize: function () {}, init: function () {}, "
-    "run: function () { return Promise.resolve(); } };\n"
-)
 
 #: Formato 1 propio de la web (hasta 1.1.0): ``dataclasses.asdict`` del ``SchemaDiff`` + ``format`` y contadores.
 #: Desde 1.2.0 ``outputs/diff/schema_diff.json`` es ``SchemaDiff.to_dict()``; el formato 1 solo se lee.
@@ -223,13 +207,12 @@ def compare_schemas(
                 sql_dialect=sql_dialect_for(options.sql_dialect, target.db_type),
                 sql_source_inspector=source_inspector,
                 sql_source_schema=source_schema,
+                mermaid_src=None,  # G25: sin scripts de otros orígenes (CSP del sitio, ADR-007)
             )
             reports: dict[str, str] = {}
             for fmt in options.formats:
                 folder, filename = _report_location(outputs_dir, fmt)
                 path = reporter.render(diff, folder, fmt, filename=filename)
-                if fmt == "html":
-                    localize_mermaid(path)
                 reports[fmt] = path.relative_to(outputs_dir).as_posix()
     return {"summary": diff.summary, **_counters(diff), "reports": reports}
 
@@ -258,24 +241,6 @@ def _resolve(inspector: Any, side: str, schema: str | None) -> str | None:
     except Exception as exc:  # frontera de SQLAlchemy
         raise SideError(side, exc) from exc
     return resolve_schema(side, schema, available, inspector.dialect)
-
-
-def localize_mermaid(html_file: Path) -> bool:
-    """Cambia el ``<script>`` de Mermaid del CDN por ``assets/mermaid-stub.js`` y escribe el sustituto.
-
-    Returns:
-        ``True`` si había etiqueta que cambiar (si util_bbdd deja de usarla, el informe queda como está).
-    """
-    html = html_file.read_text(encoding="utf-8")
-    replaced, count = _MERMAID_CDN.subn(f'<script src="{MERMAID_STUB_PATH}"></script>', html)
-    if count == 0:
-        logger.warning("El informe HTML no carga Mermaid de un CDN: no se sustituye", extra={"file": html_file.name})
-        return False
-    html_file.write_text(replaced, encoding="utf-8")
-    stub = html_file.parent / MERMAID_STUB_PATH
-    stub.parent.mkdir(parents=True, exist_ok=True)
-    stub.write_text(MERMAID_STUB, encoding="utf-8")
-    return True
 
 
 def _report_location(outputs_dir: Path, fmt: str) -> tuple[Path, str]:

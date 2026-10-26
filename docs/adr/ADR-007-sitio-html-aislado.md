@@ -39,8 +39,9 @@ Además, un documento con origen opaco hace las peticiones de sus subrecursos co
 - Quien obtenga la URL puede leer ese sitio mientras no caduque y su usuario siga teniendo acceso; no da acceso a
   nada más. Cerrar la sesión no invalida las URL ya emitidas (caducan solas).
 - Fase 6: el informe HTML de comparación de util_bbdd carga Mermaid de un CDN; la CSP lo bloquea (no se admiten
-  orígenes externos) y la web sustituye esa etiqueta por un `mermaid` vacío local para que el resto del script
-  funcione (GAPS G25).
+  orígenes externos). Hasta la 1.1.0 la web sustituía esa etiqueta por un `mermaid` vacío local para que el resto del
+  script funcionara; desde la 1.2.0 (util_bbdd 4.2.0, GAPS G25) el informe se genera con `mermaid_src=None`: sin
+  scripts externos, y su script funciona sin Mermaid (diagramas como texto).
 - El Markdown de los artefactos se convierte con `marked` y se muestra en un `iframe srcdoc` con `sandbox=""` y una
   CSP `default-src 'none'`, sin scripts.
 

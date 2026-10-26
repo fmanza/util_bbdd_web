@@ -115,11 +115,12 @@ def test_compare_generates_diff_and_reports(
         "outputs/sql/comparacion.sql",
     } <= paths
     assert detail["site_url"].endswith("/comparacion/index.html")
-    # G25: el informe no carga nada externo y su sustituto de Mermaid se sirve con el sitio.
-    assert "outputs/html/comparacion/assets/mermaid-stub.js" in paths
+    # G25: el informe no carga scripts (``mermaid_src=None``) ni nada externo, y ya no hay sustituto de Mermaid.
+    assert not any("mermaid" in path for path in paths)
     report = (
         run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs/html/comparacion/index.html"
     ).read_text(encoding="utf-8")
+    assert "<script src=" not in report
     assert "https://" not in report.split("<main", 1)[0] + report.rsplit("</main>", 1)[-1]
     directory = run_dir(settings.workspace_dir, str(run.workspace_path))
     script = (directory / "outputs/sql/comparacion.sql").read_text(encoding="utf-8")

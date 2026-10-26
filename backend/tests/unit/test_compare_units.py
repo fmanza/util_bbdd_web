@@ -12,12 +12,10 @@ from app.domain.runs.diff import evolution, leaf_items
 from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import get_operation, validate_params
 from app.integrations.util_bbdd.compare import (
-    MERMAID_STUB_PATH,
     SchemaNotFoundError,
     Side,
     SideError,
     diff_to_dict,
-    localize_mermaid,
     read_diff,
     resolve_schema,
     sql_dialect_for,
@@ -204,34 +202,6 @@ def test_evolution_new_resolved_persisting_and_case() -> None:
     assert [(i.name, i.target) for i in result.persisting] == [("nombre", "X")]
     assert result.labels_match is True
     assert evolution({**current, "target_label": "c (sqlite)"}, BASELINE).labels_match is False
-
-
-# --- Mermaid (G25) -----------------------------------------------------------------------------------------------
-
-
-def test_localize_mermaid_replaces_the_cdn_script(tmp_path: Path) -> None:
-    html = tmp_path / "index.html"
-    html.write_text(
-        '<main></main>\n<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>\n'
-        "<script>mermaid.initialize({});</script>",
-        encoding="utf-8",
-    )
-
-    assert localize_mermaid(html) is True
-
-    content = html.read_text(encoding="utf-8")
-    assert "https://" not in content
-    assert f'<script src="{MERMAID_STUB_PATH}"></script>' in content
-    assert "window.mermaid" in (tmp_path / MERMAID_STUB_PATH).read_text(encoding="utf-8")
-
-
-def test_localize_mermaid_leaves_other_reports_alone(tmp_path: Path) -> None:
-    html = tmp_path / "index.html"
-    html.write_text("<script>var x = 1;</script>", encoding="utf-8")
-
-    assert localize_mermaid(html) is False
-    assert html.read_text(encoding="utf-8") == "<script>var x = 1;</script>"
-    assert not (tmp_path / MERMAID_STUB_PATH).exists()
 
 
 #: ``schema_diff.json`` de un run de la 1.1.0 (formato 1 propio de la web: ``dataclasses.asdict`` + contadores).
