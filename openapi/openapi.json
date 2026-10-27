@@ -352,6 +352,18 @@
       },
       "BulkPlanOut": {
         "properties": {
+          "atomic": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "La carga irá en una sola transacción (ParallelPlan.atomic); null en documentos anteriores a la 1.5.0",
+            "title": "Atomic"
+          },
           "reasons": {
             "default": [],
             "items": {

@@ -371,7 +371,7 @@ def test_parallel_plan_needs_accepting_non_atomic(
     settings: Settings,
     allowed: User,
 ) -> None:
-    """Con SQLite el plan siempre es en serie: se simula un plan de 4 hilos en la vista previa guardada."""
+    """Con SQLite el plan siempre es en serie: se simula un plan de 4 hilos no atómico en la vista previa guardada."""
     import json
 
     upload_id = upload(user_client, project["id"], "c.csv", INSERT_CSV).json()["id"]
@@ -379,7 +379,8 @@ def test_parallel_plan_needs_accepting_non_atomic(
     path = run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs" / "bulk" / "preview.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["parallel"]["workers"] == 1 and data["parallel"]["reasons"]
-    data["parallel"]["workers"] = 4
+    assert data["parallel"]["atomic"] is True  # G36: ParallelPlan.atomic de util_bbdd
+    data["parallel"].update(workers=4, atomic=False)
     path.write_text(json.dumps(data), encoding="utf-8")
 
     refused = apply(user_client, project, run.id)

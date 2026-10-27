@@ -159,10 +159,11 @@ describe('lanzar la carga', () => {
     });
   });
 
-  it('en paralelo: exige aceptar que no es atómica', async () => {
-    const fetchMock = stubPreview({
-      preview: { ...PREVIEW, parallel: { workers: 4, reasons: ['Más de 100 000 filas'] } },
-    });
+  it.each([
+    ['ParallelPlan.atomic', { workers: 4, reasons: ['Más de 100 000 filas'], atomic: false }],
+    ['vista previa anterior a la 1.5.0', { workers: 4, reasons: ['Más de 100 000 filas'] }],
+  ])('en paralelo (%s): exige aceptar que no es atómica', async (_case, parallel) => {
+    const fetchMock = stubPreview({ preview: { ...PREVIEW, parallel } });
     const user = userEvent.setup();
 
     renderRoute(`/runs/${PREVIEW_ID}`);

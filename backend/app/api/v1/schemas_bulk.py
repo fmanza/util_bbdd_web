@@ -15,6 +15,10 @@ class _Bulk(BaseModel):
 class BulkPlanOut(_Bulk):
     workers: int
     reasons: list[str] = []
+    atomic: bool | None = Field(
+        default=None,
+        description="La carga irá en una sola transacción (ParallelPlan.atomic); null en documentos anteriores a la 1.5.0",
+    )
 
 
 class BulkPreviewOut(_Bulk):

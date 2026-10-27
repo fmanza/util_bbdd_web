@@ -29,7 +29,7 @@ from app.jobs.context import JobContext, JobError
 from app.jobs.operations.documentation import _MESSAGES
 
 
-def _options(params: BulkPreviewParams) -> BulkOptions:
+def _options(params: BulkPreviewParams, *, require_atomic: bool = False) -> BulkOptions:
     return BulkOptions(
         table=params.table,
         operation=params.operation,
@@ -38,6 +38,7 @@ def _options(params: BulkPreviewParams) -> BulkOptions:
         max_rejects=params.max_rejects,
         parallel=params.parallel,
         chunk_size=params.chunk_size,
+        require_atomic=require_atomic,
     )
 
 
@@ -146,7 +147,9 @@ def run_apply(ctx: JobContext) -> None:
     try:
         frame = _frame(ctx, preview_params, path, kind)
         result = run_bulk(
-            Target(db_type, conn_params, preview_params.target_schema), frame, _options(preview_params),
+            Target(db_type, conn_params, preview_params.target_schema), frame,
+            # Sin aceptar que no sea atómica, util_bbdd lo garantiza aunque su plan haya cambiado (G36).
+            _options(preview_params, require_atomic=not params.accept_non_atomic),
             expected_structure=preview["structure_hash"], outputs_dir=ctx.run_dir / "outputs",
             expected_matches=params.confirm_rows,
         )  # fmt: skip

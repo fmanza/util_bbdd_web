@@ -43,6 +43,15 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   );
 }
 
+/**
+ * Si la carga irá en una sola transacción (`ParallelPlan.atomic`, G36). Las vistas previas anteriores a la 1.5.0 no lo
+ * guardan: entonces, atómica con un solo hilo (la API aplica la misma regla).
+ */
+function planAtomic(preview: BulkPreview): boolean {
+  const { atomic, workers } = preview.parallel;
+  return typeof atomic === 'boolean' ? atomic : workers <= 1;
+}
+
 function ConfirmBulk({
   preview,
   alias,
@@ -66,12 +75,12 @@ function ConfirmBulk({
   const [rows, setRows] = useState<number | string>('');
   const [nonAtomic, setNonAtomic] = useState(false);
   const counted = preview.operation !== 'insert';
-  const parallel = preview.parallel.workers > 1;
+  const notAtomic = !planAtomic(preview);
   const ready =
     understood &&
     typed === alias &&
     (!counted || Number(rows) === preview.matches) &&
-    (!parallel || nonAtomic);
+    (!notAtomic || nonAtomic);
   return (
     <Modal opened={opened} onClose={onClose} title={t('bulk.apply.confirmTitle')}>
       <Stack>
@@ -87,7 +96,7 @@ function ConfirmBulk({
           checked={understood}
           onChange={(event) => setUnderstood(event.currentTarget.checked)}
         />
-        {parallel && (
+        {notAtomic && (
           <Checkbox
             label={t('bulk.apply.nonAtomic', { workers: preview.parallel.workers })}
             checked={nonAtomic}

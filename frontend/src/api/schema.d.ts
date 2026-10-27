@@ -1603,6 +1603,11 @@ export interface components {
         /** BulkPlanOut */
         BulkPlanOut: {
             /**
+             * Atomic
+             * @description La carga irá en una sola transacción (ParallelPlan.atomic); null en documentos anteriores a la 1.5.0
+             */
+            atomic?: boolean | null;
+            /**
              * Reasons
              * @default []
              */

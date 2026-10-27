@@ -122,3 +122,30 @@ def test_verify_compares_the_target_count_with_util_bbdd(
     operation: str, before: int, after: int, committed: int, matches: int | None, expected: bool | None
 ) -> None:
     assert verify(operation, before, after, committed, matches) is expected  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("plan", "expected"),
+    [
+        ({"workers": 4, "atomic": False}, False),
+        ({"workers": 1, "atomic": True}, True),
+        ({"workers": 1, "atomic": False}, False),  # p. ej. commit_every_n_chunks: manda util_bbdd
+        ({"workers": 4}, False),  # vista previa anterior a la 1.5.0: por los hilos
+        ({"workers": 1}, True),
+        (None, True),
+    ],
+)
+def test_plan_atomic_comes_from_util_bbdd(plan: dict[str, object] | None, expected: bool) -> None:
+    from app.domain.runs.bulks import plan_atomic
+
+    assert plan_atomic({"parallel": plan}) is expected
+
+
+def test_require_atomic_is_passed_to_util_bbdd() -> None:
+    """Sin aceptar la no atomicidad, util_bbdd fuerza un hilo aunque su plan cambie entre la vista previa y la carga."""
+    from app.integrations.util_bbdd.bulk import BulkOptions, _parallel
+
+    assert _parallel(BulkOptions(table="t", operation="insert")) is None
+    strict = _parallel(BulkOptions(table="t", operation="insert", parallel=True, require_atomic=True))
+    loose = _parallel(BulkOptions(table="t", operation="insert", parallel=True))
+    assert (strict.mode, strict.require_atomic, loose.require_atomic) == ("auto", True, False)

@@ -7,8 +7,9 @@ encolar** (y de nuevo en el worker):
 2. Una ``bulk_preview`` correcta del mismo proyecto de hace menos de ``PREVIEW_MAX_AGE`` y **sin errores de
    validación**: la carga usa sus parámetros.
 3. El mismo fichero (SHA-256) y la misma conexión destino (id), no ``read_only`` y del mismo motor.
-4. ``confirm`` = alias del destino; en update/delete, ``confirm_rows`` = filas afectadas de la vista previa; con plan
-   paralelo, ``accept_non_atomic``.
+4. ``confirm`` = alias del destino; en update/delete, ``confirm_rows`` = filas afectadas de la vista previa; si el
+   plan no es atómico (``ParallelPlan.atomic``, G36), ``accept_non_atomic``. Sin ella, la carga pide a util_bbdd
+   ``require_atomic`` (un hilo).
 5. Ninguna otra escritura activa sobre ese destino (``targets.active_write``).
 """
 
@@ -138,7 +139,17 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         raise _params_error("confirm", "Escribe el alias de la conexión destino para confirmar.")
     if preview.get("operation") in {"update", "delete"} and params.get("confirm_rows") != preview.get("matches"):
         raise _params_error("confirm_rows", "Escribe el número de filas afectadas que indica la vista previa.")
-    if (preview.get("parallel") or {}).get("workers", 1) > 1 and not params.get("accept_non_atomic"):
+    if not plan_atomic(preview) and not params.get("accept_non_atomic"):
         raise _params_error("accept_non_atomic", "La carga paralela no es atómica: acéptalo para continuar.")
     if active_write(db, membership.project.id, alias):
         raise RunStateError("Ya hay una escritura en curso sobre esa conexión destino.")
+
+
+def plan_atomic(preview: dict[str, Any]) -> bool:
+    """Si la carga de la vista previa irá en una sola transacción (``ParallelPlan.atomic``, util_bbdd 4.5.0, G36).
+
+    Las vistas previas anteriores a la 1.5.0 no lo guardan: entonces, atómica con un solo hilo.
+    """
+    plan = preview.get("parallel") or {}
+    atomic = plan.get("atomic")
+    return bool(atomic) if isinstance(atomic, bool) else plan.get("workers", 1) <= 1

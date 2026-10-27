@@ -82,3 +82,7 @@ lote tenga una sola fila. La consecuencia «con apartar en Oracle valen las limi
   coincidencias por PK y update no cambia el número de filas; si no cuadra, la carga termina bien con un aviso. La
   alternativa descartada «confiar en `rows_committed`» deja de aplicarse como estaba escrita.
 - **Modo seco explícito (G35, W-B1)**: la vista previa llama con `dry_run=True` y la carga con `dry_run=False`.
+- **Atomicidad desde util_bbdd (G36, W-B2)**: la vista previa guarda `ParallelPlan.atomic` y `accept_non_atomic` se
+  exige solo si es `False` (en las vistas previas anteriores a la 1.5.0, con más de un hilo). Sin esa aceptación la
+  carga pide `ParallelOptions(require_atomic=True)`: util_bbdd garantiza un hilo y una transacción aunque su plan haya
+  cambiado entre la vista previa y la carga (antes la web no lo controlaba).

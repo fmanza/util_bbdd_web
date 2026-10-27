@@ -26,7 +26,7 @@ En *Nueva carga*:
 | Hoja / separador y codificación | Excel: hoja (la primera por defecto). CSV: se detectan; se pueden fijar |
 | Columnas | Columna de la tabla para cada columna del fichero, o «no cargar». Con schema, se ofrecen las de la tabla y se propone la del mismo nombre |
 | Apartar filas | Las que el destino no admita van a `rechazos.csv` en vez de hacer fallar la carga |
-| Plan paralelo | util_bbdd reparte las filas en hilos si compensa; **deja de ser atómica** |
+| Plan paralelo | util_bbdd reparte las filas en hilos si compensa; con más de un hilo **deja de ser atómica** |
 
 **Vista previa** lanza una ejecución que no escribe nada. Su detalle muestra las filas del fichero y de la tabla, las
 **filas afectadas** (las que ya existen por clave primaria: en insert, posibles duplicados), las primeras filas tal
@@ -42,7 +42,8 @@ concede un administrador en *Usuarios*), ser **propietario** del proyecto, conex
 vista previa **sin errores** y de **menos de 60 minutos**.
 
 La confirmación pide marcar que has revisado la vista previa y escribir el alias del destino; en **actualizar y
-borrar**, también el **número de filas afectadas**; con plan paralelo, aceptar que no es atómica.
+borrar**, también el **número de filas afectadas**; si el plan no es atómico (más de un hilo), aceptarlo. Si no
+lo aceptas, util_bbdd carga en un solo hilo y en una sola transacción aunque el plan cambie al ejecutar.
 
 La carga usa el fichero y los parámetros de la vista previa. Antes de escribir comprueba de nuevo el fichero, la
 conexión, la estructura de la tabla y, en actualizar y borrar, que las filas afectadas sigan siendo las confirmadas:

@@ -5,7 +5,8 @@
   ``dry_run`` ni ``generar_sql`` util_bbdd tampoco ejecuta (G35, ``FutureWarning`` desde 4.5.0): la web pasa siempre
   ``dry_run`` explícito, ``False`` al aplicar.
 - Con ``ParallelOptions`` y un plan de más de un hilo la operación deja de ser atómica (una transacción por
-  partición, G36). Sin paralelo, una transacción por operación.
+  partición, G36). ``ParallelPlan.atomic`` (util_bbdd 4.5.0) lo dice en la vista previa; al cargar sin
+  ``accept_non_atomic`` se pide ``require_atomic=True``, que fuerza un hilo aunque el plan haya cambiado.
 - El fichero lo lee la web (``domain/uploads/files.py``) y llega aquí como ``DataFrame``.
 - ``last_operation_rows_committed`` (fiable desde util_bbdd 4.5.0, G37) da las filas **enviadas** y confirmadas
   (también las apartadas; un UPDATE o DELETE de una clave que no existe cuenta): es la cifra principal del resultado.
@@ -62,6 +63,14 @@ class BulkOptions:
     max_rejects: int | None = None
     parallel: bool = False
     chunk_size: int | None = None
+    #: Al cargar sin aceptar que no sea atómica: util_bbdd fuerza un hilo (``ParallelOptions(require_atomic=True)``).
+    require_atomic: bool = False
+
+
+def _parallel(options: BulkOptions) -> Any:
+    from util_bbdd.bulk import ParallelOptions
+
+    return ParallelOptions(mode="auto", require_atomic=options.require_atomic) if options.parallel else None
 
 
 def _clean(message: str) -> str:
@@ -146,7 +155,7 @@ def _prepare(target: Target, frame: Any, options: BulkOptions) -> dict[str, Any]
     """Resuelve el mapeo del ``frame`` contra la tabla y valida. Devuelve lo que necesitan vista previa y carga."""
     from sqlalchemy import inspect
     from util_bbdd import SyncDatabaseManager
-    from util_bbdd.bulk import BulkCrud, ParallelOptions
+    from util_bbdd.bulk import BulkCrud
 
     manager = SyncDatabaseManager(target.db_type, target.conn_params, use_pool=False)
     engine = manager.get_sqlalchemy_engine()
@@ -156,7 +165,7 @@ def _prepare(target: Target, frame: Any, options: BulkOptions) -> dict[str, Any]
         if target.schema
         else None
     )
-    crud = BulkCrud(engine, parallel=ParallelOptions(mode="auto") if options.parallel else None)
+    crud = BulkCrud(engine, parallel=_parallel(options))
     try:
         table = crud.reflect_table(_qualified(schema, options.table))
     except Exception:
@@ -237,7 +246,7 @@ def build_bulk_preview(
             "errors": prepared["errors"],
             "matches": matches,
             "target_rows": _count(prepared["engine"], table),
-            "parallel": {"workers": plan.workers, "reasons": list(plan.reasons)},
+            "parallel": {"workers": plan.workers, "reasons": list(plan.reasons), "atomic": plan.atomic},
             "sample": _frame_records(frame, SAMPLE_ROWS),
             "sql_file": sql_file,
             "structure_hash": structure_hash(prepared, options),
@@ -290,7 +299,7 @@ def run_bulk(
             afectadas ya no son ``expected_matches`` (las confirmadas). ``ValueError``: el fichero ya no valida.
     """
     from util_bbdd.audit import JsonLinesAuditSink
-    from util_bbdd.bulk import AuditOptions, BatchOptions, BulkCrud, ParallelOptions, RejectOptions
+    from util_bbdd.bulk import AuditOptions, BatchOptions, BulkCrud, RejectOptions
 
     prepared = _prepare(target, frame, options)
     try:
@@ -317,7 +326,7 @@ def run_bulk(
                 csv_path=rejects if options.on_error == "isolate" else None,
                 max_rejects=options.max_rejects if options.on_error == "isolate" else None,
             ),
-            parallel=ParallelOptions(mode="auto") if options.parallel else None,
+            parallel=_parallel(options),
         )
         plan = crud.parallel_plan(options.operation, len(frame))
         error: str | None = None
@@ -346,7 +355,7 @@ def run_bulk(
             "verified": verify(options.operation, before, after, committed, matches) if complete else None,
             "rejected": crud.rows_rejected,
             "error": error,
-            "parallel": {"workers": plan.workers, "reasons": list(plan.reasons)},
+            "parallel": {"workers": plan.workers, "reasons": list(plan.reasons), "atomic": plan.atomic},
             "partitions": partitions,
         }
     finally:
