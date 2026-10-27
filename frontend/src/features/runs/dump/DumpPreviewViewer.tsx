@@ -119,8 +119,8 @@ function ConfirmDump({
     <Modal opened={opened} onClose={onClose} title={t('dump.apply.confirmTitle')}>
       <Stack>
         {error !== null && <ErrorAlert error={error} />}
-        <Alert color="red" title={t('dump.apply.noCancelTitle')}>
-          {t('dump.apply.noCancel', { alias })}
+        <Alert color="red" title={t('dump.apply.cancelTitle')}>
+          {t('dump.apply.cancel', { alias })}
         </Alert>
         {truncate && (
           <Alert color="red" title={t('dump.apply.truncateTitle')}>

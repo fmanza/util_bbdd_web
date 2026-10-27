@@ -2075,6 +2075,18 @@ export interface components {
          */
         DumpResultOut: {
             /**
+             * Cancelled
+             * @description Se canceló entre lotes: la tabla en curso se deshizo y las constraints se reactivaron; sin detalle por tabla (tables vacío)
+             * @default false
+             */
+            cancelled: boolean;
+            /**
+             * Completed Tables
+             * @description Tablas cargadas antes de cancelar
+             * @default []
+             */
+            completed_tables: string[];
+            /**
              * Constraints
              * @default []
              */

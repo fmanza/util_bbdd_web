@@ -215,6 +215,8 @@ describe('resultado del volcado', () => {
     ],
     constraints: [{ table: 'pedidos', constraint: 'fk_cli', status: 'failed', error: 'orphan rows' }],
     pk_sync: [],
+    cancelled: false,
+    completed_tables: [],
   }; // prettier-ignore
 
   it('muestra filas, rechazos y constraints sin reactivar, sin relanzar ni cancelar', async () => {
@@ -246,5 +248,53 @@ describe('resultado del volcado', () => {
       `/runs/${PREVIEW_ID}`,
     );
     expect(screen.queryByRole('button', { name: 'Relanzar' })).not.toBeInTheDocument();
+  });
+
+  it('un volcado cancelado lista las tablas que quedaron cargadas', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${DUMP_ID}`]: {
+        body: {
+          ...FINISHED, id: DUMP_ID, operation: 'dump_apply', status: 'cancelled', my_role: 'owner',
+          error_code: 'cancelled', params: { preview_run: PREVIEW_ID, confirm: 'destino' }, artifacts: [],
+        },
+      },
+      [`GET /api/v1/runs/${DUMP_ID}/dump-result`]: {
+        body: { ...RESULT, report: false, tables: [], constraints: [], cancelled: true, completed_tables: ['clientes'] },
+      },
+    }); // prettier-ignore
+
+    renderRoute(`/runs/${DUMP_ID}`);
+
+    expect(await screen.findByText('Cancelado entre lotes')).toBeInTheDocument();
+    expect(screen.getByText(/Se cargó 1 tabla antes de cancelar/)).toBeInTheDocument();
+    expect(screen.getByText('clientes')).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Tablas volcadas' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/No se pudo generar el informe Excel/)).not.toBeInTheDocument();
+  });
+
+  it('un volcado en curso se cancela entre lotes tras confirmarlo', async () => {
+    stubEventSource();
+    const running = {
+      ...RUN, id: DUMP_ID, operation: 'dump_apply', status: 'running', my_role: 'owner', artifacts: [],
+      params: { preview_run: PREVIEW_ID, confirm: 'destino' },
+    }; // prettier-ignore
+    const fetchMock = stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${DUMP_ID}`]: { body: running },
+      [`POST /api/v1/runs/${DUMP_ID}/cancel`]: { status: 202, body: { ...running, cancel_requested: true } },
+    });
+    const user = userEvent.setup();
+
+    renderRoute(`/runs/${DUMP_ID}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Cancelar' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cancelar el volcado' });
+    expect(within(dialog).getByText(/las tablas ya terminadas quedan cargadas/)).toBeInTheDocument();
+    expect(callsTo(fetchMock, 'POST', `/api/v1/runs/${DUMP_ID}/cancel`)).toHaveLength(0);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar entre lotes' }));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', `/api/v1/runs/${DUMP_ID}/cancel`)).toHaveLength(1));
+    expect(screen.queryByText(/no se puede cancelar/)).not.toBeInTheDocument();
   });
 });

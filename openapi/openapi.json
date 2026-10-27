@@ -1639,6 +1639,21 @@
       "DumpResultOut": {
         "description": "Resultado de ``dump_apply``: por tabla, constraints reactivadas y contadores PK.",
         "properties": {
+          "cancelled": {
+            "default": false,
+            "description": "Se canceló entre lotes: la tabla en curso se deshizo y las constraints se reactivaron; sin detalle por tabla (tables vacío)",
+            "title": "Cancelled",
+            "type": "boolean"
+          },
+          "completed_tables": {
+            "default": [],
+            "description": "Tablas cargadas antes de cancelar",
+            "items": {
+              "type": "string"
+            },
+            "title": "Completed Tables",
+            "type": "array"
+          },
           "constraints": {
             "default": [],
             "items": {

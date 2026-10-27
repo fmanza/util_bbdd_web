@@ -15,6 +15,7 @@ from app.domain.runs.operations import DumpApplyParams, DumpPreviewParams
 from app.integrations.util_bbdd.compare import SchemaNotFoundError
 from app.integrations.util_bbdd.dump import (
     DumpOptions,
+    DumpProgress,
     Endpoint,
     PreviewChangedError,
     UnknownTablesError,
@@ -128,9 +129,13 @@ def run_apply(ctx: JobContext) -> None:
     params = DumpApplyParams.model_validate(ctx.params)
     ctx.progress("preparing", "Comprobando permiso, vista previa y destino")
     preview_params, preview = _recheck(ctx, params)
+    if ctx.cancel_requested():  # pedida mientras se comprobaba: aún no se ha tocado el destino
+        raise JobError("cancelled", "Cancelada por un usuario antes de escribir en el destino.")
     source, target = _endpoints(ctx, preview_params)
     verb = "Vaciando y cargando" if preview_params.truncate_target else "Cargando"
     ctx.progress("running", f"{verb} {len(preview['tables'])} tablas en «{preview_params.target_connection}»")
+    # Cancelar para entre lotes (util_bbdd 4.4.0, G1): la tabla en curso se deshace y las constraints se reactivan.
+    progress = DumpProgress(lambda message, pct: ctx.progress("running", message, pct), ctx.cancel_requested)
     try:
         result = run_dump(
             source,
@@ -139,6 +144,7 @@ def run_apply(ctx: JobContext) -> None:
             expected_structure=preview["structure_hash"],
             outputs_dir=ctx.run_dir / "outputs",
             work_dir=ctx.run_dir / "work",
+            progress=progress,
         )
     except PreviewChangedError:
         raise JobError("preview_changed", "Las tablas o columnas cambiaron desde la vista previa: repítela.") from None
@@ -146,6 +152,12 @@ def run_apply(ctx: JobContext) -> None:
         ctx.logger.error("Volcado fallido", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     _write(ctx.run_dir / RESULT_PATH, result)
+    if result.get("cancelled"):
+        loaded, total = len(result["completed_tables"]), sum(1 for t in preview["tables"] if t["target_table"])
+        ctx.logger.info("Volcado cancelado", extra={"completed": loaded, "tables": total})
+        raise JobError(
+            "cancelled", f"Cancelada por un usuario: {loaded} de {total} tablas cargadas; la tabla en curso se deshizo."
+        )
     failed = [t["table"] for t in result["tables"] if t["status"] == "error"]
     broken = [f"{c['table']}.{c['constraint']}" for c in result["constraints"] if c["status"] == "failed"]
     loaded = sum(max(t["target_rows_after"] - t["target_rows_before"], 0) for t in result["tables"])

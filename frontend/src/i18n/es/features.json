@@ -554,11 +554,15 @@
       "sqlTitle": "El script SQL no se ha ejecutado",
       "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
     },
-    "cancelBlocked": "Una escritura en curso en la base de datos destino no se puede cancelar: la dejaría a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría.",
+    "cancelBlocked": "Una carga en curso en la base de datos destino no se puede cancelar: la dejaría a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría.",
     "cancelApplyTitle": "Cancelar la aplicación",
     "cancelApplyBody": "La aplicación se detendrá antes de la siguiente sentencia. Las sentencias ya aplicadas quedan en el destino (el DDL no se deshace) y el informe dirá cuántas.",
     "cancelApply": "Cancelar entre sentencias",
     "keepRunning": "Seguir aplicando",
+    "cancelDumpTitle": "Cancelar el volcado",
+    "cancelDumpBody": "El volcado se detendrá entre lotes: la tabla en curso se deshace, las tablas ya terminadas quedan cargadas en el destino y las constraints se reactivan antes de terminar.",
+    "cancelDump": "Cancelar entre lotes",
+    "keepDumping": "Seguir volcando",
     "warningsTitle": "La ejecución terminó con avisos"
   },
   "explorer": {
@@ -847,8 +851,8 @@
       "open": "Volcar en «{{alias}}»…",
       "openTruncate": "Vaciar y volcar en «{{alias}}»…",
       "confirmTitle": "Volcar los datos",
-      "noCancelTitle": "No se podrá cancelar",
-      "noCancel": "Las tablas se cargan una a una en «{{alias}}» con las constraints desactivadas; una vez empezado, el volcado no se puede cancelar.",
+      "cancelTitle": "Escribe en el destino",
+      "cancel": "Las tablas se cargan una a una en «{{alias}}» con las constraints desactivadas. Si lo cancelas, para entre lotes: la tabla en curso se deshace, las terminadas quedan cargadas y las constraints se reactivan.",
       "truncateTitle": "Se vaciará el destino",
       "truncate_one": "Se borrará {{count}} fila que ya existe en las tablas destino.",
       "truncate_other": "Se borrarán {{count}} filas que ya existen en las tablas destino.",
@@ -882,7 +886,10 @@
       },
       "rejectsTitle": "Hay filas apartadas",
       "rejects": "Las filas que el destino no admitió están en rechazos.csv (en Artefactos).",
-      "noReport": "No se pudo generar el informe Excel; los datos ya se cargaron."
+      "noReport": "No se pudo generar el informe Excel; los datos ya se cargaron.",
+      "cancelledTitle": "Cancelado entre lotes",
+      "cancelled_one": "Se cargó {{count}} tabla antes de cancelar; queda en el destino. La tabla en curso se deshizo y las constraints se reactivaron. El detalle por tabla está en volcado.jsonl (en Artefactos).",
+      "cancelled_other": "Se cargaron {{count}} tablas antes de cancelar; quedan en el destino. La tabla en curso se deshizo y las constraints se reactivaron. El detalle por tabla está en volcado.jsonl (en Artefactos)."
     }
   },
   "bulk": {

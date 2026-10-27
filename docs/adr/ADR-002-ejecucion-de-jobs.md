@@ -67,3 +67,10 @@ de su avance por unidad de trabajo y paran entre unidades con `OperationCancelle
 `migrate_apply` usa el mismo puente (`RunProgress`, fase `statements`), pero **no** entra en `COOPERATIVE_OPERATIONS`:
 va en `CANCEL_BETWEEN_STEPS_ONLY`, donde el worker no termina el subproceso al cancelar (cortaría una sentencia DDL a
 medias). Solo el timeout de las ejecuciones lo termina (ADR-008).
+
+## Enmienda (2026-10-27): volcado de datos con util_bbdd 4.4.0
+
+`dump_apply` usa el puente con su propio porcentaje (`DumpProgress`: tablas terminadas más la parte escrita de la tabla
+en curso) y entra también en `CANCEL_BETWEEN_STEPS_ONLY`: al cancelar, util_bbdd para entre lotes y reactiva las
+constraints antes de salir; terminar el subproceso a mitad de un lote las dejaría desactivadas. Solo el timeout lo
+termina (ADR-009).

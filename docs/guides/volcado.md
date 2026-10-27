@@ -41,8 +41,12 @@ El volcado usa exactamente los parámetros de la vista previa. Antes de escribir
 estructura cambió (tablas, columnas u orden) o algún alias apunta ya a otra conexión, falla con `preview_changed`
 sin tocar nada. No se puede volcar mientras haya una migración o un volcado en curso sobre el mismo destino.
 
-> Un volcado **en curso no se puede cancelar**: dejaría tablas a medias y, en SQL Server u Oracle, constraints
-> desactivadas. Si se agota el tiempo máximo (`UBW_JOB_TIMEOUT_SECONDS`), revisa las constraints del destino.
+Mientras carga, el detalle muestra las tablas terminadas y las filas escritas de la tabla en curso.
+
+> Un volcado **en curso se puede cancelar** (con confirmación): para **entre lotes**, deshace la tabla en curso,
+> reactiva las constraints y termina como *cancelado*. Las tablas ya terminadas **quedan cargadas** en el destino; el
+> resultado las lista y el detalle por tabla está en `volcado.jsonl`. Si se agota el tiempo máximo
+> (`UBW_JOB_TIMEOUT_SECONDS`), el proceso se termina a mitad: revisa las constraints del destino.
 
 ## 3. Resultado
 

@@ -130,8 +130,10 @@ def test_worker_gives_cooperative_operations_time_to_stop(monkeypatch: pytest.Mo
     assert stopped == ["noop", "doc"]  # sin parar a tiempo, se termina el subproceso (ADR-002)
 
 
-def test_worker_never_kills_a_migration_apply_when_cancelled(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``migrate_apply`` para sola entre sentencias (W-M4): cancelar no mata el subproceso; el timeout sí."""
+@pytest.mark.parametrize("operation", ["migrate_apply", "dump_apply"])
+def test_worker_never_kills_a_write_that_stops_between_steps(monkeypatch: pytest.MonkeyPatch, operation: str) -> None:
+    """``migrate_apply`` (entre sentencias, W-M4) y ``dump_apply`` (entre lotes, W-V2) paran solos: cancelar no mata el
+    subproceso; el timeout sí."""
     from app.jobs import worker as worker_module
 
     class _Process:
@@ -142,7 +144,7 @@ def test_worker_never_kills_a_migration_apply_when_cancelled(monkeypatch: pytest
     monkeypatch.setattr(worker_module.queue, "cancel_requested", lambda _db, ids: list(ids))
     w: Any = worker_module.Worker.__new__(worker_module.Worker)
     w.settings = type("S", (), {"job_timeout_seconds": 3600})()
-    w.children = {"ddl": worker_module._Child(process=_Process(), started=0.0, operation="migrate_apply")}  # type: ignore[arg-type]
+    w.children = {"ddl": worker_module._Child(process=_Process(), started=0.0, operation=operation)}  # type: ignore[arg-type]
     w._stop_child = lambda run_id, _status, code, _msg: stopped.append((run_id, code)) or w.children.pop(run_id)
 
     monkeypatch.setattr(worker_module.time, "monotonic", lambda: 1.0 + 10 * worker_module.COOPERATIVE_CANCEL_GRACE)

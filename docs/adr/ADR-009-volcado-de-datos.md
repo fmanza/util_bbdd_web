@@ -61,3 +61,11 @@ Mismo modelo que ADR-008, con un permiso propio:
   las obligatorias sin origen y las FK hacia tablas fuera del volcado de `DumpOrchestrator.plan()`, con el mismo
   `DumpConfig` que el volcado; ya no replica `topological_sort`. Los recuentos de filas siguen siendo de la web (`plan()`
   no cuenta). La huella de estructura y la posición de cada tabla (su índice en el orden de carga) no cambian.
+- **Avance por tabla y cancelación entre lotes (G1, G6, W-V2)**: `run(on_progress=, cancel_token=)` con `DumpProgress`
+  (puente `RunProgress`, ADR-002): el run muestra tablas terminadas y filas escritas de la tabla en curso. El punto 4 de
+  la decisión **cambia**: un volcado en curso **se puede cancelar** (con confirmación en la UI). util_bbdd para entre
+  lotes, deshace la tabla en curso, reconstruye índices y reactiva constraints, y lanza `OperationCancelledError` sin
+  `DumpResult`; `result.json` lleva `cancelled` y las tablas terminadas, que quedan cargadas, y el run termina
+  `cancelled`. El worker **no termina nunca** el subproceso de un `dump_apply` por una cancelación
+  (`CANCEL_BETWEEN_STEPS_ONLY`, como `migrate_apply`); el `job_timeout` sí. `volcado.jsonl` recibe el evento de cada
+  tabla al terminarla. La carga bulk sigue sin cancelarse en curso (ADR-010).

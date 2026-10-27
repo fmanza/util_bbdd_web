@@ -49,7 +49,7 @@
 | Carga: `bulk_partial` | Falló una partición de una carga paralela; las demás quedaron confirmadas | Revisa las particiones y corrige el destino |
 | Migración: 403 al aplicar | Sin «Puede aplicar DDL» o sin ser propietario | Un admin concede el permiso; aplica el propietario |
 | Migración: «El origen ha cambiado desde el plan» | Cambió el schema origen tras planificar | Planifica de nuevo |
-| Migración: no aparece *Cancelar* | Las aplicaciones en curso no se cancelan (dejarían el destino a medias) | Espera a que termine; en cola sí se cancela |
+| Carga bulk: no aparece *Cancelar* | Una carga en curso no se cancela (dejaría el destino a medias); la migración y el volcado sí, entre sentencias o lotes | Espera a que termine; en cola sí se cancela |
 | Migración: `apply_partial` | Falló una sentencia; las anteriores quedaron aplicadas | Lee el informe y corrige el destino a mano |
 | Comparación: el visor da 413 | El diff supera 20 MB | Descarga los informes |
 | Ejecución fallida con `graphviz_missing` | Falta Graphviz en el servidor | Usa la imagen oficial o instala `graphviz` |

@@ -1,4 +1,4 @@
-"""Fase 8: vista previa con ``plan()`` (G29), huella de estructura, tablas y errores saneados."""
+"""Fase 8: vista previa con ``plan()`` (G29), avance y cancelación (G1), huella, tablas y errores saneados."""
 
 from __future__ import annotations
 
@@ -13,8 +13,10 @@ from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import get_operation, validate_params
 from app.integrations.util_bbdd.dump import (
     DumpOptions,
+    DumpProgress,
     Endpoint,
     build_preview,
+    cancelled_result,
     parse_tables,
     redact_values,
     result_to_dict,
@@ -172,7 +174,7 @@ def test_work_dir_is_removed_when_util_bbdd_fails(tmp_path: Path, monkeypatch: p
     options = DumpOptions()
     expected = build_preview(source, target, options)["structure_hash"]
 
-    def boom(self: Any) -> Any:
+    def boom(self: Any, **_: Any) -> Any:
         (tmp_path / "work" / "dump_report_parcial.xlsx").write_text("x")
         raise RuntimeError("fallo a mitad")
 
@@ -184,3 +186,98 @@ def test_work_dir_is_removed_when_util_bbdd_fails(tmp_path: Path, monkeypatch: p
         )  # fmt: skip
 
     assert not (tmp_path / "work").exists()
+
+
+def _event(phase: str, current: int, total: int | None, message: str = "") -> Any:
+    from util_bbdd.progress import ProgressEvent
+
+    return ProgressEvent("dump", phase, current, total, message)
+
+
+def test_dump_progress_counts_tables_and_rows() -> None:
+    reported: list[tuple[str, int | None]] = []
+    progress = DumpProgress(lambda message, pct: reported.append((message, pct)), lambda: False, poll_seconds=0)
+
+    for event in (
+        _event("tables", 0, 4),
+        _event("rows", 500, 1000, "clientes"),
+        _event("tables", 1, 4, "clientes"),
+        _event("rows", 10, None, "pedidos"),
+        _event("tables", 4, 4, "lineas"),
+    ):
+        progress(event)
+
+    assert reported == [
+        ("Volcado: 0 de 4 tablas", 0),
+        ("Cargando clientes: 500 de 1000 filas (0 de 4 tablas)", 12),
+        ("Volcado: 1 de 4 tablas", 25),
+        ("Cargando pedidos: 10 filas (1 de 4 tablas)", 25),
+        ("Volcado: 2 de 4 tablas", 50),
+    ]
+    assert progress.completed == ["clientes", "lineas"]
+
+
+def test_cancelled_dump_keeps_finished_tables_and_undoes_the_rest(tmp_path: Path) -> None:
+    """G1 con util_bbdd real: cancelar tras la primera tabla para antes de la siguiente; ``result.json`` lo cuenta."""
+    data = "INSERT INTO clientes VALUES (1, 'x'); INSERT INTO pedidos VALUES (10, 1, 5); INSERT INTO sueltas VALUES (1, 'v');"
+    source, target = _endpoints(tmp_path, SCHEMA + data, SCHEMA)
+    options = DumpOptions()
+    preview = build_preview(source, target, options)
+    progress = DumpProgress(lambda *_: None, lambda: len(progress.completed) >= 1, poll_seconds=0)
+
+    result = run_dump(
+        source, target, options=options, expected_structure=preview["structure_hash"], outputs_dir=tmp_path / "out",
+        work_dir=tmp_path / "work", progress=progress,
+    )  # fmt: skip
+
+    assert result["cancelled"] is True and result["completed_tables"] == ["clientes"]
+    assert result["tables"] == [] and result["load_order"] == preview["load_order"]
+    con = sqlite3.connect(tmp_path / "d.db")
+    counts = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("clientes", "pedidos", "sueltas")}  # noqa: S608
+    con.close()
+    assert counts == {"clientes": 1, "pedidos": 0, "sueltas": 0}
+
+
+def _apply_ctx(tmp_path: Path, cancel: bool) -> Any:
+    import logging
+
+    progress: list[tuple[str, str | None, int | None]] = []
+    return SimpleNamespace(
+        params={"preview_run": "01ARZ3NDEKTSV4RRFFQ69G5FAV", "confirm": "destino"},
+        run_dir=tmp_path,
+        logger=logging.getLogger("test"),
+        progress=lambda phase, message=None, pct=None: progress.append((phase, message, pct)),
+        cancel_requested=lambda: cancel,
+    )
+
+
+@pytest.mark.parametrize("cancel_before", [True, False])
+def test_apply_job_ends_cancelled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cancel_before: bool) -> None:
+    """Cancelado antes de escribir: no llama a util_bbdd. Cancelado entre lotes: ``result.json`` y run ``cancelled``."""
+    import json
+
+    from app.domain.runs.operations import DumpPreviewParams
+    from app.jobs.context import JobError
+    from app.jobs.operations import dump as job
+
+    preview = {
+        "structure_hash": "h", "load_order": ["a", "b", "c"], "cycles": [],
+        "tables": [{"table": t, "target_table": None if t == "c" else t} for t in ("a", "b", "c")],
+    }  # fmt: skip
+    params = DumpPreviewParams.model_validate({"source_connection": "origen", "target_connection": "destino"})
+    calls: list[Any] = []
+    monkeypatch.setattr(job, "_recheck", lambda ctx, p: (params, preview))
+    monkeypatch.setattr(job, "_endpoints", lambda ctx, p: (None, None))
+    monkeypatch.setattr(job, "run_dump", lambda *a, **k: calls.append(k) or cancelled_result(preview, ["a"]))
+
+    with pytest.raises(JobError) as raised:
+        job.run_apply(_apply_ctx(tmp_path, cancel_before))
+
+    assert raised.value.code == "cancelled"
+    if cancel_before:
+        assert calls == [] and not (tmp_path / "outputs").exists()
+    else:
+        assert "1 de 2 tablas cargadas" in raised.value.message
+        assert isinstance(calls[0]["progress"], DumpProgress)
+        result = json.loads((tmp_path / "outputs" / "dump" / "result.json").read_text(encoding="utf-8"))
+        assert result["cancelled"] is True and result["completed_tables"] == ["a"]

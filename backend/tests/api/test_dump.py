@@ -2,7 +2,7 @@
 
 Vista previa (orden por FK, ciclos, filas, avisos), volcado añadiendo y vaciando, rechazos aislados, errores sin
 datos de filas, ``preview_changed`` y las reglas al encolar (permiso + owner, caducidad, destino ``read_only``,
-confirmaciones, sin dos volcados a la vez, sin relanzar ni cancelar en curso).
+confirmaciones, sin dos volcados a la vez, sin relanzar; en curso se cancela entre lotes desde la 1.4.0).
 """
 
 from __future__ import annotations
@@ -291,7 +291,8 @@ def test_apply_rules(
     assert user_client.post(f"/api/v1/runs/{first.json()['id']}/relaunch").status_code == 409
     db.execute(update(Run).where(Run.id == first.json()["id"]).values(status="running"))
     db.commit()
-    assert user_client.post(f"/api/v1/runs/{first.json()['id']}/cancel").status_code == 409
+    cancel = user_client.post(f"/api/v1/runs/{first.json()['id']}/cancel")  # entre lotes (util_bbdd 4.4.0, G1)
+    assert cancel.status_code == 202 and cancel.json()["cancel_requested"] is True
 
 
 def test_catalog_and_permission(

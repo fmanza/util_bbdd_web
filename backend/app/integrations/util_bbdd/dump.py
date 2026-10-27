@@ -13,6 +13,9 @@
 - ``TableDumpResult.error_msg`` y ``ConstraintResult.error_msg`` traen el texto de SQLAlchemy **con los parámetros**
   (filas del origen): se guarda solo su primera línea (``_engine_message``) y sin los valores que algunos motores
   ponen en ella (``redact_values``, G34).
+- Progreso por tabla y por lote y cancelación **entre lotes** (``run(on_progress=, cancel_token=)``, util_bbdd 4.4.0,
+  G1) con ``DumpProgress``: util_bbdd deshace la tabla en curso, reactiva constraints e índices y lanza
+  ``OperationCancelledError`` sin ``DumpResult``; ``result.json`` lleva entonces ``cancelled`` y las tablas terminadas.
 """
 
 from __future__ import annotations
@@ -21,11 +24,13 @@ import hashlib
 import json
 import re
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, Literal
 
 from app.integrations.util_bbdd.compare import resolve_schema
+from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.integrations.util_bbdd.sql import _engine_message
 
 RESULT_FILE: Final = "result.json"
@@ -226,6 +231,60 @@ def _resolve(inspector: Any, side: str, schema: str | None) -> str | None:
 # --- volcado -----------------------------------------------------------------------------------------------------
 
 
+class DumpProgress(RunProgress):
+    """``on_progress`` del volcado (operación ``dump``): fases ``tables`` (una por tabla terminada) y ``rows`` (una por
+    lote, con el ``COUNT(*)`` del origen como total).
+
+    El porcentaje son las tablas terminadas más la parte escrita de la tabla del último lote; ``completed`` guarda las
+    tablas terminadas, que son las que quedan cargadas si se cancela.
+    """
+
+    def __init__(
+        self,
+        report: Callable[[str, int | None], None],
+        cancel_requested: Callable[[], bool],
+        *,
+        poll_seconds: float = 2.0,
+    ) -> None:
+        super().__init__(report, cancel_requested, ("tables", "rows"), poll_seconds=poll_seconds)
+        self.completed: list[str] = []
+        self._tables = 0
+
+    def __call__(self, event: Any) -> None:
+        if event.phase == "tables":
+            self._tables = event.total or self._tables
+            if event.current and event.message:
+                self.completed.append(event.message)
+        super().__call__(event)
+
+    def percent(self, event: Any) -> int | None:
+        if not self._tables:
+            return None
+        done = len(self.completed) + ((event.fraction or 0.0) if event.phase == "rows" else 0.0)
+        return min(99, int(done * 100 / self._tables))
+
+    def message(self, event: Any) -> str:
+        tables = f"{len(self.completed)} de {self._tables} tablas"
+        if event.phase == "rows" and event.message:
+            rows = f"{event.current} de {event.total}" if event.total is not None else str(event.current)
+            return f"Cargando {event.message}: {rows} filas ({tables})"
+        return f"Volcado: {tables}"
+
+
+def cancelled_result(preview: dict[str, Any], completed: list[str]) -> dict[str, Any]:
+    """``result.json`` de un volcado cancelado: util_bbdd no devuelve ``DumpResult``; constan las tablas terminadas."""
+    return {
+        "load_order": preview["load_order"],
+        "cycles": preview["cycles"],
+        "report": False,
+        "tables": [],
+        "constraints": [],
+        "pk_sync": [],
+        "cancelled": True,
+        "completed_tables": list(completed),
+    }
+
+
 def run_dump(
     source: Endpoint,
     target: Endpoint,
@@ -234,11 +293,13 @@ def run_dump(
     expected_structure: str,
     outputs_dir: Path,
     work_dir: Path,
+    progress: DumpProgress | None = None,
 ) -> dict[str, Any]:
     """Recalcula la vista previa, exige la misma estructura y ejecuta ``DumpOrchestrator``.
 
     Returns:
-        Resultado serializable (``result.json``): por tabla, constraints, contadores PK, orden y ciclos.
+        Resultado serializable (``result.json``): por tabla, constraints, contadores PK, orden y ciclos; si se canceló
+        entre lotes (``progress.token``), ``cancelled_result``.
 
     Raises:
         PreviewChangedError: La estructura cambió desde la vista previa revisada.
@@ -254,7 +315,7 @@ def run_dump(
         folder.mkdir(parents=True, exist_ok=True)
     sink = JsonLinesAuditSink(audit_path)
     try:
-        return _orchestrate(source, target, preview, options, sink, rejects, outputs_dir, work_dir)
+        return _orchestrate(source, target, preview, options, sink, rejects, outputs_dir, work_dir, progress)
     finally:
         sink.close()
         shutil.rmtree(work_dir, ignore_errors=True)
@@ -269,6 +330,7 @@ def _orchestrate(
     rejects: Path,
     outputs_dir: Path,
     work_dir: Path,
+    progress: DumpProgress | None,
 ) -> dict[str, Any]:
     """``DumpOrchestrator`` con la configuración de la vista previa; mueve el Excel a ``outputs/excel``."""
     from util_bbdd import SyncDatabaseManager
@@ -290,10 +352,16 @@ def _orchestrate(
             audit_sink=sink,
         )
         try:
-            result = DumpOrchestrator(config).run()
+            result = DumpOrchestrator(config).run(
+                on_progress=progress, cancel_token=progress.token if progress is not None else None
+            )
             report_ok = True
         except DumpReportError as exc:  # la carga terminó; solo falló el Excel
             result, report_ok = exc.result, False
+        except Exception as exc:
+            if not is_cancellation(exc):
+                raise
+            return cancelled_result(preview, progress.completed if progress is not None else [])
     if report_ok and result.report.exists():
         excel = outputs_dir / "excel" / REPORT_FILE
         excel.parent.mkdir(parents=True, exist_ok=True)

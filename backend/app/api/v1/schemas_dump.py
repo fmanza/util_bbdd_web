@@ -81,3 +81,9 @@ class DumpResultOut(_Dump):
     tables: list[DumpTableResultOut]
     constraints: list[DumpConstraintOut] = []
     pk_sync: list[DumpPkSyncOut] = []
+    cancelled: bool = Field(
+        default=False,
+        description="Se canceló entre lotes: la tabla en curso se deshizo y las constraints se reactivaron; sin detalle "
+        "por tabla (tables vacío)",
+    )
+    completed_tables: list[str] = Field(default=[], description="Tablas cargadas antes de cancelar")
