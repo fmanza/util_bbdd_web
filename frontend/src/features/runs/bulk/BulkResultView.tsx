@@ -68,6 +68,13 @@ export function BulkResultView({ run }: { run: RunDetail }) {
                 })}
               </Alert>
             )}
+            {data.cancelled && (
+              <Alert color="orange" title={t('bulk.result.cancelledTitle')}>
+                {data.committed
+                  ? t('bulk.result.cancelledPartial', { count: data.committed })
+                  : t('bulk.result.cancelledUndone')}
+              </Alert>
+            )}
             {data.error && (
               <Alert color="red" title={t('bulk.result.errorTitle')}>
                 {data.error}

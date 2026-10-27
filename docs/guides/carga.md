@@ -48,7 +48,14 @@ lo aceptas, util_bbdd carga en un solo hilo y en una sola transacción aunque el
 La carga usa el fichero y los parámetros de la vista previa. Antes de escribir comprueba de nuevo el fichero, la
 conexión, la estructura de la tabla y, en actualizar y borrar, que las filas afectadas sigan siendo las confirmadas:
 si algo cambió, falla con `preview_changed` sin tocar nada. No se puede cargar mientras haya otra escritura
-(migración, volcado o carga) sobre el mismo destino, y una carga **en curso no se cancela**.
+(migración, volcado o carga) sobre el mismo destino.
+
+Mientras carga, el detalle muestra las filas enviadas («Filas: 5000 de 20000 (clientes)»).
+
+> Una carga **en curso se puede cancelar** (con confirmación): para **entre lotes**. Sin plan paralelo va en una sola
+> transacción y **se deshace entera**: no queda nada en el destino. Con plan paralelo, las particiones ya terminadas
+> quedan confirmadas y el resultado dice cuántas filas. Si se agota el tiempo máximo (`UBW_JOB_TIMEOUT_SECONDS`), el
+> proceso se termina a mitad: la transacción en curso la deshace el motor.
 
 ## 4. Resultado
 

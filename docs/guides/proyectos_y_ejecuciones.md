@@ -65,9 +65,9 @@ almacena), la página se actualiza cada 2 segundos.
 (el worker termina su proceso). La **documentación**, el **grafo de todas las tablas** y la **comparación** paran por
 sí mismos al terminar la tabla en curso, y su detalle muestra el avance («Word: 3 de 12», «Grafos: 5 de 40»,
 «Tablas: 7 de 30 (pedidos)»); si no paran en un minuto, el worker termina su proceso. La comparación ya no para
-mientras genera los informes, al final. **Aplicar una migración** y **volcar datos** piden confirmación y paran solo
-entre sentencias o entre lotes: lo ya escrito queda en el destino y el worker nunca termina su proceso por cancelar.
-Una **carga bulk** en curso no se cancela.
+mientras genera los informes, al final. **Aplicar una migración**, **volcar datos** y la **carga bulk** piden
+confirmación y paran solo entre sentencias o entre lotes; el worker nunca termina su proceso por cancelar. Lo ya escrito
+queda en el destino, salvo en una carga sin plan paralelo, que va en una sola transacción y se deshace entera.
 
 ## Historial y artefactos
 

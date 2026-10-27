@@ -53,8 +53,8 @@ COOPERATIVE_OPERATIONS: Final = frozenset({"documentation", "relationship_graph"
 COOPERATIVE_CANCEL_GRACE: Final = 60.0
 #: Operaciones que solo paran por sí mismas: al cancelarlas el worker **nunca** termina el subproceso (cortaría una
 #: sentencia DDL o un lote a medias y, en un volcado, dejaría constraints desactivadas); solo el ``job_timeout`` lo
-#: hace (ADR-008, ADR-009).
-CANCEL_BETWEEN_STEPS_ONLY: Final = frozenset({"migrate_apply", "dump_apply"})
+#: hace (ADR-008, ADR-009, ADR-010).
+CANCEL_BETWEEN_STEPS_ONLY: Final = frozenset({"migrate_apply", "dump_apply", "bulk_apply"})
 
 
 @dataclass

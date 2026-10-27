@@ -541,6 +541,12 @@
       "BulkResultOut": {
         "description": "Resultado de ``bulk_apply``: filas confirmadas, filas del destino antes y después, rechazos y particiones.",
         "properties": {
+          "cancelled": {
+            "default": false,
+            "description": "Se canceló entre lotes: en una sola transacción la carga se deshizo entera; en paralelo quedan las particiones terminadas (committed)",
+            "title": "Cancelled",
+            "type": "boolean"
+          },
           "committed": {
             "anyOf": [
               {

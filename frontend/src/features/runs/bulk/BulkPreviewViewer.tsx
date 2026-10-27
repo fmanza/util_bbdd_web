@@ -89,7 +89,7 @@ function ConfirmBulk({
           color="red"
           title={t(`bulk.apply.warning.${preview.operation}`, { count: preview.matches ?? 0 })}
         >
-          {t('bulk.apply.noCancel', { alias })}
+          {t('bulk.apply.cancel', { alias })}
         </Alert>
         <Checkbox
           label={t('bulk.apply.understand')}

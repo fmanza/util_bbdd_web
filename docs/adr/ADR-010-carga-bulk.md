@@ -86,3 +86,10 @@ lote tenga una sola fila. La consecuencia «con apartar en Oracle valen las limi
   exige solo si es `False` (en las vistas previas anteriores a la 1.5.0, con más de un hilo). Sin esa aceptación la
   carga pide `ParallelOptions(require_atomic=True)`: util_bbdd garantiza un hilo y una transacción aunque su plan haya
   cambiado entre la vista previa y la carga (antes la web no lo controlaba).
+- **Progreso por lote y cancelación entre lotes (G1, W-B3)**: `on_progress`/`cancel_token` con el puente `RunProgress`
+  (fase `rows`, ADR-002). La decisión «en curso no se cancela» **cambia**: una carga en curso se puede cancelar, con
+  confirmación en la UI. util_bbdd para antes del siguiente lote y deshace la transacción en curso: sin plan paralelo
+  eso es **toda la carga** (no queda nada); con plan paralelo, las particiones terminadas quedan confirmadas
+  (`committed`). `result.json` lleva `cancelled` y el run termina `cancelled`. El worker no termina nunca el subproceso
+  de un `bulk_apply` por una cancelación (`CANCEL_BETWEEN_STEPS_ONLY`); el `job_timeout` sí. Con esto ninguna escritura
+  queda «no cancelable en curso» (`NOT_CANCELLABLE_RUNNING` retirado).

@@ -207,6 +207,7 @@ describe('resultado de la carga', () => {
     target_rows_after: 12,
     verified: null,
     rejected: 1,
+    cancelled: false,
     error: null,
     parallel: { workers: 2, reasons: [] },
     partitions: [
@@ -264,5 +265,51 @@ describe('resultado de la carga', () => {
 
     expect(await screen.findByText('El recuento del destino no cuadra')).toBeInTheDocument();
     expect(screen.getByText(/confirmó 3 filas, pero la tabla creció en 1/)).toBeInTheDocument();
+  });
+
+  it('una carga cancelada dice si se deshizo entera o qué particiones quedan', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${APPLY_ID}`]: {
+        body: {
+          ...FINISHED, id: APPLY_ID, operation: 'bulk_apply', status: 'cancelled', my_role: 'owner',
+          params: { preview_run: PREVIEW_ID, confirm: 'destino' }, artifacts: [],
+        },
+      },
+      [`GET /api/v1/runs/${APPLY_ID}/bulk-result`]: {
+        body: { ...RESULT, rejected: 0, partitions: [], committed: 0, target_rows_after: 10, cancelled: true },
+      },
+    }); // prettier-ignore
+
+    renderRoute(`/runs/${APPLY_ID}`);
+
+    expect(await screen.findByText('Cancelada entre lotes')).toBeInTheDocument();
+    expect(screen.getByText(/se deshizo entera/)).toBeInTheDocument();
+  });
+
+  it('una carga en curso se cancela entre lotes tras confirmarlo', async () => {
+    stubEventSource();
+    const running = {
+      ...RUN, id: APPLY_ID, operation: 'bulk_apply', status: 'running', my_role: 'owner', artifacts: [],
+      params: { preview_run: PREVIEW_ID, confirm: 'destino' },
+    }; // prettier-ignore
+    const fetchMock = stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${APPLY_ID}`]: { body: running },
+      [`POST /api/v1/runs/${APPLY_ID}/cancel`]: { status: 202, body: { ...running, cancel_requested: true } },
+    });
+    const user = userEvent.setup();
+
+    renderRoute(`/runs/${APPLY_ID}`);
+
+    await user.click(await screen.findByRole('button', { name: 'Cancelar' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cancelar la carga' });
+    expect(within(dialog).getByText(/se deshace entera/)).toBeInTheDocument();
+    expect(callsTo(fetchMock, 'POST', `/api/v1/runs/${APPLY_ID}/cancel`)).toHaveLength(0);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar entre lotes' }));
+    await waitFor(() =>
+      expect(callsTo(fetchMock, 'POST', `/api/v1/runs/${APPLY_ID}/cancel`)).toHaveLength(1),
+    );
   });
 });

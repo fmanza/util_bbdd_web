@@ -149,3 +149,108 @@ def test_require_atomic_is_passed_to_util_bbdd() -> None:
     strict = _parallel(BulkOptions(table="t", operation="insert", parallel=True, require_atomic=True))
     loose = _parallel(BulkOptions(table="t", operation="insert", parallel=True))
     assert (strict.mode, strict.require_atomic, loose.require_atomic) == ("auto", True, False)
+
+
+def _sqlite_target(tmp_path: Path) -> tuple[object, Path]:
+    import sqlite3
+
+    from app.integrations.util_bbdd.bulk import Target
+    from app.integrations.util_bbdd.catalog import build_params
+
+    database = tmp_path / "destino.db"
+    con = sqlite3.connect(database)
+    con.execute("CREATE TABLE clientes (id INTEGER PRIMARY KEY, nombre TEXT)")
+    con.execute("INSERT INTO clientes VALUES (1, 'ana')")
+    con.commit()
+    con.close()
+    return Target("sqlite", build_params("sqlite", {"database": str(database)}), None), database
+
+
+def test_cancelled_atomic_load_is_undone_entirely(tmp_path: Path) -> None:
+    """G1 con util_bbdd real: cancelar tras el primer lote de una carga de una sola transacción no deja nada."""
+    import sqlite3
+
+    import pandas as pd
+
+    from app.integrations.util_bbdd.bulk import BulkOptions, build_bulk_preview, run_bulk
+    from app.integrations.util_bbdd.progress import RunProgress
+
+    target, database = _sqlite_target(tmp_path)
+    frame = pd.DataFrame({"id": range(2, 12), "nombre": [f"n{i}" for i in range(10)]})
+    options = BulkOptions(table="clientes", operation="insert", chunk_size=2)
+    preview = build_bulk_preview(target, frame, options, outputs_dir=tmp_path / "p", work_dir=tmp_path / "w")  # type: ignore[arg-type]
+    reported: list[tuple[str, int | None]] = []
+    progress = RunProgress(
+        lambda message, pct: reported.append((message, pct)),
+        lambda: any(pct for _, pct in reported),  # cancela en cuanto hay filas enviadas
+        ["rows"],
+        {"rows": "Filas"},
+        poll_seconds=0,
+    )
+
+    result = run_bulk(
+        target, frame, options, expected_structure=preview["structure_hash"], outputs_dir=tmp_path / "o",  # type: ignore[arg-type]
+        progress=progress,
+    )  # fmt: skip
+
+    assert reported[0] == ("Filas: 0 de 10 (clientes)", 0) and reported[1][0] == "Filas: 2 de 10 (clientes)"
+    assert (result["cancelled"], result["error"], result["committed"], result["verified"]) == (True, None, 0, None)
+    assert result["target_rows_before"] == result["target_rows_after"] == 1
+    con = sqlite3.connect(database)
+    try:
+        assert con.execute("SELECT COUNT(*) FROM clientes").fetchone() == (1,)
+    finally:
+        con.close()
+
+
+@pytest.mark.parametrize(
+    ("cancel_before", "committed", "message"),
+    [
+        (True, 0, "antes de escribir en el destino"),
+        (False, 0, "la carga se deshizo entera"),
+        (False, 4, "quedan confirmadas 4 filas de las particiones terminadas"),
+    ],
+)
+def test_apply_job_ends_cancelled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cancel_before: bool, committed: int, message: str
+) -> None:
+    import json
+    import logging
+    from types import SimpleNamespace
+
+    from app.domain.runs.operations import BulkPreviewParams
+    from app.jobs.context import JobError
+    from app.jobs.operations import bulk as job
+
+    params = BulkPreviewParams.model_validate(
+        {"upload": "01ARZ3NDEKTSV4RRFFQ69G5FAV", "target_connection": "destino", "table": "t", "operation": "insert"}
+    )
+    preview = {"operation": "insert", "rows": 6, "table": "t", "structure_hash": "h"}
+    calls: list[dict[str, object]] = []
+    result = {
+        "operation": "insert", "rows": 6, "committed": committed, "target_rows_before": 0, "target_rows_after": committed,
+        "cancelled": True, "error": None, "partitions": [], "rejected": 0, "verified": None,
+    }  # fmt: skip
+    monkeypatch.setattr(job, "_recheck", lambda ctx, p: (params, preview))
+    monkeypatch.setattr(job, "_source", lambda ctx, p: (tmp_path / "f.csv", "csv", {}))
+    monkeypatch.setattr(job, "_frame", lambda *a: None)
+    monkeypatch.setattr(job, "run_bulk", lambda *a, **k: calls.append(k) or result)
+    ctx = SimpleNamespace(
+        params={"preview_run": "01ARZ3NDEKTSV4RRFFQ69G5FAV", "confirm": "destino"},
+        run_dir=tmp_path,
+        logger=logging.getLogger("test"),
+        progress=lambda *a, **k: None,
+        cancel_requested=lambda: cancel_before,
+        connection_params=lambda alias: ("sqlite", {}),
+    )
+
+    with pytest.raises(JobError) as raised:
+        job.run_apply(ctx)  # type: ignore[arg-type]
+
+    assert raised.value.code == "cancelled" and message in raised.value.message
+    if cancel_before:
+        assert calls == []
+    else:
+        assert calls[0]["progress"] is not None
+        written = json.loads((tmp_path / "outputs" / "bulk" / "result.json").read_text(encoding="utf-8"))
+        assert written["cancelled"] is True

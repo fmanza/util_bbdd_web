@@ -36,13 +36,33 @@ import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiv
 
 /** Operaciones que no se relanzan (la API responde 409): aplicar una migración exige un modo seco nuevo. */
 const NOT_RELAUNCHABLE = new Set(['migrate_apply', 'dump_apply', 'bulk_apply', 'dump_restore']);
-/** Escrituras en una BD destino que en curso no se cancelan (la API responde 409). */
-const NOT_CANCELLABLE_RUNNING = new Set(['bulk_apply']);
-/** Escrituras que en curso paran entre pasos (sentencias, lotes) y dejan lo hecho: se confirma antes (ADR-008/009). */
-const CANCEL_BETWEEN_STEPS: Record<string, 'migrate' | 'dump'> = {
+/** Escrituras que en curso paran entre pasos (sentencias, lotes): se confirma antes (ADR-008/009/010). */
+const CANCEL_BETWEEN_STEPS: Record<string, 'migrate' | 'dump' | 'bulk'> = {
   migrate_apply: 'migrate',
   dump_apply: 'dump',
+  bulk_apply: 'bulk',
 };
+/** Textos del modal de confirmación de cada una. */
+const CANCEL_TEXTS = {
+  migrate: {
+    title: 'runs.cancelApplyTitle',
+    body: 'runs.cancelApplyBody',
+    keep: 'runs.keepRunning',
+    stop: 'runs.cancelApply',
+  },
+  dump: {
+    title: 'runs.cancelDumpTitle',
+    body: 'runs.cancelDumpBody',
+    keep: 'runs.keepDumping',
+    stop: 'runs.cancelDump',
+  },
+  bulk: {
+    title: 'runs.cancelBulkTitle',
+    body: 'runs.cancelBulkBody',
+    keep: 'runs.keepLoading',
+    stop: 'runs.cancelBulk',
+  },
+} as const;
 
 export function RunDetailPage() {
   const { t } = useTranslation();
@@ -68,12 +88,12 @@ export function RunDetailPage() {
 
   const editor = canRole(run.my_role, 'editor');
   const active = isActive(run.status);
-  const applying = NOT_CANCELLABLE_RUNNING.has(run.operation) && run.status === 'running';
-  // Aplicar una migración o volcar datos se cancela solo entre pasos y lo hecho queda: se confirma antes.
+  // Aplicar una migración, volcar o cargar datos se cancela solo entre pasos: se confirma antes.
   const stepKind =
     run.status === 'running' && (run.operation !== 'migrate_apply' || run.params['mode'] === 'apply')
       ? CANCEL_BETWEEN_STEPS[run.operation]
       : undefined;
+  const cancelTexts = CANCEL_TEXTS[stepKind ?? 'migrate'];
   const params = Object.entries(run.params);
 
   return (
@@ -89,7 +109,7 @@ export function RunDetailPage() {
           </Text>
         </Stack>
         <Group gap="xs">
-          {editor && active && !applying && (
+          {editor && active && (
             <Button
               color="orange"
               variant="light"
@@ -99,11 +119,6 @@ export function RunDetailPage() {
             >
               {run.cancel_requested ? t('runs.cancelling') : t('runs.cancel')}
             </Button>
-          )}
-          {editor && applying && (
-            <Text size="sm" c="dimmed">
-              {t('runs.cancelBlocked')}
-            </Text>
           )}
           {editor && !active && run.status !== 'purged' && !NOT_RELAUNCHABLE.has(run.operation) && (
             <Button
@@ -233,20 +248,20 @@ export function RunDetailPage() {
       <Modal
         opened={confirmCancel && stepKind !== undefined}
         onClose={() => setConfirmCancel(false)}
-        title={t(stepKind === 'dump' ? 'runs.cancelDumpTitle' : 'runs.cancelApplyTitle')}
+        title={t(cancelTexts.title)}
       >
         <Stack>
-          <Text>{t(stepKind === 'dump' ? 'runs.cancelDumpBody' : 'runs.cancelApplyBody')}</Text>
+          <Text>{t(cancelTexts.body)}</Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setConfirmCancel(false)}>
-              {t(stepKind === 'dump' ? 'runs.keepDumping' : 'runs.keepRunning')}
+              {t(cancelTexts.keep)}
             </Button>
             <Button
               color="orange"
               loading={cancel.isPending}
               onClick={() => cancel.mutate(undefined, { onSuccess: () => setConfirmCancel(false) })}
             >
-              {t(stepKind === 'dump' ? 'runs.cancelDump' : 'runs.cancelApply')}
+              {t(cancelTexts.stop)}
             </Button>
           </Group>
         </Stack>

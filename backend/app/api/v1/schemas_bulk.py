@@ -70,5 +70,10 @@ class BulkResultOut(_Bulk):
     )
     rejected: int = 0
     error: str | None = Field(default=None, description="Primera línea del error del motor, sin valores de filas")
+    cancelled: bool = Field(
+        default=False,
+        description="Se canceló entre lotes: en una sola transacción la carga se deshizo entera; en paralelo quedan "
+        "las particiones terminadas (committed)",
+    )
     parallel: BulkPlanOut
     partitions: list[BulkPartitionOut] = []

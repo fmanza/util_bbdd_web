@@ -341,7 +341,8 @@ def test_apply_rules(
     assert user_client.post(f"/api/v1/runs/{first.json()['id']}/relaunch").status_code == 409
     db.execute(update(Run).where(Run.id == first.json()["id"]).values(status="running"))
     db.commit()
-    assert user_client.post(f"/api/v1/runs/{first.json()['id']}/cancel").status_code == 409
+    cancel = user_client.post(f"/api/v1/runs/{first.json()['id']}/cancel")  # entre lotes (util_bbdd 4.5.0, G1)
+    assert cancel.status_code == 202 and cancel.json()["cancel_requested"] is True
 
 
 def test_changed_file_or_connection_invalidates_the_preview(

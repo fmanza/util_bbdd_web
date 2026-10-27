@@ -554,7 +554,6 @@
       "sqlTitle": "El script SQL no se ha ejecutado",
       "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
     },
-    "cancelBlocked": "Una carga en curso en la base de datos destino no se puede cancelar: la dejaría a medias. Si se agota el tiempo máximo, revisa el rastro de auditoría.",
     "cancelApplyTitle": "Cancelar la aplicación",
     "cancelApplyBody": "La aplicación se detendrá antes de la siguiente sentencia. Las sentencias ya aplicadas quedan en el destino (el DDL no se deshace) y el informe dirá cuántas.",
     "cancelApply": "Cancelar entre sentencias",
@@ -563,6 +562,10 @@
     "cancelDumpBody": "El volcado se detendrá entre lotes: la tabla en curso se deshace, las tablas ya terminadas quedan cargadas en el destino y las constraints se reactivan antes de terminar.",
     "cancelDump": "Cancelar entre lotes",
     "keepDumping": "Seguir volcando",
+    "cancelBulkTitle": "Cancelar la carga",
+    "cancelBulkBody": "La carga se detendrá antes del siguiente lote. Sin plan paralelo va en una sola transacción y se deshace entera: no queda nada en el destino. Con plan paralelo, las particiones ya terminadas quedan confirmadas.",
+    "cancelBulk": "Cancelar entre lotes",
+    "keepLoading": "Seguir cargando",
     "warningsTitle": "La ejecución terminó con avisos"
   },
   "explorer": {
@@ -988,7 +991,7 @@
         "delete_one": "Se borrará {{count}} fila",
         "delete_other": "Se borrarán {{count}} filas"
       },
-      "noCancel": "Una vez empezada en «{{alias}}», la carga no se puede cancelar.",
+      "cancel": "Escribe en «{{alias}}». Si la cancelas, para entre lotes: sin plan paralelo se deshace entera; con plan paralelo, las particiones terminadas quedan.",
       "understand": "He revisado la vista previa y el SQL generado",
       "nonAtomic": "Entiendo que con {{workers}} hilos no es atómica: si una partición falla, las demás quedan",
       "typeAlias": "Escribe «{{alias}}» para confirmar",
@@ -1005,6 +1008,10 @@
       "before": "Filas antes",
       "after": "Filas después",
       "rejected": "Apartadas",
+      "cancelledTitle": "Cancelada entre lotes",
+      "cancelledUndone": "La carga se deshizo entera: no se escribió nada en el destino.",
+      "cancelledPartial_one": "Queda confirmada {{count}} fila de las particiones que terminaron antes de cancelar; las demás se deshicieron.",
+      "cancelledPartial_other": "Quedan confirmadas {{count}} filas de las particiones que terminaron antes de cancelar; las demás se deshicieron.",
       "mismatchTitle": "El recuento del destino no cuadra",
       "mismatch": {
         "insert": "util_bbdd confirmó {{committed}} filas, pero la tabla creció en {{delta}}. Revisa el destino: otro proceso pudo escribir a la vez o un disparador cambió las filas.",

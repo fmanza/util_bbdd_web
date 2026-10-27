@@ -320,25 +320,19 @@ def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, 
     )  # fmt: skip
 
 
-#: Operaciones que escriben en una BD destino: en curso no se cancelan (ADR-010); en cola sí. ``migrate_apply`` (desde
-#: la 1.3.0) y ``dump_apply`` (desde la 1.4.0) sí se cancelan en curso, pero solo entre sentencias o entre lotes
-#: (util_bbdd 4.3.0 y 4.4.0; el worker no las mata, ADR-008 y ADR-009).
-NOT_CANCELLABLE_RUNNING: Final = frozenset({"bulk_apply"})
-
-
 def cancel(db: Session, user: User, access: RunAccess, *, ctx: RequestContext) -> Run:
-    """Cancela: una en cola pasa a ``cancelled`` al momento; una en curso la termina el worker.
+    """Cancela: una en cola pasa a ``cancelled`` al momento; una en curso la para util_bbdd o la termina el worker.
+
+    Las escrituras en una BD destino (``migrate_apply``, ``dump_apply`` y ``bulk_apply``, desde las 1.3.0, 1.4.0 y
+    1.5.0) paran solo entre sentencias o entre lotes; el worker no las termina al cancelar (ADR-008, ADR-009, ADR-010).
 
     Raises:
         ProjectForbiddenError: Rol inferior a ``editor``.
-        RunStateError: Ya terminó, o escribe en una BD destino y está en curso (``NOT_CANCELLABLE_RUNNING``):
-            matarla dejaría el destino a medias (y, en un volcado, constraints desactivadas); en cola sí se cancela.
+        RunStateError: Ya terminó.
     """
     if not access.membership.can("editor"):
         raise ProjectForbiddenError()
     run = access.run
-    if run.operation in NOT_CANCELLABLE_RUNNING and run.status == "running":
-        raise RunStateError("Una escritura en curso en la BD destino no se puede cancelar: la dejaría a medias.")
     now = utcnow()
     result = db.execute(
         update(Run)

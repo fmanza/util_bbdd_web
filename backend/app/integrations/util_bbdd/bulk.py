@@ -8,6 +8,10 @@
   partición, G36). ``ParallelPlan.atomic`` (util_bbdd 4.5.0) lo dice en la vista previa; al cargar sin
   ``accept_non_atomic`` se pide ``require_atomic=True``, que fuerza un hilo aunque el plan haya cambiado.
 - El fichero lo lee la web (``domain/uploads/files.py``) y llega aquí como ``DataFrame``.
+- Progreso por lote y cancelación **entre lotes** (``on_progress``/``cancel_token``, util_bbdd 4.5.0, G1) con
+  ``RunProgress``: util_bbdd deshace la transacción en curso y lanza ``OperationCancelledError``. En una carga de una
+  sola transacción eso deshace **toda** la operación; en paralelo, las particiones terminadas quedan. ``result.json``
+  lleva entonces ``cancelled``.
 - ``last_operation_rows_committed`` (fiable desde util_bbdd 4.5.0, G37) da las filas **enviadas** y confirmadas
   (también las apartadas; un UPDATE o DELETE de una clave que no existe cuenta): es la cifra principal del resultado.
   El recuento del destino antes y después se mantiene como verificación (``verify``).
@@ -24,6 +28,7 @@ from typing import Any, Final, Literal
 
 from app.integrations.util_bbdd.compare import resolve_schema
 from app.integrations.util_bbdd.dump import redact_values
+from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.integrations.util_bbdd.sql import _engine_message
 
 Operation = Literal["insert", "update", "delete"]
@@ -287,8 +292,11 @@ def run_bulk(
     expected_structure: str,
     outputs_dir: Path,
     expected_matches: int | None = None,
+    progress: RunProgress | None = None,
 ) -> dict[str, Any]:
     """Vuelve a validar, exige la misma estructura y ejecuta la operación (``dry_run=False``).
+
+    Con ``progress`` emite el avance por lote y para entre lotes si se cancela su token (``cancelled`` en el resultado).
 
     Returns:
         Resultado: filas del fichero, filas confirmadas según util_bbdd, coincidencias por PK, filas del destino antes y
@@ -330,10 +338,17 @@ def run_bulk(
         )
         plan = crud.parallel_plan(options.operation, len(frame))
         error: str | None = None
+        cancelled = False
         try:
-            _call(crud, options.operation, frame, _qualified(prepared["schema"], options.table), dry_run=False)
-        except Exception as exc:  # fallo de la operación: el resultado lo cuenta (filas antes/después)
-            error = _clean(str(exc.__cause__ or exc))
+            _call(
+                crud, options.operation, frame, _qualified(prepared["schema"], options.table), dry_run=False,
+                on_progress=progress, cancel_token=progress.token if progress is not None else None,
+            )  # fmt: skip
+        except Exception as exc:  # fallo o cancelación: el resultado lo cuenta (filas antes/después)
+            if is_cancellation(exc):
+                cancelled = True
+            else:
+                error = _clean(str(exc.__cause__ or exc))
         finally:
             sink.close()
         after = _count(engine, table)
@@ -343,7 +358,9 @@ def run_bulk(
             for p in (parallel.partition_results if parallel else [])
         ]
         committed = crud.last_operation_rows_committed
-        complete = error is None and crud.rows_rejected == 0 and not any(p["error"] for p in partitions)
+        complete = (
+            not cancelled and error is None and crud.rows_rejected == 0 and not any(p["error"] for p in partitions)
+        )
         return {
             "operation": options.operation,
             "table": options.table,
@@ -355,6 +372,7 @@ def run_bulk(
             "verified": verify(options.operation, before, after, committed, matches) if complete else None,
             "rejected": crud.rows_rejected,
             "error": error,
+            "cancelled": cancelled,
             "parallel": {"workers": plan.workers, "reasons": list(plan.reasons), "atomic": plan.atomic},
             "partitions": partitions,
         }

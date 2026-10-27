@@ -1680,6 +1680,12 @@ export interface components {
          */
         BulkResultOut: {
             /**
+             * Cancelled
+             * @description Se canceló entre lotes: en una sola transacción la carga se deshizo entera; en paralelo quedan las particiones terminadas (committed)
+             * @default false
+             */
+            cancelled: boolean;
+            /**
              * Committed
              * @description Filas enviadas y confirmadas según util_bbdd (también las apartadas); null en resultados anteriores a la 1.5.0
              */

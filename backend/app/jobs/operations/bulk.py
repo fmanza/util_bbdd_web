@@ -25,6 +25,7 @@ from app.integrations.util_bbdd.bulk import (
 )
 from app.integrations.util_bbdd.compare import SchemaNotFoundError
 from app.integrations.util_bbdd.isolated import classify
+from app.integrations.util_bbdd.progress import RunProgress
 from app.jobs.context import JobContext, JobError
 from app.jobs.operations.documentation import _MESSAGES
 
@@ -141,9 +142,15 @@ def run_apply(ctx: JobContext) -> None:
     params = BulkApplyParams.model_validate(ctx.params)
     ctx.progress("preparing", "Comprobando permiso, vista previa, fichero y destino")
     preview_params, preview = _recheck(ctx, params)
+    if ctx.cancel_requested():  # pedida mientras se comprobaba: aún no se ha tocado el destino
+        raise JobError("cancelled", "Cancelada por un usuario antes de escribir en el destino.")
     path, kind, _ = _source(ctx, preview_params)
     db_type, conn_params = ctx.connection_params(preview_params.target_connection)
     ctx.progress("running", f"{preview['operation'].upper()} de {preview['rows']} filas en «{preview['table']}»")
+    # Cancelar para entre lotes (util_bbdd 4.5.0, G1): en una sola transacción se deshace la carga entera.
+    progress = RunProgress(
+        lambda message, pct: ctx.progress("running", message, pct), ctx.cancel_requested, ["rows"], {"rows": "Filas"}
+    )
     try:
         frame = _frame(ctx, preview_params, path, kind)
         result = run_bulk(
@@ -151,7 +158,7 @@ def run_apply(ctx: JobContext) -> None:
             # Sin aceptar que no sea atómica, util_bbdd lo garantiza aunque su plan haya cambiado (G36).
             _options(preview_params, require_atomic=not params.accept_non_atomic),
             expected_structure=preview["structure_hash"], outputs_dir=ctx.run_dir / "outputs",
-            expected_matches=params.confirm_rows,
+            expected_matches=params.confirm_rows, progress=progress,
         )  # fmt: skip
     except StructureChangedError:
         raise JobError("preview_changed", "La tabla o el mapeo cambiaron desde la vista previa: repítela.") from None
@@ -173,6 +180,13 @@ def run_apply(ctx: JobContext) -> None:
         },
     )  # fmt: skip
     failed = [p["index"] for p in result["partitions"] if p["error"]]
+    if result["cancelled"]:
+        kept = (
+            f"quedan confirmadas {result['committed']} filas de las particiones terminadas"
+            if result["committed"]
+            else "la carga se deshizo entera; no se escribió nada"
+        )
+        raise JobError("cancelled", f"Cancelada por un usuario: {kept}.")
     if result["error"]:
         raise JobError("bulk_failed", f"La carga falló: {result['error']}")
     if failed:

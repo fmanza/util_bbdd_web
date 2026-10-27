@@ -130,10 +130,10 @@ def test_worker_gives_cooperative_operations_time_to_stop(monkeypatch: pytest.Mo
     assert stopped == ["noop", "doc"]  # sin parar a tiempo, se termina el subproceso (ADR-002)
 
 
-@pytest.mark.parametrize("operation", ["migrate_apply", "dump_apply"])
+@pytest.mark.parametrize("operation", ["migrate_apply", "dump_apply", "bulk_apply"])
 def test_worker_never_kills_a_write_that_stops_between_steps(monkeypatch: pytest.MonkeyPatch, operation: str) -> None:
-    """``migrate_apply`` (entre sentencias, W-M4) y ``dump_apply`` (entre lotes, W-V2) paran solos: cancelar no mata el
-    subproceso; el timeout sí."""
+    """``migrate_apply`` (entre sentencias, W-M4), ``dump_apply`` (W-V2) y ``bulk_apply`` (W-B3, entre lotes) paran
+    solos: cancelar no mata el subproceso; el timeout sí."""
     from app.jobs import worker as worker_module
 
     class _Process:
