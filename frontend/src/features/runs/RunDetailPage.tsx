@@ -35,7 +35,7 @@ import { RunStatusBadge } from './RunStatusBadge';
 import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiveRun } from './useRuns';
 
 /** Operaciones que no se relanzan (la API responde 409): aplicar una migración exige un modo seco nuevo. */
-const NOT_RELAUNCHABLE = new Set(['migrate_apply', 'dump_apply', 'bulk_apply']);
+const NOT_RELAUNCHABLE = new Set(['migrate_apply', 'dump_apply', 'bulk_apply', 'dump_restore']);
 /** Escrituras en una BD destino que en curso no se cancelan (la API responde 409). */
 const NOT_CANCELLABLE_RUNNING = new Set(['bulk_apply']);
 /** Escrituras que en curso paran entre pasos (sentencias, lotes) y dejan lo hecho: se confirma antes (ADR-008/009). */

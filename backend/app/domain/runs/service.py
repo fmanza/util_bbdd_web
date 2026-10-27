@@ -37,6 +37,18 @@ from app.workspace.layout import UnsafePathError, remove_tree, run_dir, run_rela
 logger = logging.getLogger(__name__)
 
 ACTIVE_STATUSES = ("queued", "running")
+#: Diario de constraints que deja un volcado interrumpido (util_bbdd 4.4.0, G31) y destino del volcado (conexión y
+#: alias), en ``work/`` del run: no son artefactos. Mientras exista el diario, las constraints siguen desactivadas.
+DUMP_JOURNAL_PATH: Final = "work/constraints_journal.json"
+DUMP_TARGET_PATH: Final = "work/target.json"
+
+
+def dump_journal(run: Run, settings: Settings) -> Path | None:
+    """Diario de constraints pendiente de un ``dump_apply`` terminado (``None`` si no queda ninguno)."""
+    if run.operation != "dump_apply" or not run.workspace_path or run.status not in TERMINAL_STATUSES:
+        return None
+    path = run_dir(settings.workspace_dir, run.workspace_path) / DUMP_JOURNAL_PATH
+    return path if path.is_file() else None
 
 
 @dataclass(frozen=True)
@@ -209,7 +221,7 @@ def enqueue(
         TooManyRunsError: El usuario ya tiene ``max_queued_per_user`` en cola o en curso (429).
         QuotaExceededError: El usuario supera su cuota (409), aun con la purga por cuota si está activa.
         MigrationForbiddenError, DumpForbiddenError, RunStateError: Reglas de escritura en la BD destino
-            (``migrations.check_apply``, ADR-008; ``dumps.check_apply``, ADR-009).
+            (``migrations.check_apply``, ADR-008; ``dumps.check_apply`` y ``dumps.check_restore``, ADR-009).
     """
     from app.domain.runs import bulks, dumps, migrations  # importan este módulo: aquí para evitar el ciclo
 
@@ -231,6 +243,8 @@ def enqueue(
         migrations.check_apply(db, user, membership, clean, settings)
     elif spec.name == "dump_apply":
         dumps.check_apply(db, user, membership, clean, settings)
+    elif spec.name == "dump_restore":
+        dumps.check_restore(db, user, membership, clean, settings)
     elif spec.name == "bulk_preview":
         bulks.check_preview(db, membership, clean)
     elif spec.name == "bulk_apply":
@@ -264,6 +278,8 @@ def enqueue(
             **({"migration": {k: clean.get(k) for k in ("mode", "plan_run", "target_connection", "dry_run_run")}}
                if spec.name == "migrate_apply" else {}),
             **({"dump": _dump_audit(db, clean)} if spec.name == "dump_apply" else {}),
+            **({"dump_restore": {"dump_run": clean["dump_run"], "target_connection": clean["confirm"]}}
+               if spec.name == "dump_restore" else {}),
             **({"bulk": _bulk_audit(db, clean)} if spec.name == "bulk_apply" else {}),
         },
     )  # fmt: skip
@@ -363,6 +379,8 @@ def purge(db: Session, user: User, access: RunAccess, *, settings: Settings, ctx
         raise ProjectForbiddenError()
     if access.run.status not in TERMINAL_STATUSES:
         raise RunStateError("Solo se purgan ejecuciones terminadas.")
+    if dump_journal(access.run, settings) is not None:
+        raise RunStateError("Este volcado dejó constraints sin restaurar en el destino: restáuralas antes de purgarlo.")
     purge_run(db, access.run, settings)
     audit.record(
         db, action=AuditAction.RUN_PURGE, ctx=ctx, actor_id=user.id, target_type="run", target_id=access.run.id
@@ -395,7 +413,8 @@ def retention_candidates(db: Session, settings: Settings, *, now: datetime | Non
         old_ids = select(ranked.c.id).where(ranked.c.rn > keep)
         for run in db.scalars(terminal.where(Run.id.in_(old_ids))).unique().all():
             selected[run.id] = run
-    return list(selected.values())
+    # Un volcado con constraints sin restaurar conserva su diario (G31): no se purga hasta restaurarlas.
+    return [run for run in selected.values() if dump_journal(run, settings) is None]
 
 
 def apply_retention(db: Session, settings: Settings, *, now: datetime | None = None) -> int:

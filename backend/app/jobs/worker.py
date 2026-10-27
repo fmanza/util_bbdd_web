@@ -6,7 +6,7 @@ Uso::
 
 El bucle reclama hasta ``UBW_WORKER_CONCURRENCY`` jobs, emite latidos, aplica cancelaciones y timeouts terminando el
 subproceso, cierra como ``worker_crash`` los hijos que mueren sin estado final, recupera huérfanos de un worker
-anterior y aplica la retención del workspace y la purga por cuota (al arrancar, cada hora y cuando un admin pulsa
+anterior (y, si era un volcado que dejó constraints desactivadas, encola su restauración) y aplica la retención del workspace y la purga por cuota (al arrancar, cada hora y cuando un admin pulsa
 «Aplicar ahora»), con los ajustes efectivos de ADR-012. Termina limpio con ``SIGTERM``/``SIGINT``:
 los jobs en curso se terminan y quedan como ``interrupted``.
 """
@@ -33,6 +33,7 @@ from app.core.ulid import new_ulid
 from app.db.models import Run, utcnow
 from app.db.session import new_session
 from app.domain.identity.audit import RequestContext
+from app.domain.runs.dumps import enqueue_automatic_restore
 from app.domain.runs.service import apply_retention
 from app.domain.storage.purge import purge_over_quota
 from app.domain.storage.settings import effective_settings, maintenance_requested_since
@@ -94,6 +95,7 @@ class Worker:
             finalize_run(
                 run_id, "failed", error_code="interrupted", error_message="El worker se detuvo durante la ejecución."
             )
+            self._restore_after(run_id)
         if orphans:
             logger.warning("Ejecuciones huérfanas cerradas", extra={"runs": orphans})
         return orphans
@@ -131,6 +133,22 @@ class Worker:
             child.process.join(TERMINATE_GRACE)
         finalize_run(run_id, status, error_code=code, error_message=message)
         logger.info("Job detenido", extra={"run_id": run_id, "status": status, "code": code})
+        self._restore_after(run_id)
+
+    def _restore_after(self, run_id: str) -> None:
+        """Si el proceso de un volcado murió con constraints desactivadas (diario pendiente), encola su restauración
+        (``dump_restore``, G31); el job aplica los mismos controles que una manual."""
+        try:
+            with new_session() as db:
+                restore_id = enqueue_automatic_restore(db, run_id, self.settings, ctx=WORKER_CONTEXT)
+        except Exception as exc:  # restaurar nunca debe parar el worker
+            logger.error(
+                "Fallo encolando la restauración de constraints",
+                extra={"run_id": run_id, "exc_type": type(exc).__name__},
+            )
+            return
+        if restore_id:
+            logger.warning("Restauración de constraints encolada", extra={"run_id": run_id, "restore_run": restore_id})
 
     def reap(self) -> None:
         """Retira los hijos terminados; si murieron sin cerrar el run, lo cierra como ``worker_crash``."""
@@ -145,6 +163,7 @@ class Worker:
             )  # fmt: skip
             if closed:
                 logger.warning("Job sin estado final", extra={"run_id": run_id, "exitcode": child.process.exitcode})
+                self._restore_after(run_id)
 
     def enforce(self) -> None:
         """Cancelaciones pedidas y timeouts."""

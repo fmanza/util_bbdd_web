@@ -298,3 +298,76 @@ describe('resultado del volcado', () => {
     expect(screen.queryByText(/no se puede cancelar/)).not.toBeInTheDocument();
   });
 });
+
+describe('constraints sin restaurar', () => {
+  const RESTORE_ID = '01JRESTRESTRESTRESTRESTRES';
+  const PENDING = {
+    pending: true, engine: 'mysql', target_connection: 'destino', tables: ['clientes', 'pedidos'], constraints: [],
+    created_at: '2026-10-27T08:00:00+00:00', restore_run: null,
+  }; // prettier-ignore
+
+  function stubInterrupted(me: object, pending: object = PENDING) {
+    stubEventSource();
+    return stubApi({
+      ...session(me),
+      [`GET /api/v1/runs/${DUMP_ID}`]: {
+        body: {
+          ...FINISHED, id: DUMP_ID, operation: 'dump_apply', status: 'failed', my_role: 'owner',
+          error_code: 'job_timeout', params: { preview_run: PREVIEW_ID, confirm: 'destino' }, artifacts: [],
+        },
+      },
+      [`GET /api/v1/runs/${DUMP_ID}/dump-constraints`]: { body: pending },
+      'GET /api/v1/projects/5/connections': { body: CONNECTIONS },
+      'POST /api/v1/projects/5/runs': { status: 202, body: { ...RUN, id: RESTORE_ID, status: 'queued' } },
+      [`GET /api/v1/runs/${RESTORE_ID}`]: {
+        body: { ...RUN, id: RESTORE_ID, operation: 'dump_restore', status: 'queued', artifacts: [],
+                params: { dump_run: DUMP_ID, confirm: 'destino' } },
+      },
+    }); // prettier-ignore
+  }
+
+  it('el owner con permiso las restaura escribiendo el alias', async () => {
+    const fetchMock = stubInterrupted(ALLOWED);
+    const user = userEvent.setup();
+
+    renderRoute(`/runs/${DUMP_ID}`);
+
+    expect(await screen.findByText('Constraints sin restaurar')).toBeInTheDocument();
+    expect(
+      screen.getByText(/dejó 2 objetos con las constraints desactivadas en «destino»/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('pedidos')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restaurar constraints…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Restaurar constraints' });
+    const submit = within(dialog).getByRole('button', { name: 'Restaurar ahora' });
+    expect(submit).toBeDisabled();
+    await user.type(
+      within(dialog).getByRole('textbox', { name: 'Escribe «destino» para confirmar' }),
+      'destino',
+    );
+    await user.click(submit);
+
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')).toHaveLength(1));
+    expect(await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()).toEqual({
+      operation: 'dump_restore',
+      params: { dump_run: DUMP_ID, confirm: 'destino' },
+    });
+  });
+
+  it('sin permiso se explica el motivo; con una restauración en marcha, se enlaza', async () => {
+    stubInterrupted(ADMIN);
+
+    const view = renderRoute(`/runs/${DUMP_ID}`);
+
+    expect(await screen.findByText(/necesitas el permiso «Puede escribir datos»/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restaurar constraints…' })).not.toBeInTheDocument();
+    view.unmount();
+
+    stubInterrupted(ALLOWED, { ...PENDING, restore_run: RESTORE_ID });
+    renderRoute(`/runs/${DUMP_ID}`);
+
+    expect(
+      await screen.findByRole('link', { name: 'Hay una restauración en marcha: ver la ejecución' }),
+    ).toHaveAttribute('href', `/runs/${RESTORE_ID}`);
+  });
+});

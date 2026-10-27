@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { isApiError } from '../../../api/client';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { isActive, type RunDetail } from '../useRuns';
+import { PendingConstraints } from './PendingConstraints';
 import { type DumpResult, useDumpResult } from './useDump';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -71,6 +72,7 @@ export function DumpResultView({ run }: { run: RunDetail }) {
             {t('dump.result.pending')}
           </Text>
         )}
+        <PendingConstraints run={run} />
         {result.isPending && finished && <Loader size="sm" aria-label={t('common.loading')} />}
         {result.isError && !isApiError(result.error, 404) && <ErrorAlert error={result.error} />}
         {result.data && (

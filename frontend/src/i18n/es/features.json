@@ -888,8 +888,20 @@
       "rejects": "Las filas que el destino no admitió están en rechazos.csv (en Artefactos).",
       "noReport": "No se pudo generar el informe Excel; los datos ya se cargaron.",
       "cancelledTitle": "Cancelado entre lotes",
-      "cancelled_one": "Se cargó {{count}} tabla antes de cancelar; queda en el destino. La tabla en curso se deshizo y las constraints se reactivaron. El detalle por tabla está en volcado.jsonl (en Artefactos).",
-      "cancelled_other": "Se cargaron {{count}} tablas antes de cancelar; quedan en el destino. La tabla en curso se deshizo y las constraints se reactivaron. El detalle por tabla está en volcado.jsonl (en Artefactos)."
+      "cancelled_one": "Se cargó {{count}} tabla antes de cancelar; queda en el destino. La tabla en curso se deshizo. El detalle por tabla está en volcado.jsonl (en Artefactos).",
+      "cancelled_other": "Se cargaron {{count}} tablas antes de cancelar; quedan en el destino. La tabla en curso se deshizo. El detalle por tabla está en volcado.jsonl (en Artefactos)."
+    },
+    "restore": {
+      "title": "Constraints sin restaurar",
+      "body_one": "El volcado se interrumpió y dejó {{count}} objeto con las constraints desactivadas en «{{alias}}»: el destino no comprueba sus claves foráneas hasta restaurarlas.",
+      "body_other": "El volcado se interrumpió y dejó {{count}} objetos con las constraints desactivadas en «{{alias}}»: el destino no comprueba sus claves foráneas hasta restaurarlas.",
+      "running": "Hay una restauración en marcha: ver la ejecución",
+      "noPermission": "Para restaurarlas necesitas el permiso «Puede escribir datos» (lo concede un administrador).",
+      "ownerOnly": "Solo el propietario del proyecto puede restaurarlas.",
+      "open": "Restaurar constraints…",
+      "confirmTitle": "Restaurar constraints",
+      "confirmBody": "Se reactivarán en «{{alias}}» las constraints que el volcado dejó desactivadas. Si hay filas que no las cumplen, esas constraints seguirán desactivadas y el resultado dirá cuáles.",
+      "submit": "Restaurar ahora"
     }
   },
   "bulk": {

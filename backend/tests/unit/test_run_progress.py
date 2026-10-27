@@ -185,3 +185,44 @@ def test_graph_of_all_tables_stops_between_tables_when_cancelled(tmp_path: Path)
         )
 
     assert not list((tmp_path / "graphs").glob("*.svg"))
+
+
+def test_worker_queues_a_restore_when_a_dump_process_dies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Timeout, caída o huérfano: tras cerrar el run, el worker pide la restauración de constraints (G31)."""
+    from app.jobs import worker as worker_module
+
+    class _Process:
+        exitcode = -9
+
+        def is_alive(self) -> bool:
+            return False
+
+        def join(self, timeout: float | None = None) -> None:
+            return None
+
+        def terminate(self) -> None:
+            return None
+
+    asked: list[str] = []
+
+    def enqueue(_db: Any, run_id: str, _settings: Any, *, ctx: Any) -> str | None:
+        asked.append(run_id)
+        if run_id == "roto":
+            raise RuntimeError("la BD no responde")
+        return "restauracion"
+
+    monkeypatch.setattr(worker_module, "enqueue_automatic_restore", enqueue)
+    monkeypatch.setattr(worker_module, "finalize_run", lambda *_a, **_k: True)
+    w: Any = worker_module.Worker.__new__(worker_module.Worker)
+    w.settings = object()
+    w.children = {
+        "muerto": worker_module._Child(process=_Process(), started=0.0, operation="dump_apply"),  # type: ignore[arg-type]
+        "lento": worker_module._Child(process=_Process(), started=0.0, operation="dump_apply"),  # type: ignore[arg-type]
+    }
+
+    w.reap()
+    w.children["lento"] = worker_module._Child(process=_Process(), started=0.0, operation="dump_apply")  # type: ignore[arg-type]
+    w._stop_child("lento", "failed", "job_timeout", "Superó el tiempo máximo")
+    w._restore_after("roto")  # un fallo al encolar no para el worker
+
+    assert asked == ["muerto", "lento", "lento", "roto"]

@@ -16,6 +16,8 @@
 - Progreso por tabla y por lote y cancelación **entre lotes** (``run(on_progress=, cancel_token=)``, util_bbdd 4.4.0,
   G1) con ``DumpProgress``: util_bbdd deshace la tabla en curso, reactiva constraints e índices y lanza
   ``OperationCancelledError`` sin ``DumpResult``; ``result.json`` lleva entonces ``cancelled`` y las tablas terminadas.
+- Si alguna constraint no se reactiva o el proceso muere, queda ``constraints_journal.json`` en ``output_dir`` (la
+  carpeta ``work`` del run, que entonces se conserva) y ``restore_constraints`` las reactiva después (G31).
 """
 
 from __future__ import annotations
@@ -33,6 +35,8 @@ from app.integrations.util_bbdd.compare import resolve_schema
 from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.integrations.util_bbdd.sql import _engine_message
 
+#: Diario de constraints de util_bbdd en ``DumpConfig.output_dir`` (4.4.0, G31; solo SQL Server, PostgreSQL y Oracle).
+JOURNAL_FILE: Final = "constraints_journal.json"
 RESULT_FILE: Final = "result.json"
 AUDIT_FILE: Final = "volcado.jsonl"
 REJECTS_FILE: Final = "rechazos.csv"
@@ -318,7 +322,9 @@ def run_dump(
         return _orchestrate(source, target, preview, options, sink, rejects, outputs_dir, work_dir, progress)
     finally:
         sink.close()
-        shutil.rmtree(work_dir, ignore_errors=True)
+        # Con el diario pendiente (alguna constraint no se reactivó) la carpeta se conserva para restaurarlas.
+        if not (work_dir / JOURNAL_FILE).exists():
+            shutil.rmtree(work_dir, ignore_errors=True)
 
 
 def _orchestrate(
@@ -367,6 +373,31 @@ def _orchestrate(
         excel.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(result.report), str(excel))
     return result_to_dict(result, report_ok)
+
+
+def restore_constraints(target: Endpoint, journal: Path) -> dict[str, Any]:
+    """Reactiva lo que un volcado interrumpido dejó desactivado (``util_bbdd.dump.restore_constraints``, G31).
+
+    Es idempotente y util_bbdd borra el diario si todo se reactiva.
+
+    Returns:
+        ``constraints`` (por tabla o constraint, con el error saneado) y ``pending`` (el diario sigue: alguna falló).
+
+    Raises:
+        ValueError: El fichero no es un diario válido o es de otro motor.
+    """
+    from util_bbdd import SyncDatabaseManager
+    from util_bbdd.dump import restore_constraints as restore
+
+    with SyncDatabaseManager(target.db_type, target.conn_params, use_pool=False) as manager:
+        results = restore(manager.get_sqlalchemy_engine(), journal)
+    return {
+        "constraints": [
+            {"table": r.table_name, "constraint": r.constraint_name, "status": r.status, "error": _clean(r.error_msg)}
+            for r in results
+        ],
+        "pending": journal.exists(),
+    }
 
 
 #: Valores de filas que algunos motores ponen en la primera línea del error (G34): MySQL/MariaDB

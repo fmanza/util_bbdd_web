@@ -31,6 +31,19 @@ export function useDumpResult(runId: string, enabled: boolean) {
   });
 }
 
+/** Constraints que un volcado interrumpido dejó desactivadas (G31); se repite mientras haya una restauración en marcha. */
+export function useDumpConstraints(runId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['runs', runId, 'dump-constraints'],
+    queryFn: async () =>
+      unwrap(
+        await api.GET('/api/v1/runs/{run_id}/dump-constraints', { params: { path: { run_id: runId } } }),
+      ),
+    enabled,
+    refetchInterval: (query) => (query.state.data?.restore_run ? 3000 : false),
+  });
+}
+
 /** Volcados lanzados desde una vista previa (más recientes primero). */
 export function usePreviewDumps(projectId: number, previewId: string) {
   return useQuery({

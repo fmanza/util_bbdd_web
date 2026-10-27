@@ -46,7 +46,7 @@ Mientras carga, el detalle muestra las tablas terminadas y las filas escritas de
 > Un volcado **en curso se puede cancelar** (con confirmación): para **entre lotes**, deshace la tabla en curso,
 > reactiva las constraints y termina como *cancelado*. Las tablas ya terminadas **quedan cargadas** en el destino; el
 > resultado las lista y el detalle por tabla está en `volcado.jsonl`. Si se agota el tiempo máximo
-> (`UBW_JOB_TIMEOUT_SECONDS`), el proceso se termina a mitad: revisa las constraints del destino.
+> (`UBW_JOB_TIMEOUT_SECONDS`), el proceso se termina a mitad: ver [Constraints sin restaurar](#constraints-sin-restaurar).
 
 ## 3. Resultado
 
@@ -54,6 +54,23 @@ El detalle del volcado muestra, por tabla, estado, filas en origen y en destino 
 error (solo la primera línea del motor, sin los valores de las filas que lo provocaron). También las
 **constraints que no se reactivaron** (p. ej. filas huérfanas). Artefactos: el **informe Excel** de util_bbdd, `rechazos.csv` (si se apartaron filas: contiene
 datos de negocio) y el rastro de auditoría `volcado.jsonl`.
+
+### Constraints sin restaurar
+
+Con destino SQL Server, PostgreSQL u Oracle, util_bbdd anota qué desactiva antes de cargar. Si el proceso del volcado
+muere (se agota el tiempo máximo, se reinicia el worker) o alguna constraint no se puede reactivar, el resultado
+muestra **Constraints sin restaurar** con las tablas o constraints afectadas: el destino no comprueba sus claves
+foráneas hasta restaurarlas. Mientras tanto no se puede volcar otra vez en ese destino ni purgar ese volcado (la
+retención tampoco lo purga).
+
+- Si el proceso murió, el worker lanza **solo** una restauración (`dump_restore`) con los mismos controles que el
+  volcado.
+- Si no, o si esa restauración falla, el propietario con «Puede escribir datos» pulsa **Restaurar constraints…** y
+  escribe el alias del destino. Una constraint que no se puede reactivar (filas que no la cumplen) sigue pendiente:
+  corrige los datos y vuelve a restaurar.
+
+En MySQL/MariaDB las constraints se desactivan solo en la sesión del volcado y vuelven solas al cerrarse; SQLite no
+las toca.
 
 ## Errores frecuentes
 
@@ -63,4 +80,6 @@ datos de negocio) y el rastro de auditoría `volcado.jsonl`.
 | 422 «más de 60 minutos» | Vista previa antigua | Lanza otra vista previa |
 | `preview_changed` | Cambiaron tablas o columnas desde la vista previa | Repite la vista previa y revísala |
 | `dump_partial` | Alguna tabla falló o alguna constraint no se reactivó | Revisa el resultado por tabla; corrige los datos o el destino |
+| 409 «constraints sin restaurar» | Un volcado anterior sobre ese destino las dejó desactivadas | Restáuralas desde el resultado de ese volcado |
+| `restore_partial` | Alguna constraint no se pudo reactivar al restaurar | Corrige las filas que no la cumplen y vuelve a restaurar |
 | `invalid_params` | Tabla o schema inexistente en el origen | Revisa los nombres en el explorador |

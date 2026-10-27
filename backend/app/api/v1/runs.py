@@ -18,7 +18,7 @@ from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
 from app.api.v1.schemas_bulk import BulkPreviewOut, BulkResultOut
 from app.api.v1.schemas_diff import DiffEvolutionOut, DiffItemOut, SchemaDiffOut
-from app.api.v1.schemas_dump import DumpPreviewOut, DumpResultOut
+from app.api.v1.schemas_dump import DumpPendingConstraintsOut, DumpPreviewOut, DumpResultOut
 from app.api.v1.schemas_migrate import MigrationPlanOut, MigrationReportOut
 from app.api.v1.schemas_projects import ArtifactOut, RunCreate, RunDetailOut, RunOut, RunPage, RunStatus
 from app.core.config import Settings
@@ -426,6 +426,18 @@ def get_dump_result(run_id: str, user: CurrentUser, db: DbSession, settings: Set
     """Filas por tabla, rechazos, constraints reactivadas y contadores PK de un ``dump_apply`` (también si falló)."""
     access = service.get_access(db, user, run_id)
     return DumpResultOut.model_validate(dumps.load_result(db, access.run, settings))
+
+
+@router.get(
+    "/{run_id}/dump-constraints", response_model=DumpPendingConstraintsOut,
+    summary="Constraints sin restaurar de un volcado", responses={**_401, **_404},
+)  # fmt: skip
+def get_dump_constraints(
+    run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep
+) -> DumpPendingConstraintsOut:
+    """Si un ``dump_apply`` dejó constraints desactivadas (su proceso murió o alguna no se reactivó) y cuáles."""
+    access = service.get_access(db, user, run_id)
+    return DumpPendingConstraintsOut.model_validate(dumps.pending_constraints(db, access.run, settings))
 
 
 # --- carga bulk (Fase 9) -----------------------------------------------------------------------------------------

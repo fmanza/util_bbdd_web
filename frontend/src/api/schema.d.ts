@@ -1197,6 +1197,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/dump-constraints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Constraints sin restaurar de un volcado
+         * @description Si un ``dump_apply`` dejó constraints desactivadas (su proceso murió o alguna no se reactivó) y cuáles.
+         */
+        get: operations["get_dump_constraints_api_v1_runs__run_id__dump_constraints_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/dump-preview": {
         parameters: {
             query?: never;
@@ -1985,6 +2005,56 @@ export interface components {
             status: "enabled" | "failed" | "unverified";
             /** Table */
             table: string;
+        };
+        /** DumpJournalConstraintOut */
+        DumpJournalConstraintOut: {
+            /** Constraint */
+            constraint: string;
+            /** Table */
+            table: string;
+        };
+        /**
+         * DumpPendingConstraintsOut
+         * @description Constraints que un volcado interrumpido dejó desactivadas en el destino (diario de util_bbdd, G31).
+         */
+        DumpPendingConstraintsOut: {
+            /**
+             * Constraints
+             * @description Constraints desactivadas (Oracle)
+             * @default []
+             */
+            constraints: components["schemas"]["DumpJournalConstraintOut"][];
+            /**
+             * Created At
+             * @description Cuándo se desactivaron (ISO 8601, UTC)
+             */
+            created_at?: string | null;
+            /**
+             * Engine
+             * @description Motor del destino según el diario
+             */
+            engine?: string | null;
+            /**
+             * Pending
+             * @description Queda el diario: hay constraints desactivadas que restaurar
+             */
+            pending: boolean;
+            /**
+             * Restore Run
+             * @description Restauración (dump_restore) en cola o en curso
+             */
+            restore_run?: string | null;
+            /**
+             * Tables
+             * @description Tablas desactivadas enteras (SQL Server, PostgreSQL)
+             * @default []
+             */
+            tables: string[];
+            /**
+             * Target Connection
+             * @description Alias de la conexión destino del volcado
+             */
+            target_connection?: string | null;
         };
         /** DumpPkSyncOut */
         DumpPkSyncOut: {
@@ -7724,6 +7794,51 @@ export interface operations {
             };
             /** @description Demasiado grande para el visor */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dump_constraints_api_v1_runs__run_id__dump_constraints_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpPendingConstraintsOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro del proyecto */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

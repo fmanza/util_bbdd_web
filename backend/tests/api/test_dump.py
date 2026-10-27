@@ -435,3 +435,165 @@ def test_worker_rechecks_permission_owner_and_read_only(
     db.execute(update(User).where(User.id == allowed.id).values(can_write_data=False))
     db.commit()
     assert code().startswith("forbidden: El usuario ya no tiene permiso")
+
+
+# --- constraints sin restaurar (G31, W-V3) -----------------------------------------------------------------------
+
+
+def _interrupt(settings: Settings, db: Session, preview_id: str, dump: Run, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Deja en ``work/`` del volcado su diario y su destino, como si el proceso hubiera muerto con las constraints
+    desactivadas. SQLite no lleva diario en util_bbdd: para estos tests la web lo acepta como motor del diario."""
+    import json
+
+    from app.domain.runs import dumps
+
+    monkeypatch.setitem(dumps._JOURNAL_ENGINES, "sqlite", "sqlite")  # type: ignore[index]
+    preview_run = db.get(Run, preview_id)
+    assert preview_run is not None and dump.workspace_path
+    stored = json.loads((run_dir(settings.workspace_dir, preview_run.workspace_path) / dumps.PREVIEW_PATH).read_text())
+    work = run_dir(settings.workspace_dir, dump.workspace_path) / "work"
+    work.mkdir(parents=True, exist_ok=True)
+    journal = {
+        "format": "util_bbdd.dump_constraints_journal", "format_version": 1, "dialect": "sqlite", "schema": None,
+        "created_at": "2026-10-27T08:00:00+00:00", "tables": ["clientes", "pedidos"], "constraints": [],
+    }  # fmt: skip
+    (work / "constraints_journal.json").write_text(json.dumps(journal), encoding="utf-8")
+    target = {"alias": "destino", "connection_id": stored["target_connection_id"]}
+    (work / "target.json").write_text(json.dumps(target), encoding="utf-8")
+
+
+def test_interrupted_dump_blocks_writes_until_its_constraints_are_restored(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+    allowed: User,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    preview_id = preview(user_client, project, worker, db)
+    dump = wait_for(worker, db, apply(user_client, project, preview_id).json()["id"], timeout=180)
+    assert user_client.get(f"/api/v1/runs/{dump.id}/dump-constraints").json()["pending"] is False
+    _interrupt(settings, db, preview_id, dump, monkeypatch)
+
+    pending = user_client.get(f"/api/v1/runs/{dump.id}/dump-constraints").json()
+    assert pending["pending"] is True and pending["engine"] == "sqlite"
+    assert (pending["tables"], pending["target_connection"], pending["restore_run"]) == (
+        ["clientes", "pedidos"], "destino", None,
+    )  # fmt: skip
+    again = apply(user_client, project, preview(user_client, project, worker, db))
+    assert again.status_code == 409 and "sin restaurar" in again.text
+    purge = user_client.delete(f"/api/v1/runs/{dump.id}")
+    assert purge.status_code == 409 and "sin restaurar" in purge.text
+    from app.domain.runs.service import retention_candidates
+
+    old_runs = retention_candidates(
+        db, settings.model_copy(update={"run_retention_days": 1}), now=utcnow() + timedelta(days=9)
+    )
+    assert preview_id in {r.id for r in old_runs} and dump.id not in {r.id for r in old_runs}  # la retención la respeta
+
+    restore = {"dump_run": dump.id, "confirm": "Destino"}
+    assert launch(user_client, project["id"], "dump_restore", **restore).status_code == 422
+    first = launch(user_client, project["id"], "dump_restore", **{**restore, "confirm": "destino"})
+    assert first.status_code == 202, first.text
+    assert launch(user_client, project["id"], "dump_restore", **{**restore, "confirm": "destino"}).status_code == 409
+    assert user_client.get(f"/api/v1/runs/{dump.id}/dump-constraints").json()["restore_run"] == first.json()["id"]
+    assert user_client.post(f"/api/v1/runs/{first.json()['id']}/relaunch").status_code == 409
+    entry = db.scalars(select(AuditEntry).where(AuditEntry.target_id == first.json()["id"])).one()
+    assert entry.details["dump_restore"] == {"dump_run": dump.id, "target_connection": "destino"}
+
+
+def test_restore_rules(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+    user: User,
+    make_user: Callable[..., User],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.db.models import Connection, ProjectConnection
+
+    db.execute(update(User).where(User.id == user.id).values(can_write_data=True))
+    db.commit()
+    preview_id = preview(user_client, project, worker, db)
+    dump = wait_for(worker, db, apply(user_client, project, preview_id).json()["id"], timeout=180)
+    restore = {"dump_run": dump.id, "confirm": "destino"}
+    nothing = launch(user_client, project["id"], "dump_restore", **restore)
+    assert nothing.status_code == 422 and "no tiene constraints pendientes" in nothing.text
+    _interrupt(settings, db, preview_id, dump, monkeypatch)
+
+    eva = login_as(user_client, make_user, "eva")
+    user_client.post(f"/api/v1/projects/{project['id']}/members", json={"username": "eva", "role": "editor"})
+    db.execute(update(User).where(User.username == "eva").values(can_write_data=True))
+    db.commit()
+    assert launch(eva, project["id"], "dump_restore", **restore).status_code == 403  # no es owner
+    link = db.scalars(select(ProjectConnection).where(ProjectConnection.alias == "destino")).one()
+    connection = db.get(Connection, link.connection_id)
+    assert connection is not None
+    connection.read_only = True
+    db.commit()
+    read_only = launch(user_client, project["id"], "dump_restore", **restore)
+    assert read_only.status_code == 422 and "solo lectura" in read_only.text
+    connection.read_only = False
+    db.execute(update(User).where(User.id == user.id).values(can_write_data=False))
+    db.commit()
+    assert launch(user_client, project["id"], "dump_restore", **restore).status_code == 403
+
+
+def test_restore_job_and_automatic_restore(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+    allowed: User,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El worker encola la restauración de un volcado cuyo proceso murió; el job reactiva y deja ``restore.json``."""
+    import json
+
+    from app.domain.identity.audit import RequestContext
+    from app.domain.runs.dumps import enqueue_automatic_restore
+    from app.jobs.context import JobContext, JobError
+    from app.jobs.operations import dump as job
+
+    preview_id = preview(user_client, project, worker, db)
+    dump = wait_for(worker, db, apply(user_client, project, preview_id).json()["id"], timeout=180)
+    _interrupt(settings, db, preview_id, dump, monkeypatch)
+    worker_ctx = RequestContext(ip=None, user_agent="worker")
+
+    restore_id = enqueue_automatic_restore(db, dump.id, settings, ctx=worker_ctx)
+    assert restore_id is not None
+    assert enqueue_automatic_restore(db, dump.id, settings, ctx=worker_ctx) is None  # ya hay una en cola
+    restore = db.get(Run, restore_id)
+    assert restore is not None and restore.user_id == allowed.id
+    assert restore.params == {"dump_run": dump.id, "confirm": "destino"}
+    entry = db.scalars(select(AuditEntry).where(AuditEntry.target_id == restore_id)).one()
+    assert entry.actor_user_id is None and entry.details is not None and entry.details["dump_restore"]["automatic"]
+
+    journal = run_dir(settings.workspace_dir, dump.workspace_path or "") / "work" / "constraints_journal.json"
+    outcome = {"status": "failed"}
+
+    def fake_restore(target: Any, path: Any) -> dict[str, Any]:
+        assert (target.db_type, path) == ("sqlite", journal)
+        if outcome["status"] == "enabled":
+            path.unlink()
+        status = outcome["status"]
+        return {"constraints": [{"table": "pedidos", "constraint": "fk", "status": status, "error": None}],
+                "pending": path.exists()}  # fmt: skip
+
+    monkeypatch.setattr(job, "restore_constraints", fake_restore)
+    ctx = JobContext(
+        run_id=restore_id, project_id=int(str(project["id"])), operation="dump_restore", params=dict(restore.params),
+        run_dir=settings.workspace_dir / "restore", settings=settings,
+    )  # fmt: skip
+    with pytest.raises(JobError) as partial:
+        job.run_restore(ctx)
+    assert partial.value.code == "restore_partial" and "pedidos.fk" in partial.value.message
+    outcome["status"] = "enabled"
+    job.run_restore(ctx)
+    written = json.loads((ctx.run_dir / job.RESTORE_PATH).read_text(encoding="utf-8"))
+    assert written["pending"] is False and not journal.exists()
+    assert user_client.get(f"/api/v1/runs/{dump.id}/dump-constraints").json()["pending"] is False

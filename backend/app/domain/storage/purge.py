@@ -21,7 +21,7 @@ from app.core.config import Settings
 from app.db.models import TERMINAL_STATUSES, Run, User, utcnow
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
-from app.domain.runs.service import ACTIVE_STATUSES, purge_run, usage_bytes
+from app.domain.runs.service import ACTIVE_STATUSES, dump_journal, purge_run, usage_bytes
 from app.domain.storage.settings import quota_bytes
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ def select_for_quota(
     for run in _purgeable(db, user.id, now or utcnow()):
         if used <= target:
             break
-        if run.id in exclude:
+        if run.id in exclude or dump_journal(run, settings) is not None:  # constraints sin restaurar (G31)
             continue
         chosen.append(run)
         used -= run.size_bytes

@@ -1423,6 +1423,105 @@
         "title": "DumpConstraintOut",
         "type": "object"
       },
+      "DumpJournalConstraintOut": {
+        "properties": {
+          "constraint": {
+            "title": "Constraint",
+            "type": "string"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "constraint"
+        ],
+        "title": "DumpJournalConstraintOut",
+        "type": "object"
+      },
+      "DumpPendingConstraintsOut": {
+        "description": "Constraints que un volcado interrumpido dejó desactivadas en el destino (diario de util_bbdd, G31).",
+        "properties": {
+          "constraints": {
+            "default": [],
+            "description": "Constraints desactivadas (Oracle)",
+            "items": {
+              "$ref": "#/components/schemas/DumpJournalConstraintOut"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cuándo se desactivaron (ISO 8601, UTC)",
+            "title": "Created At"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Motor del destino según el diario",
+            "title": "Engine"
+          },
+          "pending": {
+            "description": "Queda el diario: hay constraints desactivadas que restaurar",
+            "title": "Pending",
+            "type": "boolean"
+          },
+          "restore_run": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Restauración (dump_restore) en cola o en curso",
+            "title": "Restore Run"
+          },
+          "tables": {
+            "default": [],
+            "description": "Tablas desactivadas enteras (SQL Server, PostgreSQL)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tables",
+            "type": "array"
+          },
+          "target_connection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Alias de la conexión destino del volcado",
+            "title": "Target Connection"
+          }
+        },
+        "required": [
+          "pending"
+        ],
+        "title": "DumpPendingConstraintsOut",
+        "type": "object"
+      },
       "DumpPkSyncOut": {
         "properties": {
           "error": {
@@ -10204,6 +10303,55 @@
           }
         },
         "summary": "Evolución respecto a otra comparación",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/dump-constraints": {
+      "get": {
+        "description": "Si un ``dump_apply`` dejó constraints desactivadas (su proceso murió o alguna no se reactivó) y cuáles.",
+        "operationId": "get_dump_constraints_api_v1_runs__run_id__dump_constraints_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DumpPendingConstraintsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe o no eres miembro del proyecto"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Constraints sin restaurar de un volcado",
         "tags": [
           "runs"
         ]

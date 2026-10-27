@@ -16,6 +16,7 @@ IMPLEMENTATIONS: dict[str, Callable[[JobContext], None]] = {
     "migrate_apply": migrate.run_apply,
     "dump_preview": dump.run_preview,
     "dump_apply": dump.run_apply,
+    "dump_restore": dump.run_restore,
     "bulk_preview": bulk.run_preview,
     "bulk_apply": bulk.run_apply,
 }

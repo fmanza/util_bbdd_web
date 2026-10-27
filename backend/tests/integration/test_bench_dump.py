@@ -2,6 +2,7 @@
 
 Origen y destino con ``ubw_it_cliente``/``ubw_it_pedido`` (FK); la vista previa coincide con el orden de util_bbdd,
 el volcado vacía y copia, las constraints se reactivan y, añadiendo sobre una PK repetida, el rechazo se aísla.
+Las constraints que deja desactivadas un proceso muerto (con su diario) se restauran (G31).
 """
 
 from __future__ import annotations
@@ -10,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from app.integrations.util_bbdd.dump import DumpOptions, Endpoint, build_preview, run_dump
+from app.integrations.util_bbdd.dump import DumpOptions, Endpoint, build_preview, restore_constraints, run_dump
 from tests.integration.test_bench_engines import PASSWORD
-from tests.integration.test_bench_explorer import CHILD, PARENT, SCHEMAS, _ddl, _execute, _params
+from tests.integration.test_bench_explorer import CHILD, PARENT, SCHEMAS, _ddl, _execute, _ident, _params
 
 pytestmark = pytest.mark.integration
 
@@ -111,3 +112,31 @@ def test_duplicate_key_error_hides_the_value(pair: tuple[str, str], tmp_path: Pa
     error = str(result["tables"][0]["error"])
     assert result["tables"][0]["status"] == "error", result["tables"]
     assert "…" in error and "'1'" not in error and "(1)" not in error, error
+
+
+@pytest.mark.parametrize("engine", ["postgresql", "sqlserver", "oracle"])
+def test_constraints_left_disabled_are_restored(engine: str, tmp_path: Path) -> None:
+    """G31: el diario de util_bbdd (como el de un volcado cuyo proceso murió) permite reactivarlas después."""
+    from util_bbdd import SyncDatabaseManager
+    from util_bbdd.dump import ConstraintManager
+
+    if not PASSWORD:
+        pytest.skip("Define UTIL_BBDD_BENCH_PASSWORD para las pruebas contra los contenedores bench")
+    _drop(engine)
+    _execute(engine, _ddl(engine))
+    journal = tmp_path / "constraints_journal.json"
+    try:
+        with SyncDatabaseManager(engine, _params(engine), use_pool=False) as manager:
+            ConstraintManager(manager.get_sqlalchemy_engine(), SCHEMAS[engine], journal_path=journal).disable_all(
+                [_ident(engine, PARENT), _ident(engine, CHILD)]
+            )
+        assert journal.exists()
+
+        result = restore_constraints(Endpoint(engine, _params(engine), SCHEMAS[engine]), journal)
+
+        assert result["pending"] is False and not journal.exists()
+        assert {c["status"] for c in result["constraints"]} <= {"enabled", "unverified"}, result["constraints"]
+        with pytest.raises(Exception):  # noqa: B017 (la FK vuelve a estar activa: el error depende del driver)
+            _execute(engine, [f"INSERT INTO {CHILD} VALUES (99, 12345)"])
+    finally:
+        _drop(engine)

@@ -66,6 +66,23 @@ class DumpConstraintOut(_Dump):
     error: str | None = None
 
 
+class DumpJournalConstraintOut(_Dump):
+    table: str
+    constraint: str
+
+
+class DumpPendingConstraintsOut(_Dump):
+    """Constraints que un volcado interrumpido dejó desactivadas en el destino (diario de util_bbdd, G31)."""
+
+    pending: bool = Field(description="Queda el diario: hay constraints desactivadas que restaurar")
+    engine: str | None = Field(default=None, description="Motor del destino según el diario")
+    target_connection: str | None = Field(default=None, description="Alias de la conexión destino del volcado")
+    tables: list[str] = Field(default=[], description="Tablas desactivadas enteras (SQL Server, PostgreSQL)")
+    constraints: list[DumpJournalConstraintOut] = Field(default=[], description="Constraints desactivadas (Oracle)")
+    created_at: str | None = Field(default=None, description="Cuándo se desactivaron (ISO 8601, UTC)")
+    restore_run: str | None = Field(default=None, description="Restauración (dump_restore) en cola o en curso")
+
+
 class DumpPkSyncOut(_Dump):
     table: str
     status: str

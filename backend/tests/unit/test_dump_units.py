@@ -261,7 +261,7 @@ def test_apply_job_ends_cancelled(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     from app.jobs.operations import dump as job
 
     preview = {
-        "structure_hash": "h", "load_order": ["a", "b", "c"], "cycles": [],
+        "structure_hash": "h", "load_order": ["a", "b", "c"], "cycles": [], "target_connection_id": 2,
         "tables": [{"table": t, "target_table": None if t == "c" else t} for t in ("a", "b", "c")],
     }  # fmt: skip
     params = DumpPreviewParams.model_validate({"source_connection": "origen", "target_connection": "destino"})
@@ -281,3 +281,62 @@ def test_apply_job_ends_cancelled(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
         assert isinstance(calls[0]["progress"], DumpProgress)
         result = json.loads((tmp_path / "outputs" / "dump" / "result.json").read_text(encoding="utf-8"))
         assert result["cancelled"] is True and result["completed_tables"] == ["a"]
+        target = json.loads((tmp_path / "work" / "target.json").read_text(encoding="utf-8"))
+        assert target == {"alias": "destino", "connection_id": 2}  # junto al diario, por si el proceso muere (G31)
+
+
+def test_work_dir_is_kept_when_constraints_are_left_disabled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Con el diario de util_bbdd pendiente (G31), ``work/`` se conserva para ``dump_restore``."""
+    from app.integrations.util_bbdd.dump import JOURNAL_FILE
+
+    source, target = _endpoints(
+        tmp_path, "CREATE TABLE t (id INTEGER PRIMARY KEY);", "CREATE TABLE t (id INTEGER PRIMARY KEY);"
+    )
+    options = DumpOptions()
+    expected = build_preview(source, target, options)["structure_hash"]
+
+    def boom(self: Any, **_: Any) -> Any:
+        (tmp_path / "work" / JOURNAL_FILE).write_text("{}")
+        raise RuntimeError("no se pudieron reactivar")
+
+    monkeypatch.setattr("util_bbdd.dump.DumpOrchestrator.run", boom)
+    with pytest.raises(RuntimeError):
+        run_dump(
+            source, target, options=options, expected_structure=expected, outputs_dir=tmp_path / "out",
+            work_dir=tmp_path / "work",
+        )  # fmt: skip
+
+    assert (tmp_path / "work" / JOURNAL_FILE).exists()
+
+
+def test_journal_names_match_util_bbdd() -> None:
+    from util_bbdd.dump import _constraints
+
+    from app.domain.runs.dumps import JOURNAL_FORMAT
+    from app.domain.runs.service import DUMP_JOURNAL_PATH
+    from app.integrations.util_bbdd.dump import JOURNAL_FILE
+
+    assert JOURNAL_FILE == _constraints.JOURNAL_FILENAME and DUMP_JOURNAL_PATH == f"work/{JOURNAL_FILE}"
+    assert JOURNAL_FORMAT == _constraints.JOURNAL_FORMAT
+
+
+def test_restore_constraints_reports_sanitised_results(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from util_bbdd.dump import ConstraintResult
+
+    from app.integrations.util_bbdd.dump import restore_constraints
+
+    _, target = _endpoints(tmp_path, "", "")
+    journal = tmp_path / "constraints_journal.json"
+    journal.write_text("{}")
+    error = "(1452, \"Cannot add row: Duplicate entry 'secreto' for key 'PRIMARY'\")\n[parameters: ('secreto',)]"
+    results = [
+        ConstraintResult("clientes", "*", "postgresql", "enabled"),
+        ConstraintResult("pedidos", "fk_cli", "postgresql", "failed", error),
+    ]
+    monkeypatch.setattr("util_bbdd.dump.restore_constraints", lambda engine, path: results)
+
+    data = restore_constraints(target, journal)
+
+    assert data["pending"] is True
+    assert data["constraints"][0] == {"table": "clientes", "constraint": "*", "status": "enabled", "error": None}
+    assert "secreto" not in repr(data) and data["constraints"][1]["status"] == "failed"

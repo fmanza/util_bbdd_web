@@ -6,7 +6,8 @@ de documento (``ubw_template_kind``: ``word`` o ``excel``, ADR-011). La implemen
 Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones.
 Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
 Fase 7: ``migrate_plan`` y ``migrate_apply`` (este no sale en el formulario genérico: se lanza desde el plan).
-Fase 8: ``dump_preview`` (modo seco) y ``dump_apply`` (se lanza desde la vista previa).
+Fase 8: ``dump_preview`` (modo seco) y ``dump_apply`` (se lanza desde la vista previa); desde la 1.4.0,
+``dump_restore`` (se lanza desde un volcado con constraints sin restaurar, o lo encola el worker).
 Fase 9: ``bulk_preview`` y ``bulk_apply`` (carga desde fichero; las dos se lanzan desde el asistente de carga).
 """
 
@@ -311,6 +312,15 @@ class DumpApplyParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class DumpRestoreParams(BaseModel):
+    """Reactivar las constraints que un volcado interrumpido dejó desactivadas (G31, ADR-009 enmendado)."""
+
+    dump_run: str = Field(pattern=RUN_ID_PATTERN, description="Volcado dump_apply con constraints sin restaurar.")
+    confirm: str = Field(max_length=64, description="Alias de la conexión destino escrito a mano.")
+
+    model_config = ConfigDict(extra="forbid")
+
+
 #: Nombre de tabla (sin ``.``: el schema va aparte) y de columna (admite espacios, como en una cabecera de CSV).
 TABLE_PATTERN = r"^[\w$#][\w$# -]{0,127}$"
 COLUMN_PATTERN = r"^[^\x00-\x1f]{1,128}$"
@@ -477,6 +487,13 @@ OPERATIONS: dict[str, OperationSpec] = {
         title="Volcado de datos",
         description="Copia las filas según una vista previa correcta y reciente.",
         model=DumpApplyParams,
+        form=False,
+    ),
+    "dump_restore": OperationSpec(
+        name="dump_restore",
+        title="Restaurar constraints",
+        description="Reactiva las constraints que un volcado interrumpido dejó desactivadas en el destino.",
+        model=DumpRestoreParams,
         form=False,
     ),
     "bulk_preview": OperationSpec(
