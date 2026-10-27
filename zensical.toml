@@ -32,6 +32,7 @@ nav = [
   { "Operación" = [
     "guides/puesta_en_marcha.md",
     "guides/deployment.md",
+    "guides/publicar_version.md",
     "guides/troubleshooting.md",
     "security/ASVS_L2.md",
   ] },

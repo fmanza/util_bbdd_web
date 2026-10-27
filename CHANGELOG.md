@@ -3,6 +3,27 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Added
+
+- **Publicar una versión** (`docs/guides/publicar_version.md`, en «Operación»): de `develop` terminado al servidor,
+  en Git Bash. Orden cuando cambian util_bbdd y la web, subir util_bbdd (uv de la imagen, el 401 de las releases y
+  la comprobación del hash), comprobaciones, commit de versión con todos los sitios donde vive la versión, `main` por
+  fast-forward y tag, despliegue con `UBW_TAG`, vuelta atrás, y ramas y Dependabot. «Puesta en marcha» y «Despliegue»
+  remiten a ella; `sync.instructions.md` añade los ficheros derivados de la versión.
+
+### Changed
+
+- **Dependabot**: mensual en los cuatro ecosistemas, con un PR agrupado por ecosistema (antes `uv` y `npm` eran
+  semanales y sin agrupar).
+- **`docs/guides/deployment.md` › Actualizar**: `git checkout` de un tag en lugar de `git pull`, como en «Puesta en
+  marcha».
+
+### Fixed
+
+- **`.env.example`**: `UBW_TAG=1.5.0` (seguía en 1.0.0); la guía lo incluye en cada commit de versión.
+
 ## [1.5.0] - 2026-10-27
 
 util_bbdd 4.5.0 y ola 5 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (carga bulk).

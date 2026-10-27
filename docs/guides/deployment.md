@@ -201,10 +201,12 @@ cd backend && uv run --frozen python ../scripts/load_test.py --base https://util
 ## Actualizar
 
 ```bash
-git pull
+git fetch --tags && git checkout vX.Y.Z   # una versión etiquetada; UBW_TAG=X.Y.Z en .env
 docker compose build        # descarga util_bbdd de su release de GitHub (hash fijado en uv.lock)
 docker compose up -d        # entrypoint aplica alembic upgrade head
 ```
+
+Publicar la versión y desplegarla paso a paso: [Publicar una versión](publicar_version.md).
 
 Antes, haz una copia (`app.cli backup`). Rollback: volver a la imagen anterior y restaurar la copia (o, si solo hubo
 migraciones, `docker compose run --rm web alembic downgrade <rev>` antes de arrancarla).

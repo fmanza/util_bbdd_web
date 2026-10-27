@@ -33,6 +33,7 @@ Se lee en GitHub o como sitio web con [Zensical](https://zensical.org): desde la
 |---|---|
 | [Puesta en marcha](guides/puesta_en_marcha.md) | Local con Docker, desarrollo sin Docker, producción paso a paso, comandos de operación |
 | [Despliegue](guides/deployment.md) | Referencia de producción: proxy TLS, límites, logs y métricas, variantes, copias, carga, actualización |
+| [Publicar una versión](guides/publicar_version.md) | De `develop` terminado al servidor: subir util_bbdd, versión, `main`, tag, despliegue, vuelta atrás y Dependabot |
 | [Solución de problemas](guides/troubleshooting.md) | Errores frecuentes y su causa |
 | [Seguridad (ASVS L2)](security/ASVS_L2.md) | Revisión OWASP ASVS nivel 2 y riesgos aceptados |
 | [Arquitectura](architecture.md) | Componentes, capas, configuración (`UBW_*`) |

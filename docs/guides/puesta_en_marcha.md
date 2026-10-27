@@ -280,7 +280,8 @@ Guía funcional para los usuarios: [Guía de usuario](guia_usuario.md).
     ```
 
     Lee antes el [CHANGELOG](https://github.com/fmanza/util_bbdd_web/blob/develop/CHANGELOG.md): al pasar de 0.x
-    a 1.0.0 todos los usuarios vuelven a iniciar sesión.
+    a 1.0.0 todos los usuarios vuelven a iniciar sesión. Pasos completos, con `UBW_TAG` y la vuelta atrás:
+    [Publicar una versión](publicar_version.md#8-desplegar-en-el-servidor).
 
 ### 4.8. Lista de comprobación
 
