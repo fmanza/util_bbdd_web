@@ -1,18 +1,25 @@
 version: 2
-# PR contra develop (la rama por defecto es main) y solo versiones con ≥ 14 días (SHARED § «Dependencias»).
+# Una vez al mes, un único PR por ecosistema (todas las actualizaciones agrupadas) contra develop (la rama por
+# defecto es main), y solo versiones con ≥ 14 días (SHARED § «Dependencias»). Con «Automatically delete head
+# branches» (Settings → General) la rama dependabot/* se borra al cerrar el PR (docs/guides/publicar_version.md).
 updates:
   - package-ecosystem: uv
     directory: /backend
     target-branch: develop
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 1
     cooldown:
       default-days: 14
+    groups:
+      backend:
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /frontend
     target-branch: develop
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 1
     cooldown:
       default-days: 14
     ignore:
@@ -20,19 +27,27 @@ updates:
       - dependency-name: typescript
         versions: [">=6"]
     groups:
-      frontend-dev:
-        dependency-type: development
+      frontend:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /docker
     target-branch: develop
     schedule:
       interval: monthly
+    open-pull-requests-limit: 1
     cooldown:
       default-days: 14
+    groups:
+      docker:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     target-branch: develop
     schedule:
       interval: monthly
+    open-pull-requests-limit: 1
     cooldown:
       default-days: 14
+    groups:
+      github-actions:
+        patterns: ["*"]
