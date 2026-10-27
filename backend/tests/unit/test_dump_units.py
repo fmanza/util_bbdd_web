@@ -1,11 +1,11 @@
-"""Fase 8: orden de carga por FK y ciclos (como util_bbdd), huella de estructura, tablas y errores saneados."""
+"""Fase 8: vista previa con ``plan()`` (G29), huella de estructura, tablas y errores saneados."""
 
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -14,9 +14,7 @@ from app.domain.runs.operations import get_operation, validate_params
 from app.integrations.util_bbdd.dump import (
     DumpOptions,
     Endpoint,
-    _required,
     build_preview,
-    load_order,
     parse_tables,
     redact_values,
     result_to_dict,
@@ -24,26 +22,58 @@ from app.integrations.util_bbdd.dump import (
     structure_hash,
 )
 
+# Cadena clientes → pedidos → lineas, tabla suelta (sin destino en el test de orden) y ciclo a ↔ b.
+SCHEMA = """
+CREATE TABLE clientes (id INTEGER PRIMARY KEY, nombre TEXT NOT NULL);
+CREATE TABLE pedidos (id INTEGER PRIMARY KEY, cliente_id INTEGER REFERENCES clientes(id), total NUMERIC);
+CREATE TABLE lineas (id INTEGER PRIMARY KEY, pedido_id INTEGER REFERENCES pedidos(id));
+CREATE TABLE a (id INTEGER PRIMARY KEY, b_id INTEGER REFERENCES b(id));
+CREATE TABLE b (id INTEGER PRIMARY KEY, a_id INTEGER REFERENCES a(id));
+CREATE TABLE sueltas (id INTEGER PRIMARY KEY, v TEXT);
+"""
 
-def test_load_order_chain_independent_and_self_reference() -> None:
-    order, cycles = load_order(
-        ["lineas", "clientes", "pedidos", "sueltas", "arbol"],
-        {"lineas": ["pedidos"], "pedidos": ["clientes", "fuera"], "arbol": ["arbol"]},
-    )
 
-    # Cola en el orden recibido; una FK a sí misma o a una tabla fuera del volcado no cuenta.
-    assert order == ["clientes", "sueltas", "arbol", "pedidos", "lineas"]
-    assert cycles == []
+def _endpoints(tmp_path: Path, source_sql: str, target_sql: str) -> tuple[Endpoint, Endpoint]:
+    from app.integrations.util_bbdd.catalog import build_params
+
+    endpoints = []
+    for name, script in (("o.db", source_sql), ("d.db", target_sql)):
+        con = sqlite3.connect(tmp_path / name)
+        con.executescript(script)
+        con.close()
+        endpoints.append(Endpoint("sqlite", build_params("sqlite", {"database": str(tmp_path / name)}), None))
+    return endpoints[0], endpoints[1]
 
 
-def test_load_order_puts_cycles_last_as_components() -> None:
-    order, cycles = load_order(
-        ["a", "b", "c", "x", "y", "z"],
-        {"a": ["c"], "b": ["a"], "c": ["b"], "x": ["y"], "y": ["x"], "z": ["a"]},
-    )
+def test_preview_order_is_the_one_util_bbdd_loads(tmp_path: Path) -> None:
+    """Contrato G29: el orden y los ciclos de la vista previa (``plan()``) son los de ``run()``."""
+    target_sql = SCHEMA.replace("CREATE TABLE sueltas (id INTEGER PRIMARY KEY, v TEXT);", "")
+    source, target = _endpoints(tmp_path, SCHEMA + "INSERT INTO clientes VALUES (1, 'x');", target_sql)
+    options = DumpOptions()
 
-    assert order == ["a", "b", "c", "x", "y", "z"]  # ninguna es raíz: todas al final, en su orden
-    assert sorted(map(sorted, cycles)) == [["a", "b", "c", "z"], ["x", "y"]]
+    preview = build_preview(source, target, options)
+    result = run_dump(
+        source, target, options=options, expected_structure=preview["structure_hash"], outputs_dir=tmp_path / "out",
+        work_dir=tmp_path / "work",
+    )  # fmt: skip
+
+    assert preview["load_order"] == result["load_order"] == ["clientes", "sueltas", "pedidos", "lineas", "a", "b"]
+    assert preview["cycles"] == result["cycles"] == [["a", "b"]]
+    assert [t["position"] for t in preview["tables"]] == list(range(6))
+
+
+@pytest.mark.parametrize("on_error", ["raise", "isolate"])
+def test_preview_columns_come_from_the_plan(tmp_path: Path, on_error: Literal["raise", "isolate"]) -> None:
+    source_sql = "CREATE TABLE t (id INTEGER PRIMARY KEY, extra TEXT, padre_id INTEGER REFERENCES fuera(id));"
+    target_sql = "CREATE TABLE t (id INTEGER PRIMARY KEY, alta DATE NOT NULL, opcional TEXT, padre_id INTEGER);"
+    source, target = _endpoints(tmp_path, source_sql + "CREATE TABLE fuera (id INTEGER PRIMARY KEY);", target_sql)
+
+    table = build_preview(source, target, DumpOptions(tables=("T",), on_error=on_error))["tables"][0]
+
+    assert (table["table"], table["target_table"]) == ("t", "t")
+    assert table["skipped_columns"] == ["extra"]
+    assert table["missing_target_columns"] == ["alta"]
+    assert table["outside_references"] == ["fuera"]
 
 
 def test_structure_hash_ignores_rows_but_not_columns() -> None:
@@ -64,16 +94,6 @@ def test_structure_hash_ignores_rows_but_not_columns() -> None:
 )
 def test_parse_tables(raw: str | None, expected: tuple[str, ...]) -> None:
     assert parse_tables(raw) == expected
-
-
-def test_required_target_columns() -> None:
-    source = {"id"}
-
-    assert _required({"name": "alta", "nullable": False, "default": None}, source) is True
-    assert _required({"name": "alta", "nullable": True, "default": None}, source) is False
-    assert _required({"name": "alta", "nullable": False, "default": "now()"}, source) is False
-    assert _required({"name": "id2", "nullable": False, "default": None, "autoincrement": True}, source) is False
-    assert _required({"name": "ID", "nullable": False, "default": None}, source) is False
 
 
 def test_result_errors_never_carry_row_data() -> None:

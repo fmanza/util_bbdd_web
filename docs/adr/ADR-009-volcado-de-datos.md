@@ -54,3 +54,10 @@ Mismo modelo que ADR-008, con un permiso propio:
 - **Volcado sin vista previa previa** (confirmación en el formulario): no habría una revisión de qué se va a escribir
   ni detección de cambios de estructura.
 - **Permitir cancelar**: matar el proceso deja tablas a medias y constraints desactivadas.
+
+## Enmienda (2026-10-27): util_bbdd 4.4.0
+
+- **Vista previa con `plan()` (G29, W-V1)**: `dump_preview` toma el orden de carga, los ciclos, las columnas omitidas,
+  las obligatorias sin origen y las FK hacia tablas fuera del volcado de `DumpOrchestrator.plan()`, con el mismo
+  `DumpConfig` que el volcado; ya no replica `topological_sort`. Los recuentos de filas siguen siendo de la web (`plan()`
+  no cuenta). La huella de estructura y la posición de cada tabla (su índice en el orden de carga) no cambian.

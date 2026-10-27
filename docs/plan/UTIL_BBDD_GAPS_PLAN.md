@@ -490,4 +490,5 @@ Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd (la se
 
 | Fase | Commit | Notas |
 |---|---|---|
-| W-4.0 | este commit | Pin 4.4.0 (lock con uv 0.12.22). El test que reproducía G33 pasa a `xfail(strict=True)` (F3): SQLite → SQLite ya vuelca; W-V4 lo reescribe. Excepción de `asyncpg` en `exclude-newer` revisada: se mantiene (util_bbdd 4.4.0 sigue exigiendo `asyncpg>=0.32`) |
+| W-4.0 | `c7c0db9` | Pin 4.4.0 (lock con uv 0.12.22). El test que reproducía G33 pasa a `xfail(strict=True)` (F3): SQLite → SQLite ya vuelca; W-V4 lo reescribe. Excepción de `asyncpg` en `exclude-newer` revisada: se mantiene (util_bbdd 4.4.0 sigue exigiendo `asyncpg>=0.32`) |
+| W-V1 | este commit | `build_preview` sobre `DumpOrchestrator.plan()` con un `DumpConfig` común (`_config`) para la vista previa y el volcado; fuera `load_order`, `_components` y `_required`. Sin cambio de API: la posición sigue siendo el índice en `load_order` (util_bbdd da `-1` sin destino) y la huella no cambia. Tests de contrato `plan` = `run` y de columnas con util_bbdd real (también con `isolate`: `DumpConfig` exige `rejects_csv_path` aunque `plan()` no lo escriba). Las columnas obligatorias ya excluyen identidad y calculadas (más preciso que la réplica) |

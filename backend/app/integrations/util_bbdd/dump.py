@@ -3,9 +3,8 @@
 - ``DumpOrchestrator(DumpConfig(...)).run() -> DumpResult``: copia filas tabla a tabla en orden de FK, con las
   constraints del destino **desactivadas** durante la carga (SQL Server, Oracle, PostgreSQL, MySQL/MariaDB; SQLite no
   las toca). Transaccional por tabla, *best-effort* entre tablas.
-- util_bbdd no ofrece vista previa pública (G29): ``preview`` replica con el ``Inspector`` de SQLAlchemy el orden de
-  ``util_bbdd.dump._fk_graph.topological_sort`` (cola en el orden de las tablas, dependientes ordenados, ciclos al
-  final) y añade filas, columnas y avisos.
+- ``build_preview`` toma de ``DumpOrchestrator.plan()`` (util_bbdd 4.4.0, G29) el orden de carga, los ciclos y las
+  columnas por tabla, con el mismo ``DumpConfig`` que el volcado (``_config``), y añade los recuentos de filas.
 - ``DumpConfig.truncate_target`` es ``True`` por defecto (G30): la web lo pasa siempre explícito.
 - Con destino Oracle, ``on_error="isolate"`` no aparta las filas con PK duplicada: la tabla falla (G32, aviso
   ``isolate_oracle`` en la vista previa).
@@ -22,7 +21,6 @@ import hashlib
 import json
 import re
 import shutil
-from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, Literal
@@ -30,8 +28,6 @@ from typing import Any, Final, Literal
 from app.integrations.util_bbdd.compare import resolve_schema
 from app.integrations.util_bbdd.sql import _engine_message
 
-#: Motores cuyas constraints gestiona util_bbdd durante la carga (``dump._constraints._SUPPORTED_DIALECTS``).
-CONSTRAINT_ENGINES: Final = frozenset({"sqlserver", "mariadb", "mysql", "oracle", "postgresql"})
 RESULT_FILE: Final = "result.json"
 AUDIT_FILE: Final = "volcado.jsonl"
 REJECTS_FILE: Final = "rechazos.csv"
@@ -81,59 +77,38 @@ def parse_tables(raw: str | None) -> tuple[str, ...]:
 # --- vista previa ------------------------------------------------------------------------------------------------
 
 
-def load_order(tables: list[str], referred: dict[str, list[str]]) -> tuple[list[str], list[list[str]]]:
-    """Orden de carga y ciclos, como ``util_bbdd.dump._fk_graph.topological_sort``.
+def _config(
+    source_engine: Any,
+    target_engine: Any,
+    source_schema: str | None,
+    target_schema: str | None,
+    tables: list[str],
+    options: DumpOptions,
+    rejects: Path,
+    **extra: Any,
+) -> Any:
+    """``DumpConfig`` del volcado; la vista previa (``plan()``) y el volcado (``run()``) usan el mismo.
 
-    Args:
-        tables: Tablas en el orden en que util_bbdd las recibe.
-        referred: Tablas a las que apunta cada tabla por FK.
+    ``rejects`` es el CSV de rechazos con ``on_error="isolate"`` (``DumpConfig`` lo exige; ``plan()`` no lo escribe).
     """
-    tables_set = set(tables)
-    dependents: dict[str, set[str]] = {t: set() for t in tables}
-    in_degree = dict.fromkeys(tables, 0)
-    for table in tables:
-        for ref in referred.get(table, []):
-            if ref and ref != table and ref in tables_set and table not in dependents[ref]:
-                dependents[ref].add(table)
-                in_degree[table] += 1
-    queue = deque(t for t in tables if in_degree[t] == 0)
-    ordered: list[str] = []
-    while queue:
-        node = queue.popleft()
-        ordered.append(node)
-        for dep in sorted(dependents[node]):
-            in_degree[dep] -= 1
-            if in_degree[dep] == 0:
-                queue.append(dep)
-    done = set(ordered)
-    cycle_tables = [t for t in tables if t not in done]
-    return ordered + cycle_tables, _components(cycle_tables, dependents)
+    from util_bbdd.dump import DumpConfig
 
-
-def _components(cycle_tables: list[str], dependents: dict[str, set[str]]) -> list[list[str]]:
-    cycle_set = set(cycle_tables)
-    adjacent: dict[str, set[str]] = {t: set() for t in cycle_tables}
-    for node in cycle_tables:
-        for dep in dependents[node]:
-            if dep in cycle_set:
-                adjacent[node].add(dep)
-                adjacent[dep].add(node)
-    seen: set[str] = set()
-    components: list[list[str]] = []
-    for start in cycle_tables:
-        if start in seen:
-            continue
-        component: list[str] = []
-        queue = deque([start])
-        while queue:
-            node = queue.popleft()
-            if node in seen:
-                continue
-            seen.add(node)
-            component.append(node)
-            queue.extend(n for n in adjacent[node] if n not in seen)
-        components.append(component)
-    return components
+    return DumpConfig(
+        source_engine=source_engine,
+        target_engine=target_engine,
+        source_schema=source_schema,
+        target_schema=target_schema,
+        tables=tables if options.tables else None,
+        chunk_size=options.chunk_size,
+        truncate_target=options.truncate_target,
+        max_parallel_tables=options.max_parallel_tables,
+        manage_indexes="secondary" if options.manage_indexes == "secondary" else False,
+        sync_pk_sequences=options.sync_pk_sequences,
+        on_error=options.on_error,
+        rejects_csv_path=rejects if options.on_error == "isolate" else None,
+        max_rejects=options.max_rejects if options.on_error == "isolate" else None,
+        **extra,
+    )
 
 
 def _count(engine: Any, table: str, schema: str | None) -> int:
@@ -148,16 +123,6 @@ def _is_date(column_type: Any) -> bool:
     from sqlalchemy import Date, DateTime
 
     return isinstance(column_type, Date | DateTime)
-
-
-def _required(column: Any, source_columns: set[str]) -> bool:
-    """Columna del destino que el origen no tiene y que no admite nulos ni tiene valor por defecto: la carga fallará."""
-    return (
-        column["name"].lower() not in source_columns
-        and not column.get("nullable", True)
-        and column.get("default") is None
-        and column.get("autoincrement") is not True
-    )
 
 
 def _source_tables(inspector: Any, schema: str | None, wanted: tuple[str, ...]) -> list[str]:
@@ -181,6 +146,7 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
     """
     from sqlalchemy import inspect
     from util_bbdd import SyncDatabaseManager
+    from util_bbdd.dump import DumpOrchestrator
 
     with (
         SyncDatabaseManager(source.db_type, source.conn_params, use_pool=False) as source_manager,
@@ -193,37 +159,28 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
         src_schema = _resolve(src_inspector, "source", source.schema)
         dst_schema = _resolve(dst_inspector, "target", target.schema)
         tables = _source_tables(src_inspector, src_schema, options.tables)
-        referred = {
-            t: [fk.get("referred_table") or "" for fk in src_inspector.get_foreign_keys(t, schema=src_schema)]
-            for t in tables
-        }
-        order, cycles = load_order(tables, referred)
-        in_cycle = {t for component in cycles for t in component}
-        dst_by_lower = {name.lower(): name for name in dst_inspector.get_table_names(schema=dst_schema)}
+        config = _config(source_engine, target_engine, src_schema, dst_schema, tables, options, Path(REJECTS_FILE))
+        plan = DumpOrchestrator(config).plan()
+        in_cycle = {t for component in plan.cycles for t in component}
         rows: list[dict[str, Any]] = []
-        for position, table in enumerate(order):
-            target_name = dst_by_lower.get(table.lower())
-            src_cols = [c["name"] for c in src_inspector.get_columns(table, schema=src_schema)]
+        # Posición en ``load_order``, también para las tablas sin destino (util_bbdd les da -1).
+        for position, table in enumerate(plan.tables):
             entry: dict[str, Any] = {
-                "table": table,
-                "target_table": target_name,
+                "table": table.table_name,
+                "target_table": table.target_table,
                 "position": position,
-                "in_cycle": table in in_cycle,
-                "source_rows": _count(source_engine, table, src_schema),
+                "in_cycle": table.table_name in in_cycle,
+                "source_rows": _count(source_engine, table.table_name, src_schema),
                 "target_rows": None,
-                "skipped_columns": [],
-                "missing_target_columns": [],
-                "outside_references": sorted({r for r in referred[table] if r and r not in set(tables)}),
+                "skipped_columns": list(table.skipped_columns),
+                "missing_target_columns": list(table.required_target_columns),
+                "outside_references": list(table.outside_references),
                 "date_columns": [],
             }
-            if target_name is not None:
-                dst_cols = dst_inspector.get_columns(target_name, schema=dst_schema)
-                dst_names = {c["name"].lower() for c in dst_cols}
-                src_lower = {c.lower() for c in src_cols}
-                entry["target_rows"] = _count(target_engine, target_name, dst_schema)
-                entry["skipped_columns"] = [c for c in src_cols if c.lower() not in dst_names]
-                entry["missing_target_columns"] = [c["name"] for c in dst_cols if _required(c, src_lower)]
+            if table.target_table is not None:
+                entry["target_rows"] = _count(target_engine, table.target_table, dst_schema)
                 if source.db_type == target.db_type == "sqlite":
+                    dst_cols = dst_inspector.get_columns(table.target_table, schema=dst_schema)
                     entry["date_columns"] = [c["name"] for c in dst_cols if _is_date(c["type"])]
             rows.append(entry)
     data = {
@@ -232,11 +189,11 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
         "source_schema": src_schema,
         "target_schema": dst_schema,
         "truncate_target": options.truncate_target,
-        "constraints_managed": target.db_type in CONSTRAINT_ENGINES,
+        "constraints_managed": plan.constraints_managed,
         "warnings": _warnings(target, options) + (["sqlite_dates"] if any(r["date_columns"] for r in rows) else []),
         "tables": rows,
-        "cycles": cycles,
-        "load_order": order,
+        "cycles": [list(c) for c in plan.cycles],
+        "load_order": list(plan.load_order),
     }
     data["structure_hash"] = structure_hash(data)
     return data
@@ -315,27 +272,21 @@ def _orchestrate(
 ) -> dict[str, Any]:
     """``DumpOrchestrator`` con la configuración de la vista previa; mueve el Excel a ``outputs/excel``."""
     from util_bbdd import SyncDatabaseManager
-    from util_bbdd.dump import DumpConfig, DumpOrchestrator, DumpReportError
+    from util_bbdd.dump import DumpOrchestrator, DumpReportError
 
     with (
         SyncDatabaseManager(source.db_type, source.conn_params, use_pool=False) as source_manager,
         SyncDatabaseManager(target.db_type, target.conn_params, use_pool=False) as target_manager,
     ):
-        config = DumpConfig(
-            source_engine=source_manager.get_sqlalchemy_engine(),
-            target_engine=target_manager.get_sqlalchemy_engine(),
-            source_schema=preview["source_schema"],
-            target_schema=preview["target_schema"],
-            tables=[t["table"] for t in preview["tables"]] if options.tables else None,
-            chunk_size=options.chunk_size,
+        config = _config(
+            source_manager.get_sqlalchemy_engine(),
+            target_manager.get_sqlalchemy_engine(),
+            preview["source_schema"],
+            preview["target_schema"],
+            [t["table"] for t in preview["tables"]],
+            options,
+            rejects,
             output_dir=work_dir,
-            truncate_target=options.truncate_target,
-            max_parallel_tables=options.max_parallel_tables,
-            manage_indexes="secondary" if options.manage_indexes == "secondary" else False,
-            sync_pk_sequences=options.sync_pk_sequences,
-            on_error=options.on_error,
-            rejects_csv_path=rejects if options.on_error == "isolate" else None,
-            max_rejects=options.max_rejects if options.on_error == "isolate" else None,
             audit_sink=sink,
         )
         try:
