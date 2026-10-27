@@ -1140,8 +1140,8 @@ wheels = [
 
 [[package]]
 name = "util-bbdd"
-version = "4.4.0"
-source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.4.0/util_bbdd-4.4.0-py3-none-any.whl" }
+version = "4.5.0"
+source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.5.0/util_bbdd-4.5.0-py3-none-any.whl" }
 dependencies = [
     { name = "jinja2" },
     { name = "openpyxl" },
@@ -1150,7 +1150,7 @@ dependencies = [
     { name = "sqlalchemy" },
 ]
 wheels = [
-    { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.4.0/util_bbdd-4.4.0-py3-none-any.whl", hash = "sha256:2c46c8ada53be797530d339ed92734b29a05bfdef49a9aba19884601951725e2" },
+    { url = "https://github.com/fmanza/util_bbdd/releases/download/v4.5.0/util_bbdd-4.5.0-py3-none-any.whl", hash = "sha256:64a90d1038150eedccc7551339c30ef366e4032a402c121c2bcfb8c6034c0ce5" },
 ]
 
 [package.optional-dependencies]
@@ -1294,7 +1294,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "sqlalchemy", specifier = ">=2.1" },
     { name = "sqlglot", specifier = ">=30" },
-    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlite-async", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v4.4.0/util_bbdd-4.4.0-py3-none-any.whl" },
+    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlite-async", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v4.5.0/util_bbdd-4.5.0-py3-none-any.whl" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]
 provides-extras = ["hsqldb", "odbc"]

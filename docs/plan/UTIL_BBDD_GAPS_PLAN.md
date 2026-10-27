@@ -7,7 +7,7 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
   Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6). Ola 4 y W-4 hechas (util_bbdd 4.4.0, web
-  1.4.0; registro en §6).
+  1.4.0; registro en §6). Ola 5 hecha (util_bbdd 4.5.0); W-5 en curso.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -498,3 +498,21 @@ Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd (la se
 | W-V4 | `4e26982` | Fuera `_warnings`, `date_columns` y el campo `warnings` de la vista previa (D5; OpenAPI + `gen:api`) y sus textos. El test G33 deja de ser `xfail` y comprueba que SQLite → SQLite vuelca fechas en texto; el de bench de G32 comprueba que Oracle aparta la PK duplicada (16 passed contra el bench). ADR-010 enmendado: G32 también resuelto en `BulkCrud` |
 | W-V5 | `6718ebb` | `redact_values` se mantiene (suma PostgreSQL `invalid input syntax …: "…"`, que util_bbdd sí enmascara); `_clean` deja de envolver el texto en un `RuntimeError` para reutilizar `_engine_message` y sanea la cadena directamente (primera línea, sin `[SQL: …]` ni URL, recortada). Sigue siendo necesaria: el `error_msg` de los contadores PK viene de `bulk` y util_bbdd no lo sanea. Tests: idempotente con lo ya saneado y mensaje crudo de PK |
 | release | este commit | util_bbdd_web **1.4.0** (D5). `docker compose up --build` + `/api/health` 200 (util_bbdd 4.4.0), bench de integración (83 passed; SQL Server en el puerto 51833) y E2E (23 specs, `--workers=1`) en verde |
+
+### Ola 5 — util_bbdd 4.5.0 (2026-10-27)
+
+Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd.
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-B1 | `1498169` | `rows_committed` / `last_operation_rows_committed` cuentan en todos los modos (antes, 0 en modo atómico y sin las cargas paralelas). Son **filas enviadas confirmadas** (`len(df)`, también las apartadas), no las que la BD modificó: un UPDATE o DELETE de una clave inexistente cuenta. Una carga atómica que falla suma 0 |
+| U-B2 | `b000e06` | `ParallelPlan.atomic` (`True` con un hilo, una partición y sin `commit_every_n_chunks`) y `ParallelOptions(require_atomic=True)`, que fuerza un hilo en `BulkCrud` |
+| U-B3 | `b15a879` | `dry_run: bool \| None` (solo palabra clave) en `bulk_*_from_df`, equivalente explícito de `generar_sql`; `FutureWarning` si no se pasa ninguno de los dos; `ValueError` si discrepan |
+| U-B4 | `316dbfd` | `on_progress`/`cancel_token` en los seis métodos de carga: operación `bulk`, fase `rows`, un evento al empezar y uno por lote (`total=len(df)`; en paralelo `current` suma los hilos, desde varios hilos). Cancelar sale con `OperationCancelledError` **después** de deshacer: en una carga de una sola transacción, **la operación entera**; en paralelo, las particiones terminadas quedan (`last_parallel_result`) |
+| release | `7115364` | Release `v4.5.0` con wheel y `.sha256` (SHA-256 `64a90d10…0ce5`, comprobado contra `uv.lock`); sin cambios de dependencias |
+
+### W-5 — util_bbdd_web con util_bbdd 4.5.0 (2026-10-27, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-5.0 | este commit | Pin 4.5.0 (lock con uv 0.12.22; se descarta del lock la retirada de una rueda `armv7l` de zensical, ajena a la fase). Sin cambios de código: la suite pasa con `-W error::FutureWarning` (la web ya pasa `generar_sql` explícito) |
