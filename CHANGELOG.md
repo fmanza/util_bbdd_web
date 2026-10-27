@@ -3,6 +3,45 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [1.4.0] - 2026-10-27
+
+util_bbdd 4.4.0 y ola 4 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (volcado de datos).
+
+### Added
+
+- **Avance por tabla y cancelación del volcado** (W-V2, GAPS G1 y G6; util_bbdd 4.4.0): el detalle muestra las
+  tablas terminadas y las filas escritas de la tabla en curso («Cargando pedidos: 5000 de 20000 filas (3 de 12
+  tablas)»). Un volcado en curso ya se puede cancelar, tras confirmarlo: para entre lotes, deshace la tabla en curso,
+  reactiva las constraints y termina como cancelado; las tablas terminadas quedan cargadas y el resultado las lista
+  (campos `cancelled` y `completed_tables`). El worker nunca lo corta a mitad de un lote; solo el tiempo máximo de las
+  ejecuciones detiene el proceso. `volcado.jsonl` recibe el evento de cada tabla al terminarla.
+- **Restaurar constraints tras un volcado interrumpido** (W-V3, GAPS G31): si el proceso de un volcado muere con las
+  constraints desactivadas (SQL Server, PostgreSQL, Oracle), su resultado muestra **Constraints sin restaurar** y el
+  propietario con «Puede escribir datos» las reactiva con **Restaurar constraints…** (operación `dump_restore`, mismos
+  controles que el volcado y auditada). El worker la lanza solo cuando el proceso del volcado murió. Mientras queden
+  pendientes no se vuelca otra vez en ese destino (409) ni se purga ese volcado (a mano, por retención ni por cuota).
+  Endpoint nuevo `GET /api/v1/runs/{run_id}/dump-constraints`.
+
+### Changed
+
+- **util_bbdd 4.4.0** (W-4.0): wheel de la release v4.4.0 (hash en `backend/uv.lock`).
+- **Vista previa del volcado con `DumpOrchestrator.plan()`** (W-V1, GAPS G29): orden de carga, ciclos y columnas salen
+  de util_bbdd con la misma configuración que el volcado, en lugar de una réplica propia del orden. Las columnas
+  obligatorias del destino ya no incluyen las de identidad ni las calculadas.
+- La carga bulk sigue sin cancelarse en curso; el aviso de la UI ya solo habla de ella.
+
+### Removed
+
+- **Avisos `isolate_oracle` y `sqlite_dates` de la vista previa** (W-V4, GAPS G32 y G33): con util_bbdd 4.4.0
+  «apartar» separa también la PK duplicada con destino Oracle (también en la carga bulk) y SQLite → SQLite carga las
+  fechas guardadas como texto ISO. `DumpPreviewOut` pierde `warnings` y `date_columns`.
+
+### Security
+
+- **Mensajes del volcado** (W-V5, GAPS G34): util_bbdd entrega ya saneados los errores de tablas y constraints; la web
+  mantiene su defensa (primera línea, sin SQL ni URL, valores enmascarados), necesaria para los errores de los
+  contadores PK, y enmascara también el valor de `invalid input syntax …: "…"` de PostgreSQL.
+
 ## [1.3.0] - 2026-10-26
 
 util_bbdd 4.3.0 y ola 3 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (migración DDL).
