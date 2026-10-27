@@ -363,7 +363,7 @@ def purge_run(db: Session, run: Run, settings: Settings) -> None:
             remove_tree(run_dir(settings.workspace_dir, run.workspace_path))
         except UnsafePathError:
             logger.warning("Ruta de run fuera del workspace", extra={"run_id": run.id})
-    for artifact in list(run.artifacts):
+    for artifact in run.artifacts:
         db.delete(artifact)
     run.status = "purged"
     run.size_bytes = 0
