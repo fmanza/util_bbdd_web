@@ -3,6 +3,31 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [1.5.0] - 2026-10-27
+
+util_bbdd 4.5.0 y ola 5 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (carga bulk).
+
+### Added
+
+- **Progreso por lote y cancelación de la carga** (W-B3, GAPS G1; util_bbdd 4.5.0): el detalle muestra las filas
+  enviadas («Filas: 5000 de 20000 (clientes)»). Una carga en curso ya se puede cancelar, tras confirmarlo: para entre
+  lotes. Sin plan paralelo va en una sola transacción y **se deshace entera**; con plan paralelo, las particiones
+  terminadas quedan confirmadas. El resultado lo dice (campo `cancelled`) y el run termina como cancelado. El worker
+  nunca la corta a mitad de un lote; solo el tiempo máximo de las ejecuciones detiene el proceso. Con esto ninguna
+  escritura en una BD destino queda sin cancelar en curso.
+
+### Changed
+
+- **util_bbdd 4.5.0** (W-5.0): wheel de la release v4.5.0 (hash en `backend/uv.lock`).
+- **Filas confirmadas de util_bbdd** (W-B1, GAPS G37): el resultado de la carga muestra como cifra principal las filas
+  que util_bbdd envió y confirmó (campo `committed`; incluyen las apartadas y, al actualizar o borrar, las claves que no
+  existían). El recuento de la tabla antes y después se mantiene como comprobación (campo `verified`) y el resultado
+  avisa si no cuadra.
+- **Modo seco explícito** (W-B1, GAPS G35): la vista previa y la carga pasan `dry_run` a util_bbdd.
+- **Atomicidad desde util_bbdd** (W-B2, GAPS G36): la vista previa guarda si la carga irá en una sola transacción
+  (`parallel.atomic`) y solo entonces no pide aceptar la no atomicidad. Sin esa aceptación, la carga pide a util_bbdd un
+  solo hilo aunque su plan cambie entre la vista previa y la carga (antes podía acabar en paralelo sin aceptarlo).
+
 ## [1.4.0] - 2026-10-27
 
 util_bbdd 4.4.0 y ola 4 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (volcado de datos).

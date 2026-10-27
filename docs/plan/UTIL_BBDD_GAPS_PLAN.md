@@ -7,7 +7,7 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
   Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6). Ola 4 y W-4 hechas (util_bbdd 4.4.0, web
-  1.4.0; registro en §6). Ola 5 hecha (util_bbdd 4.5.0); W-5 en curso.
+  1.4.0; registro en §6). Ola 5 y W-5 hechas (util_bbdd 4.5.0, web 1.5.0; registro en §6).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -229,7 +229,7 @@ flowchart LR
 | 3 | U-M1 → U-M2 → U-M3 → U-M4 → U-M5 → **`release: v4.3.0`** | **W-2.0** `chore(backend): util_bbdd 4.2.0` → W-C1 → W-C2 → W-C3 → W-C4 → **`release: v1.2.0`** | Wheel 4.2.0 |
 | 4 (web ✅) | U-V1 → U-V2 → U-V3 → U-V4 → U-V5 → U-V6 → U-V7 → U-V8 → **`release: v4.4.0`** | **W-3.0** `chore(backend): util_bbdd 4.3.0` → W-M1 → W-M2 → W-M3 → W-M4 → **`release: v1.3.0`** | Wheel 4.3.0 |
 | 5 (web ✅) | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 → **`release: v1.4.0`** | Wheel 4.4.0 |
-| 6 | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
+| 6 (web ✅) | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
 | 8 *(fuera de este plan, D4)* | `feat!: truncate_target=False y generar_sql=False por defecto` (G30, G35; también ventana G2 = 0) → **`release: v5.0.0`**, en otra sesión | **W-8.0** `chore(backend): util_bbdd 5.0.0` (sin cambios de código: la web ya pasa todo explícito) | Wheel 5.0.0 |
 
@@ -518,4 +518,5 @@ Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd.
 | W-5.0 | `2506adf` | Pin 4.5.0 (lock con uv 0.12.22; se descarta del lock la retirada de una rueda `armv7l` de zensical, ajena a la fase). Sin cambios de código: la suite pasa con `-W error::FutureWarning` (la web ya pasa `generar_sql` explícito) |
 | W-B1 | `a326ac5` | `committed` (`last_operation_rows_committed`) como cifra principal y `verified` (`verify`: insert crece en `committed`, delete decrece en `matches`, update sin cambio; `null` con rechazos, error o particiones fallidas). G35: `dry_run` explícito en la vista previa y la carga. UI: «Filas confirmadas», explicación y aviso si no cuadra. OpenAPI + `gen:api`. Bench: contadores verificados en los 5 motores |
 | W-B2 | `6be0e3a` | `parallel.atomic` en la vista previa y el resultado; `plan_atomic` (backend y UI; vistas previas antiguas: `workers <= 1`) decide si se pide `accept_non_atomic`. Sin aceptarla, la carga pide `require_atomic=True`: cierra el hueco de un plan que cambie entre la vista previa y la carga. OpenAPI + `gen:api` |
-| W-B3 | este commit | `RunProgress` (fase `rows`) en `run_bulk`; `bulk_apply` en `CANCEL_BETWEEN_STEPS_ONLY` y `NOT_CANCELLABLE_RUNNING` retirado (backend y UI: ya no hay escrituras no cancelables). Cancelar antes de escribir no llama a util_bbdd; entre lotes, `cancelled` en `result.json` y run `cancelled`, con mensaje según quede algo (`committed`). Test real con SQLite: una carga atómica cancelada tras el primer lote no deja filas. UI: confirmación, aviso en el resultado y texto del modal de la carga. OpenAPI + `gen:api` |
+| W-B3 | `eed7da9` | `RunProgress` (fase `rows`) en `run_bulk`; `bulk_apply` en `CANCEL_BETWEEN_STEPS_ONLY` y `NOT_CANCELLABLE_RUNNING` retirado (backend y UI: ya no hay escrituras no cancelables). Cancelar antes de escribir no llama a util_bbdd; entre lotes, `cancelled` en `result.json` y run `cancelled`, con mensaje según quede algo (`committed`). Test real con SQLite: una carga atómica cancelada tras el primer lote no deja filas. UI: confirmación, aviso en el resultado y texto del modal de la carga. OpenAPI + `gen:api` |
+| release | este commit | util_bbdd_web **1.5.0** (D5). `docker compose up --build` + `/api/health` 200 (1.5.0 / util_bbdd 4.5.0), bench de integración (83 passed; SQL Server en el puerto 51833) y E2E (23 specs, `--workers=1`) en verde |
