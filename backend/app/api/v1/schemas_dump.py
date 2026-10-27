@@ -24,10 +24,6 @@ class DumpPreviewTableOut(_Dump):
         description="Columnas del destino obligatorias que el origen no tiene (la carga de la tabla fallará)"
     )
     outside_references: list[str] = Field(description="Tablas referenciadas por FK que no entran en el volcado")
-    date_columns: list[str] = Field(
-        default=[],
-        description="SQLite → SQLite: columnas de fecha del destino que util_bbdd no carga desde texto (G33)",
-    )
 
 
 class DumpPreviewOut(_Dump):
@@ -39,7 +35,6 @@ class DumpPreviewOut(_Dump):
     target_schema: str | None
     truncate_target: bool
     constraints_managed: bool = Field(description="util_bbdd desactiva y reactiva las constraints de este destino")
-    warnings: list[str] = Field(default=[], description="Códigos de aviso: isolate_oracle (G32), sqlite_dates (G33)")
     tables: list[DumpPreviewTableOut]
     cycles: list[list[str]]
     load_order: list[str]

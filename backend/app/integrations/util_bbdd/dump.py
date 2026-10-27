@@ -6,10 +6,8 @@
 - ``build_preview`` toma de ``DumpOrchestrator.plan()`` (util_bbdd 4.4.0, G29) el orden de carga, los ciclos y las
   columnas por tabla, con el mismo ``DumpConfig`` que el volcado (``_config``), y añade los recuentos de filas.
 - ``DumpConfig.truncate_target`` es ``True`` por defecto (G30): la web lo pasa siempre explícito.
-- Con destino Oracle, ``on_error="isolate"`` no aparta las filas con PK duplicada: la tabla falla (G32, aviso
-  ``isolate_oracle`` en la vista previa).
-- SQLite → SQLite falla en columnas ``DATE``/``DATETIME`` del destino si el origen guarda la fecha como texto (lo normal
-  en SQLite): ``TypeError: SQLite Date type only accepts Python date objects`` (G33, aviso ``sqlite_dates``).
+- Desde util_bbdd 4.4.0, ``on_error="isolate"`` aparta también la PK duplicada en Oracle (G32) y SQLite → SQLite carga
+  las fechas guardadas como texto ISO (G33): la vista previa ya no avisa de ninguno de los dos.
 - ``TableDumpResult.error_msg`` y ``ConstraintResult.error_msg`` traen el texto de SQLAlchemy **con los parámetros**
   (filas del origen): se guarda solo su primera línea (``_engine_message``) y sin los valores que algunos motores
   ponen en ella (``redact_values``, G34).
@@ -128,12 +126,6 @@ def _count(engine: Any, table: str, schema: str | None) -> int:
         return int(connection.execute(select(func.count()).select_from(sa_table(table, schema=schema))).scalar_one())
 
 
-def _is_date(column_type: Any) -> bool:
-    from sqlalchemy import Date, DateTime
-
-    return isinstance(column_type, Date | DateTime)
-
-
 def _source_tables(inspector: Any, schema: str | None, wanted: tuple[str, ...]) -> list[str]:
     """Tablas del origen (nombres del catálogo); si se piden, ordenadas como hace util_bbdd y sin distinguir caja."""
     available = list(inspector.get_table_names(schema=schema))
@@ -164,9 +156,8 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
         source_engine = source_manager.get_sqlalchemy_engine()
         target_engine = target_manager.get_sqlalchemy_engine()
         src_inspector = inspect(source_engine)
-        dst_inspector = inspect(target_engine)
         src_schema = _resolve(src_inspector, "source", source.schema)
-        dst_schema = _resolve(dst_inspector, "target", target.schema)
+        dst_schema = _resolve(inspect(target_engine), "target", target.schema)
         tables = _source_tables(src_inspector, src_schema, options.tables)
         config = _config(source_engine, target_engine, src_schema, dst_schema, tables, options, Path(REJECTS_FILE))
         plan = DumpOrchestrator(config).plan()
@@ -184,13 +175,9 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
                 "skipped_columns": list(table.skipped_columns),
                 "missing_target_columns": list(table.required_target_columns),
                 "outside_references": list(table.outside_references),
-                "date_columns": [],
             }
             if table.target_table is not None:
                 entry["target_rows"] = _count(target_engine, table.target_table, dst_schema)
-                if source.db_type == target.db_type == "sqlite":
-                    dst_cols = dst_inspector.get_columns(table.target_table, schema=dst_schema)
-                    entry["date_columns"] = [c["name"] for c in dst_cols if _is_date(c["type"])]
             rows.append(entry)
     data = {
         "source_engine": source.db_type,
@@ -199,21 +186,12 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
         "target_schema": dst_schema,
         "truncate_target": options.truncate_target,
         "constraints_managed": plan.constraints_managed,
-        "warnings": _warnings(target, options) + (["sqlite_dates"] if any(r["date_columns"] for r in rows) else []),
         "tables": rows,
         "cycles": [list(c) for c in plan.cycles],
         "load_order": list(plan.load_order),
     }
     data["structure_hash"] = structure_hash(data)
     return data
-
-
-def _warnings(target: Endpoint, options: DumpOptions) -> list[str]:
-    """Avisos generales del volcado (códigos estables para la interfaz)."""
-    warnings: list[str] = []
-    if options.on_error == "isolate" and target.db_type == "oracle":
-        warnings.append("isolate_oracle")  # G32: util_bbdd no aparta la PK duplicada en Oracle
-    return warnings
 
 
 def structure_hash(preview: dict[str, Any]) -> str:

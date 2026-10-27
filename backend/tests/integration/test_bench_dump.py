@@ -88,13 +88,9 @@ def test_append_isolates_the_duplicated_key(pair: tuple[str, str], tmp_path: Pat
                       outputs_dir=tmp_path / "out", work_dir=tmp_path / "work")  # fmt: skip
 
     table = result["tables"][0]
-    if pair[1] == "oracle":
-        # G32: con destino Oracle util_bbdd no aparta la PK duplicada; la tabla falla (mensaje saneado).
-        assert table["status"] == "error" and "ORA-00001" in str(table["error"]), table
-        assert "[SQL" not in str(table["error"])
-    else:
-        assert (table["status"], table["rows_rejected"]) == ("success", 1), table["error"]
-        assert (tmp_path / "out" / "rejects" / "rechazos.csv").exists()
+    # G32 resuelto en util_bbdd 4.4.0: también con destino Oracle se aparta la PK duplicada (ORA-00001).
+    assert (table["status"], table["rows_rejected"]) == ("success", 1), table["error"]
+    assert (tmp_path / "out" / "rejects" / "rechazos.csv").exists()
     assert _count(pair[1], PARENT) == 1
 
 

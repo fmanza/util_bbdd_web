@@ -23,9 +23,10 @@ fuera del volcado. Avisos:
 - tablas que **no existen** en el destino (no se cargan);
 - destino **con filas** sin vaciar (se añaden; pueden duplicarse claves);
 - **ciclos** de FK;
-- motor sin gestión de constraints (SQLite: se cargan con las constraints activas);
-- destino **Oracle** con «apartar»: util_bbdd no aparta las claves primarias duplicadas, la tabla falla (G32);
-- **SQLite → SQLite** con columnas de fecha: util_bbdd no las carga si el origen las guarda como texto (G33).
+- motor sin gestión de constraints (SQLite: se cargan con las constraints activas).
+
+«Apartar» funciona igual en todos los motores (también con destino Oracle) y, con origen SQLite, las fechas guardadas
+como texto ISO se cargan como fechas.
 
 ## 2. Volcar
 

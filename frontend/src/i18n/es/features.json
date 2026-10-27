@@ -838,9 +838,7 @@
       "append": "El destino ya tiene filas en {{tables}}: se añadirán (pueden duplicarse claves).",
       "cycles_one": "Hay {{count}} ciclo de FK: esas tablas se cargan al final con las constraints desactivadas.",
       "cycles_other": "Hay {{count}} ciclos de FK: esas tablas se cargan al final con las constraints desactivadas.",
-      "noConstraints": "util_bbdd no gestiona las constraints de {{engine}}: se cargan activas.",
-      "isolate_oracle": "Con destino Oracle, «apartar» no aparta las filas con clave primaria duplicada: la tabla falla (G32).",
-      "sqlite_dates": "SQLite → SQLite: util_bbdd no carga fechas guardadas como texto y estas tablas fallarán: {{columns}} (G33)."
+      "noConstraints": "util_bbdd no gestiona las constraints de {{engine}}: se cargan activas."
     },
     "apply": {
       "title": "Volcar los datos",

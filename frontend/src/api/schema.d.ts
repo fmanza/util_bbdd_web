@@ -2093,21 +2093,9 @@ export interface components {
             target_schema: string | null;
             /** Truncate Target */
             truncate_target: boolean;
-            /**
-             * Warnings
-             * @description Códigos de aviso: isolate_oracle (G32), sqlite_dates (G33)
-             * @default []
-             */
-            warnings: string[];
         };
         /** DumpPreviewTableOut */
         DumpPreviewTableOut: {
-            /**
-             * Date Columns
-             * @description SQLite → SQLite: columnas de fecha del destino que util_bbdd no carga desde texto (G33)
-             * @default []
-             */
-            date_columns: string[];
             /** In Cycle */
             in_cycle: boolean;
             /**

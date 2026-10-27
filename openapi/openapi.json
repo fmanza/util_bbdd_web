@@ -1620,15 +1620,6 @@
           "truncate_target": {
             "title": "Truncate Target",
             "type": "boolean"
-          },
-          "warnings": {
-            "default": [],
-            "description": "Códigos de aviso: isolate_oracle (G32), sqlite_dates (G33)",
-            "items": {
-              "type": "string"
-            },
-            "title": "Warnings",
-            "type": "array"
           }
         },
         "required": [
@@ -1648,15 +1639,6 @@
       },
       "DumpPreviewTableOut": {
         "properties": {
-          "date_columns": {
-            "default": [],
-            "description": "SQLite → SQLite: columnas de fecha del destino que util_bbdd no carga desde texto (G33)",
-            "items": {
-              "type": "string"
-            },
-            "title": "Date Columns",
-            "type": "array"
-          },
           "in_cycle": {
             "title": "In Cycle",
             "type": "boolean"

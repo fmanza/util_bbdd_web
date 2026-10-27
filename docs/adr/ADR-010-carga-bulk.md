@@ -67,3 +67,8 @@ usuario, con `BulkCrud` de util_bbdd. Comparado con el volcado (ADR-009):
 - **`bulk_preview` en el formulario genérico** (como `dump_preview`): habría que añadirle tipos de campo para ficheros
   subidos y para un mapeo que depende de la tabla, y la subida tendría que vivir en otra pantalla de todas formas.
 - **Confiar en `rows_committed`**: verificado incorrecto en la sonda de la fase (G37).
+
+## Enmienda (2026-10-27): util_bbdd 4.4.0
+
+util_bbdd corrige G32 también en `BulkCrud`: con destino Oracle, «apartar» separa la fila con PK duplicada aunque el
+lote tenga una sola fila. La consecuencia «con apartar en Oracle valen las limitaciones de G32» deja de aplicarse.

@@ -81,3 +81,6 @@ Mismo modelo que ADR-008, con un permiso propio:
   ya no se cumplen, falla y queda la acción manual. Mientras quede un diario: un `dump_apply` nuevo sobre ese destino
   responde 409 y el volcado no se purga (ni a mano, ni por retención, ni por cuota). La consecuencia «hay que revisarlas
   a mano» tras un timeout deja de aplicarse salvo en MySQL/MariaDB, donde la desactivación es de la sesión.
+- **Sin avisos de G32 y G33 (W-V4)**: util_bbdd aparta también la PK duplicada con destino Oracle y convierte al leer
+  las fechas en texto ISO de un origen SQLite. La vista previa ya no lleva `warnings` (`isolate_oracle`, `sqlite_dates`)
+  ni `date_columns`; la consecuencia «limitaciones de util_bbdd verificadas» deja de aplicarse.

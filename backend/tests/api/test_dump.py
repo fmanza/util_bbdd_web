@@ -307,8 +307,7 @@ def test_catalog_and_permission(
     assert user_client.get("/api/v1/auth/me").json()["can_write_data"] is True
 
 
-@pytest.mark.xfail(strict=True, reason="G33 resuelto en util_bbdd 4.4.0: el volcado ya no falla (W-V4 retira el aviso)")
-def test_sqlite_dates_are_warned_and_fail_as_util_bbdd_does(
+def test_sqlite_dates_stored_as_text_are_dumped(
     user_client: TestClient,
     project: dict[str, object],
     worker: Worker,  # noqa: F811
@@ -316,7 +315,7 @@ def test_sqlite_dates_are_warned_and_fail_as_util_bbdd_does(
     settings: Settings,
     allowed: User,
 ) -> None:
-    """G33: SQLite guarda DATE como texto y util_bbdd no lo convierte al insertar en un destino SQLite."""
+    """G33 (util_bbdd 4.4.0): SQLite guarda DATE como texto ISO y util_bbdd lo convierte al leer; sin aviso."""
     for name in ("origen.db", "destino.db"):
         con = sqlite3.connect(settings.files_dir / name)
         con.execute("CREATE TABLE altas (id INTEGER PRIMARY KEY, alta DATE)")
@@ -329,11 +328,13 @@ def test_sqlite_dates_are_warned_and_fail_as_util_bbdd_does(
     body = user_client.get(f"/api/v1/runs/{preview_id}/dump-preview").json()
     run = wait_for(worker, db, apply(user_client, project, preview_id).json()["id"], timeout=180)
 
-    assert "sqlite_dates" in body["warnings"]
-    assert body["tables"][0]["date_columns"] == ["alta"]
-    assert (run.status, run.error_code) == ("failed", "dump_partial")
-    error = user_client.get(f"/api/v1/runs/{run.id}/dump-result").json()["tables"][0]["error"]
-    assert "Date type only accepts Python date objects" in error
+    assert "warnings" not in body and "date_columns" not in body["tables"][0]
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+    con = sqlite3.connect(settings.files_dir / "destino.db")
+    try:
+        assert list(con.execute("SELECT id, alta FROM altas")) == [(1, "2026-01-01")]
+    finally:
+        con.close()
 
 
 # --- auditoría de la Fase 8 --------------------------------------------------------------------------------------

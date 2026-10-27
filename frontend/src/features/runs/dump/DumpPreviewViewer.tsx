@@ -53,18 +53,7 @@ function Warnings({ preview }: { preview: DumpPreview }) {
   const missing = preview.tables.filter((table) => table.target_table === null);
   const required = preview.tables.filter((table) => table.missing_target_columns.length > 0);
   const notEmpty = preview.tables.filter((table) => (table.target_rows ?? 0) > 0);
-  const dates = preview.tables.filter((table) => (table.date_columns ?? []).length > 0);
   const items = [
-    ...(preview.warnings ?? [])
-      .filter((code) => code !== 'sqlite_dates')
-      .map((code) => t(`dump.warnings.${code}`)),
-    ...(dates.length
-      ? [
-          t('dump.warnings.sqlite_dates', {
-            columns: dates.map((x) => `${x.table} (${(x.date_columns ?? []).join(', ')})`).join('; '),
-          }),
-        ]
-      : []),
     ...(missing.length
       ? [t('dump.warnings.missingTables', { tables: missing.map((x) => x.table).join(', ') })]
       : []),

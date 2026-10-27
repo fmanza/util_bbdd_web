@@ -19,21 +19,20 @@ const PREVIEW: DumpPreview = {
   target_schema: null,
   truncate_target: false,
   constraints_managed: true,
-  warnings: [],
   load_order: ['clientes', 'pedidos', 'a', 'b', 'sueltas'],
   cycles: [['a', 'b']],
   structure_hash: 'h'.repeat(64),
   tables: [
     { table: 'clientes', target_table: 'clientes', position: 0, in_cycle: false, source_rows: 2, target_rows: 3,
-      skipped_columns: ['email'], missing_target_columns: [], outside_references: [], date_columns: [] },
+      skipped_columns: ['email'], missing_target_columns: [], outside_references: [] },
     { table: 'pedidos', target_table: 'pedidos', position: 1, in_cycle: false, source_rows: 5, target_rows: 0,
-      skipped_columns: [], missing_target_columns: ['alta'], outside_references: ['facturas'], date_columns: [] },
+      skipped_columns: [], missing_target_columns: ['alta'], outside_references: ['facturas'] },
     { table: 'a', target_table: 'a', position: 2, in_cycle: true, source_rows: 1, target_rows: 0,
-      skipped_columns: [], missing_target_columns: [], outside_references: [], date_columns: [] },
+      skipped_columns: [], missing_target_columns: [], outside_references: [] },
     { table: 'b', target_table: 'b', position: 3, in_cycle: true, source_rows: 1, target_rows: 0,
-      skipped_columns: [], missing_target_columns: [], outside_references: [], date_columns: [] },
+      skipped_columns: [], missing_target_columns: [], outside_references: [] },
     { table: 'sueltas', target_table: null, position: 4, in_cycle: false, source_rows: 1, target_rows: null,
-      skipped_columns: [], missing_target_columns: [], outside_references: [], date_columns: [] },
+      skipped_columns: [], missing_target_columns: [], outside_references: [] },
   ],
 }; // prettier-ignore
 
@@ -86,13 +85,7 @@ async function openConfirm(user: ReturnType<typeof userEvent.setup>, label = /Vo
 
 describe('vista previa del volcado', () => {
   it('muestra el orden, las notas por tabla y los avisos', async () => {
-    stubPreview({
-      preview: {
-        ...PREVIEW,
-        warnings: ['isolate_oracle', 'sqlite_dates'],
-        tables: PREVIEW.tables.map((x) => (x.table === 'clientes' ? { ...x, date_columns: ['alta'] } : x)),
-      },
-    });
+    stubPreview();
 
     renderRoute(`/runs/${PREVIEW_ID}`);
 
@@ -105,10 +98,6 @@ describe('vista previa del volcado', () => {
     expect(screen.getByText(/columnas obligatorias .* su carga fallará: pedidos/)).toBeInTheDocument();
     expect(screen.getByText(/ya tiene filas en clientes: se añadirán/)).toBeInTheDocument();
     expect(screen.getByText(/Hay 1 ciclo de FK/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/«apartar» no aparta las filas con clave primaria duplicada/),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/no carga fechas guardadas como texto.*clientes \(alta\)/)).toBeInTheDocument();
   });
 
   it('explica por qué no se puede volcar', async () => {
