@@ -156,6 +156,14 @@ def test_apply_params_only_reference_the_preview() -> None:
             "converting the varchar value '…' to data type int.",
         ),
         ("ORA-00001: unique constraint (BENCH.PK) violated", "ORA-00001: unique constraint (BENCH.PK) violated"),
+        (
+            'invalid input syntax for type integer: "secreto"',
+            'invalid input syntax for type integer: "…"',
+        ),
+        (
+            "Truncated value: 'secreto'.",
+            "Truncated value: '…'.",
+        ),
     ],
 )
 def test_redact_values_hides_row_values_and_keeps_names(message: str, expected: str) -> None:
@@ -340,3 +348,32 @@ def test_restore_constraints_reports_sanitised_results(tmp_path: Path, monkeypat
     assert data["pending"] is True
     assert data["constraints"][0] == {"table": "clientes", "constraint": "*", "status": "enabled", "error": None}
     assert "secreto" not in repr(data) and data["constraints"][1]["status"] == "failed"
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        # Ya saneado por util_bbdd 4.4.0 (G34): pasa igual.
+        "(1062, \"Duplicate entry '…' for key 'clientes.PRIMARY'\")",
+        'invalid input syntax for type integer: "…"',
+    ],
+)
+def test_messages_already_sanitised_by_util_bbdd_pass_unchanged(message: str) -> None:
+    from app.integrations.util_bbdd.dump import _clean
+
+    assert _clean(message) == message
+
+
+def test_raw_pk_sync_messages_are_still_cleaned() -> None:
+    """El ``error_msg`` de los contadores PK viene de ``bulk`` y util_bbdd no lo sanea: la web sí."""
+    from app.integrations.util_bbdd.dump import _clean
+
+    raw = (
+        '(psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type integer: "secreto" '
+        "postgresql://u:clave@host/db\n[SQL: SELECT setval(%(s)s)]\n[parameters: {'s': 'secreto'}]"
+    )
+
+    cleaned = _clean(raw)
+
+    assert cleaned == ('(psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type integer: "…" [url]')
+    assert _clean("") is None and _clean("  \n ") is None

@@ -84,3 +84,7 @@ Mismo modelo que ADR-008, con un permiso propio:
 - **Sin avisos de G32 y G33 (W-V4)**: util_bbdd aparta también la PK duplicada con destino Oracle y convierte al leer
   las fechas en texto ISO de un origen SQLite. La vista previa ya no lleva `warnings` (`isolate_oracle`, `sqlite_dates`)
   ni `date_columns`; la consecuencia «limitaciones de util_bbdd verificadas» deja de aplicarse.
+- **Mensajes del volcado (G34, W-V5)**: util_bbdd entrega el `error_msg` de tablas y constraints ya saneado (primera
+  línea, sin sentencia, parámetros ni URL, valores enmascarados). La web **mantiene** su defensa del punto 3 (`_clean`
+  + `redact_values`, que suma el patrón de PostgreSQL `invalid input syntax …: "…"`): no cambia nada en lo ya saneado y
+  sigue siendo necesaria para el `error_msg` de los contadores PK, que viene de `bulk` y util_bbdd no sanea.

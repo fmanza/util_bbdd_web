@@ -8,9 +8,9 @@
 - ``DumpConfig.truncate_target`` es ``True`` por defecto (G30): la web lo pasa siempre explícito.
 - Desde util_bbdd 4.4.0, ``on_error="isolate"`` aparta también la PK duplicada en Oracle (G32) y SQLite → SQLite carga
   las fechas guardadas como texto ISO (G33): la vista previa ya no avisa de ninguno de los dos.
-- ``TableDumpResult.error_msg`` y ``ConstraintResult.error_msg`` traen el texto de SQLAlchemy **con los parámetros**
-  (filas del origen): se guarda solo su primera línea (``_engine_message``) y sin los valores que algunos motores
-  ponen en ella (``redact_values``, G34).
+- ``TableDumpResult.error_msg`` y ``ConstraintResult.error_msg`` llegan saneados desde util_bbdd 4.4.0 (G34); la web
+  se sigue quedando con la primera línea y enmascara los valores conocidos (``_clean``, ``redact_values``) como
+  defensa, que además cubre el ``error_msg`` de los contadores PK, que util_bbdd no sanea.
 - Progreso por tabla y por lote y cancelación **entre lotes** (``run(on_progress=, cancel_token=)``, util_bbdd 4.4.0,
   G1) con ``DumpProgress``: util_bbdd deshace la tabla en curso, reactiva constraints e índices y lanza
   ``OperationCancelledError`` sin ``DumpResult``; ``result.json`` lleva entonces ``cancelled`` y las tablas terminadas.
@@ -31,7 +31,7 @@ from typing import Any, Final, Literal
 
 from app.integrations.util_bbdd.compare import resolve_schema
 from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
-from app.integrations.util_bbdd.sql import _engine_message
+from app.integrations.util_bbdd.sql import MAX_ENGINE_MESSAGE
 
 #: Diario de constraints de util_bbdd en ``DumpConfig.output_dir`` (4.4.0, G31; solo SQL Server, PostgreSQL y Oracle).
 JOURNAL_FILE: Final = "constraints_journal.json"
@@ -379,19 +379,34 @@ def restore_constraints(target: Endpoint, journal: Path) -> dict[str, Any]:
 
 
 #: Valores de filas que algunos motores ponen en la primera línea del error (G34): MySQL/MariaDB
-#: ``Duplicate entry 'x' for key``/``Incorrect integer value: 'x'``, SQL Server ``duplicate key value is (x)`` y
-#: ``converting the varchar value 'x'``. Se cambian por ``…``; los nombres de clave o columna se conservan.
+#: ``Duplicate entry 'x' for key``/``Incorrect integer value: 'x'``, SQL Server ``duplicate key value is (x)``,
+#: ``converting the varchar value 'x'`` y ``Truncated value: 'x'``, y PostgreSQL ``invalid input syntax for type
+#: integer: "x"``. Se cambian por ``…``; los nombres de clave o columna se conservan.
 _QUOTED_VALUE = re.compile(r"\b(entry|value:?)\s+'[^']*'", re.IGNORECASE)
 _PAREN_VALUE = re.compile(r"\b(value is)\s+\([^)]*\)", re.IGNORECASE)
+_DOUBLE_QUOTED_VALUE = re.compile(r'\b(invalid input (?:syntax|value) for [^:]+:)\s*"[^"]*"', re.IGNORECASE)
+_URL = re.compile(r"\b[a-z][a-z0-9+]*://\S+")
 
 
 def redact_values(message: str) -> str:
     """Mensaje del motor sin los valores de las filas que lo provocaron."""
+    message = _DOUBLE_QUOTED_VALUE.sub(r'\1 "…"', message)
     return _PAREN_VALUE.sub(r"\1 (…)", _QUOTED_VALUE.sub(r"\1 '…'", message))
 
 
 def _clean(message: str) -> str | None:
-    return redact_values(_engine_message(RuntimeError(message))) if message else None
+    """Mensaje de error para ``result.json``, sin datos de filas (G34).
+
+    Desde util_bbdd 4.4.0 el ``error_msg`` de tablas y constraints ya llega saneado (primera línea, sin sentencia,
+    parámetros ni URL y con los valores enmascarados); el de los contadores PK, que viene de ``bulk``, no. Por eso se
+    sigue quedando con la primera línea, sin ``[SQL: …]`` ni URL, y aplicando ``redact_values`` a todos (con lo ya
+    saneado no cambia nada).
+    """
+    lines = message.strip().splitlines()
+    if not lines:
+        return None
+    line = lines[0].split("[SQL:")[0].split("(Background on this error")[0]
+    return redact_values(_URL.sub("[url]", line).strip()[:MAX_ENGINE_MESSAGE]) or None
 
 
 def result_to_dict(result: Any, report_ok: bool) -> dict[str, Any]:
