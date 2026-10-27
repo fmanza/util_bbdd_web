@@ -46,14 +46,24 @@ class BulkPartitionOut(_Bulk):
 
 
 class BulkResultOut(_Bulk):
-    """Resultado de ``bulk_apply``: filas del destino antes y después, rechazos y particiones."""
+    """Resultado de ``bulk_apply``: filas confirmadas, filas del destino antes y después, rechazos y particiones."""
 
     operation: Literal["insert", "update", "delete"]
     table: str
     rows: int
+    committed: int | None = Field(
+        default=None,
+        description="Filas enviadas y confirmadas según util_bbdd (también las apartadas); null en resultados anteriores "
+        "a la 1.5.0",
+    )
     matches: int | None = None
     target_rows_before: int
     target_rows_after: int
+    verified: bool | None = Field(
+        default=None,
+        description="El recuento del destino antes/después cuadra con committed (false: revisar); null si no se "
+        "puede comprobar (rechazos, error, particiones fallidas o resultado anterior)",
+    )
     rejected: int = 0
     error: str | None = Field(default=None, description="Primera línea del error del motor, sin valores de filas")
     parallel: BulkPlanOut

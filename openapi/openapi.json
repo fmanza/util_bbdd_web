@@ -527,8 +527,20 @@
         "type": "object"
       },
       "BulkResultOut": {
-        "description": "Resultado de ``bulk_apply``: filas del destino antes y después, rechazos y particiones.",
+        "description": "Resultado de ``bulk_apply``: filas confirmadas, filas del destino antes y después, rechazos y particiones.",
         "properties": {
+          "committed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filas enviadas y confirmadas según util_bbdd (también las apartadas); null en resultados anteriores a la 1.5.0",
+            "title": "Committed"
+          },
           "error": {
             "anyOf": [
               {
@@ -592,6 +604,18 @@
           "target_rows_before": {
             "title": "Target Rows Before",
             "type": "integer"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "El recuento del destino antes/después cuadra con committed (false: revisar); null si no se puede comprobar (rechazos, error, particiones fallidas o resultado anterior)",
+            "title": "Verified"
           }
         },
         "required": [

@@ -20,7 +20,10 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-/** Resultado de una carga bulk (`bulk_apply`): filas antes y después, rechazos y particiones (Fase 9). */
+/**
+ * Resultado de una carga bulk (`bulk_apply`): filas confirmadas según util_bbdd, recuento del destino antes y
+ * después como verificación (G37), rechazos y particiones (Fase 9).
+ */
 export function BulkResultView({ run }: { run: RunDetail }) {
   const { t } = useTranslation();
   const finished = !isActive(run.status) && run.status !== 'purged';
@@ -46,12 +49,25 @@ export function BulkResultView({ run }: { run: RunDetail }) {
         {result.isError && !isApiError(result.error, 404) && <ErrorAlert error={result.error} />}
         {data && (
           <>
-            <SimpleGrid cols={{ base: 2, sm: 4 }}>
+            <SimpleGrid cols={{ base: 2, sm: 5 }}>
               <Stat label={t('bulk.result.rows')} value={data.rows} />
+              <Stat label={t('bulk.result.committed')} value={data.committed ?? '—'} />
               <Stat label={t('bulk.result.before')} value={data.target_rows_before} />
               <Stat label={t('bulk.result.after')} value={data.target_rows_after} />
               <Stat label={t('bulk.result.rejected')} value={data.rejected ?? 0} />
             </SimpleGrid>
+            <Text size="xs" c="dimmed">
+              {t('bulk.result.committedHelp')}
+            </Text>
+            {data.verified === false && (
+              <Alert color="orange" title={t('bulk.result.mismatchTitle')}>
+                {t(`bulk.result.mismatch.${data.operation}`, {
+                  committed: data.committed ?? 0,
+                  matches: data.matches ?? 0,
+                  delta: Math.abs(data.target_rows_after - data.target_rows_before),
+                })}
+              </Alert>
+            )}
             {data.error && (
               <Alert color="red" title={t('bulk.result.errorTitle')}>
                 {data.error}

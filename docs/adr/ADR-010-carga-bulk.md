@@ -72,3 +72,13 @@ usuario, con `BulkCrud` de util_bbdd. Comparado con el volcado (ADR-009):
 
 util_bbdd corrige G32 también en `BulkCrud`: con destino Oracle, «apartar» separa la fila con PK duplicada aunque el
 lote tenga una sola fila. La consecuencia «con apartar en Oracle valen las limitaciones de G32» deja de aplicarse.
+
+## Enmienda (2026-10-27): util_bbdd 4.5.0
+
+- **Contadores de util_bbdd (G37, W-B1)**: el resultado toma `last_operation_rows_committed` como cifra principal
+  («filas confirmadas»). Son filas **enviadas** y confirmadas (incluyen las apartadas y, en update o delete, las claves
+  que no existen), no las que la BD modificó. El recuento del destino antes y después se mantiene como **verificación**
+  (`verified`): sin rechazos, error ni particiones fallidas, insert crece en las confirmadas, delete decrece en las
+  coincidencias por PK y update no cambia el número de filas; si no cuadra, la carga termina bien con un aviso. La
+  alternativa descartada «confiar en `rows_committed`» deja de aplicarse como estaba escrita.
+- **Modo seco explícito (G35, W-B1)**: la vista previa llama con `dry_run=True` y la carga con `dry_run=False`.

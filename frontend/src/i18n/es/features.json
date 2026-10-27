@@ -1000,9 +1000,17 @@
       "preview": "Ver la vista previa",
       "pending": "El resultado estará disponible al terminar.",
       "rows": "Filas del fichero",
+      "committed": "Filas confirmadas",
+      "committedHelp": "Filas confirmadas: las que util_bbdd envió y confirmó, incluidas las apartadas y, en una actualización o un borrado, las claves que no existían. Antes y después: recuento de la tabla destino, que sirve de comprobación.",
       "before": "Filas antes",
       "after": "Filas después",
       "rejected": "Apartadas",
+      "mismatchTitle": "El recuento del destino no cuadra",
+      "mismatch": {
+        "insert": "util_bbdd confirmó {{committed}} filas, pero la tabla creció en {{delta}}. Revisa el destino: otro proceso pudo escribir a la vez o un disparador cambió las filas.",
+        "update": "La actualización no debería cambiar el número de filas, pero cambió en {{delta}}. Revisa el destino: otro proceso pudo escribir a la vez.",
+        "delete": "El fichero coincidía con {{matches}} filas, pero la tabla decreció en {{delta}}. Revisa el destino: otro proceso pudo escribir a la vez."
+      },
       "errorTitle": "La carga falló",
       "rejectsTitle": "Hay filas apartadas",
       "rejects": "Las filas que el destino no admitió están en rechazos.csv (en Artefactos).",

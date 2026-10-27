@@ -12,7 +12,7 @@ from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import get_operation, validate_params
 from app.domain.uploads.errors import UploadContentError, UploadTypeError
 from app.domain.uploads.files import ReadOptions, display_name, kind_for, read_frame
-from app.integrations.util_bbdd.bulk import _count_matches, _required_columns, _resolve_mapping
+from app.integrations.util_bbdd.bulk import _count_matches, _required_columns, _resolve_mapping, verify
 
 
 @pytest.mark.parametrize(
@@ -104,3 +104,21 @@ def test_count_matches_with_composite_key() -> None:
 def test_preview_params_rejected(bad: dict[str, object]) -> None:
     with pytest.raises(RunParamsError):
         validate_params(get_operation("bulk_preview"), bad)
+
+
+@pytest.mark.parametrize(
+    ("operation", "before", "after", "committed", "matches", "expected"),
+    [
+        ("insert", 10, 13, 3, None, True),
+        ("insert", 10, 12, 3, None, False),  # una fila no llegó: el contador de util_bbdd no cuadra
+        ("update", 10, 10, 5, 4, True),
+        ("update", 10, 11, 5, 4, False),
+        ("delete", 10, 7, 5, 3, True),  # dos claves del fichero no existían: cuentan como enviadas
+        ("delete", 10, 8, 5, 3, False),
+        ("delete", 10, 7, 5, None, None),
+    ],
+)
+def test_verify_compares_the_target_count_with_util_bbdd(
+    operation: str, before: int, after: int, committed: int, matches: int | None, expected: bool | None
+) -> None:
+    assert verify(operation, before, after, committed, matches) is expected  # type: ignore[arg-type]

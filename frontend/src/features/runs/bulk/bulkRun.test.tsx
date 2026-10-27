@@ -200,9 +200,11 @@ describe('resultado de la carga', () => {
     operation: 'insert',
     table: 'clientes',
     rows: 3,
+    committed: 3,
     matches: 0,
     target_rows_before: 10,
     target_rows_after: 12,
+    verified: null,
     rejected: 1,
     error: null,
     parallel: { workers: 2, reasons: [] },
@@ -230,6 +232,8 @@ describe('resultado de la carga', () => {
 
     expect(await screen.findByText('Filas después')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getByText('Filas confirmadas')).toBeInTheDocument();
+    expect(screen.queryByText('El recuento del destino no cuadra')).not.toBeInTheDocument();
     expect(screen.getByText('Hay filas apartadas')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Particiones' })).toHaveTextContent('duplicate key');
     expect(screen.getByRole('link', { name: 'Ver la vista previa' })).toHaveAttribute(
@@ -237,5 +241,27 @@ describe('resultado de la carga', () => {
       `/runs/${PREVIEW_ID}`,
     );
     expect(screen.queryByRole('button', { name: 'Relanzar' })).not.toBeInTheDocument();
+  });
+
+  it('avisa si el recuento del destino no cuadra con las filas confirmadas', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${APPLY_ID}`]: {
+        body: {
+          ...FINISHED, id: APPLY_ID, operation: 'bulk_apply', status: 'succeeded', my_role: 'owner',
+          params: { preview_run: PREVIEW_ID, confirm: 'destino' }, artifacts: [],
+        },
+      },
+      [`GET /api/v1/runs/${APPLY_ID}/bulk-result`]: {
+        body: { ...RESULT, rejected: 0, partitions: [], parallel: { workers: 1, reasons: [] }, target_rows_after: 11,
+                verified: false },
+      },
+    }); // prettier-ignore
+
+    renderRoute(`/runs/${APPLY_ID}`);
+
+    expect(await screen.findByText('El recuento del destino no cuadra')).toBeInTheDocument();
+    expect(screen.getByText(/confirmó 3 filas, pero la tabla creció en 1/)).toBeInTheDocument();
   });
 });

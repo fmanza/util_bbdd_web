@@ -222,6 +222,8 @@ def test_insert_preview_generates_sql_without_touching_the_target_and_apply_inse
     assert done.status == "succeeded", (done.error_code, done.error_message)
     result = user_client.get(f"/api/v1/runs/{done.id}/bulk-result").json()
     assert (result["target_rows_before"], result["target_rows_after"], result["rejected"]) == (2, 4, 1)
+    # G37: util_bbdd cuenta las filas enviadas (también la apartada); con rechazos no se verifica el recuento.
+    assert (result["committed"], result["verified"]) == (3, None)
     assert [r[0] for r in _rows(settings)] == [1, 2, 3, 5]
     entry = db.scalars(select(AuditEntry).where(AuditEntry.target_id == done.id)).one()
     assert (entry.details or {})["bulk"]["operation"] == "insert"
@@ -251,6 +253,11 @@ def test_update_and_delete_need_the_exact_row_count(
     assert wait_for(worker, db, removed.json()["id"], timeout=120).status == "succeeded"
 
     assert _rows(settings) == [(1, "ANA", "a@x")]
+    # G37: las claves que no existen (99, 98) cuentan como enviadas; el recuento del destino cuadra.
+    updated = user_client.get(f"/api/v1/runs/{ok.json()['id']}/bulk-result").json()
+    deleted = user_client.get(f"/api/v1/runs/{removed.json()['id']}/bulk-result").json()
+    assert (updated["committed"], updated["verified"]) == (3, True)
+    assert (deleted["committed"], deleted["matches"], deleted["verified"]) == (2, 1, True)
 
 
 def test_apply_aborts_if_the_affected_rows_changed(

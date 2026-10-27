@@ -515,4 +515,5 @@ Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd.
 
 | Fase | Commit | Notas |
 |---|---|---|
-| W-5.0 | este commit | Pin 4.5.0 (lock con uv 0.12.22; se descarta del lock la retirada de una rueda `armv7l` de zensical, ajena a la fase). Sin cambios de código: la suite pasa con `-W error::FutureWarning` (la web ya pasa `generar_sql` explícito) |
+| W-5.0 | `2506adf` | Pin 4.5.0 (lock con uv 0.12.22; se descarta del lock la retirada de una rueda `armv7l` de zensical, ajena a la fase). Sin cambios de código: la suite pasa con `-W error::FutureWarning` (la web ya pasa `generar_sql` explícito) |
+| W-B1 | este commit | `committed` (`last_operation_rows_committed`) como cifra principal y `verified` (`verify`: insert crece en `committed`, delete decrece en `matches`, update sin cambio; `null` con rechazos, error o particiones fallidas). G35: `dry_run` explícito en la vista previa y la carga. UI: «Filas confirmadas», explicación y aviso si no cuadra. OpenAPI + `gen:api`. Bench: contadores verificados en los 5 motores |

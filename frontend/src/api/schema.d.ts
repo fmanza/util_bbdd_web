@@ -1671,9 +1671,14 @@ export interface components {
         };
         /**
          * BulkResultOut
-         * @description Resultado de ``bulk_apply``: filas del destino antes y después, rechazos y particiones.
+         * @description Resultado de ``bulk_apply``: filas confirmadas, filas del destino antes y después, rechazos y particiones.
          */
         BulkResultOut: {
+            /**
+             * Committed
+             * @description Filas enviadas y confirmadas según util_bbdd (también las apartadas); null en resultados anteriores a la 1.5.0
+             */
+            committed?: number | null;
             /**
              * Error
              * @description Primera línea del error del motor, sin valores de filas
@@ -1705,6 +1710,11 @@ export interface components {
             target_rows_after: number;
             /** Target Rows Before */
             target_rows_before: number;
+            /**
+             * Verified
+             * @description El recuento del destino antes/después cuadra con committed (false: revisar); null si no se puede comprobar (rechazos, error, particiones fallidas o resultado anterior)
+             */
+            verified?: boolean | null;
         };
         /**
          * CapabilitiesOut

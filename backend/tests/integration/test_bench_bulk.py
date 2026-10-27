@@ -69,15 +69,18 @@ def test_insert_update_delete(engine: str, tmp_path: Path) -> None:
     sql = (tmp_path / "i" / "out" / preview["sql_file"]).read_text(encoding="utf-8")
     assert "o''brien" in sql
     assert (result["error"], result["rejected"], result["target_rows_after"]) == (None, 1, 3), result
+    assert (result["committed"], result["verified"]) == (3, None), result  # G37: la apartada cuenta como enviada
 
     updates = pd.DataFrame({"id": [1, 2, 99], "nombre": ["ANA", "EVA", "nadie"]})
     preview, result = _run(engine, updates, BulkOptions(table=PARENT, operation="update"), tmp_path / "u")
     assert preview["matches"] == 2 and result["error"] is None and result["matches"] == 2
+    assert (result["committed"], result["verified"]) == (3, True), result
 
     deletes = pd.DataFrame({"id": [2, 98]})
     preview, result = _run(engine, deletes, BulkOptions(table=PARENT, operation="delete"), tmp_path / "d")
     assert preview["matches"] == 1
     assert (result["target_rows_before"], result["target_rows_after"]) == (3, 2), result
+    assert (result["committed"], result["verified"]) == (2, True), result
 
 
 def test_failure_message_hides_the_row_values(engine: str, tmp_path: Path) -> None:
@@ -87,3 +90,4 @@ def test_failure_message_hides_the_row_values(engine: str, tmp_path: Path) -> No
     assert result["error"] is not None, result
     assert "secreto" not in result["error"] and "[SQL" not in result["error"], result["error"]
     assert result["target_rows_after"] == 1
+    assert (result["committed"], result["verified"]) == (0, None), result  # atómica y fallida: no suma

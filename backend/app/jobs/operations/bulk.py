@@ -162,11 +162,23 @@ def run_apply(ctx: JobContext) -> None:
         raise _job_error(exc) from None
     _write(ctx.run_dir / RESULT_PATH, result)
     changed = abs(result["target_rows_after"] - result["target_rows_before"])
-    ctx.logger.info("Carga", extra={"operation": result["operation"], "rows": result["rows"], "changed": changed})
+    ctx.logger.info(
+        "Carga",
+        extra={
+            "operation": result["operation"], "rows": result["rows"], "committed": result["committed"],
+            "changed": changed, "verified": result["verified"],
+        },
+    )  # fmt: skip
     failed = [p["index"] for p in result["partitions"] if p["error"]]
     if result["error"]:
         raise JobError("bulk_failed", f"La carga falló: {result['error']}")
     if failed:
         raise JobError("bulk_partial", f"Fallaron {len(failed)} particiones; las demás quedaron confirmadas.")
     extra = f", {result['rejected']} filas apartadas en rechazos.csv" if result["rejected"] else ""
-    ctx.progress("reporting", f"{result['operation'].upper()} terminado{extra}", 100)
+    # G37: el recuento del destino se mantiene como verificación de lo que util_bbdd dice haber confirmado.
+    check = "; el recuento del destino no cuadra: revisa el resultado" if result["verified"] is False else ""
+    ctx.progress(
+        "reporting",
+        f"{result['operation'].upper()} terminado: {result['committed']} filas confirmadas{extra}{check}",
+        100,
+    )

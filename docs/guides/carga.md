@@ -51,8 +51,12 @@ si algo cambió, falla con `preview_changed` sin tocar nada. No se puede cargar 
 
 ## 4. Resultado
 
-Filas del fichero, filas de la tabla antes y después, filas apartadas, el error (solo la primera línea del motor, sin
-valores) y, si fue paralela, cada partición. Artefactos: `result.json`, la auditoría de util_bbdd `carga.jsonl` y, si
+Filas del fichero, **filas confirmadas** (las que util_bbdd envió y confirmó: incluyen las apartadas y, al actualizar
+o borrar, las claves que no existían), filas de la tabla antes y después, filas apartadas, el error (solo la primera
+línea del motor, sin valores) y, si fue paralela, cada partición. El recuento de la tabla antes y después sirve de
+comprobación: si no cuadra con las filas confirmadas (otro proceso escribió a la vez, un disparador…), el resultado lo
+avisa. Sin filas apartadas ni errores, al insertar la tabla crece en las filas confirmadas, al borrar decrece en las
+filas que coincidían y al actualizar no cambia. Artefactos: `result.json`, la auditoría de util_bbdd `carga.jsonl` y, si
 se apartaron filas, `rechazos.csv` (datos de negocio).
 
 ## Errores frecuentes

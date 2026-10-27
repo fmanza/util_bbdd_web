@@ -1,13 +1,15 @@
 """Carga bulk desde fichero con ``BulkCrud`` de util_bbdd (Fase 9, ADR-010); se ejecuta en el subproceso del job.
 
-- ``bulk_insert|update|delete_from_df(df, tabla, generar_sql=True, path_sql=dir)`` **escribe el SQL sin ejecutarlo**
-  (una sentencia por fila, con los valores): es el modo seco y el artefacto ``outputs/sql/carga_<op>.sql``.
-  ``generar_sql=True`` es el valor por defecto (G35): al aplicar se pasa siempre ``False``.
+- ``bulk_insert|update|delete_from_df(df, tabla, dry_run=True, path_sql=dir)`` **escribe el SQL sin ejecutarlo**
+  (una sentencia por fila, con los valores): es el modo seco y el artefacto ``outputs/sql/carga_<op>.sql``. Sin
+  ``dry_run`` ni ``generar_sql`` util_bbdd tampoco ejecuta (G35, ``FutureWarning`` desde 4.5.0): la web pasa siempre
+  ``dry_run`` explícito, ``False`` al aplicar.
 - Con ``ParallelOptions`` y un plan de más de un hilo la operación deja de ser atómica (una transacción por
   partición, G36). Sin paralelo, una transacción por operación.
 - El fichero lo lee la web (``domain/uploads/files.py``) y llega aquí como ``DataFrame``.
-- Los contadores ``rows_committed``/``last_operation_rows_committed`` no son fiables sin auditoría CSV (verificado en
-  la sonda de la Fase 9): las filas afectadas las calcula la web (recuento por PK antes y después).
+- ``last_operation_rows_committed`` (fiable desde util_bbdd 4.5.0, G37) da las filas **enviadas** y confirmadas
+  (también las apartadas; un UPDATE o DELETE de una clave que no existe cuenta): es la cifra principal del resultado.
+  El recuento del destino antes y después se mantiene como verificación (``verify``).
 """
 
 from __future__ import annotations
@@ -253,10 +255,10 @@ def _call(crud: Any, operation: Operation, frame: Any, table: str, **kwargs: Any
 def _generate_sql(
     crud: Any, frame: Any, options: BulkOptions, table_name: str, outputs_dir: Path, work_dir: Path
 ) -> str:
-    """SQL de la operación sin ejecutarla (``generar_sql=True``), en ``outputs/sql/carga_<op>.sql``."""
+    """SQL de la operación sin ejecutarla (``dry_run=True``), en ``outputs/sql/carga_<op>.sql``."""
     work_dir.mkdir(parents=True, exist_ok=True)
     try:
-        _call(crud, options.operation, frame, table_name, generar_sql=True, path_sql=work_dir)
+        _call(crud, options.operation, frame, table_name, dry_run=True, path_sql=work_dir)
         produced = sorted(work_dir.glob("*.sql"))
         target = outputs_dir / "sql" / SQL_FILE.format(op=options.operation)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -277,11 +279,11 @@ def run_bulk(
     outputs_dir: Path,
     expected_matches: int | None = None,
 ) -> dict[str, Any]:
-    """Vuelve a validar, exige la misma estructura y ejecuta la operación (``generar_sql=False``).
+    """Vuelve a validar, exige la misma estructura y ejecuta la operación (``dry_run=False``).
 
     Returns:
-        Resultado: filas del fichero, coincidencias por PK, filas del destino antes y después, rechazadas, plan
-        paralelo y particiones (con errores saneados).
+        Resultado: filas del fichero, filas confirmadas según util_bbdd, coincidencias por PK, filas del destino antes y
+        después y su verificación, rechazadas, plan paralelo y particiones (con errores saneados).
 
     Raises:
         StructureChangedError: La tabla o el mapeo cambiaron. ``MatchesChangedError``: en update/delete, las filas
@@ -320,27 +322,46 @@ def run_bulk(
         plan = crud.parallel_plan(options.operation, len(frame))
         error: str | None = None
         try:
-            _call(crud, options.operation, frame, _qualified(prepared["schema"], options.table), generar_sql=False)
+            _call(crud, options.operation, frame, _qualified(prepared["schema"], options.table), dry_run=False)
         except Exception as exc:  # fallo de la operación: el resultado lo cuenta (filas antes/después)
             error = _clean(str(exc.__cause__ or exc))
         finally:
             sink.close()
         after = _count(engine, table)
         parallel = crud.last_parallel_result
+        partitions = [
+            {"index": p.index, "rows": p.rows, "error": _clean(p.error) if p.error else None}
+            for p in (parallel.partition_results if parallel else [])
+        ]
+        committed = crud.last_operation_rows_committed
+        complete = error is None and crud.rows_rejected == 0 and not any(p["error"] for p in partitions)
         return {
             "operation": options.operation,
             "table": options.table,
             "rows": len(frame),
+            "committed": committed,
             "matches": matches,
             "target_rows_before": before,
             "target_rows_after": after,
+            "verified": verify(options.operation, before, after, committed, matches) if complete else None,
             "rejected": crud.rows_rejected,
             "error": error,
             "parallel": {"workers": plan.workers, "reasons": list(plan.reasons)},
-            "partitions": [
-                {"index": p.index, "rows": p.rows, "error": _clean(p.error) if p.error else None}
-                for p in (parallel.partition_results if parallel else [])
-            ],
+            "partitions": partitions,
         }
     finally:
         prepared["manager"].close()
+
+
+def verify(operation: Operation, before: int, after: int, committed: int, matches: int | None) -> bool | None:
+    """Si el recuento del destino cuadra con lo que util_bbdd dice haber confirmado (G37: se mantiene como defensa).
+
+    Solo tiene sentido en una carga completa (sin rechazos, error ni particiones fallidas): insert crece en
+    ``committed``; delete decrece en ``matches`` (las filas distintas del destino con esas claves; ``committed`` cuenta
+    también claves que no existen); update no cambia el número de filas. ``None``: no se puede comprobar.
+    """
+    if operation == "insert":
+        return after - before == committed
+    if operation == "delete":
+        return None if matches is None else before - after == matches
+    return after == before
