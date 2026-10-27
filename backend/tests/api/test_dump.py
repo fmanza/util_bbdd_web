@@ -306,6 +306,7 @@ def test_catalog_and_permission(
     assert user_client.get("/api/v1/auth/me").json()["can_write_data"] is True
 
 
+@pytest.mark.xfail(strict=True, reason="G33 resuelto en util_bbdd 4.4.0: el volcado ya no falla (W-V4 retira el aviso)")
 def test_sqlite_dates_are_warned_and_fail_as_util_bbdd_does(
     user_client: TestClient,
     project: dict[str, object],

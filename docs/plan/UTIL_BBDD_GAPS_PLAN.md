@@ -6,7 +6,7 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
-  Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6).
+  Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6). Ola 4 hecha (util_bbdd 4.4.0); W-4 en curso.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -469,3 +469,25 @@ Release `v4.2.0` publicada el 2026-10-26 (tag, wheel y `.sha256` comprobados: SH
 | W-M4 | `de8bc33` | `RunProgress` (fase `statements`) en `execute()`; `migrate_apply` cancelable en curso **solo entre sentencias** (confirmación en la UI, informe con `cancelled` y aplicadas); el worker no la mata al cancelar (`CANCEL_BETWEEN_STEPS_ONLY`), solo por timeout. Campo `cancelled` en el informe (OpenAPI) |
 | E2E | `5e9fc9c` | Los specs buscan al usuario antes de «Editar» (la lista pagina de 50 y los usuarios de E2E anteriores los empujaban a la página 2) |
 | release | este commit | util_bbdd_web **1.3.0** (D5). `docker compose up --build` + `/api/health` 200, bench de integración (80 passed; SQL Server en el puerto 51833) y E2E (23 specs) en verde |
+
+### Ola 4 — util_bbdd 4.4.0 (2026-10-27)
+
+Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd (la sesión de util_bbdd no la registró aquí).
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-V1 | `26414f0` | `DumpOrchestrator.plan() -> DumpPlan` (`load_order`, `cycles`, `missing_target`, `tables: DumpPlanTable`, `warnings: DumpPlanWarning(code, message, table)`, `constraints_managed`). No cuenta filas; posición `-1` sin destino; las columnas obligatorias excluyen identidad y calculadas |
+| U-V2 | `d2eb4cc` | El evento `table` de `audit_sink` se escribe al terminar cada tabla; los de constraints, índices, contadores PK y el `run` de cierre siguen al final |
+| U-V3 | `4887fb1` | `restore_constraints(engine, journal)` (idempotente; sin diario devuelve `[]`). `constraints_journal.json` en `output_dir` solo con destino SQL Server, PostgreSQL u Oracle; `run()` no arranca con un diario pendiente en su `output_dir`; `DumpResult.constraints_journal` si queda pendiente |
+| U-V4 | `9e9a24f` | `isolate` aparta también la fila única de un lote en Oracle (`ORA-00001`); verificado en el banco |
+| U-V5 | `38bcd6d` | Origen SQLite: texto ISO en `DATE`/`DATETIME`/`TIME` → `date`/`datetime`/`time` si el destino es de fecha; aviso `SQLITE_SOURCE` en `plan()` |
+| U-V6 | `28eed78` | `error_msg` de tablas y constraints y `constraint_reactivation_error`: primera línea, sin sentencia ni URL, valores enmascarados |
+| U-V7 | `71b72e8` | `FutureWarning` si `DumpConfig` no recibe `truncate_target` (la web lo pasa siempre) |
+| U-V8 | `c75a699` | `run(on_progress=, cancel_token=)`: fases `tables` (una por tabla terminada, `message` = tabla) y `rows` (una por lote). Cancelar sale con `OperationCancelledError` **después** de reactivar constraints e índices y sin `DumpResult` |
+| release | `97a1fd9` | Release `v4.4.0` con wheel y `.sha256` (SHA-256 `2c46c8ad…25e2`, comprobado contra `uv.lock`); sin cambios de dependencias |
+
+### W-4 — util_bbdd_web con util_bbdd 4.4.0 (2026-10-27, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-4.0 | este commit | Pin 4.4.0 (lock con uv 0.12.22). El test que reproducía G33 pasa a `xfail(strict=True)` (F3): SQLite → SQLite ya vuelca; W-V4 lo reescribe. Excepción de `asyncpg` en `exclude-newer` revisada: se mantiene (util_bbdd 4.4.0 sigue exigiendo `asyncpg>=0.32`) |
