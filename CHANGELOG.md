@@ -3,6 +3,19 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [1.7.1] - 2026-10-29
+
+util_bbdd 5.1.0 y ola 9 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (G44). La API HTTP no cambia y no hay
+migraciones.
+
+### Changed
+
+- **util_bbdd 5.1.0** (W-9.0): wheel de la release v5.1.0 (hash en `backend/uv.lock`).
+- **`NUMBER` de Oracle desde util_bbdd** (W-9.1, GAPS G44): util_bbdd 5.1.0 da en la consola SQL los `NUMBER` sin
+  pasar por `float` (`Decimal` con decimales, entero si lo es), así que la web retira su rodeo de la 1.7.0
+  (`fetch_decimals` en el subproceso). En pantalla, `FLOAT` de Oracle vuelve a salir como número, como hasta la 1.6.0
+  (en la 1.7.0 salía como texto).
+
 ## [1.7.0] - 2026-10-29
 
 util_bbdd 5.0.0 (MAJOR, valores por defecto seguros) y ola 8 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md). La

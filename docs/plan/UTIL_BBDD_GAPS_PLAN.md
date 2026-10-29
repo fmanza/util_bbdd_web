@@ -12,7 +12,8 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
   2026-10-29 con las decisiones D8-1 a D8-8 aprobadas el mismo día (§4) y hecha en util_bbdd el mismo día (5.0.0, sin
   publicar entonces; registro en §6). Ola 8 y W-8 hechas (util_bbdd 5.0.0, web 1.7.0; registro en §6). Ola 9
   (util_bbdd 5.1.0, Grupo 9: G44) planificada el 2026-10-29 con las decisiones D9-1 a D9-4 aprobadas el mismo día
-  (§4) y hecha en util_bbdd el mismo día (5.1.0, sin publicar; registro en §6). Falta W-9.
+  (§4) y hecha en util_bbdd el mismo día (5.1.0, publicada antes de W-9.0; registro en §6). Ola 9 y W-9 hechas (util_bbdd 5.1.0,
+  web 1.7.1; registro en §6).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -303,7 +304,7 @@ flowchart LR
 | 6 (web ✅) | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 (web ✅) | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
-| 9 (util_bbdd ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ → **`release: v1.7.1`** (D9-3) | Wheel 5.1.0 |
+| 9 (web ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ `fa13622` → **`release: v1.7.1`** ✅ (D9-3) | Wheel 5.1.0 |
 
 Reglas de la tubería:
 
@@ -729,4 +730,5 @@ Sesión de util_bbdd: `.ai/sessions/2026-10-29-web-gaps-ola9/`. Tag `v5.1.0`, wh
 | Fase | Commit | Notas |
 |---|---|---|
 | W-9.0 | `1bd3801` | Pin 5.1.0 (lock con uv 0.12.22; hash `52783997…1d1b86` igual al `.sha256` de la release; se descarta otra vez la retirada ajena de la rueda `armv7l` de zensical). Sin cambios de código; suite con `-W error::FutureWarning -W error::DeprecationWarning`. Bench del explorador: el rodeo de la web y el conversor de 5.1.0 juntos dan el mismo resultado (R9-6). Excepción de `asyncpg` mantenida |
-| W-9.1 | este commit | Fuera `_prepare_driver` (`fetch_decimals`) y `_oracle_number` de `sql.py`; `_run_read_only` ya no recibe `db_type`. Verificado antes en el bench sin el rodeo: `NUMBER(38,3)` exacto, enteros `int`, `BINARY_DOUBLE` y `FLOAT` `float`. **Cambio visible**: `FLOAT` de Oracle vuelve a salir como número (con el rodeo salía como texto). Test unitario: `free_sql_task` no toca `oracledb.defaults`; test del bench con `NUMBER(38,3)` sin cambios y `FLOAT` → `1.25`. Bench del explorador: 21 passed. G44 resuelto |
+| W-9.1 | `fa13622` | Fuera `_prepare_driver` (`fetch_decimals`) y `_oracle_number` de `sql.py`; `_run_read_only` ya no recibe `db_type`. Verificado antes en el bench sin el rodeo: `NUMBER(38,3)` exacto, enteros `int`, `BINARY_DOUBLE` y `FLOAT` `float`. **Cambio visible**: `FLOAT` de Oracle vuelve a salir como número (con el rodeo salía como texto). Test unitario: `free_sql_task` no toca `oracledb.defaults`; test del bench con `NUMBER(38,3)` sin cambios y `FLOAT` → `1.25`. Bench del explorador: 21 passed. G44 resuelto |
+| release | este commit | util_bbdd_web **1.7.1** (D9-3). Ver el commit para las comprobaciones |
