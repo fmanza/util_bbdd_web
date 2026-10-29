@@ -10,7 +10,9 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
   1.4.0; registro en §6). Ola 5 y W-5 hechas (util_bbdd 4.5.0, web 1.5.0; registro en §6). Ola 6
   y W-6 hechas (util_bbdd 4.6.0, web 1.6.0; registro en §6). Ola 8 (util_bbdd 5.0.0, Grupo 8) planificada el
   2026-10-29 con las decisiones D8-1 a D8-8 aprobadas el mismo día (§4) y hecha en util_bbdd el mismo día (5.0.0, sin
-  publicar entonces; registro en §6). Ola 8 y W-8 hechas (util_bbdd 5.0.0, web 1.7.0; registro en §6).
+  publicar entonces; registro en §6). Ola 8 y W-8 hechas (util_bbdd 5.0.0, web 1.7.0; registro en §6). Ola 9
+  (util_bbdd 5.1.0, Grupo 9: G44) planificada el 2026-10-29 con las decisiones D9-1 a D9-4 aprobadas el mismo día
+  (§4).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -230,6 +232,30 @@ Orden: U-8.1, U-8.2, U-8.3 y U-8.6 son independientes; U-8.4 va antes que U-8.5 
 W-8.1 va justo después de W-8.0, porque el cambio de versión deja sin editar las conexiones MariaDB con
 `encoding_errors`, y no hay release de la web entre las dos.
 
+### Grupo 9 — util_bbdd 5.1.0: `NUMBER` de Oracle sin pasar por `float` (ola 9)
+
+G44 lo destapó W-8.2: `execute_custom_*` usa la conexión del driver y oracledb devuelve un `NUMBER` con escala (o sin
+restricción y no entero) como `float`. Planificada el 2026-10-29 sobre util_bbdd 5.0.0 (`f495b21`, repo origen) y
+oracledb 26.0.1 (wheel de la web):
+
+| Pieza | Estado verificado |
+|---|---|
+| util_bbdd 5.0.0 | Ningún `outputtypehandler` ni `fetch_decimals`. Los cursores de las consultas salen de dos sitios en `executors/sync_query_executor.py` (queries nombradas y `_execute_custom`) y de uno en `executors/async_query_executor.py` (`_get_cursor`). El ejecutor no siempre sabe el motor (`db_type` solo llega con `read_only`), pero detecta el driver por el módulo de la conexión (`_is_mariadb_connection`) |
+| oracledb 26.0.1 | `Cursor.outputtypehandler` y `FetchInfo.precision`/`scale` |
+| Banco (Oracle 23ai) | Con un `outputtypehandler` en el cursor: `NUMBER(38,3)` → `Decimal('12345678901234567.891')` (hoy `1.2345678901234568e+16`); `1.5` y `-0.5` (precisión 0, escala -127) → `Decimal`; `7`, `NUMBER(10)`, `INTEGER`, `COUNT(*)`, `1e30` y un entero de 30 dígitos → `int`; `FLOAT` (126, -127) y `BINARY_DOUBLE` → `float`; `NULL` → `None`. Es lo que daba la consola con SQLAlchemy en la web 1.6.0 |
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-9.1 | `fix(executors): NUMBER de Oracle sin pasar por float` | G44 | Módulo privado `executors/_oracle_numbers.py` con `oracle_output_type_handler(cursor, metadata)`: para `DB_TYPE_NUMBER`, con escala > 0 se lee como texto y se convierte a `Decimal`; sin restricción (precisión 0 y escala 0 o -127, también `None`), `int` si es entero y `Decimal` si no. `FLOAT`, `BINARY_*` y el resto no cambian. Se pone **solo en los cursores** de las consultas personalizadas y nombradas cuando la conexión es de oracledb; ni la conexión ni `oracledb.defaults` cambian, así que el catálogo no se ve afectado. Asíncrono solo si `AsyncCursor` lo admite (D9-2) | `executors/_oracle_numbers.py` (nuevo), `executors/sync_query_executor.py`, `executors/async_query_executor.py`, `CHANGELOG.md` (nota del cambio de tipo, D9-1), `docs/guides/api_5_0_migration.md` y la guía de consultas | Unitario del conversor con `FetchInfo` simulados (escala > 0, sin restricción entero y no entero, `FLOAT`, binario, `NULL`); doble de conexión oracledb: el cursor recibe el conversor y con otro driver no; integración Oracle síncrona **y asíncrona**: la tabla de arriba con `execute_custom_result`, `execute_custom_many` y `execute_query_many`; el snapshot de Oracle no cambia |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo | Tests |
+|---|---|---|---|---|---|
+| W-9.0 | `chore(backend): util_bbdd 5.1.0` | — | Pin 5.1.0 y lock con uv 0.12.22; tests de versión. Sin cambios de código | — | Suite completa |
+| W-9.1 | `refactor(backend): NUMBER de Oracle desde util_bbdd` | G44 | Fuera `_prepare_driver` (`fetch_decimals`) y `_oracle_number` de `sql.py`, sus llamadas y su unitario; docstring y guía del explorador. GAPS: G44 **resuelto en util_bbdd 5.1.0**. Contrato HTTP sin cambios | Se retira | `test_free_select_oracle_numbers_keep_precision` del banco sin cambios, más `FLOAT` → número (hoy sale como texto); test de que la web ya no toca `oracledb.defaults` |
+
+Orden: W-9.1 justo después de W-9.0, sin release de la web entre las dos (con las dos conversiones a la vez el
+resultado es el mismo: R9-6).
+
 ---
 
 ## 3. Orden de ejecución simultáneo
@@ -248,12 +274,13 @@ flowchart LR
         R4 --> U5["Ola 5<br/>U-B"] --> R5(["v4.5.0"])
         R5 --> U6["Ola 6<br/>U-T"] --> R6(["v4.6.0"])
         R6 --> U8["Ola 8<br/>U-8"] --> R8(["v5.0.0"])
+        R8 --> U9["Ola 9<br/>U-9"] --> R9(["v5.1.0"])
     end
     subgraph W["util_bbdd_web"]
         direction LR
         W1["W-1.0 + W-D + W-G"] --> W2["W-2.0 + W-C"] --> W3["W-3.0 + W-M"]
         W3 --> W4["W-4.0 + W-V"] --> W5["W-5.0 + W-B"] --> W6["W-6.0 + W-T"]
-        W6 --> W8["W-8.0 + W-8"]
+        W6 --> W8["W-8.0 + W-8"] --> W9["W-9.0 + W-9"]
     end
     R1 -.wheel.-> W1
     R2 -.wheel.-> W2
@@ -262,6 +289,7 @@ flowchart LR
     R5 -.wheel.-> W5
     R6 -.wheel.-> W6
     R8 -.wheel.-> W8
+    R9 -.wheel.-> W9
 ```
 
 | Paso | util_bbdd (commits en orden) | util_bbdd_web (commits en orden) | Sincronización |
@@ -275,6 +303,7 @@ flowchart LR
 | 6 (web ✅) | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 (web ✅) | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
+| 9 | U-9.1 → **`release: v5.1.0`** | **W-9.0** `chore(backend): util_bbdd 5.1.0` → W-9.1 → **`release: v1.7.1`** (D9-3) | Wheel 5.1.0 |
 
 Reglas de la tubería:
 
@@ -285,7 +314,8 @@ Reglas de la tubería:
   retrasa, la web sigue con la ola anterior o se queda parada; no se adelantan rodeos.
 - **Versiones de la web** (D5): cada ola de la web termina con su commit `release: v1.x.0` (`/version-closure`):
   1.1.0 tras W-1 (incluye lo que hoy está «Sin publicar»), 1.2.0 tras W-2 … 1.6.0 tras W-6 y 1.7.0 tras W-8
-  (D8-7: util_bbdd sube de MAJOR, pero la API HTTP de la web no cambia).
+  (D8-7: util_bbdd sube de MAJOR, pero la API HTTP de la web no cambia) y 1.7.1 tras W-9 (D9-3: PATCH, solo
+  retira un rodeo).
 - **Si una fase `U-` cambia de alcance** al implementarla, se ajusta su `W-` antes de empezarla y se anota aquí.
 
 ---
@@ -383,6 +413,31 @@ Veredicto de la ola 8: **GO_CONDICIONAL**. Condiciones:
 1. ~~Aprobar D8-1 a D8-8~~ — hecho (2026-10-29).
 2. Banco con Oracle 23ai y 11g simulado antes de `v5.0.0` (T8-1, T8-2), y banco del explorador antes de W-8.2 (S8-1).
 3. Si U-8.4 sale sin el timeout en el servidor, W-8.2 se queda fuera de la ola (S8-2).
+
+### Ola 9 (AUDIT_PLAN del 2026-10-29)
+
+| # | Riesgo | Mitigación |
+|---|---|---|
+| R9-1 | Cambia el tipo devuelto para otros consumidores de util_bbdd (`float` → `Decimal` en Oracle): código que lo mezcle con `float` fallaría con `TypeError` | D9-1: corrección de pérdida de datos que deja Oracle como PostgreSQL y MySQL (ya dan `Decimal`); nota en el CHANGELOG y en `api_5_0_migration.md` |
+| R9-2 | El conversor podría alcanzar consultas internas que esperan `int`/`float` (catálogo, `server_version`, readiness) | Solo en los cursores de las consultas personalizadas y nombradas, nunca en la conexión; test: el snapshot de Oracle no cambia |
+| R9-3 | Que `AsyncCursor` de oracledb admita `outputtypehandler` | **PENDIENTE DE VERIFICAR** en el banco (Oracle asíncrono) en U-9.1; si no, D9-2 |
+| R9-4 | Coste de leer `NUMBER` como texto y convertirlo en Python | Solo en columnas con escala o sin restricción y en consultas personalizadas o nombradas; el mismo coste que ya asumía SQLAlchemy |
+| R9-5 | Detectar oracledb por el módulo de la conexión | Mismo patrón que `_is_mariadb_connection` (las conexiones de un pool son del mismo módulo); test con un doble |
+| R9-6 | Entre W-9.0 y W-9.1 conviven el conversor de util_bbdd y el `fetch_decimals` de la web | Con `fetch_decimals` el conversor recibe el mismo texto y da el mismo `Decimal`; `_oracle_number` deja los enteros como `int`. W-9.1 va justo después, sin release entre medias |
+
+Decisiones (aprobadas el 2026-10-29):
+
+| # | Decisión | Aprobado |
+|---|---|---|
+| D9-1 | Versión de util_bbdd | **5.1.0 como `fix`**, con nota del cambio de tipo. Descartada una opción `exact_numbers=True` hasta la 6.0 |
+| D9-2 | Si el cursor asíncrono no admite el conversor | **Solo síncrono en 5.1.0** y limitación documentada (la web solo usa el síncrono) |
+| D9-3 | Versión de la web tras la ola 9 | **1.7.1 (PATCH)**: retira un rodeo; lo visible es que `FLOAT` vuelve a salir como número |
+| D9-4 | Documentación | **Grupo 9 en este plan** y fila 9 en §3, en un commit `docs(plan)` |
+
+Veredicto de la ola 9: **GO_CONDICIONAL**. Condiciones:
+
+1. ~~Aprobar D9-1 a D9-4~~ — hecho (2026-10-29).
+2. Comprobar R9-3 (cursor asíncrono) en el banco durante U-9.1.
 
 ---
 
