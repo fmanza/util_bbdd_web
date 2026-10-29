@@ -217,7 +217,13 @@ describe('ConnectionDetailPage', () => {
           detail: null,
           checked_at: '2026-10-20T08:00:00Z',
           findings: [
-            { level: 'WARNING', param: 'shared_buffers', current: '128MB', recommendation: 'Subir a 25 %' },
+            {
+              level: 'WARNING',
+              param: 'shared_buffers',
+              current: '128MB',
+              recommendation:
+                'Subir a 25 % de la RAM del servidor y reiniciar el servicio en una ventana de mantenimiento',
+            },
           ],
           error: null,
         },
@@ -232,7 +238,8 @@ describe('ConnectionDetailPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Readiness' }));
     expect(await screen.findByText('shared_buffers')).toBeInTheDocument();
-    expect(screen.getByText('WARNING')).toBeInTheDocument();
+    // El nivel no se recorta con puntos suspensivos aunque la recomendación sea larga.
+    expect(screen.getByText('WARNING')).toHaveStyle({ overflow: 'visible' });
   });
 
   it('borra tras confirmar repitiendo el nombre', async () => {

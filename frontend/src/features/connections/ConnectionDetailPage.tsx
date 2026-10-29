@@ -82,7 +82,12 @@ function ReadinessReport({ report }: { report: Readiness }) {
               {report.findings.map((finding) => (
                 <Table.Tr key={`${finding.level}-${finding.param}`}>
                   <Table.Td>
-                    <Badge color={LEVEL_COLORS[finding.level] ?? 'gray'} variant="light">
+                    {/* Sin overflow visible la etiqueta (flex item) mide 0 y la tabla la recorta («WA…»). */}
+                    <Badge
+                      color={LEVEL_COLORS[finding.level] ?? 'gray'}
+                      variant="light"
+                      styles={{ label: { overflow: 'visible' } }}
+                    >
                       {finding.level}
                     </Badge>
                   </Table.Td>
