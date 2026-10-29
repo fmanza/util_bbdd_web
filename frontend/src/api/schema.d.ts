@@ -1729,11 +1729,41 @@ export interface components {
         };
         /**
          * CapabilitiesOut
-         * @description Matriz de capacidades verificadas del motor.
+         * @description Matriz de capacidades del motor (``get_engine_capabilities`` de util_bbdd 4.6.0).
          */
         CapabilitiesOut: {
             /** Async Supported */
             async_supported: boolean;
+            /**
+             * Bulk
+             * @description Carga bulk desde fichero (BulkCrud)
+             */
+            bulk: boolean;
+            /**
+             * Compare
+             * @description Comparación de esquemas (SchemaComparator)
+             */
+            compare: boolean;
+            /**
+             * Documentation
+             * @description Documentación (DatabaseDocumentation)
+             */
+            documentation: boolean;
+            /**
+             * Dump
+             * @description Volcado de datos, como origen o destino
+             */
+            dump: boolean;
+            /**
+             * Dump Constraints
+             * @description El volcado desactiva y reactiva las constraints del destino
+             */
+            dump_constraints: boolean;
+            /**
+             * Graphs
+             * @description Grafos de relaciones
+             */
+            graphs: boolean;
             /** Migrate Source */
             migrate_source: boolean;
             /** Migrate Target */

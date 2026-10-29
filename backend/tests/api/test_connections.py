@@ -64,6 +64,12 @@ def test_engine_catalog_and_detail(user_client: TestClient) -> None:
         "migrate_source": True,
         "migrate_target": True,
         "readiness": True,
+        "documentation": True,
+        "graphs": True,
+        "compare": True,
+        "dump": True,
+        "dump_constraints": True,
+        "bulk": True,
     }
     assert detail["default_port"] == 5432
     params = {p["name"]: p for p in detail["params"]}

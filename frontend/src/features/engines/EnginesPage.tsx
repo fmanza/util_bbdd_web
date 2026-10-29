@@ -6,7 +6,7 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { DriverBadges } from './DriverBadges';
 import { useEngines } from './useEngines';
 
-function YesNo({ value }: { value: boolean }) {
+export function YesNo({ value }: { value: boolean }) {
   const { t } = useTranslation();
   return (
     <Badge color={value ? 'green' : 'gray'} variant="light">

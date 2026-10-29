@@ -18,7 +18,22 @@ import { Link, useParams } from 'react-router';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { DriverBadges } from './DriverBadges';
-import { useEngine } from './useEngines';
+import { YesNo } from './EnginesPage';
+import { type Engine, useEngine } from './useEngines';
+
+/** Operaciones de la matriz de util_bbdd (``get_engine_capabilities``, GAPS G5), en el orden de la ficha. */
+const CAPABILITIES: { key: keyof Engine['capabilities']; label: string }[] = [
+  { key: 'documentation', label: 'engines.capabilities.documentation' },
+  { key: 'graphs', label: 'engines.capabilities.graphs' },
+  { key: 'compare', label: 'engines.capabilities.compare' },
+  { key: 'migrate_source', label: 'engines.migrateSource' },
+  { key: 'migrate_target', label: 'engines.migrateTarget' },
+  { key: 'dump', label: 'engines.capabilities.dump' },
+  { key: 'dump_constraints', label: 'engines.capabilities.dumpConstraints' },
+  { key: 'bulk', label: 'engines.capabilities.bulk' },
+  { key: 'readiness', label: 'engines.readiness' },
+  { key: 'async_supported', label: 'engines.async' },
+];
 
 export function EngineDetailPage() {
   const { t } = useTranslation();
@@ -83,6 +98,23 @@ export function EngineDetailPage() {
           </Table.Tbody>
         </Table>
       </Card>
+      <Stack gap="xs">
+        <Title order={3}>{t('engines.operations')}</Title>
+        <Table withTableBorder aria-label={t('engines.operations')}>
+          <Table.Tbody>
+            {CAPABILITIES.map(({ key, label }) => (
+              <Table.Tr key={key}>
+                <Table.Th scope="row" w={260}>
+                  {t(label)}
+                </Table.Th>
+                <Table.Td>
+                  <YesNo value={engine.capabilities[key]} />
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Stack>
       {engine.system_requirements.length > 0 && (
         <Stack gap="xs">
           <Title order={3}>{t('engines.requirements')}</Title>

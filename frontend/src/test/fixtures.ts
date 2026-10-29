@@ -1,7 +1,18 @@
 import type { ConnectionInfo } from '../features/connections/useConnections';
 import type { EngineDetail } from '../features/engines/useEngines';
 
-const capabilities = { async_supported: true, migrate_source: true, migrate_target: true, readiness: true };
+const capabilities = {
+  async_supported: true,
+  migrate_source: true,
+  migrate_target: true,
+  readiness: true,
+  documentation: true,
+  graphs: true,
+  compare: true,
+  dump: true,
+  dump_constraints: true,
+  bulk: true,
+};
 
 export const PG_ENGINE: EngineDetail = {
   db_type: 'postgresql',
@@ -92,7 +103,7 @@ export const SQLITE_ENGINE: EngineDetail = {
   name: 'SQLite',
   default_port: null,
   drivers: [{ name: 'sqlite3', installed: true }],
-  capabilities: { ...capabilities, migrate_source: false, migrate_target: false },
+  capabilities: { ...capabilities, migrate_source: false, migrate_target: false, dump_constraints: false },
   params: [
     {
       name: 'database',
@@ -111,7 +122,17 @@ export const HSQLDB_ENGINE: EngineDetail = {
   db_type: 'hsqldb',
   name: 'HSQLDB',
   drivers: [{ name: 'jaydebeapi', installed: false }],
-  capabilities: { async_supported: false, migrate_source: false, migrate_target: false, readiness: false },
+  capabilities: {
+    ...capabilities,
+    async_supported: false,
+    migrate_source: false,
+    migrate_target: false,
+    readiness: false,
+    compare: false,
+    dump: false,
+    dump_constraints: false,
+    bulk: false,
+  },
 };
 
 export const CONNECTION: ConnectionInfo = {

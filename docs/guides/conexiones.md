@@ -15,11 +15,9 @@ SQLite) en una matriz:
 | Migración (origen / destino) | Puede usarse como origen o destino de la migración DDL (Fase 7) |
 | Readiness | util_bbdd tiene comprobaciones de condiciones del motor |
 
-Las operaciones de documentación, grafos, comparación, volcado y carga se añadirán a la matriz cuando se
-implementen sus fases.
-
-Al pulsar un motor se abre su **ficha**: descripción, requisitos del sistema, comando de instalación del driver,
-características y la tabla de **parámetros de conexión** (tipo, valor por defecto y descripción). *Nueva conexión con
+Al pulsar un motor se abre su **ficha**: descripción, **operaciones que admite** (documentación, grafo, comparación,
+migración, volcado y si gestiona las constraints, carga, readiness y async; la matriz es de util_bbdd), requisitos del
+sistema, comando de instalación del driver, características y la tabla de **parámetros de conexión** (tipo, valor por defecto y descripción). *Nueva conexión con
 este motor* abre el formulario ya con el motor elegido.
 
 ## Crear una conexión

@@ -46,6 +46,22 @@ describe('EngineDetailPage', () => {
     );
   });
 
+  it('muestra las operaciones que admite el motor (matriz de util_bbdd)', async () => {
+    stubApi({ ...session(USER), 'GET /api/v1/engines/hsqldb': { body: HSQLDB_ENGINE } });
+
+    renderRoute('/engines/hsqldb');
+
+    const operations = await screen.findByRole('table', { name: 'Operaciones que admite' });
+    const answer = (label: string) =>
+      within(
+        within(operations).getByRole('rowheader', { name: label }).closest('tr') as HTMLElement,
+      ).getByText(/^(Sí|No)$/).textContent;
+    expect(answer('Documentación')).toBe('Sí');
+    expect(answer('Comparación de esquemas')).toBe('No');
+    expect(answer('Carga bulk')).toBe('No');
+    expect(within(operations).getAllByRole('row')).toHaveLength(10);
+  });
+
   it('motor desconocido muestra el 404 de la API', async () => {
     stubApi({
       ...session(USER),

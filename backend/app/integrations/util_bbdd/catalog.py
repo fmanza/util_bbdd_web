@@ -1,22 +1,19 @@
 """Catálogo de motores de util_bbdd traducido a tipos propios (Fase 2).
 
-Combina ``get_db_type_info_static`` (ficha y ``connection_params``), ``is_async_supported``, los motores de
-migración (``MigrationPlanner.supported_sources/targets``, util_bbdd 4.3.0, GAPS G4) y el readiness estático en una matriz de capacidades (GAPS G5). Clasifica cada parámetro de
-conexión como secreto, host, ruta o bloqueado, porque util_bbdd no lo indica (GAPS G12).
+Combina ``get_db_type_info_static`` (ficha, ``connection_params`` y ``default_driver``), la matriz de capacidades
+``get_engine_capabilities`` y el estado de los drivers ``get_driver_status`` (util_bbdd 4.6.0, GAPS G5, G8, G10 y G14).
+Los motores de migración salen de ``MigrationPlanner.supported_sources/targets`` (util_bbdd 4.3.0, GAPS G4). Clasifica
+cada parámetro de conexión como secreto, host, ruta o bloqueado, porque util_bbdd no lo indica (GAPS G12).
 """
 
 from __future__ import annotations
 
-import importlib.util
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from functools import cache
 from typing import Any, Literal
 
 ParamType = Literal["string", "integer", "float", "boolean", "object"]
 ParamKind = Literal["plain", "secret", "host", "path", "blocked"]
-
-#: Drivers que aparecen en ``database_types.json`` pero no se pueden instalar (GAPS G8).
-OBSOLETE_DRIVERS: frozenset[str] = frozenset({"cx_Oracle"})
 
 _SECRET: frozenset[str] = frozenset({"password"})
 _HOST: frozenset[str] = frozenset({"host"})
@@ -71,12 +68,18 @@ class DriverStatus:
 
 @dataclass(frozen=True)
 class EngineCapabilities:
-    """Matriz de capacidades verificadas (GAPS G5). Las operaciones de fases futuras se añaden al verificarlas."""
+    """Matriz de capacidades de util_bbdd (``get_engine_capabilities``, GAPS G5): qué operaciones admite el motor."""
 
     async_supported: bool
     migrate_source: bool
     migrate_target: bool
     readiness: bool
+    documentation: bool
+    graphs: bool
+    compare: bool
+    dump: bool
+    dump_constraints: bool
+    bulk: bool
 
 
 @dataclass(frozen=True)
@@ -129,13 +132,6 @@ def param_kind(db_type: str, name: str) -> ParamKind:
     return "plain"
 
 
-def _driver_installed(name: str) -> bool:
-    try:
-        return importlib.util.find_spec(name) is not None
-    except (ImportError, ValueError):
-        return False
-
-
 def _param_type(raw: object) -> ParamType:
     return raw if raw in ("string", "integer", "float", "boolean", "object") else "string"
 
@@ -162,21 +158,11 @@ def _params(db_type: str, connection_params: dict[str, Any]) -> tuple[ParamSpec,
     return tuple(specs)
 
 
-def _driver_info(raw: object) -> dict[str, Any]:
-    """``driver_info`` es un ``dict`` salvo en SQL Server, que lista una opción por driver (GAPS G14): se toma la
-    primera, que es la predeterminada."""
-    if isinstance(raw, list):
-        raw = raw[0] if raw else {}
-    return raw if isinstance(raw, dict) else {}
+def _capabilities(db_type: str) -> EngineCapabilities:
+    from util_bbdd.connection import get_engine_capabilities
 
-
-def _readiness_supported(db_type: str) -> bool:
-    from util_bbdd.connection import EngineReadinessAdvisor
-
-    try:
-        return bool(EngineReadinessAdvisor().assess(db_type, {}).supported)
-    except Exception:  # un motor sin checks no debe romper el catálogo
-        return False
+    caps = get_engine_capabilities(db_type)  # None para un motor desconocido: sin capacidades
+    return EngineCapabilities(**{f.name: bool(getattr(caps, f.name, False)) for f in fields(EngineCapabilities)})
 
 
 def _raw_info(db_type: str) -> dict[str, Any]:
@@ -194,15 +180,12 @@ def engine_detail(db_type: str) -> EngineDetail:
     Raises:
         UnknownEngineError: Motor no soportado.
     """
-    from util_bbdd.core.capabilities import is_async_supported
+    from util_bbdd.connection import get_driver_status
 
     info = _raw_info(db_type)
-    driver_info = _driver_info(info.get("driver_info"))
-    drivers = tuple(
-        DriverStatus(name=name, installed=_driver_installed(name))
-        for name in info.get("drivers", [])
-        if name not in OBSOLETE_DRIVERS
-    )
+    default_driver = info.get("default_driver")
+    driver_info: dict[str, Any] = default_driver if isinstance(default_driver, dict) else {}
+    drivers = tuple(DriverStatus(name=d.name, installed=d.installed) for d in get_driver_status(db_type))
     port = info.get("default_port")
     return EngineDetail(
         db_type=db_type,
@@ -211,12 +194,7 @@ def engine_detail(db_type: str) -> EngineDetail:
         version_range=str(info.get("version_range", "")),
         default_port=port if isinstance(port, int) and port > 0 else None,
         drivers=drivers,
-        capabilities=EngineCapabilities(
-            async_supported=bool(is_async_supported(db_type)),
-            migrate_source=db_type in migration_engines()[0],
-            migrate_target=db_type in migration_engines()[1],
-            readiness=_readiness_supported(db_type),
-        ),
+        capabilities=_capabilities(db_type),
         url_docs=info.get("url_docs"),
         features=tuple(str(f) for f in info.get("supported_features", [])),
         driver_package=driver_info.get("pip_package"),

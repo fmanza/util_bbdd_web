@@ -164,7 +164,7 @@
   "engines": {
     "title": "Motores",
     "intro": "Motores de base de datos que soporta util_bbdd, con los drivers instalados en el servidor y las capacidades verificadas.",
-    "matrixCaption": "Matriz de capacidades por motor. Las operaciones de documentación, grafos, comparación, volcado y carga se añadirán al implementarse.",
+    "matrixCaption": "Matriz de capacidades por motor. La ficha de cada motor muestra todas las operaciones que admite.",
     "engine": "Motor",
     "versions": "Versiones",
     "port": "Puerto",
@@ -187,6 +187,15 @@
     "paramDescription": "Descripción",
     "required": "obligatorio",
     "newConnection": "Nueva conexión con este motor",
+    "operations": "Operaciones que admite",
+    "capabilities": {
+      "documentation": "Documentación",
+      "graphs": "Grafo de relaciones",
+      "compare": "Comparación de esquemas",
+      "dump": "Volcado de datos (origen o destino)",
+      "dumpConstraints": "El volcado gestiona las constraints",
+      "bulk": "Carga bulk"
+    },
     "kinds": {
       "secret": "secreto",
       "host": "destino",

@@ -175,12 +175,18 @@ class DriverOut(_Out):
 
 
 class CapabilitiesOut(_Out):
-    """Matriz de capacidades verificadas del motor."""
+    """Matriz de capacidades del motor (``get_engine_capabilities`` de util_bbdd 4.6.0)."""
 
     async_supported: bool
     migrate_source: bool
     migrate_target: bool
     readiness: bool
+    documentation: bool = Field(description="Documentación (DatabaseDocumentation)")
+    graphs: bool = Field(description="Grafos de relaciones")
+    compare: bool = Field(description="Comparación de esquemas (SchemaComparator)")
+    dump: bool = Field(description="Volcado de datos, como origen o destino")
+    dump_constraints: bool = Field(description="El volcado desactiva y reactiva las constraints del destino")
+    bulk: bool = Field(description="Carga bulk desde fichero (BulkCrud)")
 
 
 class ParamOut(_Out):

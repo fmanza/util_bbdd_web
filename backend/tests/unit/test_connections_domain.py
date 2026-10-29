@@ -202,8 +202,12 @@ def test_catalog_lists_all_util_bbdd_engines() -> None:
     assert engines["postgresql"].default_port == 5432
     assert engines["sqlite"].default_port is None
     assert engines["hsqldb"].capabilities.async_supported is False
-    assert engines["sqlserver"].driver_package == "pymssql"  # driver_info es una lista en SQL Server (G14)
+    assert engines["sqlserver"].driver_package == "pymssql"  # default_driver también en SQL Server (G14)
     assert "cx_Oracle" not in {d.name for d in engines["oracle"].drivers}  # G8
+    # G5: sin SQLAlchemy, HSQLDB no compara, ni vuelca ni carga; SQLite vuelca sin gestionar constraints.
+    hsqldb, sqlite = engines["hsqldb"].capabilities, engines["sqlite"].capabilities
+    assert (hsqldb.documentation, hsqldb.compare, hsqldb.dump, hsqldb.bulk) == (True, False, False, False)
+    assert (sqlite.dump, sqlite.dump_constraints, sqlite.migrate_source) == (True, False, False)
     assert next(d for d in engines["sqlite"].drivers if d.name == "sqlite3").installed
 
 
@@ -240,3 +244,19 @@ def test_build_params_reports_missing_required_without_secrets() -> None:
         ]
         == "require"
     )
+
+
+def test_capabilities_mirror_util_bbdd() -> None:
+    """Contrato G5: cada capacidad de la web existe en ``get_engine_capabilities`` (si util_bbdd renombra una, falla
+    aquí en lugar de quedarse en ``False``) y coincide con ella en todos los motores."""
+    import dataclasses
+
+    from util_bbdd.connection import get_engine_capabilities
+
+    from app.integrations.util_bbdd.catalog import EngineCapabilities
+
+    ours = {f.name for f in dataclasses.fields(EngineCapabilities)}
+    for engine in list_engines():
+        theirs = dataclasses.asdict(get_engine_capabilities(engine.db_type))  # type: ignore[arg-type]
+        assert ours <= set(theirs), sorted(ours - set(theirs))
+        assert dataclasses.asdict(engine.capabilities) == {name: theirs[name] for name in ours}

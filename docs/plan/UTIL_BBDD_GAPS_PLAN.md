@@ -543,4 +543,5 @@ cada fase `W-`).
 
 | Fase | Commit | Notas |
 |---|---|---|
-| W-6.0 | este commit | Pin 4.6.0 según `publicar_version.md` (lock con uv 0.12.22; otra vez se descarta la retirada ajena de la rueda `armv7l` de zensical). Sin cambios de código; suite con `-W error::FutureWarning`. G11 resuelto sin fase `W-` (la web no usa `get_database_info()`) |
+| W-6.0 | `9cb8827` | Pin 4.6.0 según `publicar_version.md` (lock con uv 0.12.22; otra vez se descarta la retirada ajena de la rueda `armv7l` de zensical). Sin cambios de código; suite con `-W error::FutureWarning`. G11 resuelto sin fase `W-` (la web no usa `get_database_info()`) |
+| W-T1 | este commit | Capacidades desde `get_engine_capabilities` (el tipo propio `EngineCapabilities` gana las 6 nuevas; test de contrato con la matriz de util_bbdd), drivers desde `get_driver_status` y paquete, instalación y requisitos desde `default_driver`. Fuera `OBSOLETE_DRIVERS`, `_driver_installed`, `_driver_info` y `_readiness_supported`; `migration_engines()` se queda (API pública de `MigrationPlanner`, la usa el dominio). Comparada la ficha de los 7 motores antes/después: solo se añaden capacidades. UI (D1): tabla de motores igual; la ficha muestra «Operaciones que admite». OpenAPI + `gen:api` |
