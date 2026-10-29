@@ -3,9 +3,10 @@
 Usa :func:`isolated.run_isolated`: los ``conn_params`` (con la contraseña) viajan por la tubería, el hijo no
 registra nada y al padre solo vuelve un código de error y el tipo de la excepción, nunca su mensaje.
 
-La prueba hace ``ping()`` (util_bbdd 4.6.0, GAPS G13; también en HSQLDB, sin SQLAlchemy). La versión del servidor sale
-de SQLAlchemy si el motor lo tiene: ``get_server_version()`` es menos precisa en Oracle (``23.0.0.0.0`` frente a
-``23.26.3.0.0``) y añade sufijos en MariaDB y PostgreSQL; sin SQLAlchemy (HSQLDB), la de util_bbdd.
+La prueba hace ``ping()`` (util_bbdd 4.6.0, GAPS G13; también en HSQLDB, sin SQLAlchemy). La versión del servidor es la
+numérica de ``get_server_version_info()`` (util_bbdd 5.0.0, G43: completa en Oracle y sin sufijos de distribución,
+la misma que daba SQLAlchemy en los motores del bench) o, si no empieza por un número, el texto de
+``get_server_version()``, recortado.
 """
 
 from __future__ import annotations
@@ -63,24 +64,15 @@ class ReadinessResult:
     error: ProbeError | None
 
 
-def _sqlalchemy_version(manager: Any) -> str | None:
-    try:
-        engine = manager.get_sqlalchemy_engine()
-        with engine.connect():
-            info = engine.dialect.server_version_info
-    except Exception:  # sin SQLAlchemy (HSQLDB): se pregunta a util_bbdd
-        return None
-    return ".".join(str(part) for part in info) if info else None
-
-
 def _server_version(manager: Any) -> str | None:
-    """Versión del servidor: la numérica de SQLAlchemy o, sin ella, ``get_server_version()`` (recortada)."""
-    version = _sqlalchemy_version(manager)
-    if version:
-        return version
+    """Versión del servidor: la numérica de util_bbdd o, si no la hay, su texto (recortado). Es informativa: su fallo
+    no invalida la prueba."""
     try:
+        info = manager.get_server_version_info()
+        if info:
+            return ".".join(str(part) for part in info)
         version = manager.get_server_version()
-    except Exception:  # la versión es informativa: su fallo no invalida la prueba
+    except Exception:
         return None
     return str(version)[:MAX_SERVER_VERSION] if version else None
 

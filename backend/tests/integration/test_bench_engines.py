@@ -9,6 +9,7 @@ puertos se pueden cambiar con ``UTIL_BBDD_BENCH_<MOTOR>_PORT`` (los mismos nombr
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 import pytest
@@ -45,7 +46,8 @@ def test_bench_connection(db_type: str) -> None:
     result = check_connection(db_type, build_params(db_type, {**BENCH[db_type], "password": PASSWORD}), timeout=60)
 
     assert result.ok, result.error
-    assert result.server_version
+    # G43 (util_bbdd 5.0.0, W-8.3): numérica y sin sufijos de distribución (Oracle 23ai: 23.26.3.0.0).
+    assert result.server_version and re.fullmatch(r"\d+(\.\d+)+", result.server_version), result.server_version
 
 
 @pytest.mark.parametrize("db_type", sorted(BENCH))

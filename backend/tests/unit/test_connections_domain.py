@@ -282,25 +282,29 @@ def test_capabilities_mirror_util_bbdd() -> None:
         assert dataclasses.asdict(engine.capabilities) == {name: theirs[name] for name in ours}
 
 
-def test_probe_pings_and_takes_the_version_from_sqlalchemy_or_util_bbdd() -> None:
-    """G13: la prueba hace ``ping()``; la versión es la de SQLAlchemy (más precisa en Oracle) y, sin SQLAlchemy
-    (HSQLDB), la de ``get_server_version()``, recortada."""
+def test_probe_takes_the_version_from_util_bbdd() -> None:
+    """G43 (util_bbdd 5.0.0, W-8.3): la versión es la numérica de ``get_server_version_info()``; si el servidor no da
+    números (o ``None``), el texto de ``get_server_version()``, recortado. Sin SQLAlchemy y sin romper la prueba."""
     from unittest.mock import MagicMock
 
     from app.integrations.util_bbdd.probe import MAX_SERVER_VERSION, _server_version
 
-    with_engine = MagicMock()
-    with_engine.get_sqlalchemy_engine.return_value.dialect.server_version_info = (23, 26, 3, 0, 0)
-    without_engine = MagicMock()
-    without_engine.get_sqlalchemy_engine.side_effect = NotImplementedError
-    without_engine.get_server_version.return_value = "2.7.4 " + "x" * 300
+    numeric = MagicMock()
+    numeric.get_server_version_info.return_value = (23, 26, 3, 0, 0)
+    text_only = MagicMock()
+    text_only.get_server_version_info.return_value = None
+    text_only.get_server_version.return_value = "HSQL " + "x" * 300
+    missing = MagicMock()
+    missing.get_server_version_info.return_value = None
+    missing.get_server_version.return_value = None
     broken = MagicMock()
-    broken.get_sqlalchemy_engine.side_effect = NotImplementedError
-    broken.get_server_version.side_effect = RuntimeError
+    broken.get_server_version_info.side_effect = RuntimeError
 
-    assert _server_version(with_engine) == "23.26.3.0.0"
-    with_engine.get_server_version.assert_not_called()
-    assert _server_version(without_engine) == ("2.7.4 " + "x" * 300)[:MAX_SERVER_VERSION]
+    assert _server_version(numeric) == "23.26.3.0.0"
+    numeric.get_server_version.assert_not_called()
+    numeric.get_sqlalchemy_engine.assert_not_called()
+    assert _server_version(text_only) == ("HSQL " + "x" * 300)[:MAX_SERVER_VERSION]
+    assert _server_version(missing) is None
     assert _server_version(broken) is None
 
 
