@@ -144,17 +144,17 @@ def test_engine_message_drops_urls_and_sql() -> None:
     assert "LINE 1" not in message
 
 
-def test_execute_custom_many_still_returns_rows_without_column_names(tmp_path: object) -> None:
-    """Contrato G42: ``execute_custom_many(read_only=, max_rows=)`` de util_bbdd 4.6.0 limita las filas y bloquea las
-    escrituras, pero devuelve tuplas sin nombres de columna, que la consola necesita. Si este test falla, util_bbdd ya
-    los devuelve: revisar si la consola puede pasar a usarlo (W-T4)."""
+def test_run_read_only_uses_execute_custom_result(tmp_path: object) -> None:
+    """Contrato G42 (util_bbdd 5.0.0, W-8.2): ``execute_custom_result`` da las cabeceras también sin filas y con nombres
+    repetidos, ``max_rows`` corta y ``read_only`` bloquea las escrituras aunque se salte el guardián."""
     import sqlite3
     from pathlib import Path
 
     from util_bbdd import SyncDatabaseManager
-    from util_bbdd.exceptions import DatabaseOperationError
 
     from app.integrations.util_bbdd.catalog import build_params
+    from app.integrations.util_bbdd.isolated import PublicError
+    from app.integrations.util_bbdd.sql import _run_read_only
 
     database = Path(str(tmp_path)) / "x.db"
     con = sqlite3.connect(database)
@@ -162,14 +162,40 @@ def test_execute_custom_many_still_returns_rows_without_column_names(tmp_path: o
     con.close()
 
     with SyncDatabaseManager("sqlite", build_params("sqlite", {"database": str(database)}), use_pool=False) as manager:
-        rows = manager.execute_custom_many("SELECT id, v FROM t ORDER BY id", read_only=True, max_rows=2)
-        with pytest.raises(DatabaseOperationError):
-            manager.execute_custom_many("DELETE FROM t", read_only=True)
+        page = _run_read_only(manager, "sqlite", "SELECT id, v FROM t ORDER BY id", 2, 30)
+        empty = _run_read_only(manager, "sqlite", "SELECT id, v FROM t WHERE id < 0", 10, 30)
+        repeated = _run_read_only(manager, "sqlite", "SELECT 1 AS a, 2 AS a", 10, 30)
+        with pytest.raises(PublicError) as info:
+            _run_read_only(manager, "sqlite", "DELETE FROM t", 10, 30)
 
-    assert rows == [(1, "a"), (2, "b")]  # max_rows corta (G20)
-    assert type(rows[0]) is tuple and not hasattr(rows[0], "_fields") and not hasattr(rows[0], "keys")
+    assert page["columns"] == ["id", "v"] and page["rows"] == [[1, "a"], [2, "b"]]
+    assert page["truncated"] is True and page["row_count"] == 2
+    assert empty["columns"] == ["id", "v"] and empty["rows"] == [] and empty["truncated"] is False
+    assert repeated["columns"] == ["a", "a"] and repeated["rows"] == [[1, 2]]
+    assert info.value.code == "query_error" and "readonly" in info.value.message.lower()
     con = sqlite3.connect(database)
     try:
-        assert con.execute("SELECT COUNT(*) FROM t").fetchone() == (3,)  # read_only bloqueó el DELETE (G19)
+        assert con.execute("SELECT COUNT(*) FROM t").fetchone() == (3,)  # el motor bloqueó el DELETE (G19)
     finally:
         con.close()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (decimal.Decimal("7"), 7),
+        (decimal.Decimal("1E+3"), 1000),
+        (decimal.Decimal("12345678901234567.891"), decimal.Decimal("12345678901234567.891")),
+        (decimal.Decimal("1.50"), decimal.Decimal("1.50")),
+        (decimal.Decimal("NaN"), "NaN"),
+        (2.5, 2.5),
+        ("7", "7"),
+    ],
+)
+def test_oracle_number_keeps_precision_and_integers(value: object, expected: object) -> None:
+    """G44: con ``fetch_decimals`` los ``NUMBER`` de Oracle llegan como ``Decimal``; los enteros vuelven a ``int``."""
+    from app.integrations.util_bbdd.sql import _oracle_number
+
+    result = _oracle_number(value)
+
+    assert (str(result) == expected) if expected == "NaN" else (result == expected and type(result) is type(expected))

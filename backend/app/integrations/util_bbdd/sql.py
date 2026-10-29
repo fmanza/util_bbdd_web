@@ -4,16 +4,15 @@ Defensa en capas (el dominio comprueba además el permiso del usuario y que la c
 
 1. :func:`check_read_only`: una única sentencia ``SELECT``/``UNION``/``WITH … SELECT`` sin DML, DDL, ``INTO``,
    bloqueos ni comandos en ningún nodo (también dentro de CTE).
-2. Transacción de solo lectura en el motor (PostgreSQL, MySQL/MariaDB, Oracle, SQLite con ``query_only``); SQL Server
-   no la tiene y depende del guardián. Siempre termina en ``ROLLBACK``.
-3. ``fetchmany(limit + 1)`` y timeout del subproceso (y ``statement_timeout`` en PostgreSQL).
+2. Transacción de solo lectura en el motor con ``execute_custom_result(read_only=True)`` de util_bbdd 5.0.0 (GAPS G19,
+   G42): PostgreSQL, MySQL/MariaDB, Oracle y SQLite (``query_only``); en SQL Server, una transacción que se deshace.
+3. ``max_rows=limit + 1`` (G20), timeout del subproceso y, en PostgreSQL, ``statement_timeout`` en el servidor.
 
-Desde util_bbdd 4.6.0 ``execute_custom_many`` tiene ``read_only`` y ``max_rows`` (GAPS G19, G20), pero devuelve tuplas
-sin nombres de columna (G42): la consola necesita las cabeceras (también con 0 filas) y conservar las columnas repetidas,
-así que se sigue ejecutando con el engine de SQLAlchemy del propio ``SyncDatabaseManager``, con la misma transacción de
-solo lectura por motor. Un test de contrato avisa cuando util_bbdd devuelva los nombres. util_bbdd 4.6.0 valida además
-todos los parámetros interpolados de las queries nombradas (G18), con la misma regla que ``PARAM_VALUE``, que se
-mantiene.
+``execute_custom_result`` usa la conexión del driver, no SQLAlchemy: en Oracle, oracledb devolvería ``NUMBER`` como
+``float`` y perdería precisión (G44), así que la tarea pide ``Decimal`` (``fetch_decimals``, el ajuste es del
+subproceso) y los enteros vuelven a ser ``int``. Los nombres de columna son los del driver (en Oracle, en mayúsculas).
+util_bbdd 4.6.0 valida además todos los parámetros interpolados de las queries nombradas (G18), con la misma regla que
+``PARAM_VALUE``, que se mantiene.
 """
 
 from __future__ import annotations
@@ -158,45 +157,39 @@ def _engine_message(exc: BaseException) -> str:
 
 # --- ejecución de solo lectura (en el subproceso) ----------------------------------------------------------------
 
-_READ_ONLY_STATEMENTS: Final[dict[str, tuple[str, ...]]] = {
-    "postgresql": ("SET TRANSACTION READ ONLY",),
-    "mysql": ("SET TRANSACTION READ ONLY",),
-    "mariadb": ("SET TRANSACTION READ ONLY",),
-    "oracle": ("SET TRANSACTION READ ONLY",),
-    "sqlite": ("PRAGMA query_only = ON",),
-}
+
+def _oracle_number(value: Any) -> Any:
+    """Con ``fetch_decimals`` todo ``NUMBER`` llega como ``Decimal``: los enteros vuelven a ``int``, como con SQLAlchemy."""
+    if isinstance(value, decimal.Decimal):
+        exponent = value.as_tuple().exponent
+        if isinstance(exponent, int) and exponent >= 0:  # no 'n'/'N'/'F' (NaN, infinito)
+            return int(value)
+    return value
+
+
+def _prepare_driver(db_type: str) -> None:
+    """Ajustes del driver para el subproceso de la tarea (G44: ``NUMBER`` de Oracle sin pasar por ``float``)."""
+    if db_type == "oracle":
+        import oracledb
+
+        oracledb.defaults.fetch_decimals = True
 
 
 def _run_read_only(manager: Any, db_type: str, sql: str, limit: int, timeout: float) -> dict[str, Any]:
-    from sqlalchemy import text
-    from sqlalchemy.exc import SQLAlchemyError
+    from util_bbdd.exceptions import DatabaseOperationError
 
-    engine = manager.get_sqlalchemy_engine()
     start = time.monotonic()
-    with engine.connect() as connection:
-        try:
-            if db_type in ("mysql", "mariadb"):
-                # En MySQL/MariaDB SET TRANSACTION afecta a la siguiente: se ejecuta antes de abrir la transacción.
-                connection.exec_driver_sql("ROLLBACK")
-            for statement in _READ_ONLY_STATEMENTS.get(db_type, ()):
-                connection.exec_driver_sql(statement)
-            if db_type == "postgresql":
-                connection.exec_driver_sql(f"SET LOCAL statement_timeout = {int(timeout * 1000)}")
-            result = connection.execute(text(sql))
-            columns = list(result.keys()) if result.returns_rows else []
-            rows = result.fetchmany(limit + 1) if result.returns_rows else []
-        except SQLAlchemyError as exc:
-            raise PublicError("query_error", _engine_message(exc)) from None
-        finally:
-            connection.rollback()
-            if db_type == "sqlite":
-                connection.exec_driver_sql("PRAGMA query_only = OFF")
-    truncated = len(rows) > limit
+    try:
+        result = manager.execute_custom_result(sql, timeout=timeout, read_only=True, max_rows=limit + 1)
+    except DatabaseOperationError as exc:
+        raise PublicError("query_error", _engine_message(exc.__cause__ or exc)) from None
+    convert = _oracle_number if db_type == "oracle" else None
+    rows = [[to_cell(convert(v) if convert else v) for v in row] for row in result.rows[:limit]]
     return {
-        "columns": [str(c) for c in columns],
-        "rows": [[to_cell(v) for v in row] for row in rows[:limit]],
-        "truncated": truncated,
-        "row_count": min(len(rows), limit),
+        "columns": [str(c) for c in result.columns],
+        "rows": rows,
+        "truncated": len(result.rows) > limit,
+        "row_count": len(rows),
         "duration_ms": int((time.monotonic() - start) * 1000),
     }
 
@@ -209,6 +202,7 @@ def free_sql_task(db_type: str, conn_params: dict[str, Any], sql: str, limit: in
         check_read_only(sql, db_type)
     except ReadOnlyViolation as exc:
         raise PublicError("not_read_only", str(exc)) from None
+    _prepare_driver(db_type)
     with SyncDatabaseManager(db_type, conn_params, use_pool=False) as manager:
         return _run_read_only(manager, db_type, sql, limit, timeout)
 
@@ -227,6 +221,7 @@ def named_query_task(
     from util_bbdd import SyncDatabaseManager
     from util_bbdd import exceptions as e
 
+    _prepare_driver(db_type)
     with tempfile.TemporaryDirectory(prefix="ubw-queries-") as tmp:
         queries_file = Path(tmp) / "queries.json"
         queries_file.write_text(json.dumps({db_type: {name: sql_template}}), encoding="utf-8")

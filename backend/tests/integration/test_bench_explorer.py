@@ -103,7 +103,8 @@ def test_write_bypassing_the_guard_is_blocked_or_rolled_back(db_type: str) -> No
     insert = f"INSERT INTO {PARENT} VALUES (2, 'intrusa')"
     with SyncDatabaseManager(db_type, _params(db_type), use_pool=False) as manager:
         if db_type == "sqlserver":
-            _run_read_only(manager, db_type, insert, 10, 30)  # sin transacción de solo lectura: el ROLLBACK la deshace
+            # Sin transacción de solo lectura: util_bbdd la ejecuta en una transacción que deshace (W-8.2).
+            _run_read_only(manager, db_type, insert, 10, 30)
         else:
             with pytest.raises(PublicError) as info:
                 _run_read_only(manager, db_type, insert, 10, 30)
@@ -113,3 +114,29 @@ def test_write_bypassing_the_guard_is_blocked_or_rolled_back(db_type: str) -> No
 
     count = run_free_sql(db_type, _params(db_type), f"SELECT COUNT(*) AS n FROM {PARENT}", limit=1, timeout=60)
     assert count.value["rows"] == [[1]]
+
+
+def test_free_select_headers_without_rows_and_repeated(db_type: str) -> None:
+    """G42 (util_bbdd 5.0.0): cabeceras con 0 filas y columnas repetidas. En Oracle, con los nombres del driver."""
+    dual = " FROM dual" if db_type == "oracle" else ""
+    empty = run_free_sql(
+        db_type, _params(db_type), f"SELECT id, nombre FROM {PARENT} WHERE id < 0", limit=10, timeout=60
+    )
+    repeated = run_free_sql(db_type, _params(db_type), f"SELECT 1 AS a, 2 AS a{dual}", limit=10, timeout=60)
+
+    assert empty.error is None, empty.error
+    assert [c.lower() for c in empty.value["columns"]] == ["id", "nombre"] and empty.value["rows"] == []
+    assert repeated.error is None, repeated.error
+    assert [c.lower() for c in repeated.value["columns"]] == ["a", "a"] and repeated.value["rows"] == [[1, 2]]
+
+
+def test_free_select_oracle_numbers_keep_precision(db_type: str) -> None:
+    """G44: ``NUMBER`` de Oracle sin pasar por ``float`` (``fetch_decimals`` en el subproceso); enteros como ``int``."""
+    if db_type != "oracle":
+        pytest.skip("Solo Oracle")
+    sql = "SELECT CAST(12345678901234567.891 AS NUMBER(38,3)) AS big, 1.5 AS n, 7 AS i, COUNT(*) AS c FROM dual"
+
+    result = run_free_sql(db_type, _params(db_type), sql, limit=1, timeout=60)
+
+    assert result.error is None, result.error
+    assert result.value["rows"] == [["12345678901234567.891", "1.5", 7, 1]]

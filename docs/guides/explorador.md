@@ -70,9 +70,11 @@ terminar. Ctrl+Enter ejecuta.
 - Si la consulta falla, se muestra el mensaje del motor (recortado), para poder corregirla.
 - Tiempo máximo: 30 s; filas: hasta 1000 (configurable por el administrador del servidor).
 - Todas las ejecuciones quedan en la **auditoría** con el texto de la consulta.
+- Las cabeceras son los nombres que da el motor: en Oracle, en mayúsculas salvo que el alias vaya entre comillas
+  (`SELECT nombre AS "nombre" …`).
 
-> **SQL Server** no tiene transacciones de solo lectura: la protección depende del análisis de la consulta. La
-> pantalla lo avisa. En cualquier motor, lo más seguro es que la conexión use un **usuario de BD con solo permisos
+> **SQL Server** no tiene transacciones de solo lectura: la consulta va en una transacción que se deshace al
+> terminar, y la protección principal es el análisis de la consulta. La pantalla lo avisa. En cualquier motor, lo más seguro es que la conexión use un **usuario de BD con solo permisos
 > `SELECT`**.
 
 HSQLDB no admite SQL libre.
