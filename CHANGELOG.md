@@ -3,10 +3,17 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
-## [Unreleased]
+## [1.6.0] - 2026-10-29
+
+util_bbdd 4.6.0 y ola 6 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (catálogo, conexiones y explorador), y
+la guía para publicar versiones.
 
 ### Added
 
+- **Operaciones que admite cada motor** (W-T1, GAPS G5): la ficha del motor muestra la matriz completa de util_bbdd
+  (documentación, grafo, comparación, migración, volcado y si gestiona las constraints, carga, readiness y async).
+  `CapabilitiesOut` gana `documentation`, `graphs`, `compare`, `dump`, `dump_constraints` y `bulk`. La tabla de
+  motores no cambia.
 - **Publicar una versión** (`docs/guides/publicar_version.md`, en «Operación»): de `develop` terminado al servidor,
   en Git Bash. Orden cuando cambian util_bbdd y la web, subir util_bbdd (uv de la imagen, el 401 de las releases y
   la comprobación del hash), comprobaciones, commit de versión con todos los sitios donde vive la versión, `main` por
@@ -15,6 +22,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Changed
 
+- **util_bbdd 4.6.0** (W-6.0): wheel de la release v4.6.0 (hash en `backend/uv.lock`).
+- **Ficha de motor desde util_bbdd** (W-T1, GAPS G8, G10 y G14): drivers y su estado (`get_driver_status`) y paquete,
+  instalación y requisitos (`default_driver`) salen de util_bbdd; ningún valor de la ficha cambia en los 7 motores.
+- **Clase de los parámetros de conexión desde util_bbdd** (W-T2, GAPS G12 y G15): `kind` sale de
+  `connection_params.kinds`; coincide con la clasificación anterior, salvo que el puerto tiene ahora su clase (`port`,
+  «puerto» en la ficha). Un parámetro sin clase se trata como bloqueado. Los parámetros de conexión los construye
+  util_bbdd sin mezclarlos con los del usuario (misma salida en los 7 motores).
+- **Prueba de conexión y schemas con la API del manager** (W-T3, GAPS G13 y G17): la prueba hace `ping()` y el
+  explorador lista los schemas con `get_schema_names()` (mismos resultados en los 6 motores del bench; también sin
+  SQLAlchemy). La versión del servidor sigue saliendo de SQLAlchemy, más precisa en Oracle (hueco nuevo G43).
 - **Dependabot**: mensual en los cuatro ecosistemas, con un PR agrupado por ecosistema (antes `uv` y `npm` eran
   semanales y sin agrupar).
 - **`docs/guides/deployment.md` › Actualizar**: `git checkout` de un tag en lugar de `git pull`, como en «Puesta en
@@ -22,7 +39,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Fixed
 
-- **`.env.example`**: `UBW_TAG=1.5.0` (seguía en 1.0.0); la guía lo incluye en cada commit de versión.
+- **`.env.example`**: `UBW_TAG` al día (seguía en 1.0.0); la guía lo incluye en cada commit de versión.
+
+### Security
+
+- **SQL libre** (W-T4, GAPS G18 a G20): util_bbdd 4.6.0 valida todos los parámetros de las queries nombradas y añade
+  `read_only`/`max_rows` a `execute_custom_*`. La consola mantiene su ejecución propia (transacción de solo lectura por
+  motor, `fetchmany`, guardián `sqlglot` y validación de parámetros) porque `execute_custom_*` no devuelve los nombres de
+  las columnas (hueco nuevo G42); un test de contrato avisa cuando los dé.
 
 ## [1.5.0] - 2026-10-27
 
