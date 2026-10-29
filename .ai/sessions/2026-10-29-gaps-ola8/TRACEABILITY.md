@@ -71,7 +71,7 @@
   hereda. Se lee con `[Environment]::GetEnvironmentVariable('UTIL_BBDD_BENCH_PASSWORD','User')`. SQL Server está en
   el puerto 51833.
 - **[dependencias]**: cada `uv lock` con uv 0.12.22 sigue queriendo retirar la rueda `armv7l` de zensical 0.0.67; se ha
-  vuelto a descartar en W-8.0 y en este cierre. Pendiente un `chore(deps)` propio.
+  vuelto a descartar en W-8.0 y en este cierre. Pendiente un `chore(deps)` propio. **Resuelto** en `a281292` (`chore(deps)`): PyPI ya no lista esa rueda y se retiró del lock.
 
 ## Veredicto final
 Veredicto: GO

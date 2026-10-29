@@ -60,7 +60,7 @@ G17-G20 por fase. Después, «sí» al cierre.
   `test_execute_custom_many_still_returns_rows_without_column_names`, util_bbdd ya da las columnas: revisar W-T4.
 - **[dependencias]**: cada `uv lock` con uv 0.12.22 quiere retirar del lock la rueda `armv7l` de zensical 0.0.67 (ya
   no está en el índice). Se ha descartado en tres commits para no mezclarlo; conviene asumirlo una vez en un
-  `chore(deps)` propio y dejar de revertirlo.
+  `chore(deps)` propio y dejar de revertirlo. **Resuelto** en `a281292` (`chore(deps)`): PyPI ya no lista esa rueda y se retiró del lock.
 - **[proceso]**: `docs/guides/publicar_version.md` es el procedimiento de versión: incluye `UBW_TAG` en `.env.example`
   y `npm version X.Y.Z --no-git-tag-version`.
 

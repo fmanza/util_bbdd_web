@@ -55,11 +55,12 @@
   propio; el test `test_free_sql_task_leaves_the_oracledb_defaults_alone` lo vigila.
 - **[sql]**: el test del bench `test_free_select_oracle_numbers_keep_precision` (`NUMBER(38,3)` y `FLOAT`) es la alarma
   si util_bbdd deja de convertir.
-- **[dependencias]**: cada `uv lock` con uv 0.12.22 sigue queriendo retirar la rueda `armv7l` de zensical 0.0.67; se ha
-  descartado otra vez en W-9.0 y en el cierre.
+- **[dependencias]**: la rueda `armv7l` de zensical 0.0.67 ya no está en `uv.lock` (`a281292`): PyPI dejó de listarla.
+  Un `uv lock` con uv 0.12.22 ya no debe tocar zensical; si vuelve a quitar o añadir ruedas de un paquete, se asume en
+  un `chore(deps)` propio en lugar de revertirlo a mano.
 
 ## Veredicto final
 Veredicto: GO
 Pendientes al cierre:
-- Ninguno de la ola 9. Sigue pendiente el `chore(deps)` de la rueda `armv7l` de zensical.
+- Ninguno de la ola 9. El `chore(deps)` de la rueda `armv7l` de zensical quedó hecho después (`a281292`).
 - `migrate.spec.ts` puede agotar sus 300 s si el worker va cargado (ver Evidencias): vigilar en la próxima release.
