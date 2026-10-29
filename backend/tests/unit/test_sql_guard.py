@@ -142,3 +142,34 @@ def test_engine_message_drops_urls_and_sql() -> None:
     assert "secreta" not in message
     assert message.startswith('relation "x" does not exist')
     assert "LINE 1" not in message
+
+
+def test_execute_custom_many_still_returns_rows_without_column_names(tmp_path: object) -> None:
+    """Contrato G42: ``execute_custom_many(read_only=, max_rows=)`` de util_bbdd 4.6.0 limita las filas y bloquea las
+    escrituras, pero devuelve tuplas sin nombres de columna, que la consola necesita. Si este test falla, util_bbdd ya
+    los devuelve: revisar si la consola puede pasar a usarlo (W-T4)."""
+    import sqlite3
+    from pathlib import Path
+
+    from util_bbdd import SyncDatabaseManager
+    from util_bbdd.exceptions import DatabaseOperationError
+
+    from app.integrations.util_bbdd.catalog import build_params
+
+    database = Path(str(tmp_path)) / "x.db"
+    con = sqlite3.connect(database)
+    con.executescript("CREATE TABLE t (id INTEGER, v TEXT); INSERT INTO t VALUES (1, 'a'), (2, 'b'), (3, 'c');")
+    con.close()
+
+    with SyncDatabaseManager("sqlite", build_params("sqlite", {"database": str(database)}), use_pool=False) as manager:
+        rows = manager.execute_custom_many("SELECT id, v FROM t ORDER BY id", read_only=True, max_rows=2)
+        with pytest.raises(DatabaseOperationError):
+            manager.execute_custom_many("DELETE FROM t", read_only=True)
+
+    assert rows == [(1, "a"), (2, "b")]  # max_rows corta (G20)
+    assert type(rows[0]) is tuple and not hasattr(rows[0], "_fields") and not hasattr(rows[0], "keys")
+    con = sqlite3.connect(database)
+    try:
+        assert con.execute("SELECT COUNT(*) FROM t").fetchone() == (3,)  # read_only bloqueó el DELETE (G19)
+    finally:
+        con.close()

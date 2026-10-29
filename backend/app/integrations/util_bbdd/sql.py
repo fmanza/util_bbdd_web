@@ -8,8 +8,12 @@ Defensa en capas (el dominio comprueba además el permiso del usuario y que la c
    no la tiene y depende del guardián. Siempre termina en ``ROLLBACK``.
 3. ``fetchmany(limit + 1)`` y timeout del subproceso (y ``statement_timeout`` en PostgreSQL).
 
-util_bbdd no ofrece modo de solo lectura ni límite de filas en ``execute_custom_*`` (GAPS G19, G20): se ejecuta con el
-engine de SQLAlchemy del propio ``SyncDatabaseManager``.
+Desde util_bbdd 4.6.0 ``execute_custom_many`` tiene ``read_only`` y ``max_rows`` (GAPS G19, G20), pero devuelve tuplas
+sin nombres de columna (G42): la consola necesita las cabeceras (también con 0 filas) y conservar las columnas repetidas,
+así que se sigue ejecutando con el engine de SQLAlchemy del propio ``SyncDatabaseManager``, con la misma transacción de
+solo lectura por motor. Un test de contrato avisa cuando util_bbdd devuelva los nombres. util_bbdd 4.6.0 valida además
+todos los parámetros interpolados de las queries nombradas (G18), con la misma regla que ``PARAM_VALUE``, que se
+mantiene.
 """
 
 from __future__ import annotations
