@@ -2,6 +2,10 @@
 
 Usa :func:`isolated.run_isolated`: los ``conn_params`` (con la contraseña) viajan por la tubería, el hijo no
 registra nada y al padre solo vuelve un código de error y el tipo de la excepción, nunca su mensaje.
+
+La prueba hace ``ping()`` (util_bbdd 4.6.0, GAPS G13; también en HSQLDB, sin SQLAlchemy). La versión del servidor sale
+de SQLAlchemy si el motor lo tiene: ``get_server_version()`` es menos precisa en Oracle (``23.0.0.0.0`` frente a
+``23.26.3.0.0``) y añade sufijos en MariaDB y PostgreSQL; sin SQLAlchemy (HSQLDB), la de util_bbdd.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ from typing import Any, Literal
 from app.integrations.util_bbdd.isolated import TaskResult, run_isolated
 
 ErrorCode = Literal["driver_missing", "invalid_config", "connection_failed", "timeout", "unknown"]
+MAX_SERVER_VERSION = 200
 
 logger = logging.getLogger(__name__)
 
@@ -58,21 +63,34 @@ class ReadinessResult:
     error: ProbeError | None
 
 
-def _server_version(manager: Any) -> str | None:
+def _sqlalchemy_version(manager: Any) -> str | None:
     try:
         engine = manager.get_sqlalchemy_engine()
         with engine.connect():
             info = engine.dialect.server_version_info
-        return ".".join(str(part) for part in info) if info else None
+    except Exception:  # sin SQLAlchemy (HSQLDB): se pregunta a util_bbdd
+        return None
+    return ".".join(str(part) for part in info) if info else None
+
+
+def _server_version(manager: Any) -> str | None:
+    """Versión del servidor: la numérica de SQLAlchemy o, sin ella, ``get_server_version()`` (recortada)."""
+    version = _sqlalchemy_version(manager)
+    if version:
+        return version
+    try:
+        version = manager.get_server_version()
     except Exception:  # la versión es informativa: su fallo no invalida la prueba
         return None
+    return str(version)[:MAX_SERVER_VERSION] if version else None
 
 
 def test_task(db_type: str, conn_params: dict[str, Any]) -> dict[str, Any]:
-    """Tarea del subproceso: conecta y lee la versión del servidor."""
+    """Tarea del subproceso: ``ping()`` y versión del servidor."""
     from util_bbdd import SyncDatabaseManager
 
     with SyncDatabaseManager(db_type, conn_params, use_pool=False) as manager:
+        manager.ping()
         return {"server_version": _server_version(manager)}
 
 

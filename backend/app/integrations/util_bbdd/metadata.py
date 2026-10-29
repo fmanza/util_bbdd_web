@@ -56,21 +56,11 @@ def _manager(db_type: str, conn_params: dict[str, Any]) -> Any:
 
 
 def schemas_task(db_type: str, conn_params: dict[str, Any]) -> dict[str, Any]:
-    """Schemas visibles (``sqlalchemy.inspect(engine).get_schema_names()``, GAPS G17) y el de por defecto."""
-    from sqlalchemy import inspect
-
+    """Schemas visibles con el nombre del catálogo (``get_schema_names()``, util_bbdd 4.6.0, GAPS G17; Oracle ``BENCH``
+    y no ``bench``) y el de por defecto (``metadata_source.current_schema()``). También en HSQLDB, sin SQLAlchemy."""
     with _manager(db_type, conn_params) as manager:
-        engine = manager.get_sqlalchemy_engine()
-        inspector = inspect(engine)
-        # SQLAlchemy normaliza a minúsculas los nombres sin comillas de Oracle (``BENCH`` → ``bench``); util_bbdd
-        # necesita el nombre real del catálogo.
-        dialect = engine.dialect
-
-        def real(name: str) -> str:
-            return str(dialect.denormalize_name(name) or name) if dialect.requires_name_normalize else str(name)
-
-        names = sorted(real(n) for n in inspector.get_schema_names())
-        default = real(inspector.default_schema_name) if inspector.default_schema_name else None
+        names = sorted(str(n) for n in manager.get_schema_names())
+        default = manager.metadata_source.current_schema()
     system = SYSTEM_SCHEMAS.get(db_type, frozenset())
     return {
         "default": str(default) if default else (names[0] if names else None),

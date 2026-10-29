@@ -279,3 +279,36 @@ def test_capabilities_mirror_util_bbdd() -> None:
         theirs = dataclasses.asdict(get_engine_capabilities(engine.db_type))  # type: ignore[arg-type]
         assert ours <= set(theirs), sorted(ours - set(theirs))
         assert dataclasses.asdict(engine.capabilities) == {name: theirs[name] for name in ours}
+
+
+def test_probe_pings_and_takes_the_version_from_sqlalchemy_or_util_bbdd() -> None:
+    """G13: la prueba hace ``ping()``; la versión es la de SQLAlchemy (más precisa en Oracle) y, sin SQLAlchemy
+    (HSQLDB), la de ``get_server_version()``, recortada."""
+    from unittest.mock import MagicMock
+
+    from app.integrations.util_bbdd.probe import MAX_SERVER_VERSION, _server_version
+
+    with_engine = MagicMock()
+    with_engine.get_sqlalchemy_engine.return_value.dialect.server_version_info = (23, 26, 3, 0, 0)
+    without_engine = MagicMock()
+    without_engine.get_sqlalchemy_engine.side_effect = NotImplementedError
+    without_engine.get_server_version.return_value = "2.7.4 " + "x" * 300
+    broken = MagicMock()
+    broken.get_sqlalchemy_engine.side_effect = NotImplementedError
+    broken.get_server_version.side_effect = RuntimeError
+
+    assert _server_version(with_engine) == "23.26.3.0.0"
+    with_engine.get_server_version.assert_not_called()
+    assert _server_version(without_engine) == ("2.7.4 " + "x" * 300)[:MAX_SERVER_VERSION]
+    assert _server_version(broken) is None
+
+
+def test_probe_task_pings_sqlite(tmp_path: Path) -> None:
+    import sqlite3
+
+    from app.integrations.util_bbdd.probe import test_task
+
+    database = tmp_path / "x.db"
+    sqlite3.connect(database).close()
+
+    assert test_task("sqlite", build_params("sqlite", {"database": str(database)}))["server_version"]
