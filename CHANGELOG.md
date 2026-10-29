@@ -3,6 +3,39 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [1.7.0] - 2026-10-29
+
+util_bbdd 5.0.0 (MAJOR, valores por defecto seguros) y ola 8 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md). La
+API HTTP no cambia; al actualizar se aplica sola la migración `0011`.
+
+### Changed
+
+- **util_bbdd 5.0.0** (W-8.0): wheel de la release v5.0.0 (hash en `backend/uv.lock`). Sus nuevos valores por defecto
+  (`truncate_target=False`, `bulk_*_from_df` ejecuta sin argumentos, sin ventana de agrupación en la documentación;
+  GAPS G2, G30 y G35) no cambian nada en la web, que ya los pasaba explícitos y lo sigue haciendo (W-8.4).
+- **Consola SQL con `execute_custom_result` de util_bbdd** (W-8.2, GAPS G42): cabeceras también sin filas y con
+  columnas repetidas, transacción de solo lectura de util_bbdd y `statement_timeout` de PostgreSQL en el servidor. En
+  pantalla: en Oracle las cabeceras salen en mayúsculas (los nombres reales del motor); un timeout de PostgreSQL llega
+  como «tiempo agotado» y no como error del motor; un `:nombre` dentro del SQL ya no se toma como parámetro (antes una
+  consulta con, p. ej., `'{"a":1}'` fallaba); SQL Server ejecuta dentro de una transacción que se deshace.
+- **Versión del servidor desde util_bbdd** (W-8.3, GAPS G43): la prueba de conexión usa `get_server_version_info()`
+  (completa en Oracle, sin sufijos de distribución) y ya no abre una conexión de SQLAlchemy; misma versión que antes en
+  los 5 motores del bench.
+
+### Fixed
+
+- **Conexiones MariaDB con `encoding_errors`** (W-8.1): util_bbdd 5.0.0 retira ese parámetro, que nunca tuvo efecto.
+  La migración `0011` lo quita de las conexiones guardadas: un cliente de la API que reenvíe los `params` ya no recibe
+  422 y la ficha no muestra un parámetro inexistente.
+- **Precisión de `NUMBER` en Oracle en la consola** (W-8.2, hueco nuevo G44): con la conexión del driver, oracledb
+  devolvía `NUMBER` como `float` (`12345678901234567.891` → `1.2345678901234568e+16`). La consola pide `Decimal` en su
+  subproceso y los enteros siguen siendo enteros.
+
+### Security
+
+- **SQL libre** (W-8.2): la transacción de solo lectura la abre util_bbdd con las mismas sentencias por motor que la
+  web; el guardián `sqlglot`, la validación de parámetros y el timeout del subproceso se mantienen.
+
 ## [1.6.0] - 2026-10-29
 
 util_bbdd 4.6.0 y ola 6 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (catálogo, conexiones y explorador), y

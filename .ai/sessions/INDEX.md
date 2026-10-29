@@ -26,3 +26,4 @@
 | [2026-10-27-gaps-ola4](2026-10-27-gaps-ola4/TRACEABILITY.md) | new_feature + version_closure | W-4 del plan de huecos con util_bbdd 4.4.0 (volcado de datos) → 1.4.0 |
 | [2026-10-27-gaps-ola5](2026-10-27-gaps-ola5/TRACEABILITY.md) | new_feature + version_closure | W-5 del plan de huecos con util_bbdd 4.5.0 (carga bulk) → 1.5.0 |
 | [2026-10-29-gaps-ola6](2026-10-29-gaps-ola6/TRACEABILITY.md) | new_feature + version_closure | W-6 del plan de huecos con util_bbdd 4.6.0 (catálogo, conexiones y explorador) → 1.6.0 |
+| [2026-10-29-gaps-ola8](2026-10-29-gaps-ola8/TRACEABILITY.md) | new_feature + version_closure | Plan de la ola 8 y W-8 del plan de huecos con util_bbdd 5.0.0 (valores por defecto seguros, consola SQL y versión del servidor) → 1.7.0 |
