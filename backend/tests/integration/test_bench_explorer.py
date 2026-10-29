@@ -104,10 +104,10 @@ def test_write_bypassing_the_guard_is_blocked_or_rolled_back(db_type: str) -> No
     with SyncDatabaseManager(db_type, _params(db_type), use_pool=False) as manager:
         if db_type == "sqlserver":
             # Sin transacción de solo lectura: util_bbdd la ejecuta en una transacción que deshace (W-8.2).
-            _run_read_only(manager, db_type, insert, 10, 30)
+            _run_read_only(manager, insert, 10, 30)
         else:
             with pytest.raises(PublicError) as info:
-                _run_read_only(manager, db_type, insert, 10, 30)
+                _run_read_only(manager, insert, 10, 30)
             assert info.value.code == "query_error"
             # El error debe ser el de la transacción de solo lectura, no otro cualquiera.
             assert READ_ONLY_ERRORS[db_type] in info.value.message.lower(), info.value.message
@@ -131,7 +131,7 @@ def test_free_select_headers_without_rows_and_repeated(db_type: str) -> None:
 
 
 def test_free_select_oracle_numbers_keep_precision(db_type: str) -> None:
-    """G44: ``NUMBER`` de Oracle sin pasar por ``float`` (``fetch_decimals`` en el subproceso); enteros como ``int``."""
+    """G44 (util_bbdd 5.1.0): ``NUMBER`` de Oracle sin pasar por ``float``; enteros como ``int`` y ``FLOAT`` como número."""
     if db_type != "oracle":
         pytest.skip("Solo Oracle")
     sql = "SELECT CAST(12345678901234567.891 AS NUMBER(38,3)) AS big, 1.5 AS n, 7 AS i, COUNT(*) AS c FROM dual"
@@ -140,3 +140,6 @@ def test_free_select_oracle_numbers_keep_precision(db_type: str) -> None:
 
     assert result.error is None, result.error
     assert result.value["rows"] == [["12345678901234567.891", "1.5", 7, 1]]
+    floating = run_free_sql(db_type, _params(db_type), "SELECT CAST(1.25 AS FLOAT) AS f FROM dual", limit=1, timeout=60)
+    assert floating.error is None, floating.error
+    assert floating.value["rows"] == [[1.25]]  # número, no texto (con el rodeo de W-8.2 salía «1.25»)

@@ -8,9 +8,9 @@ Defensa en capas (el dominio comprueba además el permiso del usuario y que la c
    G42): PostgreSQL, MySQL/MariaDB, Oracle y SQLite (``query_only``); en SQL Server, una transacción que se deshace.
 3. ``max_rows=limit + 1`` (G20), timeout del subproceso y, en PostgreSQL, ``statement_timeout`` en el servidor.
 
-``execute_custom_result`` usa la conexión del driver, no SQLAlchemy: en Oracle, oracledb devolvería ``NUMBER`` como
-``float`` y perdería precisión (G44), así que la tarea pide ``Decimal`` (``fetch_decimals``, el ajuste es del
-subproceso) y los enteros vuelven a ser ``int``. Los nombres de columna son los del driver (en Oracle, en mayúsculas).
+``execute_custom_result`` usa la conexión del driver, no SQLAlchemy. Desde util_bbdd 5.1.0 (G44) da en Oracle los
+``NUMBER`` sin pasar por ``float`` (``Decimal`` con decimales, ``int`` si es entero; ``FLOAT`` sigue siendo ``float``).
+Los nombres de columna son los del driver (en Oracle, en mayúsculas).
 util_bbdd 4.6.0 valida además todos los parámetros interpolados de las queries nombradas (G18), con la misma regla que
 ``PARAM_VALUE``, que se mantiene.
 """
@@ -158,24 +158,7 @@ def _engine_message(exc: BaseException) -> str:
 # --- ejecución de solo lectura (en el subproceso) ----------------------------------------------------------------
 
 
-def _oracle_number(value: Any) -> Any:
-    """Con ``fetch_decimals`` todo ``NUMBER`` llega como ``Decimal``: los enteros vuelven a ``int``, como con SQLAlchemy."""
-    if isinstance(value, decimal.Decimal):
-        exponent = value.as_tuple().exponent
-        if isinstance(exponent, int) and exponent >= 0:  # no 'n'/'N'/'F' (NaN, infinito)
-            return int(value)
-    return value
-
-
-def _prepare_driver(db_type: str) -> None:
-    """Ajustes del driver para el subproceso de la tarea (G44: ``NUMBER`` de Oracle sin pasar por ``float``)."""
-    if db_type == "oracle":
-        import oracledb
-
-        oracledb.defaults.fetch_decimals = True
-
-
-def _run_read_only(manager: Any, db_type: str, sql: str, limit: int, timeout: float) -> dict[str, Any]:
+def _run_read_only(manager: Any, sql: str, limit: int, timeout: float) -> dict[str, Any]:
     from util_bbdd.exceptions import DatabaseOperationError
 
     start = time.monotonic()
@@ -183,8 +166,7 @@ def _run_read_only(manager: Any, db_type: str, sql: str, limit: int, timeout: fl
         result = manager.execute_custom_result(sql, timeout=timeout, read_only=True, max_rows=limit + 1)
     except DatabaseOperationError as exc:
         raise PublicError("query_error", _engine_message(exc.__cause__ or exc)) from None
-    convert = _oracle_number if db_type == "oracle" else None
-    rows = [[to_cell(convert(v) if convert else v) for v in row] for row in result.rows[:limit]]
+    rows = [[to_cell(v) for v in row] for row in result.rows[:limit]]
     return {
         "columns": [str(c) for c in result.columns],
         "rows": rows,
@@ -202,9 +184,8 @@ def free_sql_task(db_type: str, conn_params: dict[str, Any], sql: str, limit: in
         check_read_only(sql, db_type)
     except ReadOnlyViolation as exc:
         raise PublicError("not_read_only", str(exc)) from None
-    _prepare_driver(db_type)
     with SyncDatabaseManager(db_type, conn_params, use_pool=False) as manager:
-        return _run_read_only(manager, db_type, sql, limit, timeout)
+        return _run_read_only(manager, sql, limit, timeout)
 
 
 def named_query_task(
@@ -221,7 +202,6 @@ def named_query_task(
     from util_bbdd import SyncDatabaseManager
     from util_bbdd import exceptions as e
 
-    _prepare_driver(db_type)
     with tempfile.TemporaryDirectory(prefix="ubw-queries-") as tmp:
         queries_file = Path(tmp) / "queries.json"
         queries_file.write_text(json.dumps({db_type: {name: sql_template}}), encoding="utf-8")
@@ -236,7 +216,7 @@ def named_query_task(
                 check_read_only(final_sql, db_type)
             except ReadOnlyViolation as exc:
                 raise PublicError("not_read_only", str(exc)) from None
-            return _run_read_only(manager, db_type, final_sql, limit, timeout)
+            return _run_read_only(manager, final_sql, limit, timeout)
 
 
 # --- API para el dominio -----------------------------------------------------------------------------------------

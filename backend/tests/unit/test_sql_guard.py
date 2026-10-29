@@ -162,11 +162,11 @@ def test_run_read_only_uses_execute_custom_result(tmp_path: object) -> None:
     con.close()
 
     with SyncDatabaseManager("sqlite", build_params("sqlite", {"database": str(database)}), use_pool=False) as manager:
-        page = _run_read_only(manager, "sqlite", "SELECT id, v FROM t ORDER BY id", 2, 30)
-        empty = _run_read_only(manager, "sqlite", "SELECT id, v FROM t WHERE id < 0", 10, 30)
-        repeated = _run_read_only(manager, "sqlite", "SELECT 1 AS a, 2 AS a", 10, 30)
+        page = _run_read_only(manager, "SELECT id, v FROM t ORDER BY id", 2, 30)
+        empty = _run_read_only(manager, "SELECT id, v FROM t WHERE id < 0", 10, 30)
+        repeated = _run_read_only(manager, "SELECT 1 AS a, 2 AS a", 10, 30)
         with pytest.raises(PublicError) as info:
-            _run_read_only(manager, "sqlite", "DELETE FROM t", 10, 30)
+            _run_read_only(manager, "DELETE FROM t", 10, 30)
 
     assert page["columns"] == ["id", "v"] and page["rows"] == [[1, "a"], [2, "b"]]
     assert page["truncated"] is True and page["row_count"] == 2
@@ -180,22 +180,24 @@ def test_run_read_only_uses_execute_custom_result(tmp_path: object) -> None:
         con.close()
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        (decimal.Decimal("7"), 7),
-        (decimal.Decimal("1E+3"), 1000),
-        (decimal.Decimal("12345678901234567.891"), decimal.Decimal("12345678901234567.891")),
-        (decimal.Decimal("1.50"), decimal.Decimal("1.50")),
-        (decimal.Decimal("NaN"), "NaN"),
-        (2.5, 2.5),
-        ("7", "7"),
-    ],
-)
-def test_oracle_number_keeps_precision_and_integers(value: object, expected: object) -> None:
-    """G44: con ``fetch_decimals`` los ``NUMBER`` de Oracle llegan como ``Decimal``; los enteros vuelven a ``int``."""
-    from app.integrations.util_bbdd.sql import _oracle_number
+def test_free_sql_task_leaves_the_oracledb_defaults_alone(tmp_path: object) -> None:
+    """G44 (util_bbdd 5.1.0, W-9.1): la precisión de ``NUMBER`` de Oracle la da util_bbdd con un conversor en el cursor;
+    la web ya no cambia ``oracledb.defaults`` (antes, ``fetch_decimals`` en el subproceso)."""
+    import sqlite3
+    from pathlib import Path
 
-    result = _oracle_number(value)
+    import oracledb
 
-    assert (str(result) == expected) if expected == "NaN" else (result == expected and type(result) is type(expected))
+    from app.integrations.util_bbdd.catalog import build_params
+    from app.integrations.util_bbdd.sql import free_sql_task
+
+    database = Path(str(tmp_path)) / "x.db"
+    con = sqlite3.connect(database)
+    con.executescript("CREATE TABLE t (id INTEGER); INSERT INTO t VALUES (1);")
+    con.close()
+    before = (oracledb.defaults.fetch_decimals, oracledb.defaults.fetch_lobs)
+
+    result = free_sql_task("sqlite", build_params("sqlite", {"database": str(database)}), "SELECT id FROM t", 10, 30)
+
+    assert result["rows"] == [[1]]
+    assert (oracledb.defaults.fetch_decimals, oracledb.defaults.fetch_lobs) == before == (False, True)

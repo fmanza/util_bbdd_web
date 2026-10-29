@@ -303,7 +303,7 @@ flowchart LR
 | 6 (web ✅) | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 (web ✅) | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
-| 9 (util_bbdd ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** `chore(backend): util_bbdd 5.1.0` → W-9.1 → **`release: v1.7.1`** (D9-3) | Wheel 5.1.0 |
+| 9 (util_bbdd ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ → **`release: v1.7.1`** (D9-3) | Wheel 5.1.0 |
 
 Reglas de la tubería:
 
@@ -688,8 +688,8 @@ cada fase `W-`).
 ### Ola 8 — util_bbdd 5.0.0 (2026-10-29, rama `develop`)
 
 Sesión de util_bbdd: `.ai/sessions/2026-10-29-web-gaps-ola8/`. Un commit por fase, con AUDIT_CODE después de cada una.
-Tag `v5.0.0`, wheel y `.sha256` (`f25a81c3…14ee2d0`, probado en un venv limpio) **pendientes de publicar** (los
-publica el propietario): la web no empieza W-8.0 hasta que existan.
+Tag `v5.0.0`, wheel y `.sha256` (`f25a81c3…14ee2d0`, probado en un venv limpio), publicados por el propietario
+antes de W-8.0.
 
 | Fase | Commit | Notas para la fase `W-` |
 |---|---|---|
@@ -717,9 +717,16 @@ publica el propietario): la web no empieza W-8.0 hasta que existan.
 ### Ola 9 — util_bbdd 5.1.0 (2026-10-29, rama `develop`)
 
 Sesión de util_bbdd: `.ai/sessions/2026-10-29-web-gaps-ola9/`. Tag `v5.1.0`, wheel y `.sha256`
-(`52783997…1d1b86`, probado en un venv limpio) **pendientes de publicar**: la web no empieza W-9.0 hasta que existan.
+(`52783997…1d1b86`, probado en un venv limpio), publicados por el propietario antes de W-9.0.
 
 | Fase | Commit | Notas para la fase `W-` |
 |---|---|---|
 | U-9.1 | `6ccca9c` | `executors/_oracle_numbers.py`: `NUMBER` con escala → `Decimal`; sin restricción (precisión 0) → `int` si es entero y `Decimal` si no; `FLOAT` (precisión 126, escala -127: también es `DB_TYPE_NUMBER`), `BINARY_*` y `NUMBER(p)` como los da el driver. Solo en el cursor de las consultas personalizadas y nombradas, **sync y async** (R9-3 verificado). **Si la conexión ya tiene un `outputtypehandler` propio, se respeta** (decisión de IMPLEMENT). Ni la conexión ni `oracledb.defaults` cambian; test de integración: la conexión del pool sigue sin conversor y el snapshot no cambia. Nota del cambio de tipo en el CHANGELOG y en `api_5_0_migration.md` § 7 |
 | release | `d7972dc` | Release `v5.1.0` (MINOR como corrección, D9-1). Suite 6873 passed, 618 skipped; integración de Oracle 110 passed; mypy, ruff y `zensical build --strict` limpios |
+
+### W-9 — util_bbdd_web con util_bbdd 5.1.0 (2026-10-29, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-9.0 | `1bd3801` | Pin 5.1.0 (lock con uv 0.12.22; hash `52783997…1d1b86` igual al `.sha256` de la release; se descarta otra vez la retirada ajena de la rueda `armv7l` de zensical). Sin cambios de código; suite con `-W error::FutureWarning -W error::DeprecationWarning`. Bench del explorador: el rodeo de la web y el conversor de 5.1.0 juntos dan el mismo resultado (R9-6). Excepción de `asyncpg` mantenida |
+| W-9.1 | este commit | Fuera `_prepare_driver` (`fetch_decimals`) y `_oracle_number` de `sql.py`; `_run_read_only` ya no recibe `db_type`. Verificado antes en el bench sin el rodeo: `NUMBER(38,3)` exacto, enteros `int`, `BINARY_DOUBLE` y `FLOAT` `float`. **Cambio visible**: `FLOAT` de Oracle vuelve a salir como número (con el rodeo salía como texto). Test unitario: `free_sql_task` no toca `oracledb.defaults`; test del bench con `NUMBER(38,3)` sin cambios y `FLOAT` → `1.25`. Bench del explorador: 21 passed. G44 resuelto |
