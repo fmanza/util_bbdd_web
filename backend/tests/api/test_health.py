@@ -13,7 +13,7 @@ def test_health_ok(client: TestClient) -> None:
     assert body["status"] == "ok"
     assert body["database"] == "ok"
     assert body["version"] == __version__
-    assert body["util_bbdd_version"] == "4.5.0"
+    assert body["util_bbdd_version"] == "4.6.0"
 
 
 def test_unknown_api_route_is_problem_json(client: TestClient) -> None:

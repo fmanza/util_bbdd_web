@@ -7,7 +7,8 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 - **Estado**: PLAN + AUDIT_PLAN emitidos (2026-10-25); decisiones D1-D5 resueltas el mismo día (§4). Ola 1 y W-1
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
   Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6). Ola 4 y W-4 hechas (util_bbdd 4.4.0, web
-  1.4.0; registro en §6). Ola 5 y W-5 hechas (util_bbdd 4.5.0, web 1.5.0; registro en §6).
+  1.4.0; registro en §6). Ola 5 y W-5 hechas (util_bbdd 4.5.0, web 1.5.0; registro en §6). Ola 6 hecha
+  (util_bbdd 4.6.0); W-6 en curso.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -520,3 +521,26 @@ Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd.
 | W-B2 | `6be0e3a` | `parallel.atomic` en la vista previa y el resultado; `plan_atomic` (backend y UI; vistas previas antiguas: `workers <= 1`) decide si se pide `accept_non_atomic`. Sin aceptarla, la carga pide `require_atomic=True`: cierra el hueco de un plan que cambie entre la vista previa y la carga. OpenAPI + `gen:api` |
 | W-B3 | `eed7da9` | `RunProgress` (fase `rows`) en `run_bulk`; `bulk_apply` en `CANCEL_BETWEEN_STEPS_ONLY` y `NOT_CANCELLABLE_RUNNING` retirado (backend y UI: ya no hay escrituras no cancelables). Cancelar antes de escribir no llama a util_bbdd; entre lotes, `cancelled` en `result.json` y run `cancelled`, con mensaje según quede algo (`committed`). Test real con SQLite: una carga atómica cancelada tras el primer lote no deja filas. UI: confirmación, aviso en el resultado y texto del modal de la carga. OpenAPI + `gen:api` |
 | release | este commit | util_bbdd_web **1.5.0** (D5). `docker compose up --build` + `/api/health` 200 (1.5.0 / util_bbdd 4.5.0), bench de integración (83 passed; SQL Server en el puerto 51833) y E2E (23 specs, `--workers=1`) en verde |
+
+### Ola 6 — util_bbdd 4.6.0 (2026-10-27)
+
+Reconstruida en la web desde los commits y el `CHANGELOG.md` de util_bbdd (que ya dice, entrada a entrada, qué necesita
+cada fase `W-`).
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-T1 | `8c7c0b6` | `get_engine_capabilities(db_type)` (10 capacidades: async, origen y destino de migración, readiness, documentación, grafos, comparación, volcado, constraints del volcado y bulk) y `get_driver_status(db_type)`, en `util_bbdd.connection` |
+| U-T2 | `500731d` | Fuera `cx_Oracle`; `default_driver` con la misma forma en todos los motores (en SQL Server, la opción `"default": true`); `driver_info` no cambia |
+| U-T3 | `bdc9724` | `connection_params.kinds` y `ConnectionParamsManager.param_kind(s)`: `secret`, `host`, `port`, `path`, `blocked`, `plain` (la web no tenía `port`); `param_kind` lanza `ValueError` con un parámetro que no existe |
+| U-T4 | `191e5ed` | `build_conn_params` conserva los opcionales declarados (`sslmode`…); los no declarados y los `None`, fuera; en Oracle con `dsn`, el destino por partes también |
+| U-T5 | `328d1d9` | `get_database_info()` enmascara los secretos (`redact_secrets`); la web no lo usa |
+| U-T6 | `5a6438d` | `ping()` (segundos), `get_server_version()` (texto del servidor) y `get_schema_names()` (nombres del catálogo) en los dos managers, también HSQLDB; verificado en el banco |
+| U-T7 | `7624315` | `QueryResolver.resolve` valida todos los parámetros interpolados con `{nombre}` (identificador o número): la misma regla que ya aplica la web |
+| U-T8 | `2deb0a2` | `execute_custom_many/one(..., read_only=, max_rows=)` con transacción de solo lectura por motor (SQL Server: transacción que se deshace). Devuelve **tuplas sin nombres de columna** |
+| release | `27798df` | Release `v4.6.0` con wheel y `.sha256` (SHA-256 `f22e18f3…4a57`, comprobado contra `uv.lock`); sin cambios de dependencias |
+
+### W-6 — util_bbdd_web con util_bbdd 4.6.0 (2026-10-29, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-6.0 | este commit | Pin 4.6.0 según `publicar_version.md` (lock con uv 0.12.22; otra vez se descarta la retirada ajena de la rueda `armv7l` de zensical). Sin cambios de código; suite con `-W error::FutureWarning`. G11 resuelto sin fase `W-` (la web no usa `get_database_info()`) |
