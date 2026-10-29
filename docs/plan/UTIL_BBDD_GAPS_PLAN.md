@@ -8,7 +8,8 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
   hechas (util_bbdd 4.1.0, web 1.1.0). Ola 2 y W-2 hechas (util_bbdd 4.2.0, web 1.2.0; registro en §6).
   Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6). Ola 4 y W-4 hechas (util_bbdd 4.4.0, web
   1.4.0; registro en §6). Ola 5 y W-5 hechas (util_bbdd 4.5.0, web 1.5.0; registro en §6). Ola 6
-  y W-6 hechas (util_bbdd 4.6.0, web 1.6.0; registro en §6).
+  y W-6 hechas (util_bbdd 4.6.0, web 1.6.0; registro en §6). Ola 8 (util_bbdd 5.0.0, Grupo 8) planificada el
+  2026-10-29 con las decisiones D8-1 a D8-8 aprobadas el mismo día (§4).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -26,7 +27,8 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
 3. **Una release de util_bbdd por ola** (MINOR `4.x.0`, con el wheel adjunto en GitHub Releases). La web sube de
    versión **en un commit propio** (`W-x.0`), sin mezclarlo con cambios de código.
 4. **SemVer en util_bbdd.** En 4.x solo hay parámetros nuevos opcionales, correcciones y avisos. Los cambios de
-   valor por defecto (G30, G35) llevan antes un `FutureWarning` y se cambian en una MAJOR aparte (ola 8, fuera de este plan: D4).
+   valor por defecto (G30, G35) llevan antes un `FutureWarning` y se cambian en una MAJOR aparte (ola 8, Grupo 8).
+   Excepción aprobada: G2 cambia en la 5.0.0 sin aviso previo, porque no es destructivo (D8-1).
 5. **Rodeo retirado o mantenido.** Cada fase `W-` dice si el rodeo **se retira** o **se mantiene como defensa en
    profundidad** (los guardianes de seguridad de la web se quedan aunque util_bbdd arregle el hueco).
 6. **Compatibilidad con lo ya guardado.** Lo que la web haya escrito con el rodeo (p. ej. `diff.json` formato 1,
@@ -191,6 +193,42 @@ No son tipos de ejecución, pero quedan huecos abiertos en GAPS. Van al final po
 
 G11: la web no usa `get_database_info()`; no hace falta fase `W-`.
 
+### Grupo 8 — util_bbdd 5.0.0: valores por defecto seguros (ola 8)
+
+MAJOR con los cambios de valor por defecto anunciados en 4.x (G30, G35) y G2. Se aprovecha para retirar lo obsoleto
+(U-8.6, D8-8) y cerrar los dos huecos abiertos en la ola 6 (G42, G43), que son aditivos. Planificada el 2026-10-29
+sobre las firmas de util_bbdd 4.6.0 (`27798df`), leídas en el repositorio origen:
+
+| Hueco | util_bbdd 4.6.0 | Web 1.6.0 |
+|---|---|---|
+| G30 | `DumpConfig.truncate_target` es el descriptor `_TruncateTargetField`, con `_ImplicitTrue` como valor por defecto. Sin el argumento lanza `FutureWarning` en `__post_init__`; `manage_indexes="all"` exige `truncate_target=True` (`dump/_models.py`) | Lo pasa siempre (`integrations/util_bbdd/dump.py`) |
+| G35 | `bulk_{insert,update,delete}_from_df(..., generar_sql=None, ..., dry_run=None)`: `_resolve_generar_sql` da `True` con `FutureWarning` si falta uno de los dos, y `ValueError` si se contradicen. `_from_chunks` siempre ejecuta | `dry_run=True/False` explícito (`bulk.py`) |
+| G2 | `_AUTO_OUTPUT_BATCH_WINDOW_SECONDS = 90` y la caché `_LAST_AUTO_OUTPUT_BY_KEY` es de clase (`doc/database_documentation.py`). Sin `FutureWarning`. El nombre tiene resolución de segundos (`%Y%m%d_%H%M%S`) | `fichero_salida` explícito + `batch_window_seconds=0` (`documentation.py`) |
+| G42 | `execute_custom_many(sql, params=None, timeout=None, *, read_only=False, max_rows=None) -> list[tuple]`, en el manager síncrono y en el asíncrono. `timeout` es un plazo comprobado en el cliente: no corta la consulta en el servidor | Ejecución propia: `keys()`, `fetchmany(limit + 1)` y `SET LOCAL statement_timeout` en PostgreSQL (`sql.py`) |
+| G43 | `get_server_version()` → `metadata_source.server_version()` → `server_version_sql()`. En Oracle, `version` de `product_component_version`, la **misma** SQL con la que `_resolve_dialect` elige `Oracle11Catalog` (`metadata/source.py`, `metadata/oracle/catalog.py`) | `server_version_info` de SQLAlchemy; la de util_bbdd solo sin SQLAlchemy (`probe.py`) |
+| U-8.6 | Setter `AuditManager.columnas_auditoria` con `DeprecationWarning` («se retirará en la próxima versión menor», `bulk/audit.py`). `encoding_errors` de MariaDB sin efecto y con `FutureWarning` (`connection/config.py`, `data/database_types.json`, clase `plain`) | `encoding_errors` en `KNOWN_PARAMS`. `validate_params` rechaza un parámetro que el motor no declare (`domain/connections/params.py`) |
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-8.1 | `feat(dump)!: truncate_target=False por defecto` | G30 | `truncate_target: bool = False`; se retiran `_TruncateTargetField`, `_ImplicitTrue` y el `FutureWarning`. Se crea la guía de migración a 5.0 con el antes/después, incluido que `manage_indexes="all"` sin `truncate_target=True` pasa a fallar | `dump/_models.py`, `dump/orchestrator.py` (docstring), `docs/guides/dump_guide.md`, `docs/guides/api_5_0_migration.md` (nuevo) + navegación, `CHANGELOG.md` | `DumpConfig()` sin aviso y con `truncate_target is False`; `run()` sin el argumento no vacía el destino (SQLite → SQLite con filas previas); `manage_indexes="all"` sin `truncate_target=True` → `ValueError` |
+| U-8.2 | `feat(bulk)!: bulk_*_from_df ejecuta por defecto` | G35 | Sin `generar_sql` ni `dry_run`, ejecuta y no avisa. `dry_run` es el nombre preferido; `generar_sql` se queda como alias sin aviso (D8-2) y se mantiene el `ValueError` si se contradicen | `bulk/crud.py`, guía de bulk, `api_5_0_migration.md`, `CHANGELOG.md` | Sin argumentos inserta, actualiza y borra (SQLite) sin `FutureWarning`; `dry_run=True` escribe el SQL en `path_sql` y no toca la BD; `generar_sql=True, dry_run=False` → `ValueError` |
+| U-8.3 | `feat(doc)!: sin ventana de agrupación por defecto` | G2 | Ventana por defecto `0`. Con ventana `0` no se consulta la caché y el nombre automático es único aunque dos generaciones caigan en el mismo segundo (sufijo). Con una ventana explícita, todo sigue igual | `doc/database_documentation.py`, `doc/infrastructure/runtime/output_runtime.py`, `api_5_0_migration.md`, `CHANGELOG.md` | Dos generaciones sin `fichero_salida` en el mismo segundo (`current_time` inyectado) → dos carpetas; `batch_window_seconds=90` explícito → una |
+| U-8.4 | `feat(managers): columnas y timeout en servidor en el SQL personalizado` | G42 | Método nuevo `execute_custom_result(sql, params=None, timeout=None, *, read_only=False, max_rows=None) -> CustomQueryResult` (dataclass congelada: `columns: tuple[str, ...]`, `rows: Rows`), en el manager síncrono y en el asíncrono (D8-3; nombre definitivo en la fase). Con `read_only=True` y `timeout`, PostgreSQL aplica `SET LOCAL statement_timeout` (D8-4). `execute_custom_many/one` no cambian | `managers/sync_mgr.py`, `managers/async_mgr.py`, `executors/sync_query_executor.py`, `executors/async_query_executor.py`, `results/` (tipo nuevo), `__init__.py` (exportación), `CHANGELOG.md` | Cabeceras con 0 filas; `SELECT 1 AS a, 2 AS a` → `("a", "a")`; `max_rows` corta; `read_only=True` bloquea un `DELETE` (SQLite); `statement_timeout` corta en el servidor (`-m integration`, PostgreSQL) |
+| U-8.5 | `fix(managers): versión completa del servidor` | G43 | En Oracle, `get_server_version()` lee `VERSION_FULL` y, si la columna no existe, `VERSION`, con una SQL **distinta** de la que usa `_resolve_dialect`. Método nuevo `get_server_version_info() -> tuple[int, ...] \| None`, con los números del principio y sin sufijos de distribución, en los dos managers (D8-6) | `metadata/contracts.py`, `metadata/oracle/catalog.py`, `metadata/source.py`, `managers/sync_mgr.py`, `managers/async_mgr.py`, `CHANGELOG.md` | Doble de Oracle 23ai → versión completa; doble de 11g sin `VERSION_FULL` → `VERSION`, sin dejar de elegir `Oracle11Catalog`; `"11.4.2-MariaDB-…"` → `(11, 4, 2)`; banco: igual que `server_version_info` de SQLAlchemy en los 6 motores |
+| U-8.6 | `feat(bulk,connection)!: retirar lo obsoleto` | — (D8-8) | Fuera el setter `AuditManager.columnas_auditoria` y el parámetro `encoding_errors` de MariaDB (campo de `MariaDBConnectionConfig`, validación, `FutureWarning`, entrada y clase de `database_types.json`) | `bulk/audit.py`, `connection/config.py`, `data/database_types.json`, `api_5_0_migration.md`, `CHANGELOG.md` | Asignar `columnas_auditoria` → `AttributeError`; `build_conn_params("mariadb", {…, "encoding_errors": "replace"})` sin la clave y sin aviso; esquema del JSON y `param_kinds` sin `encoding_errors` |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo | Tests |
+|---|---|---|---|---|---|
+| W-8.0 | `chore(backend): util_bbdd 5.0.0` | G2, G30, G35 | Fija la versión 5.0.0 y el lock (ADR-006, paso 4); `test_health` espera 5.0.0. Sin cambios de código | Los valores explícitos (`truncate_target`, `dry_run`, `fichero_salida`, `batch_window_seconds=0`) **se mantienen**: no cuestan nada | Suite completa con `-W error::FutureWarning -W error::DeprecationWarning` |
+| W-8.1 | `fix(backend): conexiones MariaDB sin encoding_errors` | — (U-8.6) | Migración Alembic que quita `encoding_errors` de los `params` guardados de las conexiones MariaDB (nunca tuvo efecto); fuera de `KNOWN_PARAMS` | — | Migración sobre una BD con una conexión MariaDB que lo tiene: desaparece y la conexión se edita sin `ConnectionParamsError`; `downgrade` sin error |
+| W-8.2 | `refactor(backend): consola SQL con execute_custom_result` | G42 | `_run_read_only` pasa a `execute_custom_result(read_only=True, max_rows=limit + 1, timeout=)`; fuera `_READ_ONLY_STATEMENTS` y la transacción propia (D8-5). El mensaje de error sale de `__cause__` con el mismo `_engine_message`. Contrato HTTP sin cambios | Se retira la transacción propia. **Se mantienen** el guardián `sqlglot`, `PARAM_VALUE` y el timeout del subproceso | El test de contrato G42 se invierte (columnas, también con 0 filas y repetidas); banco del explorador: mismas columnas y filas que antes en los 6 motores, y la escritura la bloquea el motor con el guardián desactivado en el test |
+| W-8.3 | `refactor(backend): versión del servidor desde util_bbdd` | G43 | `_server_version` usa `get_server_version_info()` en todos los motores, también HSQLDB; fuera `_sqlalchemy_version`. `MAX_SERVER_VERSION` se mantiene. Contrato HTTP sin cambios | Se retira | Unitario con dobles; banco: Oracle `23.26.3.0.0`, y MariaDB y PostgreSQL con la misma versión que en la 1.6.0 |
+| W-8.4 | `docs: valores por defecto seguros de util_bbdd 5.0` | G2, G30, G35 | Docstrings de `dump.py`, `bulk.py` y `documentation.py` (ya no son «`True` por defecto»); GAPS G2, G30 y G35 **resueltos en util_bbdd 5.0.0** | — | `zensical build --strict` |
+
+Orden: U-8.1, U-8.2, U-8.3 y U-8.6 son independientes; U-8.4 va antes que U-8.5 porque tocan los mismos managers.
+W-8.1 va justo después de W-8.0, porque el cambio de versión deja sin editar las conexiones MariaDB con
+`encoding_errors`, y no hay release de la web entre las dos.
+
 ---
 
 ## 3. Orden de ejecución simultáneo
@@ -208,11 +246,13 @@ flowchart LR
         R3 --> U4["Ola 4<br/>U-V"] --> R4(["v4.4.0"])
         R4 --> U5["Ola 5<br/>U-B"] --> R5(["v4.5.0"])
         R5 --> U6["Ola 6<br/>U-T"] --> R6(["v4.6.0"])
+        R6 --> U8["Ola 8<br/>U-8"] --> R8(["v5.0.0"])
     end
     subgraph W["util_bbdd_web"]
         direction LR
         W1["W-1.0 + W-D + W-G"] --> W2["W-2.0 + W-C"] --> W3["W-3.0 + W-M"]
         W3 --> W4["W-4.0 + W-V"] --> W5["W-5.0 + W-B"] --> W6["W-6.0 + W-T"]
+        W6 --> W8["W-8.0 + W-8"]
     end
     R1 -.wheel.-> W1
     R2 -.wheel.-> W2
@@ -220,6 +260,7 @@ flowchart LR
     R4 -.wheel.-> W4
     R5 -.wheel.-> W5
     R6 -.wheel.-> W6
+    R8 -.wheel.-> W8
 ```
 
 | Paso | util_bbdd (commits en orden) | util_bbdd_web (commits en orden) | Sincronización |
@@ -232,16 +273,18 @@ flowchart LR
 | 5 (web ✅) | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 → **`release: v1.4.0`** | Wheel 4.4.0 |
 | 6 (web ✅) | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 (web ✅) | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
-| 8 *(fuera de este plan, D4)* | `feat!: truncate_target=False y generar_sql=False por defecto` (G30, G35; también ventana G2 = 0) → **`release: v5.0.0`**, en otra sesión | **W-8.0** `chore(backend): util_bbdd 5.0.0` (sin cambios de código: la web ya pasa todo explícito) | Wheel 5.0.0 |
+| 8 | U-8.1 → U-8.2 → U-8.3 → U-8.4 → U-8.5 → U-8.6 → **`release: v5.0.0`** (guía `api_5_0_migration.md` completa) | **W-8.0** `chore(backend): util_bbdd 5.0.0` → W-8.1 → W-8.2 → W-8.3 → W-8.4 → **`release: v1.7.0`** (D8-7) | Wheel 5.0.0 |
 
 Reglas de la tubería:
 
 - **Orden dentro de una ola**: el de la tabla. Las fases `U-` de una ola son independientes salvo U-0.1 (las de
-  progreso dependen de ella), U-D3 → U-D5 (mismo fichero), U-D6 → U-D7, U-T3 → U-T5 y U-V3 → U-V8.
+  progreso dependen de ella), U-D3 → U-D5 (mismo fichero), U-D6 → U-D7, U-T3 → U-T5, U-V3 → U-V8 y U-8.4 → U-8.5
+  (mismos managers).
 - **La web nunca va por delante**: una fase `W-` solo se empieza con su release publicada. Si una release se
   retrasa, la web sigue con la ola anterior o se queda parada; no se adelantan rodeos.
 - **Versiones de la web** (D5): cada ola de la web termina con su commit `release: v1.x.0` (`/version-closure`):
-  1.1.0 tras W-1 (incluye lo que hoy está «Sin publicar»), 1.2.0 tras W-2 … 1.6.0 tras W-6.
+  1.1.0 tras W-1 (incluye lo que hoy está «Sin publicar»), 1.2.0 tras W-2 … 1.6.0 tras W-6 y 1.7.0 tras W-8
+  (D8-7: util_bbdd sube de MAJOR, pero la API HTTP de la web no cambia).
 - **Si una fase `U-` cambia de alcance** al implementarla, se ajusta su `W-` antes de empezarla y se anota aquí.
 
 ---
@@ -262,7 +305,7 @@ Reglas de la tubería:
 
 | # | Riesgo | Mitigación |
 |---|---|---|
-| T1 | Cambios de valor por defecto rompen a otros consumidores de util_bbdd (SemVer) | Regla 4: `FutureWarning` en 4.x, cambio solo en 5.0.0 (ola 8, fuera de este plan: D4) |
+| T1 | Cambios de valor por defecto rompen a otros consumidores de util_bbdd (SemVer) | Regla 4: `FutureWarning` en 4.x, cambio solo en 5.0.0 (ola 8, Grupo 8) |
 | T2 | G11 (enmascarar `get_database_info`) cambia una salida pública | Se trata como corrección de seguridad (`security:`) en MINOR, con nota en CHANGELOG. **Decisión D2** abajo |
 | T3 | G21 y U-M2/U-V4 necesitan Oracle real para verificarse | Unitarios con dobles en el CI + `pytest -m integration` contra el bench antes de la release de la ola |
 | T4 | G25: empaquetar Mermaid suma unos 3 MB al wheel | **Decisión D3**: versión fija + SRI + `mermaid_src` configurable (sin empaquetar) |
@@ -293,7 +336,7 @@ Reglas de la tubería:
 | D1 | Dónde vive el contrato de progreso | **Paquete nuevo `util_bbdd.progress`** (capa 2). Propuesta original: `util_bbdd.audit.progress`; se eligió el paquete propio por separación de responsabilidades, a cambio de regenerar el diagrama de capas en U-0.1 |
 | D2 | G11 en MINOR o en MAJOR | **MINOR como `security:`** (4.6.0, nota en CHANGELOG) |
 | D3 | Mermaid empaquetado o fijado con SRI | **Versión fija + SRI + `mermaid_src` configurable** |
-| D4 | Ola 8 (5.0.0 con defaults seguros) | **Fuera de este plan**: se planifica en otra sesión tras la 4.6.0 |
+| D4 | Ola 8 (5.0.0 con defaults seguros) | **Fuera de este plan**: se planifica en otra sesión tras la 4.6.0. Planificada el 2026-10-29 (Grupo 8, decisiones D8-x abajo) |
 | D5 | Una release de la web por ola o una al final | **Una MINOR de la web por ola** (1.1.0 … 1.6.0) |
 
 ### Veredicto
@@ -304,6 +347,41 @@ Reglas de la tubería:
 2. Bench de integración (Oracle, MariaDB, MySQL, PostgreSQL, SQL Server) disponible antes de las releases 4.1.0
    (G21), 4.3.0 (G28) y 4.4.0 (G32).
 3. Una release de util_bbdd **no se publica** sin el wheel y su `.sha256` (ADR-006).
+
+### Ola 8 (AUDIT_PLAN del 2026-10-29)
+
+Riesgos propios de la ola 8; los de arriba siguen valiendo (sobre todo T1, S1 y F3).
+
+| # | Riesgo | Mitigación |
+|---|---|---|
+| F8-1 | Otros consumidores de util_bbdd dependen de `truncate_target=True` o `generar_sql=True` implícitos | MAJOR, `FutureWarning` desde 4.4.0 (G30) y 4.5.0 (G35), y guía `api_5_0_migration.md` con el antes/después |
+| F8-2 | Con `truncate_target=False` por defecto, `DumpConfig(manage_indexes="all")` sin el argumento pasa a fallar | En la guía de migración y en el test de U-8.1; el mensaje del `ValueError` no cambia |
+| F8-3 | G2 no tuvo `FutureWarning`: es una excepción a la regla 4 | D8-1: no es destructivo (más carpetas, ninguna mezclada); va en la guía de migración |
+| F8-4 | Con ventana `0`, dos generaciones en el mismo segundo tendrían el mismo nombre (`%Y%m%d_%H%M%S`) y la misma carpeta, que es el propio G2 | U-8.3 hace el nombre único con ventana `0`. La web no se ve afectada (`fichero_salida`) |
+| F8-5 | Las conexiones MariaDB guardadas con `encoding_errors` dejan de poder editarse (`validate_params` rechaza lo no declarado) | W-8.1, justo después de W-8.0: migración Alembic que quita la clave (nunca tuvo efecto) |
+| T8-1 | Si `server_version_sql` de Oracle pasa a `VERSION_FULL`, se rompe la elección de `Oracle11Catalog` (11g no tiene la columna) | U-8.5 usa otra SQL, con respaldo a `VERSION`; test con 11g simulado |
+| T8-2 | Que `VERSION_FULL` exista desde Oracle 18c | **PENDIENTE DE VERIFICAR** en el banco (Oracle 23ai) en U-8.5; el respaldo cubre cualquier versión |
+| S8-1 | W-8.2 sustituye la capa 2 de la consola (transacción de solo lectura propia) por la de util_bbdd | Mismas sentencias por motor (`execute_custom_many` 4.6.0). El banco comprueba que el motor bloquea la escritura con el guardián desactivado. `sqlglot`, `PARAM_VALUE` y el timeout del subproceso se quedan (regla 5) |
+| S8-2 | Sin `statement_timeout`, una consulta de PostgreSQL sigue en el servidor aunque se mate el subproceso | D8-4: U-8.4 lo aplica. Si U-8.4 no lo trae, W-8.2 no se hace y la web sigue con su ejecución |
+
+Decisiones (aprobadas el 2026-10-29):
+
+| # | Decisión | Aprobado |
+|---|---|---|
+| D8-1 | G2 sin `FutureWarning` previo | **Cambio directo en 5.0.0** (no es destructivo; guía de migración). Descartada una 4.7.0 con aviso |
+| D8-2 | `generar_sql` en 5.0 | **Alias sin aviso**; `dry_run` como nombre preferido. Retirarlo exigiría cambiar `dump/orchestrator.py` y `parallel_loader.py` |
+| D8-3 | Forma de G42 | **Método nuevo** `execute_custom_result` → `CustomQueryResult(columns, rows)`, tipado y sin cambiar `execute_custom_many/one` |
+| D8-4 | Timeout en el servidor | **Dentro de G42 (U-8.4)**: amplía la petición de G42 en GAPS |
+| D8-5 | Transacción propia de la consola | **Se retira en W-8.2**; el guardián, `PARAM_VALUE` y el timeout del subproceso se mantienen |
+| D8-6 | G43 | **`VERSION_FULL` con respaldo + `get_server_version_info()`** numérico |
+| D8-7 | Versión de la web tras la ola 8 | **1.7.0** (MINOR: sin cambios en la API HTTP) |
+| D8-8 | Otras retiradas de la MAJOR | **Dentro del plan, como U-8.6** (setter `columnas_auditoria` y `encoding_errors`), con W-8.1 en la web. Propuesta original: dejarlas a la sesión de util_bbdd |
+
+Veredicto de la ola 8: **GO_CONDICIONAL**. Condiciones:
+
+1. ~~Aprobar D8-1 a D8-8~~ — hecho (2026-10-29).
+2. Banco con Oracle 23ai y 11g simulado antes de `v5.0.0` (T8-1, T8-2), y banco del explorador antes de W-8.2 (S8-1).
+3. Si U-8.4 sale sin el timeout en el servidor, W-8.2 se queda fuera de la ola (S8-2).
 
 ---
 
