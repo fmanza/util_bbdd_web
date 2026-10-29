@@ -9,7 +9,8 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
   Ola 3 y W-3 hechas (util_bbdd 4.3.0, web 1.3.0; registro en §6). Ola 4 y W-4 hechas (util_bbdd 4.4.0, web
   1.4.0; registro en §6). Ola 5 y W-5 hechas (util_bbdd 4.5.0, web 1.5.0; registro en §6). Ola 6
   y W-6 hechas (util_bbdd 4.6.0, web 1.6.0; registro en §6). Ola 8 (util_bbdd 5.0.0, Grupo 8) planificada el
-  2026-10-29 con las decisiones D8-1 a D8-8 aprobadas el mismo día (§4).
+  2026-10-29 con las decisiones D8-1 a D8-8 aprobadas el mismo día (§4) y hecha en util_bbdd el mismo día (5.0.0, sin
+  publicar; registro en §6). Falta W-8.
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -273,7 +274,7 @@ flowchart LR
 | 5 (web ✅) | U-B1 → U-B2 → U-B3 → U-B4 → **`release: v4.5.0`** | **W-4.0** `chore(backend): util_bbdd 4.4.0` → W-V1 → W-V2 → W-V3 → W-V4 → W-V5 → **`release: v1.4.0`** | Wheel 4.4.0 |
 | 6 (web ✅) | U-T1 → U-T2 → U-T3 → U-T4 → U-T5 → U-T6 → U-T7 → U-T8 → **`release: v4.6.0`** | **W-5.0** `chore(backend): util_bbdd 4.5.0` → W-B1 → W-B2 → W-B3 → **`release: v1.5.0`** | Wheel 4.5.0 |
 | 7 (web ✅) | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
-| 8 | U-8.1 → U-8.2 → U-8.3 → U-8.4 → U-8.5 → U-8.6 → **`release: v5.0.0`** (guía `api_5_0_migration.md` completa) | **W-8.0** `chore(backend): util_bbdd 5.0.0` → W-8.1 → W-8.2 → W-8.3 → W-8.4 → **`release: v1.7.0`** (D8-7) | Wheel 5.0.0 |
+| 8 (util_bbdd ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** `chore(backend): util_bbdd 5.0.0` → W-8.1 → W-8.2 → W-8.3 → W-8.4 → **`release: v1.7.0`** (D8-7) | Wheel 5.0.0 |
 
 Reglas de la tubería:
 
@@ -627,3 +628,21 @@ cada fase `W-`).
 | W-T3 | `6dbd129` | La prueba de conexión hace `ping()`; los schemas salen de `get_schema_names()` y el por defecto de `metadata_source.current_schema()` (fuera el `Inspector` y `denormalize_name`). Comparado contra el bench: mismos schemas y mismo por defecto en los 6 motores, y misma clasificación de fallos (clave errónea y puerto cerrado → `connection_failed`). **Cambio respecto a D3**: la versión sigue saliendo de `server_version_info` de SQLAlchemy porque `get_server_version()` da `23.0.0.0.0` en Oracle 23ai (frente a `23.26.3.0.0`) y sufijos en MariaDB y PostgreSQL; solo sin SQLAlchemy (HSQLDB) se usa la de util_bbdd, recortada. Hueco nuevo G43. Bench de conexiones y explorador: 26 passed |
 | W-T4 | `fe0e49c` | **Cambio respecto al plan (D4)**: la consola no pasa a `execute_custom_many(read_only=True, max_rows=)` porque devuelve tuplas sin nombres de columna (hueco nuevo G42): perdería las cabeceras (también con 0 filas), mezclaría columnas repetidas y quitaría el `statement_timeout` de PostgreSQL. Se mantiene la ejecución propia (misma transacción de solo lectura por motor), el guardián `sqlglot` y `PARAM_VALUE`. Test de contrato: `read_only` y `max_rows` funcionan en SQLite y las filas siguen sin nombres (avisa cuando util_bbdd los dé). G18, G19 y G20 resueltos en util_bbdd |
 | release | este commit | util_bbdd_web **1.6.0** (D5), con la guía de publicación y Dependabot (`9f0e2d5`, `abcb828`). `docker compose up --build` + `/api/health` 200 (1.6.0 / util_bbdd 4.6.0), bench de integración (83 passed; SQL Server en el puerto 51833) y E2E (23 specs, `--workers=1`) en verde |
+
+### Ola 8 — util_bbdd 5.0.0 (2026-10-29, rama `develop`)
+
+Sesión de util_bbdd: `.ai/sessions/2026-10-29-web-gaps-ola8/`. Un commit por fase, con AUDIT_CODE después de cada una.
+Tag `v5.0.0`, wheel y `.sha256` (`f25a81c3…14ee2d0`, probado en un venv limpio) **pendientes de publicar** (los
+publica el propietario): la web no empieza W-8.0 hasta que existan.
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-8.1 | `d7a8f51` | `DumpConfig.truncate_target: bool = False`, sin `FutureWarning`; `manage_indexes="all"` sin `truncate_target=True` → `ValueError`. Guía `api_5_0_migration.md` creada |
+| U-8.2 | `152d6a4` | `bulk_*_from_df` sin `generar_sql` ni `dry_run` ejecuta, sin aviso; `generar_sql` alias de `dry_run` (D8-2) |
+| U-8.3 | `9e25d84` | Ventana por defecto 0; con ventana 0 el nombre automático lleva `-2`, `-3`… si coincide el segundo o la carpeta existe. Con ventana explícita, igual que antes |
+| U-8.4 | `11648d4` | `execute_custom_result(sql, params=None, timeout=None, *, read_only=False, max_rows=None) -> CustomQueryResult(columns, rows)`, sync y async. **Se importa de `util_bbdd.results`** (no de la raíz). Con `read_only=True` y `timeout`, PostgreSQL aplica `SET LOCAL statement_timeout` (D8-4) y el corte llega como **`QueryTimeoutError`** (mensaje del motor en `__cause__`). Oracle da los nombres de columna en mayúsculas. Sin conjunto de resultados → `CustomQueryResult()`. Banco: PostgreSQL (psycopg y asyncpg) corta en el servidor; columnas con 0 filas y repetidas en MySQL, MariaDB, SQL Server y Oracle. Condición S8-2 cumplida: W-8.2 entra en la ola |
+| U-8.5 | `7f28ed9` | **Cambio de forma, mismo resultado**: se lee `VERSION` y solo en Oracle 18c+ `VERSION_FULL` (no «`VERSION_FULL` y, si falla, `VERSION`»), porque una consulta de catálogo que falla hace `rollback()` de la conexión. `get_server_version_info()` en los dos managers. Banco: igual que `server_version_info` de SQLAlchemy en PostgreSQL, MySQL, MariaDB, SQL Server y Oracle 23ai (`23.26.3.0.0`); T8-2 verificado. HSQLDB y 11g real sin probar (11g, con un doble) |
+| U-8.6 | `251e51a` | Fuera el setter `columnas_auditoria` y `encoding_errors` (campo, validación, aviso, `optional` y `kinds` del JSON); si se pasa, se descarta sin aviso. W-8.1 sigue haciendo falta: `validate_params` de la web rechazará la clave |
+| test | `39c0083` | La integración con el banco destapó 12 fallos de `test_dump_engines.py` por U-8.1 (helper sin `truncate_target`); corregidos. Integración completa: 673 passed, 0 failed |
+| release | `f495b21` | Release `v5.0.0` (MAJOR). Suite 6835 passed, 616 skipped; mypy, ruff y `zensical build --strict` limpios |
+
