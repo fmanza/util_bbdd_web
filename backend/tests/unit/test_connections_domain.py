@@ -149,6 +149,7 @@ def files_settings(tmp_path: Path) -> Settings:
         ("postgresql", {"nope": 1}, "no es un parámetro"),
         ("postgresql", {"password": "x"}, "campo «password»"),
         ("mariadb", {"init_command": "SET x=1"}, "por seguridad"),
+        ("mariadb", {"encoding_errors": "replace"}, "no es un parámetro"),  # retirado en util_bbdd 5.0.0 (W-8.1)
         ("postgresql", {"port": "5432"}, "integer"),
         ("postgresql", {"port": True}, "integer"),
         ("postgresql", {"sslmode": "siempre"}, "debe ser uno de"),

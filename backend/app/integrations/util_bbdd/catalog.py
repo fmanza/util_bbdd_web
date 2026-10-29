@@ -23,7 +23,7 @@ KNOWN_PARAMS: frozenset[str] = frozenset(
         "host", "port", "user", "password", "database", "schema", "dbname", "dsn", "service_name", "sid",
         "protocol", "encoding", "charset", "autocommit", "connect_timeout", "read_timeout", "write_timeout",
         "timeout", "login_timeout", "pool_size", "pool_name", "pool_timeout", "pool_recycle", "max_overflow",
-        "max_idle", "max_lifetime", "close_timeout", "encoding_errors", "catalog_charset_mode", "ssl", "ssl_ca",
+        "max_idle", "max_lifetime", "close_timeout", "catalog_charset_mode", "ssl", "ssl_ca",
         "ssl_cert", "ssl_key", "ssl_verify_cert", "ssl_verify_identity", "sslmode", "unix_socket", "init_command",
         "application_name", "fallback_application_name", "keepalives", "tcp_keepalives_idle",
         "tcp_keepalives_interval", "tcp_keepalives_count", "options", "target_session_attrs", "oracle_client_path",
