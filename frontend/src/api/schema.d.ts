@@ -2841,7 +2841,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "plain" | "secret" | "host" | "path" | "blocked";
+            kind: "plain" | "secret" | "host" | "port" | "path" | "blocked";
             /** Name */
             name: string;
             /** Options */

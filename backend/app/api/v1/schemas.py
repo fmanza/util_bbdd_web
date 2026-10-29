@@ -198,7 +198,7 @@ class ParamOut(_Out):
     default: Any = None
     options: list[str] | None
     description: str
-    kind: Literal["plain", "secret", "host", "path", "blocked"]
+    kind: Literal["plain", "secret", "host", "port", "path", "blocked"]
 
 
 class EngineOut(_Out):

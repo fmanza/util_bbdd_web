@@ -2,28 +2,22 @@
 
 Combina ``get_db_type_info_static`` (ficha, ``connection_params`` y ``default_driver``), la matriz de capacidades
 ``get_engine_capabilities`` y el estado de los drivers ``get_driver_status`` (util_bbdd 4.6.0, GAPS G5, G8, G10 y G14).
-Los motores de migración salen de ``MigrationPlanner.supported_sources/targets`` (util_bbdd 4.3.0, GAPS G4). Clasifica
-cada parámetro de conexión como secreto, host, ruta o bloqueado, porque util_bbdd no lo indica (GAPS G12).
+Los motores de migración salen de ``MigrationPlanner.supported_sources/targets`` (util_bbdd 4.3.0, GAPS G4). La clase
+de cada parámetro de conexión (secreto, host, puerto, ruta, bloqueado) sale de ``connection_params.kinds`` (util_bbdd
+4.6.0, GAPS G12); un parámetro sin clase se trata como bloqueado.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
 from functools import cache
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 ParamType = Literal["string", "integer", "float", "boolean", "object"]
-ParamKind = Literal["plain", "secret", "host", "path", "blocked"]
+ParamKind = Literal["plain", "secret", "host", "port", "path", "blocked"]
 
-_SECRET: frozenset[str] = frozenset({"password"})
-_HOST: frozenset[str] = frozenset({"host"})
-_HOST_BY_ENGINE: dict[str, frozenset[str]] = {"oracle": frozenset({"dsn"}), "hsqldb": frozenset({"jdbc_url"})}
-_PATH: frozenset[str] = frozenset({"ssl_ca", "ssl_cert", "ssl_key", "unix_socket", "oracle_client_path", "jdbc_jar"})
-_PATH_BY_ENGINE: dict[str, frozenset[str]] = {"sqlite": frozenset({"database"})}
-#: ``init_command`` ejecuta SQL arbitrario al conectar: saltaría la protección ``read_only`` de la aplicación.
-_BLOCKED: frozenset[str] = frozenset({"init_command"})
-
-#: Todos los parámetros conocidos de util_bbdd 4.0.0. Un test avisa si la librería añade uno sin clasificar.
+#: Todos los parámetros conocidos de util_bbdd. Aunque la clase venga de util_bbdd (G12), un test avisa si la librería
+#: añade uno: se revisa antes de ofrecerlo en el formulario.
 KNOWN_PARAMS: frozenset[str] = frozenset(
     {
         "host", "port", "user", "password", "database", "schema", "dbname", "dsn", "service_name", "sid",
@@ -46,7 +40,7 @@ class ParamSpec:
 
     Attributes:
         kind: ``secret`` (se cifra, nunca se devuelve), ``host`` (pasa por la allowlist), ``path`` (debe estar
-            dentro de ``UBW_FILES_DIR``), ``blocked`` (no se admite) o ``plain``.
+            dentro de ``UBW_FILES_DIR``), ``blocked`` (no se admite), ``port`` o ``plain``.
     """
 
     name: str
@@ -119,17 +113,20 @@ class UnknownEngineError(LookupError):
     """``db_type`` no soportado por util_bbdd."""
 
 
+@cache
+def _param_kinds(db_type: str) -> dict[str, str]:
+    from util_bbdd.connection import ConnectionParamsManager
+
+    return dict(ConnectionParamsManager.param_kinds(db_type))
+
+
 def param_kind(db_type: str, name: str) -> ParamKind:
-    """Clasificación de un parámetro de conexión."""
-    if name in _SECRET:
-        return "secret"
-    if name in _BLOCKED:
-        return "blocked"
-    if name in _HOST or name in _HOST_BY_ENGINE.get(db_type, frozenset()):
-        return "host"
-    if name in _PATH or name in _PATH_BY_ENGINE.get(db_type, frozenset()):
-        return "path"
-    return "plain"
+    """Clase de un parámetro de conexión según util_bbdd (``connection_params.kinds``, 4.6.0, GAPS G12).
+
+    Un parámetro sin clase (o con una que la web no conoce) se trata como ``blocked``: falla cerrado.
+    """
+    kind = _param_kinds(db_type).get(name)
+    return kind if kind in get_args(ParamKind) else "blocked"  # type: ignore[return-value]
 
 
 def _param_type(raw: object) -> ParamType:
@@ -216,9 +213,9 @@ class InvalidParamsError(ValueError):
 
 
 def build_params(db_type: str, params: dict[str, Any]) -> dict[str, Any]:
-    """``conn_params`` para ``SyncDatabaseManager``: los normalizados por util_bbdd más los opcionales del usuario.
+    """``conn_params`` para ``SyncDatabaseManager``, normalizados por util_bbdd.
 
-    ``build_conn_params`` valida requeridos pero descarta opcionales como ``sslmode``; por eso se superponen.
+    Desde util_bbdd 4.6.0 ``build_conn_params`` conserva los opcionales declarados (``sslmode``…, GAPS G15).
 
     Raises:
         InvalidParamsError: Con el mensaje de util_bbdd (no contiene secretos: solo nombres de parámetros).
@@ -226,7 +223,6 @@ def build_params(db_type: str, params: dict[str, Any]) -> dict[str, Any]:
     from util_bbdd.connection.builder import build_conn_params
 
     try:
-        built = build_conn_params(db_type, **params)
+        return dict(build_conn_params(db_type, **params))
     except ValueError as exc:
         raise InvalidParamsError(str(exc)) from None
-    return {**built, **params}

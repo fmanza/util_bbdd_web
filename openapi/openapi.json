@@ -3261,6 +3261,7 @@
               "plain",
               "secret",
               "host",
+              "port",
               "path",
               "blocked"
             ],

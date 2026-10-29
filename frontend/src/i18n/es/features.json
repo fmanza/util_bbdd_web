@@ -199,6 +199,7 @@
     "kinds": {
       "secret": "secreto",
       "host": "destino",
+      "port": "puerto",
       "path": "ruta",
       "blocked": "no admitido"
     }

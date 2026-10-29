@@ -219,6 +219,25 @@ def test_every_util_bbdd_param_is_classified() -> None:
     assert {p.kind for p in engine_detail("sqlite").params if p.name == "database"} == {"path"}
 
 
+def test_param_kinds_come_from_util_bbdd() -> None:
+    """Contrato G12: util_bbdd da clase a todos los parámetros declarados, de las que conoce la web; uno sin clase se
+    trata como ``blocked`` (falla cerrado)."""
+    from typing import get_args
+
+    from util_bbdd.connection import ConnectionParamsManager
+
+    from app.integrations.util_bbdd.catalog import ParamKind, param_kind
+
+    for engine in list_engines():
+        kinds = ConnectionParamsManager.param_kinds(engine.db_type)
+        assert {p.name for p in engine.params} <= set(kinds), engine.db_type
+        assert set(kinds.values()) <= set(get_args(ParamKind)), engine.db_type
+    expected = {("oracle", "dsn"): "host", ("hsqldb", "jdbc_url"): "host", ("mariadb", "init_command"): "blocked",
+                ("postgresql", "port"): "port", ("mysql", "ssl_ca"): "path", ("postgresql", "sslmode"): "plain"}  # fmt: skip
+    assert {key: param_kind(*key) for key in expected} == expected
+    assert param_kind("postgresql", "inventado") == "blocked"
+
+
 def test_migration_engines_come_from_util_bbdd_and_match_the_form() -> None:
     from typing import get_args
 
