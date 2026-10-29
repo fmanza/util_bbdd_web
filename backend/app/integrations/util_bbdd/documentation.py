@@ -1,7 +1,8 @@
 """Documentación y grafos de relaciones con util_bbdd (Fase 5); se ejecutan dentro del subproceso del job.
 
 - ``DatabaseDocumentation(manager, directorio_salida, fichero_salida, imprimir, formatos, batch_window_seconds=0)``:
-  siempre con ``fichero_salida`` explícito y sin ventana de agrupación (GAPS G2). Su salida
+  siempre con ``fichero_salida`` explícito y sin ventana de agrupación (GAPS G2; desde util_bbdd 5.0.0 la ventana por
+  defecto ya es 0, pero se sigue pasando). Su salida
   (``<dir>/<nombre>/{WORD,EXCEL,HTML}``) se recoloca en ``outputs/{word,excel,html}/`` del run.
 - ``GraphvizRelationshipGraphExt``: grafo paginado de una tabla o de todas las que tienen relaciones.
 

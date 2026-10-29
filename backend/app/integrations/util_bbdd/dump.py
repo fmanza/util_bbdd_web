@@ -5,7 +5,8 @@
   las toca). Transaccional por tabla, *best-effort* entre tablas.
 - ``build_preview`` toma de ``DumpOrchestrator.plan()`` (util_bbdd 4.4.0, G29) el orden de carga, los ciclos y las
   columnas por tabla, con el mismo ``DumpConfig`` que el volcado (``_config``), y añade los recuentos de filas.
-- ``DumpConfig.truncate_target`` es ``True`` por defecto (G30): la web lo pasa siempre explícito.
+- ``DumpConfig.truncate_target`` es ``False`` por defecto desde util_bbdd 5.0.0 (antes ``True``, G30); la web lo pasa
+  siempre explícito, desactivado por defecto y con la confirmación «VACIAR».
 - Desde util_bbdd 4.4.0, ``on_error="isolate"`` aparta también la PK duplicada en Oracle (G32) y SQLite → SQLite carga
   las fechas guardadas como texto ISO (G33): la vista previa ya no avisa de ninguno de los dos.
 - ``TableDumpResult.error_msg`` y ``ConstraintResult.error_msg`` llegan saneados desde util_bbdd 4.4.0 (G34); la web

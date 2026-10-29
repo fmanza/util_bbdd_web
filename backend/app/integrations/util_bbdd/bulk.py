@@ -2,8 +2,8 @@
 
 - ``bulk_insert|update|delete_from_df(df, tabla, dry_run=True, path_sql=dir)`` **escribe el SQL sin ejecutarlo**
   (una sentencia por fila, con los valores): es el modo seco y el artefacto ``outputs/sql/carga_<op>.sql``. Sin
-  ``dry_run`` ni ``generar_sql`` util_bbdd tampoco ejecuta (G35, ``FutureWarning`` desde 4.5.0): la web pasa siempre
-  ``dry_run`` explícito, ``False`` al aplicar.
+  ``dry_run`` ni ``generar_sql`` util_bbdd ejecuta desde 5.0.0 (antes escribía el SQL sin ejecutar, G35): la web pasa
+  siempre ``dry_run`` explícito, ``False`` al aplicar.
 - Con ``ParallelOptions`` y un plan de más de un hilo la operación deja de ser atómica (una transacción por
   partición, G36). ``ParallelPlan.atomic`` (util_bbdd 4.5.0) lo dice en la vista previa; al cargar sin
   ``accept_non_atomic`` se pide ``require_atomic=True``, que fuerza un hilo aunque el plan haya cambiado.
