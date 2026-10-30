@@ -15,6 +15,11 @@ La API HTTP no cambia y no hay migraciones.
   en la SPA y lo muestra como SVG en su iframe sin scripts (ADR-007 enmendado). Petición a util_bbdd para subir su
   Mermaid por defecto: GAPS G45.
 
+### Security
+
+- **Diagramas del Markdown sin directivas**: antes de dibujar se quitan `%%{init: …}%%` y el frontmatter, que un
+  nombre de tabla con saltos de línea podría colar (util_bbdd no los escapa, GAPS G46).
+
 ## [1.7.1] - 2026-10-29
 
 util_bbdd 5.1.0 y ola 9 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (G44). La API HTTP no cambia y no hay

@@ -5,6 +5,16 @@
 
 let counter = 0;
 
+// util_bbdd no genera directivas (`%%{init: …}%%`) ni frontmatter (`---`), pero no escapa los saltos de línea de los
+// nombres (GAPS G46): un nombre de tabla con `\n` podría colarlos y cambiar la configuración del dibujo (`themeCSS`…).
+const DIRECTIVE = /%%\{[\s\S]*?\}%%/g;
+const FRONTMATTER = /^\s*---\r?\n[\s\S]*?\r?\n---\s*(\r?\n|$)/;
+
+/** Texto del diagrama sin directivas ni frontmatter: solo cuenta la configuración de `initialize`. */
+export function stripMermaidConfig(text: string): string {
+  return text.replace(FRONTMATTER, '').replace(DIRECTIVE, '');
+}
+
 /** Sustituye en `html` (salida de `marked`) cada `<pre><code class="language-mermaid">` por su SVG. Un diagrama que
  *  Mermaid no sabe dibujar se queda como código. */
 export async function renderMermaidBlocks(html: string): Promise<string> {
@@ -17,7 +27,7 @@ export async function renderMermaidBlocks(html: string): Promise<string> {
   // `render` en serie: Mermaid no admite dibujar varios diagramas a la vez.
   for (const code of blocks) {
     try {
-      const { svg } = await mermaid.render(`ubw-mermaid-${++counter}`, code.textContent);
+      const { svg } = await mermaid.render(`ubw-mermaid-${++counter}`, stripMermaidConfig(code.textContent));
       const figure = doc.createElement('div');
       figure.className = 'mermaid-diagram';
       figure.innerHTML = svg;

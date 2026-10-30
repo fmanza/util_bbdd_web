@@ -72,9 +72,9 @@
 ## Veredicto final
 Veredicto: GO (`/security-review` sin CRITICAL ni HIGH en el alcance; condición del AUDIT_PLAN cumplida)
 Pendientes al cierre:
-- LOW de la revisión de seguridad: `escape_mermaid_label` de util_bbdd no escapa saltos de línea; un nombre de tabla
-  con `\n` puede añadir sentencias o directivas `%%{init}%%` al diagrama (acotado por `strict`, el sandbox y las CSP).
-  Remediación propuesta: quitar directivas y frontmatter en `renderMermaidBlocks` y pedirlo a util_bbdd (G46).
+- LOW de la revisión de seguridad (`escape_mermaid_label` de util_bbdd no escapa saltos de línea): remediado en la
+  web con `stripMermaidConfig` (directivas y frontmatter fuera antes de dibujar el Markdown) y pedido a util_bbdd
+  como G46; el informe HTML sigue acotado por su sandbox hasta que util_bbdd lo resuelva.
 - Fuera de alcance: `npm audit` avisa de `zod` 4.6.5 (GHSA-mrhx-c7xc-m3w5, high), dependencia previa.
 - Release (1.8.0) cuando se pida; merge de `feat/mermaid12`.
 - G45 en util_bbdd (subir `MERMAID_VERSION` a 12.x).
