@@ -22,9 +22,9 @@ En *Nueva carga*:
 | Campo | Efecto |
 |---|---|
 | Fichero, operación | **Insertar**, **Actualizar** (por clave primaria) o **Borrar** (por clave primaria) |
-| Conexión, schema y tabla destino | Dónde se escribe; schema vacío = el de la conexión |
-| Hoja / separador y codificación | Excel: hoja (la primera por defecto). CSV: se detectan; se pueden fijar |
-| Columnas | Columna de la tabla para cada columna del fichero, o «no cargar». Con schema, se ofrecen las de la tabla y se propone la del mismo nombre |
+| Conexión, schema y tabla destino | Dónde se escribe. Al elegir la conexión se ofrecen sus schemas (sin los del sistema) y las tablas del schema elegido o, vacío, del de la conexión; también se pueden escribir. Si el catálogo no se puede leer (p. ej. conexión privada de otro miembro), se escriben a mano |
+| Hoja / separador y codificación | Excel: hoja (la primera por defecto). CSV: el separador se detecta entre coma, punto y coma, tabulador y barra vertical (coma si no se reconoce) y la codificación probando UTF-8, Windows-1252 y Latin-1; se pueden fijar si las columnas salen juntas o hay caracteres raros (habitual: CSV de Excel en español, con `;`) |
+| Columnas | Columna de la tabla para cada columna del fichero, o «no cargar». Si se puede leer la tabla, se ofrecen sus columnas y se propone la del mismo nombre |
 | Apartar filas | Las que el destino no admita van a `rechazos.csv` en vez de hacer fallar la carga |
 | Plan paralelo | util_bbdd reparte las filas en hilos si compensa; con más de un hilo **deja de ser atómica** |
 

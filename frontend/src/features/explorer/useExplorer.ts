@@ -13,7 +13,7 @@ export type SqlCapabilities = components['schemas']['SqlCapabilities'];
 
 const key = (connectionId: number) => ['connections', connectionId, 'metadata'] as const;
 
-export function useSchemas(connectionId: number) {
+export function useSchemas(connectionId: number, enabled = true) {
   return useQuery({
     queryKey: [...key(connectionId), 'schemas'],
     queryFn: async () =>
@@ -22,6 +22,7 @@ export function useSchemas(connectionId: number) {
           params: { path: { connection_id: connectionId } },
         }),
       ),
+    enabled,
     staleTime: 5 * 60_000,
     retry: false,
   });

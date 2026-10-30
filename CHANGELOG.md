@@ -12,6 +12,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   paso a paso para descomprimir el Instant Client en `UBW_FILES_DIR` y usarlo con `oracle_client_path` (relativa) y
   `oracle_thick_mode` (`deployment.md`, `conexiones.md`, `troubleshooting.md`). Verificado con el 19.32 y
   `oracledb` 26.0.1.
+- **Carga: schema y tabla destino desde el catálogo**: al elegir la conexión destino se ofrecen sus schemas y las
+  tablas del schema (también se pueden escribir, y a mano si el catálogo no se puede leer); ayuda en pantalla sobre
+  cómo se detectan el separador y la codificación del CSV.
 
 ### Fixed
 

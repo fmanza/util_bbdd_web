@@ -1,9 +1,11 @@
 import {
   ActionIcon,
+  Autocomplete,
   Button,
   Card,
   FileInput,
   Group,
+  Loader,
   NativeSelect,
   SimpleGrid,
   Stack,
@@ -20,7 +22,7 @@ import { useNavigate } from 'react-router';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes, formatDateTime } from '../../components/format';
-import { useTable } from '../explorer/useExplorer';
+import { useSchemas, useSchemaTree, useTable } from '../explorer/useExplorer';
 import { type Project, useProjectConnections } from '../projects/useProjects';
 import { useLaunchRun } from '../runs/useRuns';
 import {
@@ -100,12 +102,22 @@ export function BulkTab({ project }: { project: Project }) {
 
   const info = useUploadInfo(project.id, uploadId || null, read);
   const connection = (connections.data ?? []).find((c) => c.alias === alias);
-  // Columnas de la tabla para los desplegables del mapeo (si la conexión se puede explorar y hay schema);
-  // con retardo para no reflejar la tabla en cada tecla.
-  const [lookupSchema] = useDebouncedValue(schema.trim(), 500);
+  const connectionId = connection?.connection_id ?? 0;
+  // Schemas y tablas del destino para elegirlos (catálogo del explorador). Si la conexión no se puede explorar
+  // (p. ej. privada de otro miembro), se siguen escribiendo a mano.
+  const schemas = useSchemas(connectionId, Boolean(connection));
+  const schemaOptions = useMemo(
+    () => (schemas.data?.schemas ?? []).filter((s) => !s.system).map((s) => s.name),
+    [schemas.data],
+  );
+  // Columnas de la tabla para los desplegables del mapeo; vacío = el schema de la conexión.
+  // Con retardo para no consultar en cada tecla.
+  const [lookupSchema] = useDebouncedValue(schema.trim() || (schemas.data?.default ?? ''), 500);
   const [lookupTable] = useDebouncedValue(table.trim(), 500);
+  const tree = useSchemaTree(connectionId, connection && lookupSchema ? lookupSchema : null);
+  const tableOptions = useMemo(() => (tree.data?.tables ?? []).map((item) => item.name), [tree.data]);
   const detail = useTable(
-    connection?.connection_id ?? 0,
+    connectionId,
     connection && lookupSchema ? lookupSchema : null,
     lookupTable || null,
   );
@@ -208,7 +220,12 @@ export function BulkTab({ project }: { project: Project }) {
             <NativeSelect
               label={t('bulk.form.connection')}
               value={alias}
-              onChange={(event) => setAlias(event.currentTarget.value)}
+              onChange={(event) => {
+                setAlias(event.currentTarget.value);
+                setSchema('');
+                setTable('');
+                setOverrides({});
+              }}
               data={[
                 { value: '', label: t('bulk.form.chooseConnection') },
                 ...(connections.data ?? []).map((c) => ({
@@ -217,50 +234,75 @@ export function BulkTab({ project }: { project: Project }) {
                 })),
               ]}
             />
-            <TextInput
+            <Autocomplete
               label={t('bulk.form.schema')}
-              description={t('bulk.form.schemaHint')}
+              description={schemas.isError ? t('bulk.form.catalogUnavailable') : t('bulk.form.schemaHint')}
+              placeholder={schemas.data?.default ?? undefined}
+              data={schemaOptions}
               value={schema}
-              onChange={(event) => setSchema(event.currentTarget.value)}
+              onChange={(value) => {
+                setSchema(value);
+                setTable('');
+                setOverrides({});
+              }}
+              rightSection={schemas.isFetching ? <Loader size="xs" /> : null}
             />
-            <TextInput
+            <Autocomplete
               label={t('bulk.form.table')}
+              description={
+                tree.isError
+                  ? t('bulk.form.catalogUnavailable')
+                  : tree.data && tableOptions.length === 0
+                    ? t('bulk.form.noTables')
+                    : undefined
+              }
+              data={tableOptions}
               value={table}
-              onChange={(event) => setTable(event.currentTarget.value)}
+              onChange={(value) => {
+                setTable(value);
+                setOverrides({});
+              }}
+              rightSection={tree.isFetching ? <Loader size="xs" /> : null}
             />
             {info.data?.sheets ? (
               <NativeSelect
                 label={t('bulk.form.sheet')}
+                description={t('bulk.form.sheetHint')}
                 value={read.sheet ?? ''}
                 onChange={(event) => setRead({ ...read, sheet: event.currentTarget.value || null })}
                 data={info.data.sheets.map((s) => ({ value: s, label: s }))}
               />
             ) : (
-              <Group grow>
-                <NativeSelect
-                  label={t('bulk.form.delimiter')}
-                  value={read.delimiter ?? ''}
-                  onChange={(event) => setRead({ ...read, delimiter: event.currentTarget.value || null })}
-                  data={[
-                    { value: '', label: t('bulk.form.auto', { value: info.data?.delimiter ?? '' }) },
-                    { value: ',', label: ',' },
-                    { value: ';', label: ';' },
-                    { value: '\t', label: t('bulk.form.tab') },
-                    { value: '|', label: '|' },
-                  ]}
-                />
-                <NativeSelect
-                  label={t('bulk.form.encoding')}
-                  value={read.encoding ?? ''}
-                  onChange={(event) => setRead({ ...read, encoding: event.currentTarget.value || null })}
-                  data={[
-                    { value: '', label: t('bulk.form.auto', { value: info.data?.encoding ?? '' }) },
-                    { value: 'utf-8', label: 'UTF-8' },
-                    { value: 'cp1252', label: 'Windows-1252' },
-                    { value: 'latin-1', label: 'Latin-1' },
-                  ]}
-                />
-              </Group>
+              <Stack gap={4}>
+                <Group grow>
+                  <NativeSelect
+                    label={t('bulk.form.delimiter')}
+                    value={read.delimiter ?? ''}
+                    onChange={(event) => setRead({ ...read, delimiter: event.currentTarget.value || null })}
+                    data={[
+                      { value: '', label: t('bulk.form.auto', { value: info.data?.delimiter ?? '' }) },
+                      { value: ',', label: ',' },
+                      { value: ';', label: ';' },
+                      { value: '\t', label: t('bulk.form.tab') },
+                      { value: '|', label: '|' },
+                    ]}
+                  />
+                  <NativeSelect
+                    label={t('bulk.form.encoding')}
+                    value={read.encoding ?? ''}
+                    onChange={(event) => setRead({ ...read, encoding: event.currentTarget.value || null })}
+                    data={[
+                      { value: '', label: t('bulk.form.auto', { value: info.data?.encoding ?? '' }) },
+                      { value: 'utf-8', label: 'UTF-8' },
+                      { value: 'cp1252', label: 'Windows-1252' },
+                      { value: 'latin-1', label: 'Latin-1' },
+                    ]}
+                  />
+                </Group>
+                <Text size="xs" c="dimmed">
+                  {t('bulk.form.readHint')}
+                </Text>
+              </Stack>
             )}
           </SimpleGrid>
           {info.isError && <ErrorAlert error={info.error} />}

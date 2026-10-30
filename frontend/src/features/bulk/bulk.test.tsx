@@ -37,6 +37,33 @@ const COLUMNS = ['id', 'nombre', 'alta'].map((name, ordinal) => ({
   nullable: true,
 }));
 
+const TREE = {
+  engine: 'postgresql',
+  schema_name: 'public',
+  database: null,
+  fetched_at: '2026-10-30T08:00:00Z',
+  size_bytes: 1024,
+  tables: [{ name: 'clientes', comment: null, columns: 3 }],
+  views: [{ name: 'v_clientes', comment: null, materialized: false }],
+  routines: [],
+};
+
+/** Rutas comunes de la pestaña, para combinarlas con las del catálogo de cada test. */
+function stubRoutes() {
+  return Object.entries({
+    ...session(ADMIN),
+    'GET /api/v1/projects/5': { body: PROJECT },
+    'GET /api/v1/projects/5/runs': { body: { items: [], total: 0 } },
+    'GET /api/v1/projects/5/connections': { body: CONNECTIONS },
+    'GET /api/v1/projects/5/uploads': { body: [UPLOAD] },
+    [`GET /api/v1/projects/5/uploads/${UPLOAD.id}/info`]: { body: INFO },
+    'GET /api/v1/connections/2/metadata/schemas/public/tables/clientes': {
+      body: { name: 'clientes', columns: COLUMNS },
+    },
+    'POST /api/v1/projects/5/runs': { status: 202, body: { ...RUN, id: '01JNEWNEWNEWNEWNEWNEWNEWNE' } },
+  });
+}
+
 function stubTab(initial: Upload[] = [UPLOAD]) {
   let uploads = initial;
   return stubApi({
@@ -99,8 +126,8 @@ describe('pestaña Carga', () => {
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Fichero' }), UPLOAD.id);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Operación' }), 'update');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Conexión destino' }), 'destino');
-    await user.type(screen.getByRole('textbox', { name: /Schema destino/ }), 'public');
-    await user.type(screen.getByRole('textbox', { name: 'Tabla destino' }), 'clientes');
+    await user.type(screen.getByRole('combobox', { name: /Schema destino/ }), 'public');
+    await user.type(screen.getByRole('combobox', { name: 'Tabla destino' }), 'clientes');
 
     // Con las columnas de la tabla, el mapeo se ofrece como desplegables con la propuesta por nombre.
     const idTarget = await screen.findByRole('combobox', { name: 'Columna de la tabla para «ID»' });
@@ -124,6 +151,87 @@ describe('pestaña Carga', () => {
         parallel: false,
       },
     });
+  });
+
+  it('ofrece los schemas y las tablas de la conexión destino', async () => {
+    const fetchMock = stubApi({
+      ...Object.fromEntries(stubRoutes()),
+      'GET /api/v1/connections/2/metadata/schemas': {
+        body: {
+          default: 'public',
+          schemas: [
+            { name: 'public', system: false, cached: true },
+            { name: 'ventas', system: false, cached: false },
+            { name: 'pg_catalog', system: true, cached: false },
+          ],
+        },
+      },
+      'GET /api/v1/connections/2/metadata/schemas/public': { body: TREE },
+    });
+    const user = userEvent.setup();
+
+    await openTab(user);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Fichero' }), UPLOAD.id);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Conexión destino' }), 'destino');
+
+    const schema = screen.getByRole('combobox', { name: /Schema destino/ });
+    await waitFor(() => expect(schema).toHaveAttribute('placeholder', 'public'));
+    // jsdom no posiciona el desplegable de Mantine (queda con display: none): opciones con `hidden`, elección
+    // con el teclado.
+    await user.click(schema);
+    expect(await screen.findByRole('option', { name: 'ventas', hidden: true })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'pg_catalog', hidden: true })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    // Sin schema elegido, las tablas son las del schema de la conexión; las vistas no se ofrecen.
+    const table = screen.getByRole('combobox', { name: 'Tabla destino' });
+    await user.click(table);
+    expect(await screen.findByRole('option', { name: 'clientes', hidden: true })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'v_clientes', hidden: true })).not.toBeInTheDocument();
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(table).toHaveValue('clientes');
+    expect(await screen.findByRole('combobox', { name: 'Columna de la tabla para «ID»' })).toHaveValue('id');
+
+    await user.click(screen.getByRole('button', { name: 'Vista previa' }));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')).toHaveLength(1));
+    const body = (await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()) as {
+      params: Record<string, unknown>;
+    };
+    expect(body.params).toMatchObject({ target_connection: 'destino', table: 'clientes' });
+    expect(body.params).not.toHaveProperty('target_schema');
+  });
+
+  it('si el catálogo no se puede leer, el schema y la tabla se escriben a mano', async () => {
+    stubApi({
+      ...Object.fromEntries(stubRoutes()),
+      'GET /api/v1/connections/2/metadata/schemas': {
+        status: 404,
+        body: { type: 'about:blank', title: 'No encontrada', status: 404, code: 'not_found' },
+      },
+    });
+    const user = userEvent.setup();
+
+    await openTab(user);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Fichero' }), UPLOAD.id);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Conexión destino' }), 'destino');
+
+    expect(
+      await screen.findByText('No se pudo leer el catálogo de la conexión: escríbelo a mano.'),
+    ).toBeInTheDocument();
+    await user.type(screen.getByRole('combobox', { name: /Schema destino/ }), 'ventas');
+    await user.type(screen.getByRole('combobox', { name: 'Tabla destino' }), 'pedidos');
+    expect(screen.getByRole('button', { name: 'Vista previa' })).toBeEnabled();
+  });
+
+  it('explica cómo se leen el separador y la codificación del CSV', async () => {
+    stubTab();
+    const user = userEvent.setup();
+
+    await openTab(user);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Fichero' }), UPLOAD.id);
+
+    expect(await screen.findByText(/Se detectan solos: el separador/)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Separador' })).toHaveDisplayValue('Automático (;)');
   });
 
   it('sin columnas de la tabla, el mapeo se escribe a mano', async () => {
