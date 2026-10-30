@@ -198,8 +198,9 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
 def structure_hash(preview: dict[str, Any]) -> str:
     """Huella de lo que se va a cargar: tablas, destino, columnas omitidas y orden (no las filas, que cambian).
 
-    Los ciclos se ordenan: util_bbdd da sus tablas en un orden que depende de la semilla de hash del proceso (GAPS
-    G47), y la vista previa y el volcado corren en subprocesos distintos. El orden de carga sale de ``position``.
+    Los ciclos se ordenan: hasta la 5.2.0, util_bbdd daba sus tablas en un orden que dependía de la semilla de hash
+    del proceso (GAPS G47), y la vista previa y el volcado corren en subprocesos distintos. Se mantiene como defensa
+    (D10-2): quitarlo cambiaría la huella de las vistas previas guardadas. El orden de carga sale de ``position``.
     """
     shape = [
         (t["table"], t["target_table"], t["skipped_columns"], t["missing_target_columns"], t["position"])

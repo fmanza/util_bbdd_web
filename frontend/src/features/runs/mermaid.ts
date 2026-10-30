@@ -5,8 +5,9 @@
 
 let counter = 0;
 
-// util_bbdd no genera directivas (`%%{init: …}%%`) ni frontmatter (`---`), pero no escapa los saltos de línea de los
-// nombres (GAPS G46): un nombre de tabla con `\n` podría colarlos y cambiar la configuración del dibujo (`themeCSS`…).
+// util_bbdd no genera directivas (`%%{init: …}%%`) ni frontmatter (`---`). Hasta la 5.2.0 no escapaba los saltos de
+// línea de los nombres (GAPS G46) y un nombre de tabla con `\n` podía colarlos y cambiar la configuración del dibujo
+// (`themeCSS`…); se sigue quitando como defensa (D10-2), para los artefactos generados con versiones anteriores.
 const DIRECTIVE = /%%\{[\s\S]*?\}%%/g;
 const FRONTMATTER = /^\s*---\r?\n[\s\S]*?\r?\n---\s*(\r?\n|$)/;
 
