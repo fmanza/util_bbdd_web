@@ -115,7 +115,7 @@ def test_compare_generates_diff_and_reports(
         "outputs/sql/comparacion.sql",
     } <= paths
     assert detail["site_url"].endswith("/comparacion/index.html")
-    # G25: el informe no carga scripts (``mermaid_src=None``) ni nada externo, y ya no hay sustituto de Mermaid.
+    # Sin ``UBW_MERMAID_JS`` (G25, ``mermaid_src=None``): el informe no carga scripts ni nada externo.
     assert not any("mermaid" in path for path in paths)
     report = (
         run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs/html/comparacion/index.html"
@@ -137,6 +137,33 @@ def test_compare_generates_diff_and_reports(
             content = file.read_text(encoding="utf-8", errors="replace")
         for needle in (server_path, server_path.replace("\\", "/"), "sqlite:///"):
             assert needle not in content, (path, needle)
+
+
+def test_compare_embeds_mermaid(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # El subproceso (spawn) lee ``UBW_MERMAID_JS`` del entorno; un ``</script>`` del código no cierra la etiqueta.
+    mermaid_js = tmp_path / "mermaid.min.js"
+    mermaid_js.write_text("window.mermaid = {/* falso </script> */};", encoding="utf-8")
+    monkeypatch.setenv("UBW_MERMAID_JS", str(mermaid_js))
+
+    run_id = compare(user_client, project["id"], markdown=False, sql=False)
+    run = wait_for(worker, db, run_id, timeout=120)
+
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+    paths = {a["path"] for a in user_client.get(f"/api/v1/runs/{run_id}").json()["artifacts"]}
+    assert not any("mermaid" in path for path in paths)
+    report = (
+        run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs/html/comparacion/index.html"
+    ).read_text(encoding="utf-8")
+    assert "window.mermaid = {/* falso <\\/script> */};" in report
+    assert "<script src=" not in report
 
 
 def test_identical_schemas_have_no_differences(

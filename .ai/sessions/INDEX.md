@@ -28,3 +28,4 @@
 | [2026-10-29-gaps-ola6](2026-10-29-gaps-ola6/TRACEABILITY.md) | new_feature + version_closure | W-6 del plan de huecos con util_bbdd 4.6.0 (catálogo, conexiones y explorador) → 1.6.0 |
 | [2026-10-29-gaps-ola8](2026-10-29-gaps-ola8/TRACEABILITY.md) | new_feature + version_closure | Plan de la ola 8 y W-8 del plan de huecos con util_bbdd 5.0.0 (valores por defecto seguros, consola SQL y versión del servidor) → 1.7.0 |
 | [2026-10-29-gaps-ola9](2026-10-29-gaps-ola9/TRACEABILITY.md) | new_feature + refactor + version_closure | Plan de la ola 9 y W-9 del plan de huecos con util_bbdd 5.1.0 (`NUMBER` de Oracle, G44) → 1.7.1 |
+| [2026-10-30-mermaid12](2026-10-30-mermaid12/TRACEABILITY.md) | new_feature | Mermaid 12 incrustado en el informe HTML de comparación y diagramas del Markdown en la SPA (G45) |

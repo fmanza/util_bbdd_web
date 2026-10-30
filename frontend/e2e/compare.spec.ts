@@ -85,14 +85,22 @@ test('comparar dos BD SQLite, navegar por el diff y ver la evolución', async ({
   await expect(page.getByText('El script SQL no se ha ejecutado')).toBeVisible();
   const report = page.frameLocator('iframe[title="Informe HTML de la comparación"]');
   await expect(report.locator('code', { hasText: /^facturas$/ }).first()).toBeVisible({ timeout: 30_000 });
-  // El script del informe arranca sin Mermaid (G25: mermaid_src=None), sin salir a Internet y en origen opaco.
+  // Mermaid 12 va incrustado (UBW_MERMAID_JS): dibuja el diagrama sin salir a Internet y en origen opaco.
+  await expect(report.locator('#diagram-section .mermaid svg').first()).toBeVisible({
+    timeout: 30_000,
+  });
   const frame = page.frames().find((f) => f.url().includes('/comparacion/index.html'));
   expect(
     await frame?.evaluate(
       "[typeof window.mermaid, document.documentElement.classList.contains('no-mermaid'), window.origin]",
     ),
-  ).toEqual(['undefined', true, 'null']);
+  ).toEqual(['object', false, 'null']);
   await expect(page.getByRole('link', { name: /Descargar comparacion\.sql/ })).toBeVisible();
+
+  // El diagrama del Markdown se dibuja en la SPA y llega como SVG al iframe sin scripts.
+  await page.getByRole('listitem').getByText('comparacion.md', { exact: true }).click();
+  const markdown = page.frameLocator('iframe[title="Vista previa de outputs/markdown/comparacion.md"]');
+  await expect(markdown.locator('.mermaid-diagram svg')).toBeVisible({ timeout: 30_000 });
 
   // Segunda comparación y evolución respecto a la primera (los esquemas no han cambiado).
   await launchCompare(page, projectUrl);

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.domain.runs.operations import CompareParams
 from app.integrations.util_bbdd.compare import (
     REPORT_FORMATS,
@@ -46,6 +48,15 @@ def _side(ctx: JobContext, alias: str, schema: str | None, side: str) -> Side:
     return Side(db_type=db_type, conn_params=conn_params, schema=schema, alias=alias)
 
 
+def _mermaid_js(ctx: JobContext) -> Path | None:
+    """``UBW_MERMAID_JS`` si existe; si apunta a un fichero que falta, aviso y el informe sale sin Mermaid."""
+    path = ctx.settings.mermaid_js
+    if path is None or path.is_file():
+        return path
+    ctx.logger.warning("UBW_MERMAID_JS no existe: informe HTML sin Mermaid", extra={"path": str(path)})
+    return None
+
+
 def run(ctx: JobContext) -> None:
     params = CompareParams.model_validate(ctx.params)
     ctx.progress("connecting", "Preparando las conexiones")
@@ -74,6 +85,7 @@ def run(ctx: JobContext) -> None:
                 progress_phases(options),
                 _PHASES,
             ),
+            mermaid_js=_mermaid_js(ctx),
         )
     except Exception as exc:  # frontera de util_bbdd: el log solo lleva el tipo
         if is_cancellation(exc):

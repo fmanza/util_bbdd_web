@@ -56,6 +56,8 @@ class Settings(BaseSettings):
         rate_limit_login_failures: Inicios de sesión fallidos por IP en 15 minutos antes de responder 429.
         rate_limit_uploads_per_hour: Subidas de ficheros por hora y por sesión.
         metrics_token: Token *bearer* de ``/metrics``; sin él, ``/metrics`` responde 404.
+        mermaid_js: ``mermaid.min.js`` que se incrusta en el informe HTML de comparación (la imagen trae el del
+            ``package-lock.json`` del frontend); sin él, o si no existe, los diagramas se ven como texto.
     """
 
     model_config = SettingsConfigDict(env_prefix="UBW_", secrets_dir=None, extra="ignore")
@@ -99,6 +101,7 @@ class Settings(BaseSettings):
     rate_limit_login_failures: int = Field(default=10, ge=1)
     rate_limit_uploads_per_hour: int = Field(default=60, ge=1)
     metrics_token: SecretStr | None = Field(default=None)
+    mermaid_js: Path | None = None
 
     @property
     def cookie_secure(self) -> bool:

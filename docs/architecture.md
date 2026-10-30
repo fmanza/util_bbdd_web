@@ -70,6 +70,7 @@ src/
 | `UBW_DATA_DIR` | `/data` | `config.db` |
 | `UBW_WORKSPACE_DIR` | `/workspace` | Salidas por ejecución |
 | `UBW_STATIC_DIR` | `/app/static` | Build del frontend |
+| `UBW_MERMAID_JS` | `/app/vendor/mermaid.min.js` | Mermaid que se incrusta en el informe HTML de comparación; sin él, o si no existe, los diagramas se ven como texto |
 | `UBW_LOG_LEVEL` | `INFO` | Nivel de log |
 | `UBW_SESSION_IDLE_MINUTES` | `60` | Caducidad de la sesión por inactividad |
 | `UBW_SESSION_ABSOLUTE_HOURS` | `12` | Caducidad absoluta de la sesión |

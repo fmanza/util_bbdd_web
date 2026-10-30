@@ -7,8 +7,9 @@
   util_bbdd ya no pone host, usuario ni ruta (``motor [schema]``), pero el alias es lo que reconoce el usuario.
 - ``SchemaDiffReporter(sql_dialect, sql_source_inspector, sql_source_schema).render(diff, dir, formato, filename)``
   genera los informes con nombre fijo. El HTML se deja en ``outputs/html/comparacion/index.html`` para servirlo por la
-  URL firmada del sitio (ADR-007), con ``mermaid_src=None`` (util_bbdd 4.2.0, G25): la CSP del sitio no admite
-  orígenes externos y el informe funciona sin Mermaid (pestañas, filtros, búsqueda); los diagramas se ven como texto.
+  URL firmada del sitio (ADR-007). La CSP del sitio no admite orígenes externos: Mermaid (12.x) va incrustado con
+  ``mermaid_src=Path`` (``UBW_MERMAID_JS``); sin el fichero, ``mermaid_src=None`` (util_bbdd 4.2.0, G25) y el informe
+  funciona sin Mermaid (pestañas, filtros, búsqueda), con los diagramas como texto.
 - Progreso y cancelación (util_bbdd 4.2.0, GAPS G1): ``RunProgress`` como ``on_progress`` y su token; la comparación
   para entre tablas (``OperationCancelledError``). Los informes, que van después, no se interrumpen.
 - El script SQL **solo se genera**: transforma el destino para igualarlo al origen y no se ejecuta nunca aquí.
@@ -169,12 +170,14 @@ def compare_schemas(
     outputs_dir: Path,
     on_phase: Any = None,
     progress: RunProgress | None = None,
+    mermaid_js: Path | None = None,
 ) -> dict[str, Any]:
     """Compara, guarda ``outputs/diff/schema_diff.json`` y genera los informes pedidos.
 
     Args:
         on_phase: ``callable(fase, mensaje)`` opcional para el progreso.
         progress: Progreso por fase y tabla y cancelación cooperativa (fases ``progress_phases(options)``).
+        mermaid_js: ``mermaid.min.js`` que se incrusta en el informe HTML; ``None``, sin Mermaid.
 
     Returns:
         ``{"summary", "has_differences", "total_differences", "total_leaf_differences", "reports": {formato: ruta}}``
@@ -226,7 +229,7 @@ def compare_schemas(
                 sql_dialect=sql_dialect_for(options.sql_dialect, target.db_type),
                 sql_source_inspector=source_inspector,
                 sql_source_schema=source_schema,
-                mermaid_src=None,  # G25: sin scripts de otros orígenes (CSP del sitio, ADR-007)
+                mermaid_src=mermaid_js,  # incrustado o None: sin scripts de otros orígenes (CSP del sitio, ADR-007)
             )
             reports: dict[str, str] = {}
             for fmt in options.formats:

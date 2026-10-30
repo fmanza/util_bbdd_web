@@ -16,13 +16,15 @@ import { useTranslation } from 'react-i18next';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes } from '../../components/format';
+import { renderMermaidBlocks } from './mermaid';
 import { type Artifact, downloadUrl, isSiteFile, previewUrl, useArtifactText } from './useRuns';
 
 // HTML y SVG se muestran en un iframe aislado: sin `allow-scripts` ni `allow-same-origin` (origen opaco); la API
 // añade además una CSP `sandbox`.
 const SANDBOXED = new Set(['html', 'graphs']);
 // Markdown: `marked` (cargado bajo demanda) genera HTML que se muestra en otro iframe `sandbox=""` con una CSP que
-// bloquea cualquier recurso externo; así el HTML incrustado en el Markdown no ejecuta nada ni hace peticiones.
+// bloquea cualquier recurso externo; así el HTML incrustado en el Markdown no ejecuta nada ni hace peticiones. Los
+// bloques `mermaid` llegan ya como SVG (`renderMermaidBlocks`).
 const MARKDOWN_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'";
 const MARKDOWN_STYLE =
   'body{font-family:system-ui,sans-serif;font-size:14px;line-height:1.5;margin:12px;color:#1a1b1e}' +
@@ -35,7 +37,7 @@ function MarkdownPreview({ title, source }: { title: string; source: string }) {
   useEffect(() => {
     let alive = true;
     void import('marked').then(async ({ marked }) => {
-      const body = await marked.parse(source, { gfm: true });
+      const body = await renderMermaidBlocks(await marked.parse(source, { gfm: true }));
       if (alive) setHtml(body);
     });
     return () => {

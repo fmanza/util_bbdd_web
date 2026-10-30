@@ -18,6 +18,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // Mermaid (vista previa de Markdown) trae chunks de hasta ~1,5 MB (`elk`, layout opcional); son lazy: solo se
+    // descargan si el Markdown tiene un diagrama que los usa. Por encima de este límite, revisar qué ha crecido.
+    chunkSizeWarningLimit: 1600,
     rolldownOptions: {
       output: {
         // Librerías que se cargan siempre al inicio, en chunks propios: el código de la app cambia en cada versión y

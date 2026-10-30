@@ -3,6 +3,18 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+La API HTTP no cambia y no hay migraciones.
+
+### Added
+
+- **Diagramas Mermaid en los informes de comparación**: el informe HTML lleva incrustado Mermaid 12.2.0 (del
+  `package-lock.json` del frontend, `UBW_MERMAID_JS` en la imagen) y dibuja el diagrama de diferencias sin salir a
+  Internet, también descargado; unos 5,5 MB más por informe. La vista previa de `comparacion.md` dibuja el diagrama
+  en la SPA y lo muestra como SVG en su iframe sin scripts (ADR-007 enmendado). Petición a util_bbdd para subir su
+  Mermaid por defecto: GAPS G45.
+
 ## [1.7.1] - 2026-10-29
 
 util_bbdd 5.1.0 y ola 9 del [plan de huecos](docs/plan/UTIL_BBDD_GAPS_PLAN.md) (G44). La API HTTP no cambia y no hay

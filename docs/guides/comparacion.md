@@ -43,9 +43,12 @@ Si los esquemas son iguales en lo comparado, la ejecución termina **Correcta** 
 ## Informes
 
 La tarjeta **Informes de la comparación** tiene las descargas (Excel, Word, Markdown y SQL) y el **informe HTML**
-navegable, aislado como el sitio de documentación ([ADR-007](../adr/ADR-007-sitio-html-aislado.md)). Sus diagramas
-Mermaid se muestran como texto: el informe se genera sin Mermaid, que util_bbdd cargaría de Internet y la web no
-permite (GAPS G25). Pestañas, filtros y búsqueda funcionan.
+navegable, aislado como el sitio de documentación ([ADR-007](../adr/ADR-007-sitio-html-aislado.md)). El diagrama de
+diferencias se dibuja con Mermaid 12, que va dentro del propio informe (unos 5,5 MB): no sale a Internet y también se
+ve al abrir el informe descargado sin conexión. La vista previa de `comparacion.md` dibuja el mismo diagrama.
+
+Los informes de ejecuciones anteriores a la 1.8.0 muestran el diagrama como texto (se generaron sin Mermaid); el
+resto del informe funciona igual.
 
 > **El script SQL no se ejecuta.** Transforma el destino para igualarlo al origen e incluye `DROP` de lo que solo
 > existe en el destino. Revísalo antes de aplicarlo a mano. Aplicar cambios desde la web llegará con la migración DDL.

@@ -75,7 +75,8 @@ ENV PATH=/opt/venv/bin:$PATH \
     UBW_DATA_DIR=/data \
     UBW_FILES_DIR=/data/files \
     UBW_WORKSPACE_DIR=/workspace \
-    UBW_STATIC_DIR=/app/static
+    UBW_STATIC_DIR=/app/static \
+    UBW_MERMAID_JS=/app/vendor/mermaid.min.js
 
 WORKDIR /app
 COPY --from=backend-build /opt/venv /opt/venv
@@ -83,6 +84,8 @@ COPY --chown=app:app backend/app ./app
 COPY --chown=app:app backend/alembic ./alembic
 COPY --chown=app:app backend/alembic.ini ./alembic.ini
 COPY --chown=app:app --from=frontend-build /fe/dist ./static
+# Mermaid del package-lock.json del frontend (hash verificado por npm ci): se incrusta en el informe HTML de comparación.
+COPY --chown=app:app --from=frontend-build /fe/node_modules/mermaid/dist/mermaid.min.js ./vendor/mermaid.min.js
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 # Delante de /usr/bin/dot en el PATH: repite sin aristas ortogonales los grafos que abortan Graphviz (GAPS G39).
 COPY --chmod=755 docker/dot-wrapper.sh /usr/local/bin/dot

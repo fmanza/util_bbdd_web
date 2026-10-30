@@ -72,6 +72,23 @@ que heredan su `sandbox`, y el navegador bloquea una ventana con `sandbox` cuya 
 - Las páginas del sitio ya tienen origen opaco y sus enlaces llevan `rel="noopener"`; el COOP no les añadía
   aislamiento útil.
 
+## Enmienda 2026-10-30: Mermaid incrustado en el informe de comparación
+
+El informe HTML de comparación y la vista previa de su Markdown mostraban el diagrama de diferencias como texto (G25).
+
+- La imagen trae `mermaid@12.2.0` del `package-lock.json` del frontend (`/app/vendor/mermaid.min.js`,
+  `UBW_MERMAID_JS`) y el job lo pasa a util_bbdd como `mermaid_src=Path`: util_bbdd lo **incrusta** en el
+  `index.html`. La CSP del sitio no cambia (el script en línea ya se admitía); sigue sin orígenes externos ni
+  `connect-src`. Sin el ajuste, o si el fichero falta, el informe se genera con `mermaid_src=None`, como antes.
+- Coste: unos 5,5 MB más por informe HTML (cuenta en la cuota del usuario). A cambio el informe descargado se ve
+  completo sin red. Se descartan un fichero aparte por ejecución (mismo peso y un artefacto `.js` servible más) y uno
+  común de la aplicación (ruta pública nueva; el informe descargado perdería el diagrama).
+- Markdown: los bloques `mermaid` se dibujan en la SPA (`renderMermaidBlocks`, Mermaid cargado bajo demanda,
+  `securityLevel: 'strict'`) y el SVG pasa al `iframe srcdoc` con `sandbox=""` y la misma CSP sin scripts. Las
+  etiquetas vienen de la BD comparada: `strict` las escapa y limpia el SVG con DOMPurify, y la CSP de la SPA no
+  admite scripts en línea.
+- La E2E de la comparación comprueba el `<svg>` en el informe (origen opaco) y en la vista previa del Markdown.
+
 ## Alternativas descartadas
 
 - **`allow-same-origin` + scripts**: el sitio podría leer la cookie CSRF y llamar a la API como el usuario.

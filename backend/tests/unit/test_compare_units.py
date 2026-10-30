@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
@@ -22,7 +24,8 @@ from app.integrations.util_bbdd.compare import (
     resolve_schema,
     sql_dialect_for,
 )
-from app.jobs.operations.compare import _job_error
+from app.jobs.context import JobContext
+from app.jobs.operations.compare import _job_error, _mermaid_js
 
 # --- parámetros --------------------------------------------------------------------------------------------------
 
@@ -278,3 +281,19 @@ def test_read_diff_rejects_unknown_or_broken_files(data: Any) -> None:
 def test_progress_phases_follow_the_options(options: CompareOptions, phases: tuple[str, ...]) -> None:
     """GAPS G1: las fases del porcentaje son las que ``SchemaComparator.compare()`` emite con esas opciones."""
     assert progress_phases(options) == phases
+
+
+def test_missing_mermaid_js_falls_back_to_text(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """``UBW_MERMAID_JS`` que no existe: aviso y el informe se genera sin Mermaid en vez de fallar."""
+    existing = tmp_path / "mermaid.min.js"
+    existing.write_text("", encoding="utf-8")
+    logger = logging.getLogger("test.compare")
+
+    def ctx(path: Path | None) -> JobContext:
+        return cast(JobContext, SimpleNamespace(settings=SimpleNamespace(mermaid_js=path), logger=logger))
+
+    assert _mermaid_js(ctx(None)) is None
+    assert _mermaid_js(ctx(existing)) == existing
+    with caplog.at_level(logging.WARNING, logger="test.compare"):
+        assert _mermaid_js(ctx(tmp_path / "falta.js")) is None
+    assert "UBW_MERMAID_JS" in caplog.text
