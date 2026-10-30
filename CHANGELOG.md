@@ -24,6 +24,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **Plan de migración DDL**: «Motor destino» empieza en «Elige…» (antes mostraba MariaDB sin elegirlo: el formulario
   lo daba por vacío y elegir MariaDB no mostraba sus opciones); «NUMBER sin precisión» y «Ancho de INT» solo aparecen
   con origen Oracle, el único en que util_bbdd los usa.
+- **Carga de un CSV con fechas**: la vista previa fallaba con «util_bbdd falló (CompileError)» en cuanto la tabla
+  tenía columnas `DATE`, `DATETIME` o `TIME` (las fechas del CSV llegan como texto); util_bbdd 5.2.0 las escribe tal
+  cual en el SQL (GAPS G48).
 
 ## [1.8.0] - 2026-10-30
 

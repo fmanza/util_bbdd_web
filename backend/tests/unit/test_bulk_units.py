@@ -203,6 +203,36 @@ def test_cancelled_atomic_load_is_undone_entirely(tmp_path: Path) -> None:
         con.close()
 
 
+@pytest.mark.parametrize("operation", ["insert", "update"])
+def test_preview_sql_with_dates_as_text(tmp_path: Path, operation: str) -> None:
+    """G48 (util_bbdd 5.2.0): las fechas de un CSV llegan como texto; el SQL del modo seco las escribe tal cual."""
+    import sqlite3
+
+    from app.integrations.util_bbdd.bulk import BulkOptions, Target, build_bulk_preview
+    from app.integrations.util_bbdd.catalog import build_params
+
+    database = tmp_path / "destino.db"
+    con = sqlite3.connect(database)
+    con.execute("CREATE TABLE eventos (id INTEGER PRIMARY KEY, alta DATETIME, dia DATE)")
+    con.execute("INSERT INTO eventos VALUES (1, '2026-01-01 00:00:00', '2026-01-01')")
+    con.commit()
+    con.close()
+    target = Target("sqlite", build_params("sqlite", {"database": str(database)}), None)
+    csv = tmp_path / "eventos.csv"
+    csv.write_text("id;alta;dia\n1;2026-10-18 20:45:24.000;2026-10-18\n", encoding="utf-8")
+    frame = read_frame(csv, "csv", ReadOptions(), max_rows=10)
+    assert isinstance(frame["alta"].iloc[0], str)  # pandas no convierte las fechas del CSV
+
+    preview = build_bulk_preview(
+        target, frame, BulkOptions(table="eventos", operation=operation),  # type: ignore[arg-type]
+        outputs_dir=tmp_path / "p", work_dir=tmp_path / "w",
+    )  # fmt: skip
+
+    assert preview["errors"] == [] and preview["sql_file"] == f"sql/carga_{operation}.sql"
+    sql = (tmp_path / "p" / preview["sql_file"]).read_text(encoding="utf-8")
+    assert "'2026-10-18 20:45:24.000'" in sql and "'2026-10-18'" in sql
+
+
 @pytest.mark.parametrize(
     ("cancel_before", "committed", "message"),
     [

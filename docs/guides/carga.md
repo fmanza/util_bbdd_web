@@ -35,6 +35,12 @@ como se cargarán, las columnas ignoradas, el plan paralelo y el **SQL** que se 
 Errores que impiden cargar: columnas que no existen en la tabla, columnas obligatorias sin valor en un insert, tabla
 sin clave primaria o fichero sin ella en update/delete, o un update sin columnas además de la clave.
 
+Las fechas de un CSV se leen como texto y el SQL las lleva tal cual (`'2026-10-18 20:45:24.000'`): es lo que recibe
+la BD al cargar, así que un formato que no admita (p. ej. `18/10/2026`) falla al cargar, no en la vista previa. Usa
+el formato ISO (`AAAA-MM-DD` y `AAAA-MM-DD HH:MM:SS`). En **Oracle**, un texto en una columna `DATE` se interpreta
+con el `NLS_DATE_FORMAT` de la sesión, y el SQL descargado puede no servir tal cual en otra sesión; en un Excel, las
+celdas con formato de fecha llegan como fecha y no dependen de ello.
+
 ## 3. Cargar
 
 Requisitos (si falta alguno, el panel *Ejecutar la carga* explica cuál): permiso **«Puede escribir datos»** (lo
