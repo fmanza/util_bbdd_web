@@ -27,6 +27,7 @@ En *Nueva carga*:
 | Columnas | Columna de la tabla para cada columna del fichero, o «no cargar». Si se puede leer la tabla, se ofrecen sus columnas y se propone la del mismo nombre |
 | Apartar filas | Las que el destino no admita van a `rechazos.csv` en vez de hacer fallar la carga |
 | Plan paralelo | util_bbdd reparte las filas en hilos si compensa; con más de un hilo **deja de ser atómica** |
+| Ids (solo insertar) | **Ajustar el contador de la clave primaria** (activado): tras cargar, lleva la secuencia, IDENTITY o AUTO_INCREMENT al máximo de la tabla, para que el siguiente alta no repita un id cargado. **Conservar los valores de columnas identity** (solo PostgreSQL): inserta los valores del fichero en columnas `GENERATED ALWAYS AS IDENTITY`; sin activarlo, la vista previa lo da como error. Para que la BD asigne los ids, pon la clave primaria en «(no cargar)» |
 
 **Vista previa** lanza una ejecución que no escribe nada. Su detalle muestra las filas del fichero y de la tabla, las
 **filas afectadas** (las que ya existen por clave primaria: en insert, posibles duplicados), las primeras filas tal

@@ -30,6 +30,7 @@ const PREVIEW: BulkPreview = {
   structure_hash: 'h'.repeat(64),
   target_engine: 'postgresql',
   upload_filename: 'clientes.csv',
+  identity_always: [],
 }; // prettier-ignore
 
 const SQL_ARTIFACT = {
@@ -214,6 +215,7 @@ describe('resultado de la carga', () => {
       { index: 0, rows: 2, error: null },
       { index: 1, rows: 1, error: 'duplicate key' },
     ],
+    pk_sync: [],
   };
 
   it('muestra filas antes y después, apartadas y particiones, sin relanzar', async () => {
@@ -293,6 +295,32 @@ describe('resultado de la carga', () => {
     expect(screen.getByText(/Las 400 filas del fichero se apartaron en rechazos.csv/)).toBeInTheDocument();
     expect(screen.getByText('Filas insertadas').nextElementSibling).toHaveTextContent('0');
     expect(screen.queryByText('Hay filas apartadas')).not.toBeInTheDocument();
+  });
+
+  it('muestra el ajuste del contador de la clave primaria', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${APPLY_ID}`]: {
+        body: {
+          ...FINISHED, id: APPLY_ID, operation: 'bulk_apply', status: 'succeeded', my_role: 'owner',
+          params: { preview_run: PREVIEW_ID, confirm: 'destino' }, artifacts: [],
+        },
+      },
+      [`GET /api/v1/runs/${APPLY_ID}/bulk-result`]: {
+        body: { ...RESULT, rejected: 0, partitions: [], pk_sync: [
+          { column: 'id', status: 'synced', max_value: 1000400, error: null },
+          { column: 'codigo', status: 'error', max_value: null, error: 'permission denied for sequence' },
+        ] },
+      },
+    }); // prettier-ignore
+
+    renderRoute(`/runs/${APPLY_ID}`);
+
+    const table = await screen.findByRole('table', { name: 'Contador de la clave primaria' });
+    expect(table).toHaveTextContent('1000400');
+    expect(table).toHaveTextContent('Ajustado');
+    expect(table).toHaveTextContent('No se pudo ajustar: permission denied for sequence');
   });
 
   it('una carga cancelada dice si se deshizo entera o qué particiones quedan', async () => {

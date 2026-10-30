@@ -40,6 +40,8 @@ def _options(params: BulkPreviewParams, *, require_atomic: bool = False) -> Bulk
         parallel=params.parallel,
         chunk_size=params.chunk_size,
         require_atomic=require_atomic,
+        override_identity=params.override_identity,
+        sync_pk_sequences=params.sync_pk_sequences,
     )
 
 
@@ -223,4 +225,6 @@ def result_message(result: dict[str, Any]) -> str:
     extra = f", {rejected} filas apartadas en rechazos.csv" if rejected else ""
     # G37: el recuento del destino se mantiene como verificación de lo que util_bbdd dice haber confirmado.
     check = "; el recuento del destino no cuadra: revisa el resultado" if result["verified"] is False else ""
-    return f"{operation} terminado: {applied_rows(result)} filas {_DONE[result['operation']]}{extra}{check}"
+    sync_errors = [s["error"] or s["status"] for s in result.get("pk_sync", []) if s["status"] == "error"]
+    sync = f"; no se pudo ajustar el contador de la PK: {sync_errors[0]}" if sync_errors else ""
+    return f"{operation} terminado: {applied_rows(result)} filas {_DONE[result['operation']]}{extra}{check}{sync}"

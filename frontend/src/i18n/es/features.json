@@ -948,6 +948,11 @@
       "table": "Tabla destino",
       "sheet": "Hoja",
       "sheetHint": "La primera por defecto.",
+      "pkHint": "Para que la BD asigne los ids, pon la clave primaria en «(no cargar)».",
+      "syncPk": "Ajustar el contador de la clave primaria tras cargar",
+      "syncPkHint": "Lleva la secuencia, IDENTITY o AUTO_INCREMENT al máximo de la tabla: sin ello, tras cargar ids propios, el siguiente alta puede repetir uno.",
+      "overrideIdentity": "Conservar los valores de columnas identity",
+      "overrideIdentityHint": "PostgreSQL: inserta los valores del fichero en columnas GENERATED ALWAYS AS IDENTITY (sin esto, la vista previa lo da como error).",
       "readHint": "Se detectan solos: el separador entre «,» «;» tabulador y «|» (coma si no se reconoce) y la codificación probando UTF-8, Windows-1252 y Latin-1. Fíjalos si las columnas salen juntas o hay caracteres raros.",
       "delimiter": "Separador",
       "encoding": "Codificación",
@@ -978,6 +983,8 @@
       },
       "workers": "Hilos",
       "errorsTitle": "No se puede cargar",
+      "identityKeptTitle": "Se conservan los ids del fichero",
+      "identityKept": "Las columnas {{columns}} son GENERATED ALWAYS AS IDENTITY y se insertarán con los valores del fichero (OVERRIDING SYSTEM VALUE). Deja activado el ajuste del contador para que el siguiente alta no repita un id.",
       "ignored": "Columnas del fichero que no se cargan: {{columns}}.",
       "parallelTitle": "Plan paralelo de {{workers}} hilos: no es atómico",
       "sample": "Primeras filas",
@@ -1044,6 +1051,17 @@
       "rejectsTitle": "Hay filas apartadas",
       "rejects": "Las filas que el destino no admitió están en rechazos.csv (en Artefactos).",
       "partitions": "Particiones",
+      "pkSync": "Contador de la clave primaria",
+      "pkSyncColumn": "Columna",
+      "pkSyncMax": "Máximo en la tabla",
+      "pkSyncState": "Ajuste",
+      "pkSyncStatus": {
+        "synced": "Ajustado",
+        "skipped": "Sin secuencia (clave natural o UUID)",
+        "no_rows": "Tabla vacía: contador reiniciado",
+        "unsupported": "No soportado en este motor",
+        "error": "No se pudo ajustar"
+      },
       "error": "Error"
     }
   },

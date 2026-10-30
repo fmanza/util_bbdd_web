@@ -101,6 +101,31 @@ export function BulkResultView({ run }: { run: RunDetail }) {
                 {t('bulk.result.rejects')}
               </Alert>
             )}
+            {(data.pk_sync ?? []).length > 0 && (
+              <Table striped withTableBorder aria-label={t('bulk.result.pkSync')}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>{t('bulk.result.pkSyncColumn')}</Table.Th>
+                    <Table.Th>{t('bulk.result.pkSyncMax')}</Table.Th>
+                    <Table.Th>{t('bulk.result.pkSyncState')}</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {(data.pk_sync ?? []).map((s) => (
+                    <Table.Tr key={s.column}>
+                      <Table.Td>{s.column}</Table.Td>
+                      <Table.Td>{s.max_value ?? '—'}</Table.Td>
+                      <Table.Td>
+                        <Text size="sm" {...(s.status === 'error' ? { c: 'red' } : {})}>
+                          {t(`bulk.result.pkSyncStatus.${s.status}`)}
+                          {s.error ? `: ${s.error}` : ''}
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            )}
             {(data.partitions ?? []).length > 0 && (
               <Table striped withTableBorder aria-label={t('bulk.result.partitions')}>
                 <Table.Thead>

@@ -350,6 +350,55 @@
         "title": "BulkPartitionOut",
         "type": "object"
       },
+      "BulkPkSyncOut": {
+        "description": "Ajuste del contador de una columna PK tras el insert (``BulkCrud.sync_pk_sequences``).",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primera línea del error del motor, sin valores",
+            "title": "Error"
+          },
+          "max_value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "status": {
+            "enum": [
+              "synced",
+              "skipped",
+              "no_rows",
+              "unsupported",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "column",
+          "status"
+        ],
+        "title": "BulkPkSyncOut",
+        "type": "object"
+      },
       "BulkPlanOut": {
         "properties": {
           "atomic": {
@@ -399,6 +448,15 @@
               "type": "string"
             },
             "title": "Errors",
+            "type": "array"
+          },
+          "identity_always": {
+            "default": [],
+            "description": "Columnas cargadas GENERATED ALWAYS AS IDENTITY (PostgreSQL); sin override_identity son un error de validación",
+            "items": {
+              "type": "string"
+            },
+            "title": "Identity Always",
             "type": "array"
           },
           "ignored_columns": {
@@ -600,6 +658,15 @@
               "$ref": "#/components/schemas/BulkPartitionOut"
             },
             "title": "Partitions",
+            "type": "array"
+          },
+          "pk_sync": {
+            "default": [],
+            "description": "Ajuste del contador de la PK tras un insert; vacío si no se pidió o no hubo insert",
+            "items": {
+              "$ref": "#/components/schemas/BulkPkSyncOut"
+            },
+            "title": "Pk Sync",
             "type": "array"
           },
           "rejected": {

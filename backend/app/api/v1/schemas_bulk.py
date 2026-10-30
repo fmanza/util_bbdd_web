@@ -41,12 +41,26 @@ class BulkPreviewOut(_Bulk):
     upload_filename: str | None = None
     target_engine: str
     structure_hash: str
+    identity_always: list[str] = Field(
+        default=[],
+        description="Columnas cargadas GENERATED ALWAYS AS IDENTITY (PostgreSQL); sin override_identity son un error "
+        "de validación",
+    )
 
 
 class BulkPartitionOut(_Bulk):
     index: int
     rows: int
     error: str | None = None
+
+
+class BulkPkSyncOut(_Bulk):
+    """Ajuste del contador de una columna PK tras el insert (``BulkCrud.sync_pk_sequences``)."""
+
+    column: str
+    status: Literal["synced", "skipped", "no_rows", "unsupported", "error"]
+    max_value: int | None = None
+    error: str | None = Field(default=None, description="Primera línea del error del motor, sin valores")
 
 
 class BulkResultOut(_Bulk):
@@ -77,3 +91,6 @@ class BulkResultOut(_Bulk):
     )
     parallel: BulkPlanOut
     partitions: list[BulkPartitionOut] = []
+    pk_sync: list[BulkPkSyncOut] = Field(
+        default=[], description="Ajuste del contador de la PK tras un insert; vacío si no se pidió o no hubo insert"
+    )

@@ -5,6 +5,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Added
+
+- **Carga: ids propios**: en un insert, «Ajustar el contador de la clave primaria tras cargar» (activado; como en el
+  volcado) lleva la secuencia, IDENTITY o AUTO_INCREMENT al máximo de la tabla, y el resultado muestra el ajuste por
+  columna; con PostgreSQL, «Conservar los valores de columnas identity» inserta los ids del fichero en columnas
+  `GENERATED ALWAYS AS IDENTITY` (sin activarlo, la vista previa lo da como error de validación, no como fallo de
+  util_bbdd). Pista en el mapeo para que la BD asigne los ids (ADR-010 enmendado). API: `override_identity` y
+  `sync_pk_sequences` en la vista previa, `identity_always` en su resultado y `pk_sync` en el de la carga (opcionales).
+
 ### Fixed
 
 - **Resultado de la carga**: decía «400 filas confirmadas, 400 filas apartadas» cuando no se había insertado ninguna

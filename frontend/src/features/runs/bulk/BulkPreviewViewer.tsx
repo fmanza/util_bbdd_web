@@ -262,6 +262,11 @@ export function BulkPreviewViewer({ run }: { run: RunDetail }) {
                 </List>
               </Alert>
             )}
+            {data.errors.length === 0 && (data.identity_always ?? []).length > 0 && (
+              <Alert color="blue" title={t('bulk.preview.identityKeptTitle')}>
+                {t('bulk.preview.identityKept', { columns: (data.identity_always ?? []).join(', ') })}
+              </Alert>
+            )}
             {data.ignored_columns && data.ignored_columns.length > 0 && (
               <Text size="sm" c="dimmed">
                 {t('bulk.preview.ignored', { columns: data.ignored_columns.join(', ') })}

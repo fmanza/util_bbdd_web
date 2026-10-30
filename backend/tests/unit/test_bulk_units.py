@@ -4,6 +4,7 @@ obligatorias y recuento por PK compuesta."""
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
@@ -228,6 +229,98 @@ def test_bulk_message_counts_applied_rows_not_committed(result: dict[str, object
     assert result_message(result) == message
 
 
+def test_override_identity_is_passed_only_to_the_insert() -> None:
+    from app.integrations.util_bbdd.bulk import BulkOptions, _call
+
+    calls: list[tuple[str, dict[str, object]]] = []
+    crud = SimpleNamespace(
+        bulk_insert_from_df=lambda df, table, **kw: calls.append(("insert", kw)),
+        bulk_update_from_df=lambda df, table, **kw: calls.append(("update", kw)),
+        bulk_delete_from_df=lambda df, table, **kw: calls.append(("delete", kw)),
+    )
+
+    _call(crud, BulkOptions(table="t", operation="insert", override_identity=True), None, "t", dry_run=True)
+    _call(crud, BulkOptions(table="t", operation="update", override_identity=True), None, "t", dry_run=True)
+
+    assert calls == [("insert", {"override_identity": True, "dry_run": True}), ("update", {"dry_run": True})]
+
+
+def test_identity_always_columns_of_the_mapped_frame() -> None:
+    from sqlalchemy import Identity
+
+    from app.integrations.util_bbdd.bulk import _identity_always
+
+    table = Table(
+        "t", MetaData(),
+        Column("id", Integer, Identity(always=True), primary_key=True),
+        Column("otro", Integer, Identity(always=False)),
+        Column("nombre", String(10)),
+    )  # fmt: skip
+
+    assert _identity_always(table, ["id", "otro", "nombre"]) == ["id"]
+    assert _identity_always(table, ["nombre"]) == []
+
+
+@pytest.mark.parametrize("override", [False, True])
+def test_identity_always_without_override_is_a_validation_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, override: bool
+) -> None:
+    """util_bbdd rechaza en el modo seco las columnas GENERATED ALWAYS sin override_identity: error de validación."""
+    import pandas as pd
+
+    from app.integrations.util_bbdd import bulk
+    from app.integrations.util_bbdd.bulk import BulkOptions, build_bulk_preview
+
+    target, _ = _sqlite_target(tmp_path)
+    # SQLite no tiene columnas identity: se simula que «id» es GENERATED ALWAYS (PostgreSQL).
+    monkeypatch.setattr(bulk, "_identity_always", lambda table, columns: [c for c in ["id"] if c in set(columns)])
+    frame = pd.DataFrame({"id": [7], "nombre": ["eva"]})
+    options = BulkOptions(table="clientes", operation="insert", override_identity=override)
+
+    preview = build_bulk_preview(target, frame, options, outputs_dir=tmp_path / "p", work_dir=tmp_path / "w")  # type: ignore[arg-type]
+
+    if override:
+        assert preview["errors"] == [] and preview["sql_file"] and preview["identity_always"] == ["id"]
+    else:
+        assert preview["sql_file"] is None
+        assert preview["errors"] == [
+            "Columnas GENERATED ALWAYS AS IDENTITY: id. Activa «Conservar los valores de columnas identity» o ponlas "
+            "en «(no cargar)» para que las asigne la BD."
+        ]
+
+
+def test_sync_pk_results_are_json_ready_and_sanitized() -> None:
+    from decimal import Decimal
+
+    from app.integrations.util_bbdd.bulk import _sync_pk
+
+    asked: list[list[str]] = []
+    results = [
+        SimpleNamespace(column_name="id", status="synced", max_value=Decimal("1000400"), error_msg=None),
+        SimpleNamespace(column_name="id2", status="error", max_value=None,
+                        error_msg="permission denied for sequence t_id_seq\nDETAIL: fila (1, 'secreto')"),
+    ]  # fmt: skip
+    crud = SimpleNamespace(sync_pk_sequences=lambda tables: asked.append(tables) or results)
+
+    synced, failed = _sync_pk(crud, "s.t")
+
+    assert asked == [["s.t"]]
+    assert synced == {"column": "id", "status": "synced", "max_value": 1000400, "error": None}
+    assert failed["status"] == "error" and "secreto" not in failed["error"]
+    assert "permission denied" in failed["error"]
+
+
+def test_bulk_message_warns_when_the_pk_counter_was_not_adjusted() -> None:
+    from app.jobs.operations.bulk import result_message
+
+    result = {**_result("insert", 2, 2, 0, 10, 12),
+              "pk_sync": [{"column": "id", "status": "error", "max_value": None, "error": "permission denied"}]}  # fmt: skip
+
+    assert result_message(result) == (
+        "INSERT terminado: 2 filas insertadas; no se pudo ajustar el contador de la PK: permission denied"
+    )
+
+
 def test_insert_without_the_autoincrement_primary_key(tmp_path: Path) -> None:
     """Un insert sin la columna de la PK (la asigna la BD): vista previa y carga, sin contar coincidencias por PK."""
     import sqlite3
@@ -252,6 +345,7 @@ def test_insert_without_the_autoincrement_primary_key(tmp_path: Path) -> None:
 
     assert preview["errors"] == [] and preview["matches"] is None
     assert (result["error"], result["matches"], result["target_rows_after"]) == (None, None, 3)
+    assert result["pk_sync"] == []  # SQLite: util_bbdd no ajusta contadores
     con = sqlite3.connect(database)
     try:
         assert con.execute("SELECT id, nombre FROM clientes ORDER BY id").fetchall() == [

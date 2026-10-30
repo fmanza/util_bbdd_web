@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
@@ -70,6 +71,11 @@ class BulkOptions:
     chunk_size: int | None = None
     #: Al cargar sin aceptar que no sea atómica: util_bbdd fuerza un hilo (``ParallelOptions(require_atomic=True)``).
     require_atomic: bool = False
+    #: Insert en PostgreSQL: ``OVERRIDING SYSTEM VALUE`` para columnas ``GENERATED ALWAYS AS IDENTITY`` (sin él, util_bbdd
+    #: rechaza el fichero que las trae). SQL Server no lo necesita: util_bbdd pone ``IDENTITY_INSERT`` por su cuenta.
+    override_identity: bool = False
+    #: Insert terminado: ``BulkCrud.sync_pk_sequences`` lleva el contador de la PK al máximo de la tabla.
+    sync_pk_sequences: bool = True
 
 
 def _parallel(options: BulkOptions) -> Any:
@@ -198,6 +204,12 @@ def _prepare(target: Target, frame: Any, options: BulkOptions) -> dict[str, Any]
             errors.append(f"Falta la clave primaria en el fichero: {', '.join(missing_pk)}.")
         if options.operation == "update" and not (loaded - set(pk)):
             errors.append("No hay columnas que actualizar además de la clave primaria.")
+    # util_bbdd las rechaza también en el modo seco (ValueError): mejor como error de validación, con la salida.
+    if options.operation == "insert" and not options.override_identity and (always := _identity_always(table, loaded)):
+        errors.append(
+            f"Columnas GENERATED ALWAYS AS IDENTITY: {', '.join(always)}. Activa «Conservar los valores de columnas "
+            "identity» o ponlas en «(no cargar)» para que las asigne la BD."
+        )
     mapped = frame[list(mapping["resolved"])].rename(columns=mapping["resolved"])
     if options.operation == "delete" and pk and not errors:
         mapped = mapped[pk]
@@ -255,15 +267,36 @@ def build_bulk_preview(
             "sample": _frame_records(frame, SAMPLE_ROWS),
             "sql_file": sql_file,
             "structure_hash": structure_hash(prepared, options),
+            "identity_always": _identity_always(table, list(frame.columns)) if options.operation == "insert" else [],
         }
     finally:
         prepared["manager"].close()
 
 
-def _call(crud: Any, operation: Operation, frame: Any, table: str, **kwargs: Any) -> None:
-    method = {"insert": crud.bulk_insert_from_df, "update": crud.bulk_update_from_df,
-              "delete": crud.bulk_delete_from_df}[operation]  # fmt: skip
+def _call(crud: Any, options: BulkOptions, frame: Any, table: str, **kwargs: Any) -> None:
+    if options.operation == "insert":
+        crud.bulk_insert_from_df(frame, table, override_identity=options.override_identity, **kwargs)
+        return
+    method = {"update": crud.bulk_update_from_df, "delete": crud.bulk_delete_from_df}[options.operation]
     method(frame, table, **kwargs)
+
+
+def _identity_always(table: Any, columns: Iterable[str]) -> list[str]:
+    """Columnas cargadas que son ``GENERATED ALWAYS AS IDENTITY`` (PostgreSQL): sin ``override_identity``, falla."""
+    loaded = set(columns)
+    return [
+        c.name for c in table.columns if c.name in loaded and getattr(getattr(c, "identity", None), "always", False)
+    ]
+
+
+def _sync_pk(crud: Any, table: str) -> list[dict[str, Any]]:
+    """Contador de la PK al máximo de la tabla (``sync_pk_sequences``): un resultado por columna, sin propagar errores."""
+    return [
+        # ``max_value`` se declara ``int``, pero el driver puede dar ``Decimal`` (Oracle): result.json es JSON.
+        {"column": r.column_name, "status": r.status, "max_value": None if r.max_value is None else int(r.max_value),
+         "error": _clean(r.error_msg) if r.error_msg else None}
+        for r in crud.sync_pk_sequences([table])
+    ]  # fmt: skip
 
 
 def _generate_sql(
@@ -272,7 +305,7 @@ def _generate_sql(
     """SQL de la operación sin ejecutarla (``dry_run=True``), en ``outputs/sql/carga_<op>.sql``."""
     work_dir.mkdir(parents=True, exist_ok=True)
     try:
-        _call(crud, options.operation, frame, table_name, dry_run=True, path_sql=work_dir)
+        _call(crud, options, frame, table_name, dry_run=True, path_sql=work_dir)
         produced = sorted(work_dir.glob("*.sql"))
         target = outputs_dir / "sql" / SQL_FILE.format(op=options.operation)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -342,7 +375,7 @@ def run_bulk(
         cancelled = False
         try:
             _call(
-                crud, options.operation, frame, _qualified(prepared["schema"], options.table), dry_run=False,
+                crud, options, frame, _qualified(prepared["schema"], options.table), dry_run=False,
                 on_progress=progress, cancel_token=progress.token if progress is not None else None,
             )  # fmt: skip
         except Exception as exc:  # fallo o cancelación: el resultado lo cuenta (filas antes/después)
@@ -359,6 +392,9 @@ def run_bulk(
             for p in (parallel.partition_results if parallel else [])
         ]
         committed = crud.last_operation_rows_committed
+        # Tras un insert con ids propios el contador se queda por detrás (PostgreSQL, Oracle): se lleva al máximo real.
+        sync = options.operation == "insert" and options.sync_pk_sequences and not cancelled and error is None
+        pk_sync = _sync_pk(crud, _qualified(prepared["schema"], options.table)) if sync else []
         complete = (
             not cancelled and error is None and crud.rows_rejected == 0 and not any(p["error"] for p in partitions)
         )
@@ -376,6 +412,7 @@ def run_bulk(
             "cancelled": cancelled,
             "parallel": {"workers": plan.workers, "reasons": list(plan.reasons), "atomic": plan.atomic},
             "partitions": partitions,
+            "pk_sync": pk_sync,
         }
     finally:
         prepared["manager"].close()

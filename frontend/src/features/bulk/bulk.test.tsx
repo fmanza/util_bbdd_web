@@ -234,6 +234,41 @@ describe('pestaña Carga', () => {
     expect(screen.getByRole('combobox', { name: 'Separador' })).toHaveDisplayValue('Automático (;)');
   });
 
+  it('en un insert ofrece ajustar el contador y, en PostgreSQL, conservar los ids identity', async () => {
+    const fetchMock = stubTab();
+    const user = userEvent.setup();
+
+    await openTab(user);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Fichero' }), UPLOAD.id);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Conexión destino' }), 'destino');
+    await user.type(screen.getByRole('combobox', { name: 'Tabla destino' }), 'clientes');
+
+    expect(screen.getByText(/pon la clave primaria en «\(no cargar\)»/)).toBeInTheDocument();
+    // Fuera del insert no aplican: ni se ofrecen ni se envían.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Operación' }), 'update');
+    expect(screen.queryByRole('switch', { name: /Ajustar el contador/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /Conservar los valores/ })).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Operación' }), 'insert');
+
+    expect(
+      screen.getByRole('switch', { name: /^Ajustar el contador de la clave primaria tras cargar/ }),
+    ).toBeChecked();
+    const identity = screen.getByRole('switch', { name: /^Conservar los valores de columnas identity/ });
+    expect(identity).not.toBeChecked();
+    await user.click(identity);
+    await user.click(screen.getByRole('button', { name: 'Vista previa' }));
+
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')).toHaveLength(1));
+    const body = (await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()) as {
+      params: Record<string, unknown>;
+    };
+    expect(body.params).toMatchObject({
+      operation: 'insert',
+      sync_pk_sequences: true,
+      override_identity: true,
+    });
+  });
+
   it('sin columnas de la tabla, el mapeo se escribe a mano', async () => {
     stubTab();
     const user = userEvent.setup();

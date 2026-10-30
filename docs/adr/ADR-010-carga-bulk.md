@@ -93,3 +93,18 @@ lote tenga una sola fila. La consecuencia «con apartar en Oracle valen las limi
   (`committed`). `result.json` lleva `cancelled` y el run termina `cancelled`. El worker no termina nunca el subproceso
   de un `bulk_apply` por una cancelación (`CANCEL_BETWEEN_STEPS_ONLY`); el `job_timeout` sí. Con esto ninguna escritura
   queda «no cancelable en curso» (`NOT_CANCELLABLE_RUNNING` retirado).
+
+## Enmienda (2026-10-30): ids propios en la carga
+
+- **Columnas identity (`override_identity`)**: un insert en PostgreSQL con columnas `GENERATED ALWAYS AS IDENTITY` en
+  el fichero se puede cargar con sus valores (`bulk_insert_from_df(override_identity=True)`, `OVERRIDING SYSTEM
+  VALUE`). Sin la opción, la validación de la web lo da como error (util_bbdd lo rechaza también en el modo seco) y
+  ofrece la salida: activarla o poner esas columnas en «(no cargar)». SQL Server no lo necesita (util_bbdd pone
+  `IDENTITY_INSERT`); en el resto de motores no aplica.
+- **Ajuste del contador de la PK (`sync_pk_sequences`)**: tras un insert terminado (sin error ni cancelación) la web
+  llama a `BulkCrud.sync_pk_sequences([tabla])`, activado por defecto como «Ajustar secuencias de PK» del volcado
+  (D-1). Escribe en el destino (`setval`, `DBCC CHECKIDENT`, `AUTO_INCREMENT`, `ALTER SEQUENCE`) dentro del mismo
+  flujo protegido de esta ADR; sus errores no hacen fallar la carga: quedan en `result.json` (`pk_sync`) y en el
+  mensaje final.
+- `exclude_autoincrement_pk` no se expone: poner la PK en «(no cargar)» hace lo mismo (y la carga lo admite desde el
+  hotfix `6f539cf`).

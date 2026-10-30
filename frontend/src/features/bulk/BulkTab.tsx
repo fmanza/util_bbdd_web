@@ -99,10 +99,13 @@ export function BulkTab({ project }: { project: Project }) {
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [isolate, setIsolate] = useState(false);
   const [parallel, setParallel] = useState(false);
+  const [syncPk, setSyncPk] = useState(true);
+  const [overrideIdentity, setOverrideIdentity] = useState(false);
 
   const info = useUploadInfo(project.id, uploadId || null, read);
   const connection = (connections.data ?? []).find((c) => c.alias === alias);
   const connectionId = connection?.connection_id ?? 0;
+  const postgres = connection?.db_type === 'postgresql';
   // Schemas y tablas del destino para elegirlos (catálogo del explorador). Si la conexión no se puede explorar
   // (p. ej. privada de otro miembro), se siguen escribiendo a mano.
   const schemas = useSchemas(connectionId, Boolean(connection));
@@ -154,6 +157,10 @@ export function BulkTab({ project }: { project: Project }) {
           ...(read.encoding ? { encoding: read.encoding } : {}),
           on_error: isolate ? 'isolate' : 'raise',
           parallel,
+          // Solo en un insert; `override_identity` solo en PostgreSQL (GENERATED ALWAYS AS IDENTITY).
+          ...(operation === 'insert'
+            ? { sync_pk_sequences: syncPk, override_identity: postgres && overrideIdentity }
+            : {}),
         },
       },
       { onSuccess: (run) => void navigate(`/runs/${run.id}`) },
@@ -311,6 +318,7 @@ export function BulkTab({ project }: { project: Project }) {
               <Title order={4}>{t('bulk.form.mapping')}</Title>
               <Text size="sm" c="dimmed">
                 {tableColumns.length ? t('bulk.form.mappingHint') : t('bulk.form.mappingFree')}
+                {operation === 'insert' && ` ${t('bulk.form.pkHint')}`}
               </Text>
               <Table withTableBorder aria-label={t('bulk.form.mapping')}>
                 <Table.Thead>
@@ -362,6 +370,22 @@ export function BulkTab({ project }: { project: Project }) {
               checked={parallel}
               onChange={(event) => setParallel(event.currentTarget.checked)}
             />
+            {operation === 'insert' && (
+              <Switch
+                label={t('bulk.form.syncPk')}
+                description={t('bulk.form.syncPkHint')}
+                checked={syncPk}
+                onChange={(event) => setSyncPk(event.currentTarget.checked)}
+              />
+            )}
+            {operation === 'insert' && postgres && (
+              <Switch
+                label={t('bulk.form.overrideIdentity')}
+                description={t('bulk.form.overrideIdentityHint')}
+                checked={overrideIdentity}
+                onChange={(event) => setOverrideIdentity(event.currentTarget.checked)}
+              />
+            )}
           </Group>
           {launch.isError && <ErrorAlert error={launch.error} />}
           <Group justify="flex-end">

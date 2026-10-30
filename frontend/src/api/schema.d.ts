@@ -1600,6 +1600,26 @@ export interface components {
             /** Rows */
             rows: number;
         };
+        /**
+         * BulkPkSyncOut
+         * @description Ajuste del contador de una columna PK tras el insert (``BulkCrud.sync_pk_sequences``).
+         */
+        BulkPkSyncOut: {
+            /** Column */
+            column: string;
+            /**
+             * Error
+             * @description Primera línea del error del motor, sin valores
+             */
+            error?: string | null;
+            /** Max Value */
+            max_value?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "synced" | "skipped" | "no_rows" | "unsupported" | "error";
+        };
         /** BulkPlanOut */
         BulkPlanOut: {
             /**
@@ -1627,6 +1647,12 @@ export interface components {
              * @description Errores de validación: con alguno no se puede cargar
              */
             errors: string[];
+            /**
+             * Identity Always
+             * @description Columnas cargadas GENERATED ALWAYS AS IDENTITY (PostgreSQL); sin override_identity son un error de validación
+             * @default []
+             */
+            identity_always: string[];
             /**
              * Ignored Columns
              * @default []
@@ -1708,6 +1734,12 @@ export interface components {
              * @default []
              */
             partitions: components["schemas"]["BulkPartitionOut"][];
+            /**
+             * Pk Sync
+             * @description Ajuste del contador de la PK tras un insert; vacío si no se pidió o no hubo insert
+             * @default []
+             */
+            pk_sync: components["schemas"]["BulkPkSyncOut"][];
             /**
              * Rejected
              * @default 0

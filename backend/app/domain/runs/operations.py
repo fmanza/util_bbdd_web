@@ -346,6 +346,13 @@ class BulkPreviewParams(BaseModel):
     max_rejects: int | None = Field(default=None, ge=1, le=1_000_000, description="Rechazos máximos.")
     parallel: bool = Field(default=False, description="Plan paralelo automático (deja de ser atómico).")
     chunk_size: int | None = Field(default=None, ge=100, le=100_000, description="Filas por lote.")
+    override_identity: bool = Field(
+        default=False,
+        description="Insert en PostgreSQL: conservar los valores del fichero en columnas GENERATED ALWAYS AS IDENTITY.",
+    )
+    sync_pk_sequences: bool = Field(
+        default=True, description="Insert: ajustar el contador de la PK (secuencia/IDENTITY/AUTO_INCREMENT) al máximo."
+    )
 
     model_config = ConfigDict(extra="forbid")
 
