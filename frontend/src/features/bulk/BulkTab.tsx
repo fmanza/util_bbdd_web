@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Alert,
   Autocomplete,
   Button,
   Card,
@@ -101,6 +102,7 @@ export function BulkTab({ project }: { project: Project }) {
   const [parallel, setParallel] = useState(false);
   const [syncPk, setSyncPk] = useState(true);
   const [overrideIdentity, setOverrideIdentity] = useState(false);
+  const [excludePk, setExcludePk] = useState(false);
 
   const info = useUploadInfo(project.id, uploadId || null, read);
   const connection = (connections.data ?? []).find((c) => c.alias === alias);
@@ -125,6 +127,11 @@ export function BulkTab({ project }: { project: Project }) {
     lookupTable || null,
   );
   const tableColumns = useMemo(() => (detail.data?.columns ?? []).map((c) => c.name), [detail.data]);
+  // Columnas de la PK que asigna la BD (identity en el catálogo): aviso temprano; la vista previa es la que manda.
+  const autoPk = useMemo(() => {
+    const identity = new Set((detail.data?.columns ?? []).filter((c) => c.identity).map((c) => c.name));
+    return (detail.data?.primary_key?.columns ?? []).filter((c) => identity.has(c));
+  }, [detail.data]);
   const fileColumns = useMemo(() => info.data?.columns ?? [], [info.data]);
 
   // Mapeo efectivo: lo elegido por el usuario o, si no, la propuesta por nombre.
@@ -138,6 +145,7 @@ export function BulkTab({ project }: { project: Project }) {
       ),
     [fileColumns, tableColumns, overrides],
   );
+  const loadedAutoPk = autoPk.filter((c) => Object.values(mapping).includes(c));
   const setMapping = (column: string, target: string) => setOverrides({ ...overrides, [column]: target });
 
   const ready = Boolean(uploadId && alias && table.trim() && info.data);
@@ -159,7 +167,11 @@ export function BulkTab({ project }: { project: Project }) {
           parallel,
           // Solo en un insert; `override_identity` solo en PostgreSQL (GENERATED ALWAYS AS IDENTITY).
           ...(operation === 'insert'
-            ? { sync_pk_sequences: syncPk, override_identity: postgres && overrideIdentity }
+            ? {
+                sync_pk_sequences: syncPk,
+                override_identity: postgres && overrideIdentity,
+                exclude_autoincrement_pk: excludePk,
+              }
             : {}),
         },
       },
@@ -351,11 +363,21 @@ export function BulkTab({ project }: { project: Project }) {
                             onChange={(event) => setMapping(column, event.currentTarget.value)}
                           />
                         )}
+                        {autoPk.includes(mapping[column] ?? '') && (
+                          <Text size="xs" c="dimmed">
+                            {t('bulk.form.autoPkMark')}
+                          </Text>
+                        )}
                       </Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
               </Table>
+              {operation === 'insert' && !excludePk && loadedAutoPk.length > 0 && (
+                <Alert color="yellow" title={t('bulk.form.autoPkLoadedTitle')}>
+                  {t('bulk.form.autoPkLoaded', { columns: loadedAutoPk.join(', ') })}
+                </Alert>
+              )}
             </Stack>
           )}
           <Group>
@@ -378,12 +400,26 @@ export function BulkTab({ project }: { project: Project }) {
                 onChange={(event) => setSyncPk(event.currentTarget.checked)}
               />
             )}
+            {operation === 'insert' && (
+              <Switch
+                label={t('bulk.form.excludePk')}
+                description={t('bulk.form.excludePkHint')}
+                checked={excludePk}
+                onChange={(event) => {
+                  setExcludePk(event.currentTarget.checked);
+                  if (event.currentTarget.checked) setOverrideIdentity(false);
+                }}
+              />
+            )}
             {operation === 'insert' && postgres && (
               <Switch
                 label={t('bulk.form.overrideIdentity')}
                 description={t('bulk.form.overrideIdentityHint')}
                 checked={overrideIdentity}
-                onChange={(event) => setOverrideIdentity(event.currentTarget.checked)}
+                onChange={(event) => {
+                  setOverrideIdentity(event.currentTarget.checked);
+                  if (event.currentTarget.checked) setExcludePk(false);
+                }}
               />
             )}
           </Group>

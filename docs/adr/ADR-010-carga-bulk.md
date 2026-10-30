@@ -106,5 +106,9 @@ lote tenga una sola fila. La consecuencia «con apartar en Oracle valen las limi
   (D-1). Escribe en el destino (`setval`, `DBCC CHECKIDENT`, `AUTO_INCREMENT`, `ALTER SEQUENCE`) dentro del mismo
   flujo protegido de esta ADR; sus errores no hacen fallar la carga: quedan en `result.json` (`pk_sync`) y en el
   mensaje final.
-- `exclude_autoincrement_pk` no se expone: poner la PK en «(no cargar)» hace lo mismo (y la carga lo admite desde el
-  hotfix `6f539cf`).
+- **Ids asignados por la BD (`exclude_autoincrement_pk`)**: con la opción, util_bbdd quita del INSERT las columnas de
+  PK autoincrementales (`is_identity_pk`: `autoincrement is True` o con `identity`), aunque vengan en el fichero; es
+  incompatible con `override_identity`. La web replica ese criterio (la función es privada) para avisar: la vista
+  previa devuelve `autoincrement_pk` y el formulario marca la PK en el mapeo con el catálogo del explorador. Con la PK
+  excluida no se cuentan coincidencias. SQLite refleja la PK con `autoincrement="auto"`: util_bbdd no la excluye y la
+  vista previa lo avisa. Poner la PK en «(no cargar)» sigue siendo equivalente.

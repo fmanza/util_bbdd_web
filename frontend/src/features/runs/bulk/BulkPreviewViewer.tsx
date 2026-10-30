@@ -224,6 +224,36 @@ function GeneratedSql({ run, file }: { run: RunDetail; file: string }) {
 }
 
 /** Vista previa (modo seco) de una carga bulk y panel para ejecutarla (Fase 9, ADR-010). */
+/**
+ * Ids de un insert según la vista previa (manda sobre el aviso del formulario): el fichero trae la PK que asigna la BD
+ * y se insertará tal cual; se excluye y la asigna la BD; o se pidió excluir y util_bbdd no la ve autoincremental.
+ */
+function AutoPkNotice({ data, exclude }: { data: BulkPreview; exclude: boolean }) {
+  const { t } = useTranslation();
+  const loaded = new Set(Object.values(data.mapping));
+  const autoLoaded = (data.autoincrement_pk ?? []).filter((c) => loaded.has(c));
+  if (autoLoaded.length > 0) {
+    return exclude ? (
+      <Alert color="blue" title={t('bulk.preview.idsByDbTitle')}>
+        {t('bulk.preview.idsByDb', { columns: autoLoaded.join(', ') })}
+      </Alert>
+    ) : (
+      <Alert color="yellow" title={t('bulk.preview.idsFromFileTitle')}>
+        {t('bulk.preview.idsFromFile', { columns: autoLoaded.join(', ') })}
+      </Alert>
+    );
+  }
+  const pkLoaded = data.primary_key.filter((c) => loaded.has(c));
+  if (exclude && pkLoaded.length > 0) {
+    return (
+      <Alert color="yellow" title={t('bulk.preview.excludeNoEffectTitle')}>
+        {t('bulk.preview.excludeNoEffect', { columns: pkLoaded.join(', ') })}
+      </Alert>
+    );
+  }
+  return null;
+}
+
 export function BulkPreviewViewer({ run }: { run: RunDetail }) {
   const { t } = useTranslation();
   const preview = useBulkPreview(run.id);
@@ -261,6 +291,9 @@ export function BulkPreviewViewer({ run }: { run: RunDetail }) {
                   ))}
                 </List>
               </Alert>
+            )}
+            {data.operation === 'insert' && (
+              <AutoPkNotice data={data} exclude={run.params['exclude_autoincrement_pk'] === true} />
             )}
             {data.errors.length === 0 && (data.identity_always ?? []).length > 0 && (
               <Alert color="blue" title={t('bulk.preview.identityKeptTitle')}>

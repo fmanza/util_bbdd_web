@@ -242,7 +242,84 @@ def test_override_identity_is_passed_only_to_the_insert() -> None:
     _call(crud, BulkOptions(table="t", operation="insert", override_identity=True), None, "t", dry_run=True)
     _call(crud, BulkOptions(table="t", operation="update", override_identity=True), None, "t", dry_run=True)
 
-    assert calls == [("insert", {"override_identity": True, "dry_run": True}), ("update", {"dry_run": True})]
+    assert calls == [
+        ("insert", {"override_identity": True, "exclude_autoincrement_pk": False, "dry_run": True}),
+        ("update", {"dry_run": True}),
+    ]
+
+
+def test_exclude_autoincrement_pk_is_passed_only_to_the_insert() -> None:
+    from app.integrations.util_bbdd.bulk import BulkOptions, _call
+
+    calls: list[dict[str, object]] = []
+    crud = SimpleNamespace(bulk_insert_from_df=lambda df, table, **kw: calls.append(kw))
+
+    _call(crud, BulkOptions(table="t", operation="insert", exclude_autoincrement_pk=True), None, "t", dry_run=True)
+
+    assert calls == [{"override_identity": False, "exclude_autoincrement_pk": True, "dry_run": True}]
+
+
+def test_autoincrement_pk_uses_the_util_bbdd_criterion() -> None:
+    """``is_identity_pk`` de util_bbdd: ``autoincrement is True`` o con ``identity`` (no ``"auto"``, como SQLite)."""
+    from sqlalchemy import Identity
+
+    from app.integrations.util_bbdd.bulk import BulkOptions, _autoincrement_pk, _counts_pk, _excluded
+
+    meta = MetaData()
+    auto = Table("a", meta, Column("id", Integer, primary_key=True, autoincrement=True), Column("n", String(5)))
+    identity = Table("i", meta, Column("id", Integer, Identity(), primary_key=True))
+    natural = Table("n", meta, Column("id", Integer, primary_key=True))  # autoincrement="auto", como refleja SQLite
+    insert = BulkOptions(table="a", operation="insert", exclude_autoincrement_pk=True)
+    frame = SimpleNamespace(columns=["id", "n"])
+
+    assert (_autoincrement_pk(auto), _autoincrement_pk(identity), _autoincrement_pk(natural)) == (["id"], ["id"], [])
+    assert _excluded(auto, insert) == {"id"}
+    assert _excluded(auto, BulkOptions(table="a", operation="update", exclude_autoincrement_pk=True)) == set()
+    assert not _counts_pk(auto, insert, frame, ["id"])  # excluida: no hay duplicados posibles por PK
+    assert _counts_pk(auto, BulkOptions(table="a", operation="insert"), frame, ["id"])
+
+
+def test_exclude_and_override_identity_are_incompatible(tmp_path: Path) -> None:
+    import pandas as pd
+
+    from app.integrations.util_bbdd.bulk import BulkOptions, build_bulk_preview
+
+    target, _ = _sqlite_target(tmp_path)
+    options = BulkOptions(table="clientes", operation="insert", exclude_autoincrement_pk=True, override_identity=True)
+
+    preview = build_bulk_preview(
+        target, pd.DataFrame({"id": [7], "nombre": ["eva"]}), options,  # type: ignore[arg-type]
+        outputs_dir=tmp_path / "p", work_dir=tmp_path / "w",
+    )  # fmt: skip
+
+    assert preview["sql_file"] is None
+    assert preview["errors"] == [
+        "«Que la BD asigne los ids» y «Conservar los valores de columnas identity» son incompatibles: elige una."
+    ]
+
+
+def test_preview_reports_the_autoincrement_pk_and_skips_matches_when_excluded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """La vista previa dice qué PK asigna la BD; excluida, no cuenta coincidencias. SQLite no la marca: se simula."""
+    import pandas as pd
+
+    from app.integrations.util_bbdd import bulk
+    from app.integrations.util_bbdd.bulk import BulkOptions, build_bulk_preview
+
+    target, _ = _sqlite_target(tmp_path)  # clientes con id = 1
+    monkeypatch.setattr(bulk, "_autoincrement_pk", lambda table: ["id"])
+    frame = pd.DataFrame({"id": [1], "nombre": ["eva"]})
+
+    def preview(exclude: bool) -> dict[str, object]:
+        options = BulkOptions(table="clientes", operation="insert", exclude_autoincrement_pk=exclude)
+        out = tmp_path / ("e" if exclude else "n")
+        return build_bulk_preview(target, frame, options, outputs_dir=out / "p", work_dir=out / "w")  # type: ignore[arg-type]
+
+    kept, excluded = preview(False), preview(True)
+
+    assert (kept["autoincrement_pk"], kept["matches"]) == (["id"], 1)  # el id 1 ya existe
+    assert (excluded["autoincrement_pk"], excluded["matches"], excluded["errors"]) == (["id"], None, [])
 
 
 def test_identity_always_columns_of_the_mapped_frame() -> None:

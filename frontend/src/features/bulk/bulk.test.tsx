@@ -201,6 +201,47 @@ describe('pestaña Carga', () => {
     expect(body.params).not.toHaveProperty('target_schema');
   });
 
+  it('marca la PK autoincremental del mapeo y ofrece que la asigne la BD', async () => {
+    const fetchMock = stubApi({
+      ...Object.fromEntries(stubRoutes()),
+      'GET /api/v1/connections/2/metadata/schemas': {
+        body: { default: 'public', schemas: [{ name: 'public', system: false, cached: true }] },
+      },
+      'GET /api/v1/connections/2/metadata/schemas/public': { body: TREE },
+      'GET /api/v1/connections/2/metadata/schemas/public/tables/clientes': {
+        body: {
+          name: 'clientes',
+          columns: COLUMNS.map((c) => (c.name === 'id' ? { ...c, identity: 'by default' } : c)),
+          primary_key: { name: 'pk_clientes', columns: ['id'] },
+        },
+      },
+    });
+    const user = userEvent.setup();
+
+    await openTab(user);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Fichero' }), UPLOAD.id);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Conexión destino' }), 'destino');
+    await user.type(screen.getByRole('combobox', { name: 'Tabla destino' }), 'clientes');
+
+    // «ID» del fichero va a «id», PK que asigna la BD: marca en el mapeo y aviso.
+    expect(await screen.findByText('clave primaria · la asigna la BD')).toBeInTheDocument();
+    expect(screen.getByText('El fichero trae la clave primaria autoincremental')).toBeInTheDocument();
+
+    // Excluyentes: activar «que la BD asigne los ids» apaga «conservar los valores».
+    const identity = screen.getByRole('switch', { name: /^Conservar los valores de columnas identity/ });
+    await user.click(identity);
+    await user.click(screen.getByRole('switch', { name: /^Que la BD asigne los ids/ }));
+    expect(identity).not.toBeChecked();
+    expect(screen.queryByText('El fichero trae la clave primaria autoincremental')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Vista previa' }));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')).toHaveLength(1));
+    const body = (await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()) as {
+      params: Record<string, unknown>;
+    };
+    expect(body.params).toMatchObject({ exclude_autoincrement_pk: true, override_identity: false });
+  });
+
   it('si el catálogo no se puede leer, el schema y la tabla se escriben a mano', async () => {
     stubApi({
       ...Object.fromEntries(stubRoutes()),

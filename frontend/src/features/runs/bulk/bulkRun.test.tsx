@@ -31,6 +31,7 @@ const PREVIEW: BulkPreview = {
   target_engine: 'postgresql',
   upload_filename: 'clientes.csv',
   identity_always: [],
+  autoincrement_pk: [],
 }; // prettier-ignore
 
 const SQL_ARTIFACT = {
@@ -60,11 +61,14 @@ function stubPreview({
   me = ALLOWED as object,
   preview = PREVIEW,
   post = { status: 202, body: { ...RUN, id: APPLY_ID, status: 'queued' } } as StubResponse,
+  params = {} as Record<string, unknown>,
 } = {}) {
   stubEventSource();
   return stubApi({
     ...session(me),
-    [`GET /api/v1/runs/${PREVIEW_ID}`]: { body: previewRun() },
+    [`GET /api/v1/runs/${PREVIEW_ID}`]: {
+      body: previewRun({ params: { target_connection: 'destino', table: 'clientes', ...params } }),
+    },
     [`GET /api/v1/runs/${PREVIEW_ID}/bulk-preview`]: { body: preview },
     [`GET /api/v1/runs/${PREVIEW_ID}/artifacts/3/preview`]: {
       text: "INSERT INTO public.clientes (id, nombre) VALUES (1, 'Ana');\n",
@@ -102,6 +106,25 @@ describe('vista previa de la carga', () => {
     expect(within(sample).getAllByRole('row')).toHaveLength(3);
     expect(screen.getByText('Columnas del fichero que no se cargan: notas.')).toBeInTheDocument();
     expect(await screen.findByText(/INSERT INTO public\.clientes/)).toBeInTheDocument();
+  });
+
+  it.each([
+    [{}, ['id'], 'Se insertarán los ids del fichero'],
+    [{ exclude_autoincrement_pk: true }, ['id'], 'La BD asignará los ids'],
+    [{ exclude_autoincrement_pk: true }, [], 'No hay clave primaria autoincremental que excluir'],
+  ])('avisa de los ids del insert (%o, PK autoincremental %o)', async (params, autoPk, title) => {
+    stubPreview({ preview: { ...PREVIEW, autoincrement_pk: autoPk }, params });
+    renderRoute(`/runs/${PREVIEW_ID}`);
+
+    expect(await screen.findByText(title)).toBeInTheDocument();
+  });
+
+  it('sin PK autoincremental en el fichero no avisa de los ids', async () => {
+    stubPreview();
+    renderRoute(`/runs/${PREVIEW_ID}`);
+
+    expect(await screen.findByText(/Insertar «clientes.csv» en public.clientes/)).toBeInTheDocument();
+    expect(screen.queryByText('Se insertarán los ids del fichero')).not.toBeInTheDocument();
   });
 
   it('con errores de validación no deja cargar', async () => {

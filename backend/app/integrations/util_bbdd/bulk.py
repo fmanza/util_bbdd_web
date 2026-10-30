@@ -76,6 +76,8 @@ class BulkOptions:
     override_identity: bool = False
     #: Insert terminado: ``BulkCrud.sync_pk_sequences`` lleva el contador de la PK al máximo de la tabla.
     sync_pk_sequences: bool = True
+    #: Insert: la BD asigna los ids; util_bbdd quita del INSERT las columnas de PK autoincrementales/identity.
+    exclude_autoincrement_pk: bool = False
 
 
 def _parallel(options: BulkOptions) -> Any:
@@ -204,8 +206,13 @@ def _prepare(target: Target, frame: Any, options: BulkOptions) -> dict[str, Any]
             errors.append(f"Falta la clave primaria en el fichero: {', '.join(missing_pk)}.")
         if options.operation == "update" and not (loaded - set(pk)):
             errors.append("No hay columnas que actualizar además de la clave primaria.")
+    if options.operation == "insert" and options.exclude_autoincrement_pk and options.override_identity:
+        errors.append(
+            "«Que la BD asigne los ids» y «Conservar los valores de columnas identity» son incompatibles: elige una."
+        )
     # util_bbdd las rechaza también en el modo seco (ValueError): mejor como error de validación, con la salida.
-    if options.operation == "insert" and not options.override_identity and (always := _identity_always(table, loaded)):
+    sent = loaded - _excluded(table, options)
+    if options.operation == "insert" and not options.override_identity and (always := _identity_always(table, sent)):
         errors.append(
             f"Columnas GENERATED ALWAYS AS IDENTITY: {', '.join(always)}. Activa «Conservar los valores de columnas "
             "identity» o ponlas en «(no cargar)» para que las asigne la BD."
@@ -244,7 +251,7 @@ def build_bulk_preview(
     try:
         frame, crud, table, pk = prepared["frame"], prepared["crud"], prepared["table"], prepared["pk"]
         matches = None
-        if pk and set(pk) <= set(frame.columns) and not prepared["errors"]:
+        if _counts_pk(table, options, frame, pk) and not prepared["errors"]:
             matches = _count_matches(prepared["engine"], table, _keys(frame, pk), pk)
         plan = crud.parallel_plan(options.operation, len(frame))
         sql_file: str | None = None
@@ -267,7 +274,12 @@ def build_bulk_preview(
             "sample": _frame_records(frame, SAMPLE_ROWS),
             "sql_file": sql_file,
             "structure_hash": structure_hash(prepared, options),
-            "identity_always": _identity_always(table, list(frame.columns)) if options.operation == "insert" else [],
+            "identity_always": (
+                _identity_always(table, set(frame.columns) - _excluded(table, options))
+                if options.operation == "insert"
+                else []
+            ),
+            "autoincrement_pk": _autoincrement_pk(table),
         }
     finally:
         prepared["manager"].close()
@@ -275,10 +287,34 @@ def build_bulk_preview(
 
 def _call(crud: Any, options: BulkOptions, frame: Any, table: str, **kwargs: Any) -> None:
     if options.operation == "insert":
-        crud.bulk_insert_from_df(frame, table, override_identity=options.override_identity, **kwargs)
+        crud.bulk_insert_from_df(
+            frame, table, override_identity=options.override_identity,
+            exclude_autoincrement_pk=options.exclude_autoincrement_pk, **kwargs,
+        )  # fmt: skip
         return
     method = {"update": crud.bulk_update_from_df, "delete": crud.bulk_delete_from_df}[options.operation]
     method(frame, table, **kwargs)
+
+
+def _autoincrement_pk(table: Any) -> list[str]:
+    """Columnas de la PK que asigna la BD: el criterio de ``exclude_autoincrement_pk`` de util_bbdd (``is_identity_pk``,
+    privado): ``autoincrement is True`` (MySQL/MariaDB ``AUTO_INCREMENT``, PostgreSQL ``SERIAL``) o con ``identity``.
+    """
+    return [
+        c.name for c in table.primary_key.columns if c.autoincrement is True or getattr(c, "identity", None) is not None
+    ]
+
+
+def _excluded(table: Any, options: BulkOptions) -> set[str]:
+    """Columnas que util_bbdd quitará del INSERT con ``exclude_autoincrement_pk``."""
+    if options.operation == "insert" and options.exclude_autoincrement_pk:
+        return set(_autoincrement_pk(table))
+    return set()
+
+
+def _counts_pk(table: Any, options: BulkOptions, frame: Any, pk: list[str]) -> bool:
+    """Si se cuentan coincidencias por PK: el fichero la trae (un insert puede no traerla) y no se excluye."""
+    return bool(pk) and set(pk) <= set(frame.columns) and not (set(pk) & _excluded(table, options))
 
 
 def _identity_always(table: Any, columns: Iterable[str]) -> list[str]:
@@ -349,8 +385,8 @@ def run_bulk(
         if prepared["errors"]:
             raise ValueError("; ".join(prepared["errors"]))
         frame, table, pk, engine = prepared["frame"], prepared["table"], prepared["pk"], prepared["engine"]
-        # Como en la vista previa: un insert puede no traer la PK (autoincremental) y entonces no se cuentan coincidencias.
-        matches = _count_matches(engine, table, _keys(frame, pk), pk) if pk and set(pk) <= set(frame.columns) else None
+        # Como en la vista previa: sin la PK en el fichero, o excluida, no se cuentan coincidencias.
+        matches = _count_matches(engine, table, _keys(frame, pk), pk) if _counts_pk(table, options, frame, pk) else None
         if options.operation != "insert" and expected_matches is not None and matches != expected_matches:
             raise MatchesChangedError(f"{matches}")
         before = _count(engine, table)

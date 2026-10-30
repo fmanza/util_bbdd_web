@@ -42,6 +42,7 @@ def _options(params: BulkPreviewParams, *, require_atomic: bool = False) -> Bulk
         require_atomic=require_atomic,
         override_identity=params.override_identity,
         sync_pk_sequences=params.sync_pk_sequences,
+        exclude_autoincrement_pk=params.exclude_autoincrement_pk,
     )
 
 

@@ -1640,6 +1640,12 @@ export interface components {
          * @description Validación del fichero contra la tabla, filas afectadas, plan paralelo y SQL generado (sin ejecutar).
          */
         BulkPreviewOut: {
+            /**
+             * Autoincrement Pk
+             * @description Columnas de la PK que asigna la BD (AUTO_INCREMENT, SERIAL, IDENTITY), se carguen o no
+             * @default []
+             */
+            autoincrement_pk: string[];
             /** Columns */
             columns: string[];
             /**

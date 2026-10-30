@@ -350,6 +350,9 @@ class BulkPreviewParams(BaseModel):
         default=False,
         description="Insert en PostgreSQL: conservar los valores del fichero en columnas GENERATED ALWAYS AS IDENTITY.",
     )
+    exclude_autoincrement_pk: bool = Field(
+        default=False, description="Insert: la BD asigna los ids (no se envían las columnas de PK autoincrementales)."
+    )
     sync_pk_sequences: bool = Field(
         default=True, description="Insert: ajustar el contador de la PK (secuencia/IDENTITY/AUTO_INCREMENT) al máximo."
     )

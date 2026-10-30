@@ -41,6 +41,9 @@ class BulkPreviewOut(_Bulk):
     upload_filename: str | None = None
     target_engine: str
     structure_hash: str
+    autoincrement_pk: list[str] = Field(
+        default=[], description="Columnas de la PK que asigna la BD (AUTO_INCREMENT, SERIAL, IDENTITY), se carguen o no"
+    )
     identity_always: list[str] = Field(
         default=[],
         description="Columnas cargadas GENERATED ALWAYS AS IDENTITY (PostgreSQL); sin override_identity son un error "

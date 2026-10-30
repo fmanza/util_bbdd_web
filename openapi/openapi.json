@@ -435,6 +435,15 @@
       "BulkPreviewOut": {
         "description": "Validación del fichero contra la tabla, filas afectadas, plan paralelo y SQL generado (sin ejecutar).",
         "properties": {
+          "autoincrement_pk": {
+            "default": [],
+            "description": "Columnas de la PK que asigna la BD (AUTO_INCREMENT, SERIAL, IDENTITY), se carguen o no",
+            "items": {
+              "type": "string"
+            },
+            "title": "Autoincrement Pk",
+            "type": "array"
+          },
           "columns": {
             "items": {
               "type": "string"

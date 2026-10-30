@@ -11,8 +11,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   volcado) lleva la secuencia, IDENTITY o AUTO_INCREMENT al máximo de la tabla, y el resultado muestra el ajuste por
   columna; con PostgreSQL, «Conservar los valores de columnas identity» inserta los ids del fichero en columnas
   `GENERATED ALWAYS AS IDENTITY` (sin activarlo, la vista previa lo da como error de validación, no como fallo de
-  util_bbdd). Pista en el mapeo para que la BD asigne los ids (ADR-010 enmendado). API: `override_identity` y
-  `sync_pk_sequences` en la vista previa, `identity_always` en su resultado y `pk_sync` en el de la carga (opcionales).
+  util_bbdd). **«Que la BD asigne los ids»** (`exclude_autoincrement_pk` de util_bbdd) no envía la PK autoincremental
+  aunque venga en el fichero; el mapeo marca esa columna y avisa si se va a cargar, y la vista previa lo confirma
+  (ADR-010 enmendado). API: `override_identity`, `sync_pk_sequences` y `exclude_autoincrement_pk` en la vista previa,
+  `identity_always` y `autoincrement_pk` en su resultado y `pk_sync` en el de la carga (opcionales).
 
 ### Fixed
 
