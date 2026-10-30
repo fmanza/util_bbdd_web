@@ -52,6 +52,33 @@ def test_read_csv_encodings_delimiters_and_limits(tmp_path: Path) -> None:
         read_frame(latin, "csv", ReadOptions(encoding="utf-8"), max_rows=10)
 
 
+def test_describe_an_empty_excel_sheet_still_lists_the_sheets(tmp_path: Path) -> None:
+    """Hoja vacía (también la primera): columnas vacías y la lista de hojas, para poder elegir otra; cargarla, no."""
+    from openpyxl import Workbook
+
+    from app.domain.uploads.files import describe
+
+    book = Workbook()
+    book.active.title = "Vacía"
+    datos = book.create_sheet("Datos")
+    datos.append(["id", "nombre"])
+    datos.append([7, "ana"])
+    path = tmp_path / "libro.xlsx"
+    book.save(path)
+
+    empty = describe(path, "xlsx", ReadOptions())
+    full = describe(path, "xlsx", ReadOptions(sheet="Datos"))
+
+    assert empty == {"columns": [], "sample": [], "sheets": ["Vacía", "Datos"]}
+    assert full["columns"] == ["id", "nombre"] and full["sheets"] == ["Vacía", "Datos"]
+    with pytest.raises(UploadContentError, match="no tiene columnas"):
+        read_frame(path, "xlsx", ReadOptions(), max_rows=10)  # la vista previa y la carga la siguen rechazando
+    csv = tmp_path / "vacio.csv"
+    csv.write_text("", encoding="utf-8")
+    with pytest.raises(UploadContentError):
+        describe(csv, "csv", ReadOptions())  # un CSV vacío sigue siendo un error
+
+
 def test_resolve_mapping_by_name_and_explicit() -> None:
     by_name = _resolve_mapping(["ID", "Nombre", "otra"], ["id", "nombre", "email"], {})
     explicit = _resolve_mapping(["cliente", "mail"], ["id", "nombre", "email"], {"cliente": "NOMBRE", "mail": "x"})

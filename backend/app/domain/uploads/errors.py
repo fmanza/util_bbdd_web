@@ -27,6 +27,10 @@ class UploadContentError(AppError):
     title = "El fichero no es válido"
 
 
+class NoColumnsError(UploadContentError):
+    """El fichero, o la hoja del Excel, no tiene columnas (p. ej. una hoja vacía)."""
+
+
 class UploadInUseError(AppError):
     status = 409
     title = "El fichero lo usa una carga en curso"

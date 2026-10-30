@@ -310,6 +310,47 @@ describe('pestaña Carga', () => {
     });
   });
 
+  it('con un Excel, una hoja vacía (o que falla) deja elegir otra', async () => {
+    const XLSX: Upload = {
+      ...UPLOAD,
+      id: '01JXLSXXLSXXLSXXLSXXLSXXLS',
+      filename: 'libro.xlsx',
+      kind: 'xlsx',
+    };
+    const SHEETS = ['Vacía', 'Rota', 'Datos'];
+    stubApi({
+      ...Object.fromEntries(stubRoutes()),
+      'GET /api/v1/projects/5/uploads': { body: [XLSX] },
+      [`GET /api/v1/projects/5/uploads/${XLSX.id}/info`]: (request) => {
+        const sheet = new URL(request.url).searchParams.get('sheet');
+        if (sheet === 'Rota') {
+          return { status: 422, body: { type: 'about:blank', title: 'El fichero no es válido', status: 422,
+                                        detail: 'No se pudo leer el fichero (ValueError).' } }; // prettier-ignore
+        }
+        return sheet === 'Datos'
+          ? { body: { ...INFO, delimiter: null, encoding: null, sheets: SHEETS } }
+          : { body: { columns: [], sample: [], sheets: SHEETS } }; // la primera hoja está vacía
+      },
+    });
+    const user = userEvent.setup();
+
+    await openTab(user);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Fichero' }), XLSX.id);
+
+    expect(
+      await screen.findByText('La hoja «Vacía» está vacía: elige otra hoja del libro.'),
+    ).toBeInTheDocument();
+    const sheet = screen.getByRole('combobox', { name: /^Hoja/ });
+    expect(screen.queryByRole('combobox', { name: 'Separador' })).not.toBeInTheDocument();
+
+    await user.selectOptions(sheet, 'Rota');
+    expect(await screen.findByText('No se pudo leer el fichero (ValueError).')).toBeInTheDocument();
+    // El error no se lleva el selector: se puede elegir otra hoja.
+    await user.selectOptions(screen.getByRole('combobox', { name: /^Hoja/ }), 'Datos');
+    expect(await screen.findByRole('textbox', { name: 'Columna de la tabla para «ID»' })).toHaveValue('ID');
+    expect(screen.queryByText(/está vacía: elige otra hoja/)).not.toBeInTheDocument();
+  });
+
   it('sin columnas de la tabla, el mapeo se escribe a mano', async () => {
     stubTab();
     const user = userEvent.setup();

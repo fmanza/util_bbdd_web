@@ -23,6 +23,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   borradas de verdad y avisa «No se cargó ninguna fila» cuando todas se apartan (p. ej. PK duplicada en un insert).
 - **Insert sin la clave primaria**: con la columna de una PK autoincremental en «no cargar», la vista previa pasaba
   pero la carga fallaba con «None of [Index(['ID'])] are in the [columns]»; ahora la BD asigna los ids.
+- **Carga desde Excel con hojas vacías**: al elegir una hoja sin datos (o que no se podía leer) desaparecía el selector
+  de hoja y no se podía elegir otra; si la vacía era la primera, ni siquiera se veían las demás. Ahora el selector
+  depende de que el fichero sea un Excel, la descripción de una hoja vacía trae la lista de hojas y se avisa «La hoja
+  no tiene datos: elige otra» (la vista previa y la carga la siguen rechazando).
 
 ## [1.9.0] - 2026-10-30
 

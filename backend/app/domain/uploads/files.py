@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Any, Final, Literal
 
-from app.domain.uploads.errors import UploadContentError, UploadTypeError
+from app.domain.uploads.errors import NoColumnsError, UploadContentError, UploadTypeError
 
 Kind = Literal["csv", "xlsx"]
 KINDS: Final[dict[str, Kind]] = {".csv": "csv", ".xlsx": "xlsx"}
@@ -138,7 +138,7 @@ def read_frame(path: Path, kind: Kind, options: ReadOptions, *, max_rows: int, n
     except Exception as exc:  # errores de pandas/openpyxl: solo el tipo, nunca el contenido
         raise UploadContentError(f"No se pudo leer el fichero ({type(exc).__name__}).") from None
     if len(frame.columns) == 0:
-        raise UploadContentError("El fichero no tiene columnas.")
+        raise NoColumnsError("El fichero no tiene columnas.")
     if nrows is None and len(frame) > max_rows:
         raise UploadContentError(f"El fichero tiene más de {max_rows} filas.")
     frame.columns = [str(c).strip() for c in frame.columns]
@@ -146,8 +146,17 @@ def read_frame(path: Path, kind: Kind, options: ReadOptions, *, max_rows: int, n
 
 
 def describe(path: Path, kind: Kind, options: ReadOptions) -> dict[str, Any]:
-    """Hojas (Excel), separador y codificación detectados (CSV), columnas y primeras filas para el mapeo."""
-    frame = read_frame(path, kind, options, max_rows=0, nrows=5)
+    """Hojas (Excel), separador y codificación detectados (CSV), columnas y primeras filas para el mapeo.
+
+    Una hoja de Excel vacía no es un error aquí: columnas vacías y la lista de hojas, para poder elegir otra (también si
+    la vacía es la primera). La vista previa y la carga la siguen rechazando (``read_frame``).
+    """
+    try:
+        frame = read_frame(path, kind, options, max_rows=0, nrows=5)
+    except NoColumnsError:
+        if kind != "xlsx":
+            raise
+        return {"columns": [], "sample": [], "sheets": sheet_names(path)}
     info: dict[str, Any] = {"columns": list(frame.columns), "sample": _records(frame)}
     if kind == "xlsx":
         info["sheets"] = sheet_names(path)

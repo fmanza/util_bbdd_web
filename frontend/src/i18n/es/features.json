@@ -947,6 +947,8 @@
       "noTables": "Este schema no tiene tablas.",
       "table": "Tabla destino",
       "sheet": "Hoja",
+      "emptySheetTitle": "La hoja no tiene datos",
+      "emptySheet": "La hoja «{{sheet}}» está vacía: elige otra hoja del libro.",
       "sheetHint": "La primera por defecto.",
       "autoPkMark": "clave primaria · la asigna la BD",
       "autoPkLoadedTitle": "El fichero trae la clave primaria autoincremental",
