@@ -336,7 +336,7 @@ flowchart LR
 | 7 (web ✅) | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
 | 9 (web ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ `fa13622` → **`release: v1.7.1`** ✅ (D9-3) | Wheel 5.1.0 |
-| 10 | U-10.1 → U-10.2 → U-10.3 → U-10.4 → **`release: v5.2.0`** | **W-10.0** `chore(backend): util_bbdd 5.2.0` → W-10.1 → W-10.2 → **`release: v1.9.0`** (D10-5) | Wheel 5.2.0 |
+| 10 (web ✅) | U-10.1 ✅ `87e5386` → U-10.2 ✅ `f1c0737` → U-10.3 ✅ `ad9fe85` → U-10.4 ✅ `c3a1d55` → **`release: v5.2.0`** ✅ `30e47bf` | **W-10.0** ✅ `a7d6e1e` `chore(backend): util_bbdd 5.2.0` → W-10.1 ✅ `f86056a` → W-10.2 ✅ `ddbaecc` → **`release: v1.9.0`** ✅ (D10-5) | Wheel 5.2.0 |
 
 Reglas de la tubería:
 
@@ -794,3 +794,25 @@ Sesión de util_bbdd: `.ai/sessions/2026-10-29-web-gaps-ola9/`. Tag `v5.1.0`, wh
 | W-9.0 | `1bd3801` | Pin 5.1.0 (lock con uv 0.12.22; hash `52783997…1d1b86` igual al `.sha256` de la release; se descarta otra vez la retirada ajena de la rueda `armv7l` de zensical). Sin cambios de código; suite con `-W error::FutureWarning -W error::DeprecationWarning`. Bench del explorador: el rodeo de la web y el conversor de 5.1.0 juntos dan el mismo resultado (R9-6). Excepción de `asyncpg` mantenida |
 | W-9.1 | `fa13622` | Fuera `_prepare_driver` (`fetch_decimals`) y `_oracle_number` de `sql.py`; `_run_read_only` ya no recibe `db_type`. Verificado antes en el bench sin el rodeo: `NUMBER(38,3)` exacto, enteros `int`, `BINARY_DOUBLE` y `FLOAT` `float`. **Cambio visible**: `FLOAT` de Oracle vuelve a salir como número (con el rodeo salía como texto). Test unitario: `free_sql_task` no toca `oracledb.defaults`; test del bench con `NUMBER(38,3)` sin cambios y `FLOAT` → `1.25`. Bench del explorador: 21 passed. G44 resuelto |
 | release | este commit | util_bbdd_web **1.7.1** (D9-3). Ver el commit para las comprobaciones |
+
+### Ola 10 — util_bbdd 5.2.0 (2026-10-30, rama `develop`)
+
+Sesión de util_bbdd: `.ai/sessions/2026-10-30-web-gaps-ola10/`. Tag `v5.2.0`; el wheel y su `.sha256`
+(`592f76c0…63e5b4`) se subieron a la release después de crearla (al principio solo tenía el zip de documentación).
+
+| Fase | Commit | Notas para la fase `W-` |
+|---|---|---|
+| U-10.1 | `87e5386` | Valor `str` en columna `Date`/`DateTime`/`Time` → literal `String()`, por valor, en VALUES, SET y WHERE; ejecutado en los 5 motores del banco |
+| U-10.2 | `f1c0737` | `bfs_component` recorre `sorted(adj[node])` |
+| U-10.3 | `ad9fe85` | Saltos de línea y caracteres de control → espacio; `%%` → `% %`; ids de nodo del Markdown con `_mermaid_node_id` (únicos) |
+| U-10.4 | `c3a1d55` | `MERMAID_VERSION = "12.2.0"` con su SRI; plantilla comprobada en Chromium (D10-4 no se aplicó) |
+| release | `30e47bf` | Release `v5.2.0` (MINOR, D10-1). Sin cambios de dependencias respecto a 5.1.0 |
+
+### W-10 — util_bbdd_web con util_bbdd 5.2.0 (2026-10-30, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-10.0 | `a7d6e1e` | Pin 5.2.0; en el lock solo cambia util_bbdd, con el hash del `.sha256` de la release. Sin excepción de `exclude-newer`: las dependencias de util_bbdd no cambian. Suite con `-W error::FutureWarning -W error::DeprecationWarning`: 704 passed, 2 skipped |
+| W-10.1 | `f86056a` | Test de la vista previa de un CSV con `DATETIME` y `DATE` en texto (insert y update, SQLite): con 5.1.0 da el `CompileError` del caso real, con 5.2.0 genera el SQL. Nota de formato ISO y `NLS_DATE_FORMAT` en `carga.md`. G48 resuelto |
+| W-10.2 | `ddbaecc` | G45-G47 resueltos en GAPS; los rodeos de G46 (`stripMermaidConfig`) y G47 (ciclos ordenados en `structure_hash`) se mantienen como defensa (D10-2). Ningún hueco abierto |
+| release | este commit | util_bbdd_web **1.9.0** (D10-5). Ver el commit para las comprobaciones |

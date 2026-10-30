@@ -3,7 +3,11 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
-## [Unreleased]
+## [1.9.0] - 2026-10-30
+
+util_bbdd 5.2.0 (ola 10 del plan de huecos: G45-G48 resueltos, ninguno abierto), Oracle en modo thick y schema y tabla
+de la carga desde el catálogo. La API HTTP no cambia y no hay migraciones. Variables nuevas, opcionales:
+`WITH_ORACLE_THICK` (al construir) y `UBW_ORACLE_CLIENT_DIR`; sin ellas todo sigue igual.
 
 ### Added
 
@@ -15,6 +19,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **Carga: schema y tabla destino desde el catálogo**: al elegir la conexión destino se ofrecen sus schemas y las
   tablas del schema (también se pueden escribir, y a mano si el catálogo no se puede leer); ayuda en pantalla sobre
   cómo se detectan el separador y la codificación del CSV.
+
+### Changed
+
+- **util_bbdd 5.2.0** (ADR-006; W-10.0): Mermaid 12.2.0 por defecto en su informe HTML (G45), etiquetas e ids de
+  Mermaid sin saltos de línea (G46), ciclos de FK en orden estable (G47) y fechas en texto en el SQL del modo seco de
+  la carga (G48). Los rodeos de G46 y G47 se mantienen como defensa (D10-2).
+- **Documentación**: con destino MariaDB/MySQL, el volcado necesita subir `read_timeout` y `write_timeout` (util_bbdd
+  usa 30 y 60 s por defecto; un «Lost connection to server during query» lo delata) (`volcado.md`,
+  `troubleshooting.md`).
 
 ### Fixed
 
