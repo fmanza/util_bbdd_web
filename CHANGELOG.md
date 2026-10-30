@@ -19,6 +19,8 @@ La API HTTP no cambia y no hay migraciones.
 
 - **Diagramas del Markdown sin directivas**: antes de dibujar se quitan `%%{init: …}%%` y el frontmatter, que un
   nombre de tabla con saltos de línea podría colar (util_bbdd no los escapa, GAPS G46).
+- **zod 4.6.7** (frontend): corrige GHSA-mrhx-c7xc-m3w5 (memoria agotada al validar colecciones enormes con
+  restricciones); `npm audit` sin avisos.
 
 ## [1.7.1] - 2026-10-29
 
