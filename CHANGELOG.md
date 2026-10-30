@@ -18,6 +18,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **Volcado con ciclos de FK de 3 o más tablas**: fallaba siempre con `preview_changed` («Las tablas o columnas
   cambiaron…») porque util_bbdd da esas tablas en un orden distinto en cada proceso (GAPS G47); la huella ordena los
   ciclos. Las vistas previas anteriores hay que repetirlas.
+- **Plan de migración DDL**: «Motor destino» empieza en «Elige…» (antes mostraba MariaDB sin elegirlo: el formulario
+  lo daba por vacío y elegir MariaDB no mostraba sus opciones); «NUMBER sin precisión» y «Ancho de INT» solo aparecen
+  con origen Oracle, el único en que util_bbdd los usa.
 
 ## [1.8.0] - 2026-10-30
 

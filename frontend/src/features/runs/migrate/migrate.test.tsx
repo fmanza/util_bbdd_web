@@ -392,4 +392,80 @@ describe('formulario de lanzamiento', () => {
     expect(within(dialog).getByRole('group', { name: 'Destino MariaDB/MySQL' })).toBeInTheDocument();
     expect(within(dialog).queryByRole('group', { name: 'Destino PostgreSQL' })).not.toBeInTheDocument();
   });
+
+  it('elige el primer motor destino y solo ofrece NUMBER y ancho de INT con origen Oracle', async () => {
+    stubEventSource();
+    const param = { required: false, description: 'x', minimum: null, maximum: null };
+    const MIGRATE_PLAN = {
+      name: 'migrate_plan',
+      title: 'Plan de migración DDL',
+      description: 'Plan',
+      form: true,
+      params: [
+        { ...param, name: 'source_connection', type: 'connection', required: true, default: null },
+        {
+          ...param,
+          name: 'target_engine',
+          type: 'string',
+          required: true,
+          default: null,
+          options: ['mariadb', 'mysql'],
+        },
+        {
+          ...param,
+          name: 'number_fallback',
+          type: 'string',
+          default: 'DOUBLE',
+          options: ['DOUBLE', 'DECIMAL(38,10)'],
+          group: 'general',
+        },
+        { ...param, name: 'int_display_width', type: 'integer', default: 11, group: 'mysql' },
+        { ...param, name: 'charset', type: 'string', default: null, group: 'mysql' },
+      ],
+    };
+    const ORACLE_SOURCE = {
+      ...MYSQL_TARGET,
+      id: 9,
+      alias: 'origen',
+      connection_name: 'Oracle',
+      db_type: 'oracle',
+    };
+    const fetchMock = stubApi({
+      ...session(ALLOWED),
+      'GET /api/v1/projects/5': { body: PROJECT },
+      'GET /api/v1/projects/5/runs': { body: { items: [], total: 0 } },
+      'GET /api/v1/projects/5/connections': { body: [MYSQL_TARGET, ORACLE_SOURCE] },
+      'GET /api/v1/operations': { body: [NOOP, MIGRATE_PLAN] },
+      'POST /api/v1/projects/5/runs': { status: 202, body: { ...RUN, status: 'queued' } },
+    });
+    const user = userEvent.setup();
+
+    renderRoute('/projects/5');
+    await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.selectOptions(
+      await within(dialog).findByRole('combobox', { name: 'Operación' }),
+      'migrate_plan',
+    );
+
+    const engine = within(dialog).getByRole('combobox', { name: 'Motor destino' });
+    expect(engine).toHaveValue('');
+    await user.selectOptions(engine, 'mariadb');
+    expect(within(dialog).getByRole('group', { name: 'Destino MariaDB/MySQL' })).toBeInTheDocument();
+
+    const source = within(dialog).getByRole('combobox', { name: 'Conexión origen' });
+    await user.selectOptions(source, 'destino');
+    expect(within(dialog).queryByLabelText('NUMBER sin precisión')).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Ancho de INT')).not.toBeInTheDocument();
+    await user.selectOptions(source, 'origen');
+    expect(within(dialog).getByLabelText('NUMBER sin precisión')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Ancho de INT')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Lanzar' }));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')).toHaveLength(1));
+    const body = (await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()) as {
+      params: Record<string, unknown>;
+    };
+    expect(body.params).toMatchObject({ source_connection: 'origen', target_engine: 'mariadb' });
+  });
 });

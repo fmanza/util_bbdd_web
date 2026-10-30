@@ -75,6 +75,9 @@ const ENGINE_GROUPS: Record<string, readonly string[]> = {
   oracle: ['oracle'],
 };
 
+/** Parámetros de `migrate_plan` que util_bbdd solo usa con origen Oracle (`NUMBER` sin precisión, ancho de INT). */
+const ORACLE_SOURCE_PARAMS: ReadonlySet<string> = new Set(['number_fallback', 'int_display_width']);
+
 /** Opciones de un parámetro de plantilla: «sin plantilla» y las del tipo pedido, las del proyecto primero. */
 function templateOptions(templates: DocumentTemplate[], kind: string | null | undefined, t: TFunction) {
   const items = (scope: DocumentTemplate['scope']) =>
@@ -126,9 +129,11 @@ function LaunchForm({
   const templateParams = operation.params.filter((p) => p.type === 'template');
   const templates = useTemplates({ kind: 'project', projectId }, templateParams.length > 0);
   const values = useWatch({ control: form.control });
+  const sourceType = connections.find((c) => c.alias === values['source_connection'])?.db_type;
   // Una plantilla solo se ofrece si su formato (`word`, `excel`) se va a generar.
   const paramVisible = (param: OperationParam) =>
-    param.type !== 'template' || !param.template_kind || values[param.template_kind] === true;
+    (param.type !== 'template' || !param.template_kind || values[param.template_kind] === true) &&
+    (!ORACLE_SOURCE_PARAMS.has(param.name) || sourceType === 'oracle');
   const targetEngine = values['target_engine'];
   const groupVisible = (group: string | null) =>
     group === null ||
@@ -202,14 +207,22 @@ function LaunchForm({
           );
         }
         if (param.options) {
+          // Sin valor por defecto, el navegador mostraría la primera opción sin elegirla (y elegirla no cambiaría nada).
+          const placeholder =
+            param.default === null || param.default === undefined
+              ? [{ value: '', label: t('runs.launch.choose'), disabled: true }]
+              : [];
           return (
             <NativeSelect
               label={label}
               description={param.description}
-              data={param.options.map((option) => ({
-                value: option,
-                label: t(`runs.options.${option}`, { defaultValue: option }),
-              }))}
+              data={[
+                ...placeholder,
+                ...param.options.map((option) => ({
+                  value: option,
+                  label: t(`runs.options.${option}`, { defaultValue: option }),
+                })),
+              ]}
               value={typeof field.value === 'string' ? field.value : ''}
               onChange={(event) => field.onChange(event.currentTarget.value)}
               error={error}

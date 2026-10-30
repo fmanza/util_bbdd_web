@@ -481,6 +481,7 @@
       "title": "Lanzar ejecución",
       "submit": "Lanzar",
       "noConnection": "Sin conexión",
+      "choose": "Elige…",
       "number": "Debe ser un número válido",
       "range": "Entre {{min}} y {{max}}",
       "noTemplate": "Sin plantilla (formato por defecto)",
