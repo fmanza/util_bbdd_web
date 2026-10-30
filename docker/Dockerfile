@@ -2,6 +2,8 @@
 # util_bbdd_web — imagen única para API (target "runtime") y worker (mismo target, otro comando).
 # Build:  docker compose build            (o docker build -f docker/Dockerfile .)
 # Variantes: --build-arg WITH_HSQLDB=true  (JRE + jaydebeapi)  |  --build-arg WITH_ODBC=true (msodbcsql18 + pyodbc)
+#            --build-arg WITH_ORACLE_THICK=true (libaio1; el Instant Client lo copia el admin a UBW_FILES_DIR y se
+#            indica en UBW_ORACLE_CLIENT_DIR)
 
 ARG PYTHON_IMAGE=python:3.12.14-slim-bookworm
 ARG NODE_IMAGE=node:24.21.0-alpine
@@ -52,9 +54,11 @@ CMD ["uv", "run", "--frozen", "pytest"]
 FROM ${PYTHON_IMAGE} AS runtime
 ARG WITH_HSQLDB=false
 ARG WITH_ODBC=false
+ARG WITH_ORACLE_THICK=false
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libmariadb3 graphviz \
  && if [ "$WITH_HSQLDB" = "true" ]; then apt-get install -y --no-install-recommends default-jre-headless; fi \
+ && if [ "$WITH_ORACLE_THICK" = "true" ]; then apt-get install -y --no-install-recommends libaio1; fi \
  && if [ "$WITH_ODBC" = "true" ]; then \
       apt-get install -y --no-install-recommends curl gnupg unixodbc \
       && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \

@@ -46,6 +46,72 @@ util_bbdd desactive y reactive constraints e índices, `ALTER` sobre esas tablas
   volumen `data`). Para copiarlos: `docker compose cp ./ventas.db web:/data/files/ventas.db` y, en la conexión,
   `database = ventas.db`.
 
+### Oracle en modo thick (Instant Client)
+
+Por defecto Oracle usa el modo **thin** de `oracledb`, que no necesita cliente y conecta con Oracle 12.1 o posterior.
+El modo **thick** solo hace falta para Oracle 11g o para funciones que thin no tiene (p. ej. Native Network
+Encryption). Necesita el Oracle Instant Client, que la imagen no incluye (licencia de Oracle): lo copia el admin a
+`UBW_FILES_DIR`, y `oracle_client_path` es la carpeta **relativa** a `UBW_FILES_DIR`. Una ruta absoluta fuera de ella
+(`C:\oracle\…`, `/opt/oracle/…`) se rechaza con «debe ser una ruta dentro de la carpeta de ficheros del servidor».
+
+Verificado con el Instant Client 19.32 (Linux x86_64) y `oracledb` 26.0.1. Todos los comandos se ejecutan desde la
+raíz del proyecto (donde está `docker-compose.yml`; si no, `no configuration file provided`).
+
+1. **Descarga el Instant Client *Basic* para Linux** (no el de Windows: el backend corre en Linux), de la
+   arquitectura del contenedor (`docker compose exec web uname -m`: `x86_64` o `aarch64`). La versión depende de la
+   BD: 19 conecta con 11.2 o posterior; 21, con 12.1 o posterior; 23, con 19 o posterior. Para Oracle 11g, el 19.
+
+2. **Descomprímelo en el volumen `data`** con un contenedor de usar y tirar. `unzip` conserva los enlaces simbólicos
+   (`libclntsh.so` → `libclntsh.so.19.1`), que el Explorador de Windows rompe, y el `chown` deja la carpeta a nombre
+   del usuario `app` (uid 10001). El volumen se llama `<proyecto>_data` (`docker volume ls`):
+
+    ```bash
+    docker run --rm -v util_bbdd_web_data:/data -v "$PWD:/in:ro" python:3.12.14-slim-bookworm sh -c \
+      'apt-get update -qq && apt-get install -y -qq unzip && unzip -q /in/instantclient-basic-linux.x64-19.32.0.0.0dbru.zip -d /data/files && chown -R 10001:10001 /data/files/instantclient_19_32'
+    ```
+
+    En PowerShell, `${PWD}` en lugar de `$PWD` y todo en una línea; en Git Bash, `MSYS_NO_PATHCONV=1` delante.
+    Con `docker compose cp` también se copia, pero la carpeta queda de root y, con `cap_drop: ALL`, no se puede
+    borrar después desde el contenedor.
+
+3. **Imagen con `libaio1` y la carpeta en el entorno**, en `.env`:
+
+    ```bash
+    WITH_ORACLE_THICK=true
+    UBW_ORACLE_CLIENT_DIR=instantclient_19_32    # relativa a UBW_FILES_DIR
+    ```
+
+    ```bash
+    docker compose build
+    docker compose up -d
+    ```
+
+    El Instant Client 19 no lleva RUNPATH `$ORIGIN`: `libclntsh.so` se encuentra por `oracle_client_path`, pero sus
+    dependencias (`libnnz19.so`) solo por `LD_LIBRARY_PATH`, que tiene que existir al arrancar el proceso. El
+    *entrypoint* la monta con `UBW_ORACLE_CLIENT_DIR`; las pruebas de conexión y los jobs la heredan.
+
+4. **Comprueba que carga** antes de tocar la conexión. `docker compose exec` no pasa por el *entrypoint*, así que la
+   prueba toma `LD_LIBRARY_PATH` del proceso de la aplicación (PID 1):
+
+    ```bash
+    docker compose exec web sh -c 'L=$(tr "\0" "\n" </proc/1/environ | grep ^LD_LIBRARY_PATH= | cut -d= -f2-); echo "$L"; LD_LIBRARY_PATH="$L" python -c "import oracledb; oracledb.init_oracle_client(lib_dir=\"/data/files/instantclient_19_32\"); print(oracledb.clientversion())"'
+    ```
+
+    Debe imprimir `/data/files/instantclient_19_32` y `(19, 32, 0, 0, 0)`. Repite con `worker` en lugar de `web`.
+
+5. **En la conexión Oracle**: `oracle_client_path = instantclient_19_32` (sin `/data/files/`, la misma carpeta que
+   `UBW_ORACLE_CLIENT_DIR`) y activa `oracle_thick_mode`. Guarda y pulsa *Probar conexión*.
+
+**Cambiar de versión**: descomprime la nueva (paso 2), cambia `UBW_ORACLE_CLIENT_DIR` y `docker compose up -d`, y
+actualiza `oracle_client_path` en las conexiones. Para borrar la antigua:
+`docker compose exec web rm -rf /data/files/instantclient_19_32`. Si se copió con `docker compose cp` (de root),
+primero `docker compose exec -u root web find /data/files/<carpeta> -mindepth 1 -delete` y después
+`docker compose exec web rmdir /data/files/<carpeta>`.
+
+El modo thick se inicializa una vez por proceso y no se puede volver a thin. La web abre cada prueba de conexión y cada
+ejecución en un subproceso propio (ADR-002), así que las conexiones thin y thick conviven sin problema. Como
+`LD_LIBRARY_PATH` es una sola, hay **un Instant Client por despliegue**: todas las conexiones thick usan el mismo.
+
 ## Detrás de un proxy inverso con TLS
 
 Por defecto el puerto se publica solo en `127.0.0.1:8080`. Para acceso desde la red, pon delante un **proxy
@@ -147,6 +213,7 @@ API, cada uno lleva su cuenta.
 |---|---|---|
 | Base | `docker compose build` | ≈ 770 MB |
 | Con HSQLDB (JRE + jaydebeapi) y/o ODBC para SQL Server (msodbcsql18 + `pyodbc`) | `WITH_HSQLDB=true WITH_ODBC=true docker compose build` | ≈ 1,06 GB con las dos |
+| Con Oracle thick (`libaio1`; el Instant Client va aparte, [ver arriba](#oracle-en-modo-thick-instant-client)) | `WITH_ORACLE_THICK=true docker compose build` | Sin medir (solo añade `libaio1`) |
 
 Verificado en la 1.0.0 contra el bench: HSQLDB 2.7.4 por JDBC (el JAR del driver va en `UBW_FILES_DIR`, parámetro
 `jdbc_jar`) y SQL Server 2022 con `sql_server_driver = pyodbc` y `driver_name = ODBC Driver 18 for SQL Server`.

@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Added
+
+- **Oracle en modo thick**: variante de imagen `WITH_ORACLE_THICK=true` (`libaio1`) y `UBW_ORACLE_CLIENT_DIR`, que el
+  *entrypoint* pone en `LD_LIBRARY_PATH` (el Instant Client 19 no encuentra `libnnz19.so` solo con `lib_dir`). Guía
+  paso a paso para descomprimir el Instant Client en `UBW_FILES_DIR` y usarlo con `oracle_client_path` (relativa) y
+  `oracle_thick_mode` (`deployment.md`, `conexiones.md`, `troubleshooting.md`). Verificado con el 19.32 y
+  `oracledb` 26.0.1.
+
 ## [1.8.0] - 2026-10-30
 
 Diagramas Mermaid 12 en los informes de comparación. La API HTTP no cambia y no hay migraciones; la imagen trae

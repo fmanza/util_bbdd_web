@@ -23,7 +23,7 @@
 |---|---|---|
 | MariaDB | `mariadb` (sync), `aiomysql` | `libmariadb3` |
 | MySQL | `pymysql[rsa]`, `aiomysql` | — |
-| Oracle | `oracledb` (thin) | — |
+| Oracle | `oracledb` (thin; thick con `WITH_ORACLE_THICK=true`) | `libaio1` en la variante; Instant Client en `UBW_FILES_DIR` |
 | PostgreSQL | `psycopg[binary]`, `psycopg-pool`, `asyncpg` | — |
 | SQL Server | `pymssql` (por defecto); `pyodbc`/`aioodbc` con `WITH_ODBC=true` | `msodbcsql18` solo en la variante |
 | SQLite | `sqlite3`, `aiosqlite` | — |

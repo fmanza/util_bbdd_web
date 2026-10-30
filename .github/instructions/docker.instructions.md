@@ -8,7 +8,9 @@ applyTo: "docker/**,docker-compose*.yml,.dockerignore"
   `backend-dev` añade el grupo `dev` para CI y equipos sin uv.
 - Versiones exactas de `python`, `node` y `uv` en los `ARG` del Dockerfile; al subirlas, versión con ≥ 2 semanas.
 - Librerías nativas: `libmariadb3` (MariaDB) y `graphviz`; SQL Server con `pymssql` sin ODBC. Variantes por
-  `build-arg`: `WITH_HSQLDB=true` (JRE + `jaydebeapi`), `WITH_ODBC=true` (`msodbcsql18` + `pyodbc`).
+  `build-arg`: `WITH_HSQLDB=true` (JRE + `jaydebeapi`), `WITH_ODBC=true` (`msodbcsql18` + `pyodbc`),
+  `WITH_ORACLE_THICK=true` (`libaio1`; el Instant Client no va en la imagen, lo copia el admin a `UBW_FILES_DIR` y
+  el *entrypoint* pone `UBW_ORACLE_CLIENT_DIR` en `LD_LIBRARY_PATH`: el IC 19 no carga `libnnz19.so` solo con `lib_dir`).
 - Runtime: usuario `app` (uid 10001), `read_only`, `tmpfs /tmp`, `cap_drop: ALL`, `no-new-privileges`,
   `HEALTHCHECK` contra `/api/health`, `CMD` en forma exec.
 - Volúmenes con nombre: `data` (`config.db`) y `workspace` (salidas). Nunca sobre NFS/CIFS (bloqueo de SQLite).

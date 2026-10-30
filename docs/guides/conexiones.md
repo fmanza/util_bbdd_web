@@ -36,7 +36,10 @@ Notas por motor:
 
 - **SQLite**: `database` es la ruta del fichero **dentro de la carpeta de ficheros del servidor** (por ejemplo,
   `ventas.db`). El administrador copia ahí los ficheros ([despliegue](deployment.md#destinos-y-ficheros-de-las-conexiones)).
-- **Oracle**: indica `dsn` (`host:puerto/servicio`) o bien `host`, `port` y `service_name` (o `sid`).
+- **Oracle**: indica `dsn` (`host:puerto/servicio`) o bien `host`, `port` y `service_name` (o `sid`). Para
+  Oracle 11g (modo thick), `oracle_client_path` es la carpeta del Instant Client **dentro de la carpeta de ficheros**
+  (p. ej. `instantclient_19_32`, la misma que `UBW_ORACLE_CLIENT_DIR`) y se activa `oracle_thick_mode`. El
+  administrador prepara la imagen y copia el cliente ([despliegue](deployment.md#oracle-en-modo-thick-instant-client)).
 - **HSQLDB** necesita la imagen con Java (`WITH_HSQLDB=true`) y el JAR en la carpeta de ficheros.
 - **SQL Server** usa `pymssql` por defecto; `pyodbc` requiere la imagen `WITH_ODBC=true`.
 - Los certificados TLS (`ssl_ca`, `ssl_cert`, `ssl_key`) también deben estar en la carpeta de ficheros.

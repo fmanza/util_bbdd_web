@@ -12,8 +12,11 @@ x-app: &app
     args:
       WITH_HSQLDB: ${WITH_HSQLDB:-false}
       WITH_ODBC: ${WITH_ODBC:-false}
+      WITH_ORACLE_THICK: ${WITH_ORACLE_THICK:-false}
   environment:
     UBW_LOG_LEVEL: ${UBW_LOG_LEVEL:-INFO}
+    # Oracle thick: carpeta del Instant Client relativa a UBW_FILES_DIR (el entrypoint la pone en LD_LIBRARY_PATH).
+    UBW_ORACLE_CLIENT_DIR: ${UBW_ORACLE_CLIENT_DIR:-}
     # IP del proxy inverso en el que confía uvicorn para X-Forwarded-For/Proto (rate limit por IP real, HSTS).
     FORWARDED_ALLOW_IPS: ${UBW_FORWARDED_ALLOW_IPS:-127.0.0.1}
     # Rate limiting por IP de lo que llega sin sesión y del inicio de sesión (Fase 10; el resto, por defecto).

@@ -12,6 +12,10 @@
 | Build de la imagen falla compilando `mariadb` | Falta `libmariadb-dev` en la etapa de build | Ya incluido en `backend-build`; en CI o local, instalar `libmariadb-dev` |
 | SQL Server con `pyodbc` falla al conectar | Imagen sin ODBC | `WITH_ODBC=true docker compose build` o usar `pymssql` (por defecto) |
 | HSQLDB no disponible | Imagen sin JRE | `WITH_HSQLDB=true docker compose build` |
+| «`oracle_client_path` debe ser una ruta dentro de la carpeta de ficheros del servidor» | Ruta absoluta o fuera de `UBW_FILES_DIR` | Copiar el Instant Client a `/data/files` e indicar la carpeta relativa ([Oracle thick](deployment.md#oracle-en-modo-thick-instant-client)) |
+| Oracle thick: `DPI-1047` / `libaio.so.1: cannot open shared object file` | Imagen sin `libaio1` | `WITH_ORACLE_THICK=true docker compose build` |
+| Oracle thick: `DPI-1047` / `libclntsh.so: cannot open shared object file` | Instant Client de Windows, de otra arquitectura, o descomprimido sin enlaces simbólicos | Instant Client Linux de la arquitectura del contenedor, descomprimido con `unzip` ([Oracle thick](deployment.md#oracle-en-modo-thick-instant-client), paso 2) |
+| Oracle thick: `DPI-1047` / `libnnz19.so: cannot open shared object file` | `UBW_ORACLE_CLIENT_DIR` vacía o distinta de `oracle_client_path` (falta en `LD_LIBRARY_PATH`) | Fijarla en `.env` y `docker compose up -d` ([Oracle thick](deployment.md#oracle-en-modo-thick-instant-client), paso 3) |
 | El contenedor `web` no arranca: `MissingSecretKeyError` | Producción sin `ubw_app_secret_key` | `python scripts/generate_secrets.py` y comprobar `secrets:` en compose |
 | El login no persiste (vuelve a `/login`) | Cookie `Secure` sobre HTTP en un host que no es `localhost`/`127.0.0.1` | Acceder por el proxy TLS; solo en desarrollo `UBW_ENVIRONMENT=development` quita `Secure` |
 | «Token CSRF ausente o no válido» (403) | Cookie `ubw_csrf` borrada o de otra sesión | Recargar la página; el login pide un token nuevo con `GET /api/v1/auth/csrf` |
