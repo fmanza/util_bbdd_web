@@ -3,9 +3,10 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
-## [Unreleased]
+## [1.8.0] - 2026-10-30
 
-La API HTTP no cambia y no hay migraciones.
+Diagramas Mermaid 12 en los informes de comparación. La API HTTP no cambia y no hay migraciones; la imagen trae
+`UBW_MERMAID_JS` (no hay que tocar `.env`).
 
 ### Added
 
@@ -21,6 +22,10 @@ La API HTTP no cambia y no hay migraciones.
   nombre de tabla con saltos de línea podría colar (util_bbdd no los escapa, GAPS G46).
 - **zod 4.6.7** (frontend): corrige GHSA-mrhx-c7xc-m3w5 (memoria agotada al validar colecciones enormes con
   restricciones); `npm audit` sin avisos.
+
+### Fixed
+
+- **Readiness de una conexión**: el nivel de cada hallazgo (`WARNING`, `ERROR`…) ya no sale recortado en la tabla.
 
 ## [1.7.1] - 2026-10-29
 

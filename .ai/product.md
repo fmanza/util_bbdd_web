@@ -1,7 +1,7 @@
 # Producto — util_bbdd_web
 
 - **Qué es**: aplicación web multiusuario que expone la funcionalidad de la librería util_bbdd 4.3.0.
-- **Versión actual**: 1.7.1 (util_bbdd 5.1.0: ola 9 del plan de huecos, `NUMBER` de Oracle en la consola SQL). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
+- **Versión actual**: 1.8.0 (util_bbdd 5.1.0; diagramas Mermaid 12 en los informes de comparación). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
 - **Usuarios**: equipos técnicos (DBA, desarrollo, migraciones) en una red interna; rol `admin` y rol `user`.
 
 ## Capacidades objetivo
