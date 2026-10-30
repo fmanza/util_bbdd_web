@@ -43,6 +43,12 @@ const NUMBERS: { key: Exclude<StorageKey, 'quota_purge'>; min: number; max: numb
   { key: 'run_retention_per_project', min: 0, max: 100_000 },
   { key: 'upload_retention_days', min: 0, max: 365 },
 ];
+/** Límites de la carga de ficheros (Fase 2 de ficheros grandes; mismos rangos que la API). */
+const LIMITS: typeof NUMBERS = [
+  { key: 'upload_max_mb', min: 1, max: 2048 },
+  { key: 'upload_max_uncompressed_mb', min: 1, max: 8192 },
+  { key: 'bulk_max_rows', min: 1, max: 50_000_000 },
+];
 const ENV: Record<StorageKey, string> = {
   user_quota_mb: 'UBW_USER_QUOTA_MB',
   run_retention_days: 'UBW_RUN_RETENTION_DAYS',
@@ -50,6 +56,9 @@ const ENV: Record<StorageKey, string> = {
   upload_retention_days: 'UBW_UPLOAD_RETENTION_DAYS',
   quota_purge: 'UBW_QUOTA_PURGE',
   quota_purge_target_pct: 'UBW_QUOTA_PURGE_TARGET_PCT',
+  upload_max_mb: 'UBW_UPLOAD_MAX_MB',
+  upload_max_uncompressed_mb: 'UBW_UPLOAD_MAX_UNCOMPRESSED_MB',
+  bulk_max_rows: 'UBW_BULK_MAX_ROWS',
 };
 
 /** Cambios pendientes: un valor nuevo o `null` (volver a la variable `UBW_*`). */
@@ -92,29 +101,30 @@ function SettingsForm({ settings }: { settings: StorageSettings }) {
 
   const body = draft as StorageUpdate;
   const dirty = Object.keys(draft).length > 0;
+  const numberField = ({ key, min, max }: (typeof NUMBERS)[number]) => (
+    <Stack key={key} gap={2}>
+      <NumberInput
+        label={t(`storage.fields.${key}`)}
+        description={`${t(`storage.help.${key}`)} ${hint(key)}`}
+        min={min}
+        max={max}
+        allowDecimal={false}
+        allowNegative={false}
+        thousandSeparator="."
+        decimalSeparator=","
+        value={value(key) as number}
+        onChange={(next) => typeof next === 'number' && set(key, next)}
+      />
+      {resetButton(key)}
+    </Stack>
+  );
 
   return (
     <Card withBorder>
       <Stack>
         <Title order={3}>{t('storage.settingsTitle')}</Title>
         {(preview.isError || update.isError) && <ErrorAlert error={preview.error ?? update.error} />}
-        <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          {NUMBERS.map(({ key, min, max }) => (
-            <Stack key={key} gap={2}>
-              <NumberInput
-                label={t(`storage.fields.${key}`)}
-                description={`${t(`storage.help.${key}`)} ${hint(key)}`}
-                min={min}
-                max={max}
-                allowDecimal={false}
-                allowNegative={false}
-                value={value(key) as number}
-                onChange={(next) => typeof next === 'number' && set(key, next)}
-              />
-              {resetButton(key)}
-            </Stack>
-          ))}
-        </SimpleGrid>
+        <SimpleGrid cols={{ base: 1, sm: 2 }}>{NUMBERS.map(numberField)}</SimpleGrid>
         <Stack gap={4}>
           <Switch
             label={t('storage.fields.quota_purge')}
@@ -138,6 +148,11 @@ function SettingsForm({ settings }: { settings: StorageSettings }) {
           />
           {resetButton('quota_purge_target_pct')}
         </Stack>
+        <Title order={4}>{t('storage.uploadsTitle')}</Title>
+        <Text size="sm" c="dimmed">
+          {t('storage.uploadsIntro')}
+        </Text>
+        <SimpleGrid cols={{ base: 1, sm: 2 }}>{LIMITS.map(numberField)}</SimpleGrid>
         <Group justify="space-between">
           <Group gap="xs">
             <Button

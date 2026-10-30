@@ -15,6 +15,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   aunque venga en el fichero; el mapeo marca esa columna y avisa si se va a cargar, y la vista previa lo confirma
   (ADR-010 enmendado). API: `override_identity`, `sync_pk_sequences` y `exclude_autoincrement_pk` en la vista previa,
   `identity_always` y `autoincrement_pk` en su resultado y `pk_sync` en el de la carga (opcionales).
+- **Límites de la carga administrables**: tamaño máximo de un fichero, tamaño descomprimido de un Excel y filas
+  máximas, en *Administración → Almacenamiento → Carga de ficheros* y sin reiniciar (ADR-012 enmendado). La pantalla
+  *Carga* muestra el máximo vigente y avisa antes de enviar un fichero que no cabe. API: tres campos más en
+  `/admin/storage` y `upload_max_mb` en `/auth/me/storage`.
 
 ### Fixed
 

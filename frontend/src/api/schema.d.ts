@@ -2752,6 +2752,11 @@ export interface components {
             run_bytes: number;
             /** Upload Bytes */
             upload_bytes: number;
+            /**
+             * Upload Max Mb
+             * @description Tamaño máximo de un fichero de carga (MB)
+             */
+            upload_max_mb: number;
             /** Used Bytes */
             used_bytes: number;
             /** Used Pct */
@@ -3515,10 +3520,13 @@ export interface components {
         };
         /** StorageSettingsOut */
         StorageSettingsOut: {
+            bulk_max_rows: components["schemas"]["IntSettingOut"];
             quota_purge: components["schemas"]["BoolSettingOut"];
             quota_purge_target_pct: components["schemas"]["IntSettingOut"];
             run_retention_days: components["schemas"]["IntSettingOut"];
             run_retention_per_project: components["schemas"]["IntSettingOut"];
+            upload_max_mb: components["schemas"]["IntSettingOut"];
+            upload_max_uncompressed_mb: components["schemas"]["IntSettingOut"];
             upload_retention_days: components["schemas"]["IntSettingOut"];
             user_quota_mb: components["schemas"]["IntSettingOut"];
         };
@@ -3527,6 +3535,8 @@ export interface components {
          * @description Cambio de ajustes: un campo que no se envía no cambia; ``null`` vuelve al valor de su variable ``UBW_*``.
          */
         StorageUpdate: {
+            /** Bulk Max Rows */
+            bulk_max_rows?: number | null;
             /** Quota Purge */
             quota_purge?: boolean | null;
             /** Quota Purge Target Pct */
@@ -3535,6 +3545,10 @@ export interface components {
             run_retention_days?: number | null;
             /** Run Retention Per Project */
             run_retention_per_project?: number | null;
+            /** Upload Max Mb */
+            upload_max_mb?: number | null;
+            /** Upload Max Uncompressed Mb */
+            upload_max_uncompressed_mb?: number | null;
             /** Upload Retention Days */
             upload_retention_days?: number | null;
             /** User Quota Mb */

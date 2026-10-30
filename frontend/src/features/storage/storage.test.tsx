@@ -16,6 +16,9 @@ const SETTINGS: StorageSettings = {
   upload_retention_days: { value: 7, default: 7, overridden: false },
   quota_purge: { value: false, default: false, overridden: false },
   quota_purge_target_pct: { value: 80, default: 80, overridden: false },
+  upload_max_mb: { value: 50, default: 50, overridden: false },
+  upload_max_uncompressed_mb: { value: 300, default: 300, overridden: false },
+  bulk_max_rows: { value: 1_000_000, default: 1_000_000, overridden: false },
 };
 
 const ANA_USAGE: Usage = {
@@ -121,6 +124,7 @@ describe('Mi espacio', () => {
     used_pct: 90,
     quota_purge: true,
     quota_purge_target_pct: 80,
+    upload_max_mb: 50,
   };
 
   it('muestra el uso, el aviso de poco espacio y la purga automática', async () => {

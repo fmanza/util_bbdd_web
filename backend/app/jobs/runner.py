@@ -20,6 +20,7 @@ from app.core.logging import JsonFormatter
 from app.db.models import Artifact, ProjectConnection, Run, utcnow
 from app.db.session import new_session
 from app.domain.runs.operations import get_operation
+from app.domain.storage.settings import effective_settings
 from app.integrations.util_bbdd import library_version
 from app.jobs.context import JobContext, JobError
 from app.workspace.layout import (
@@ -186,7 +187,7 @@ def run_job(run_id: str) -> None:
             operation=run.operation,
             params=dict(run.params),
             run_dir=directory,
-            settings=settings,
+            settings=effective_settings(db, settings),  # límites administrables (ADR-012), p. ej. bulk_max_rows
         )
     ensure_layout(directory)
     _configure_child_logging(directory / RUN_LOG, settings.log_level)

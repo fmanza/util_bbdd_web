@@ -1,7 +1,7 @@
 """Subidas de ficheros a un proyecto para la carga bulk (Fase 9, ADR-010).
 
 El fichero se copia en bloques a un temporal de la carpeta del proyecto (``…/uploads/.tmp-<id>``) contando bytes y
-calculando el SHA-256; si supera ``upload_max_mb`` se borra y se responde 413. Después se comprueba el contenido y se
+calculando el SHA-256; si supera ``upload_max_mb`` (administrable, ADR-012) se borra y se responde 413. Después se comprueba el contenido y se
 renombra a ``<id>.<ext>``. Los ficheros cuentan en la cuota del usuario.
 """
 
@@ -81,8 +81,8 @@ def save_upload(
         raise ProjectForbiddenError()
     name = display_name(filename)
     kind = kind_for(name)
-    limit = settings.upload_max_mb * 1024 * 1024
     effective = effective_settings(db, settings)
+    limit = effective.upload_max_mb * 1024 * 1024
     quota = quota_bytes(user, effective)
     project = membership.project
     folder = uploads_folder(settings.workspace_dir, project.owner_id, project.id)
@@ -96,12 +96,12 @@ def save_upload(
             while chunk := stream.read(_CHUNK):
                 size += len(chunk)
                 if size > limit:
-                    raise UploadTooLargeError(f"El máximo es {settings.upload_max_mb} MB.")
+                    raise UploadTooLargeError(f"El máximo es {effective.upload_max_mb} MB.")
                 if quota and not effective.quota_purge and used_bytes + size > quota:
                     raise UploadQuotaError(_QUOTA_HINT)
                 digest.update(chunk)
                 out.write(chunk)
-        check_content(tmp, kind, max_uncompressed=settings.upload_max_uncompressed_mb * 1024 * 1024)
+        check_content(tmp, kind, max_uncompressed=effective.upload_max_uncompressed_mb * 1024 * 1024)
         if quota and used_bytes + size > quota:  # solo con la purga por cuota: se intenta liberar antes de rechazar
             used_bytes = _free_space(db, user, effective, ctx, size)
             if used_bytes + size > quota:

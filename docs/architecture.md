@@ -92,10 +92,10 @@ src/
 | `UBW_METADATA_TIMEOUT_SECONDS` | `120` | Lectura de schemas, snapshot o DDL |
 | `UBW_QUERY_TIMEOUT_SECONDS` | `30` | Queries nombradas y SQL libre |
 | `UBW_QUERY_MAX_ROWS` | `1000` | Filas máximas de una consulta (máx. 10 000) |
-| `UBW_UPLOAD_MAX_MB` | `50` | Tamaño máximo de un fichero de carga bulk |
-| `UBW_UPLOAD_MAX_UNCOMPRESSED_MB` | `300` | Tamaño descomprimido máximo de un `.xlsx` |
+| `UBW_UPLOAD_MAX_MB` | `50` | Tamaño máximo de un fichero de carga bulk (máx. 2048); administrable* |
+| `UBW_UPLOAD_MAX_UNCOMPRESSED_MB` | `300` | Tamaño descomprimido máximo de un `.xlsx`; administrable* |
 | `UBW_UPLOAD_RETENTION_DAYS` | `7` | Purga de ficheros subidos sin uso (`0` desactiva); administrable* |
-| `UBW_BULK_MAX_ROWS` | `1000000` | Filas máximas de un fichero de carga |
+| `UBW_BULK_MAX_ROWS` | `1000000` | Filas máximas de un fichero de carga; administrable* |
 | `UBW_TEMPLATE_MAX_MB` | `10` | Tamaño máximo de una plantilla de documento Word o Excel |
 | `UBW_TEMPLATES_PER_SCOPE` | `20` | Plantillas como máximo en el catálogo global y en cada proyecto |
 | `UBW_RATE_LIMIT_*` | ver [despliegue](guides/deployment.md#cabeceras-y-rate-limiting) | Límites por sesión, por IP sin sesión, login y subidas |

@@ -2980,6 +2980,11 @@
             "title": "Upload Bytes",
             "type": "integer"
           },
+          "upload_max_mb": {
+            "description": "Tamaño máximo de un fichero de carga (MB)",
+            "title": "Upload Max Mb",
+            "type": "integer"
+          },
           "used_bytes": {
             "title": "Used Bytes",
             "type": "integer"
@@ -3004,7 +3009,8 @@
           "quota_source",
           "used_pct",
           "quota_purge",
-          "quota_purge_target_pct"
+          "quota_purge_target_pct",
+          "upload_max_mb"
         ],
         "title": "MyStorageOut",
         "type": "object"
@@ -5015,6 +5021,9 @@
       },
       "StorageSettingsOut": {
         "properties": {
+          "bulk_max_rows": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          },
           "quota_purge": {
             "$ref": "#/components/schemas/BoolSettingOut"
           },
@@ -5025,6 +5034,12 @@
             "$ref": "#/components/schemas/IntSettingOut"
           },
           "run_retention_per_project": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          },
+          "upload_max_mb": {
+            "$ref": "#/components/schemas/IntSettingOut"
+          },
+          "upload_max_uncompressed_mb": {
             "$ref": "#/components/schemas/IntSettingOut"
           },
           "upload_retention_days": {
@@ -5040,7 +5055,10 @@
           "run_retention_per_project",
           "upload_retention_days",
           "quota_purge",
-          "quota_purge_target_pct"
+          "quota_purge_target_pct",
+          "upload_max_mb",
+          "upload_max_uncompressed_mb",
+          "bulk_max_rows"
         ],
         "title": "StorageSettingsOut",
         "type": "object"
@@ -5049,6 +5067,20 @@
         "additionalProperties": false,
         "description": "Cambio de ajustes: un campo que no se envía no cambia; ``null`` vuelve al valor de su variable ``UBW_*``.",
         "properties": {
+          "bulk_max_rows": {
+            "anyOf": [
+              {
+                "description": "Filas de un fichero de carga",
+                "maximum": 50000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bulk Max Rows"
+          },
           "quota_purge": {
             "anyOf": [
               {
@@ -5101,6 +5133,34 @@
               }
             ],
             "title": "Run Retention Per Project"
+          },
+          "upload_max_mb": {
+            "anyOf": [
+              {
+                "description": "MB por fichero subido para la carga",
+                "maximum": 2048.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Max Mb"
+          },
+          "upload_max_uncompressed_mb": {
+            "anyOf": [
+              {
+                "description": "MB descomprimidos de un .xlsx",
+                "maximum": 8192.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Max Uncompressed Mb"
           },
           "upload_retention_days": {
             "anyOf": [

@@ -107,6 +107,7 @@ def me_storage(session: CurrentSession, db: DbSession, settings: SettingsDep) ->
         run_bytes=usage.run_bytes, upload_bytes=usage.upload_bytes, used_bytes=usage.used_bytes,
         quota_bytes=usage.quota_bytes, quota_source=usage.quota_source, used_pct=usage.used_pct,
         quota_purge=mine.quota_purge, quota_purge_target_pct=mine.quota_purge_target_pct,
+        upload_max_mb=mine.upload_max_mb,
     )  # fmt: skip
 
 

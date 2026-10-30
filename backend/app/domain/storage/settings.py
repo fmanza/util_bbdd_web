@@ -1,4 +1,4 @@
-"""Ajustes de almacenamiento administrables (ADR-012): cuota, retención y purga por cuota.
+"""Ajustes de almacenamiento administrables (ADR-012): cuota, retención, purga por cuota y límites de la carga.
 
 El valor por defecto de cada ajuste es su variable ``UBW_*``; un admin puede sobrescribirlo desde la web y se guarda en
 ``app_settings``. Los ajustes **efectivos** son una copia de ``Settings`` con esas filas aplicadas: quien antes recibía
@@ -30,6 +30,9 @@ RetentionDays = Annotated[int, Field(ge=0, le=3650, description="Días; 0 = no s
 RunsPerProject = Annotated[int, Field(ge=0, le=100_000, description="Ejecuciones; 0 = sin máximo")]
 UploadDays = Annotated[int, Field(ge=0, le=365, description="Días; 0 = no se purgan")]
 TargetPct = Annotated[int, Field(ge=10, le=95, description="Porcentaje de la cuota")]
+UploadMb = Annotated[int, Field(ge=1, le=2048, description="MB por fichero subido para la carga")]
+UncompressedMb = Annotated[int, Field(ge=1, le=8192, description="MB descomprimidos de un .xlsx")]
+BulkRows = Annotated[int, Field(ge=1, le=50_000_000, description="Filas de un fichero de carga")]
 QuotaSource = Literal["global", "user", "unlimited"]
 
 
@@ -44,6 +47,9 @@ class StorageValues(BaseModel):
     upload_retention_days: UploadDays
     quota_purge: bool
     quota_purge_target_pct: TargetPct
+    upload_max_mb: UploadMb
+    upload_max_uncompressed_mb: UncompressedMb
+    bulk_max_rows: BulkRows
 
 
 STORAGE_KEYS: Final[tuple[str, ...]] = tuple(StorageValues.model_fields)
@@ -54,6 +60,9 @@ _ADAPTERS: Final[dict[str, TypeAdapter[Any]]] = {
     "upload_retention_days": TypeAdapter(UploadDays),
     "quota_purge": TypeAdapter(bool),
     "quota_purge_target_pct": TypeAdapter(TargetPct),
+    "upload_max_mb": TypeAdapter(UploadMb),
+    "upload_max_uncompressed_mb": TypeAdapter(UncompressedMb),
+    "bulk_max_rows": TypeAdapter(BulkRows),
 }
 
 

@@ -194,6 +194,7 @@ class MyStorage:
     usage: Usage
     quota_purge: bool
     quota_purge_target_pct: int
+    upload_max_mb: int
 
 
 def my_storage(db: Session, user: User, settings: Settings) -> MyStorage:
@@ -203,4 +204,5 @@ def my_storage(db: Session, user: User, settings: Settings) -> MyStorage:
         usage=_usage(user, effective, runs, uploads),
         quota_purge=effective.quota_purge,
         quota_purge_target_pct=effective.quota_purge_target_pct,
+        upload_max_mb=effective.upload_max_mb,
     )

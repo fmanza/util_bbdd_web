@@ -63,7 +63,10 @@ def test_settings_default_to_env_and_can_be_changed_and_reset(
     assert reset["user_quota_mb"] == {"value": 1024, "default": 1024, "overridden": False}
     assert reset["quota_purge"]["value"] is True  # lo que no se envía no cambia
 
-    for wrong in ({"user_quota_mb": -1}, {"quota_purge_target_pct": 99}, {"run_retention_days": 4000}, {"x": 1}):
+    for wrong in (
+        {"user_quota_mb": -1}, {"quota_purge_target_pct": 99}, {"run_retention_days": 4000}, {"x": 1},
+        {"upload_max_mb": 0}, {"upload_max_mb": 2049}, {"upload_max_uncompressed_mb": 8193}, {"bulk_max_rows": 0},
+    ):  # fmt: skip
         assert admin.patch(URL, json=wrong).status_code == 422, wrong
     assert user_client.get(URL).status_code == 403
     assert user_client.patch(URL, json={"user_quota_mb": 1}).status_code == 403
@@ -245,6 +248,7 @@ def test_usage_by_user_and_my_storage(
     assert own == {
         "run_bytes": 256 * MB, "upload_bytes": 0, "used_bytes": 256 * MB, "quota_bytes": 1024 * MB,
         "quota_source": "global", "used_pct": 25.0, "quota_purge": False, "quota_purge_target_pct": 80,
+        "upload_max_mb": 50,
     }  # fmt: skip
     admin.patch(f"/api/v1/users/{user.id}", json={"storage_quota_mb": 0})
     unlimited = user_client.get("/api/v1/auth/me/storage").json()

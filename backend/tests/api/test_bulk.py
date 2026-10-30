@@ -170,6 +170,27 @@ def test_upload_limits_size_and_uncompressed_size(
     assert zip_bomb.status_code == 422 and "descomprimido" in zip_bomb.text
 
 
+def test_upload_and_row_limits_come_from_the_admin_settings(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    make_user: Callable[..., User],
+) -> None:
+    """ADR-012: los límites de la carga se cambian en Administración → Almacenamiento y se aplican sin reiniciar."""
+    admin = login_as(user_client, make_user, "root", role="admin")
+    changed = admin.patch("/api/v1/admin/storage", json={"upload_max_mb": 1, "bulk_max_rows": 2})
+    assert changed.status_code == 200 and changed.json()["upload_max_mb"]["value"] == 1
+    assert user_client.get("/api/v1/auth/me/storage").json()["upload_max_mb"] == 1
+
+    too_big = upload(user_client, project["id"], "grande.csv", "a\n" + "1\n" * 600_000)
+    three = upload(user_client, project["id"], "tres.csv", "id,nombre\n7,eva\n8,leo\n9,max\n").json()
+    run = preview(user_client, project, worker, db, three["id"])
+
+    assert too_big.status_code == 413 and "1 MB" in too_big.text
+    assert run.status == "failed" and "más de 2 filas" in str(run.error_message)
+
+
 def test_uploads_are_per_project_and_need_editor(
     user_client: TestClient, project: dict[str, object], make_user: Callable[..., User]
 ) -> None:

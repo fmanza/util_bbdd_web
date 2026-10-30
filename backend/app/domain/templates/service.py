@@ -28,6 +28,7 @@ from app.db.models import TERMINAL_STATUSES, DocumentTemplate, Project, Run, Use
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.runs.errors import RunParamsError
+from app.domain.storage.settings import effective_settings
 from app.domain.templates.errors import (
     TemplateConflictError,
     TemplateContentError,
@@ -169,7 +170,9 @@ def save_template(
         _store(stream, tmp, settings.template_max_mb * 1024 * 1024, settings.template_max_mb)
         if from_template:
             untemplate(tmp, kind)
-        info = check_template(tmp, kind, max_uncompressed=settings.upload_max_uncompressed_mb * 1024 * 1024)
+        info = check_template(
+            tmp, kind, max_uncompressed=effective_settings(db, settings).upload_max_uncompressed_mb * 1024 * 1024
+        )
         final = folder / f"{template_id}.{STORED_SUFFIX[kind]}"
         tmp.replace(final)
     except BaseException:

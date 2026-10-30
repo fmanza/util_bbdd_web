@@ -1126,7 +1126,10 @@
       "run_retention_per_project": "Ejecuciones por proyecto",
       "upload_retention_days": "Retención de ficheros de carga (días)",
       "quota_purge": "Purga por cuota",
-      "quota_purge_target_pct": "Objetivo de la purga"
+      "quota_purge_target_pct": "Objetivo de la purga",
+      "upload_max_mb": "Tamaño máximo de un fichero (MB)",
+      "upload_max_uncompressed_mb": "Tamaño descomprimido de un Excel (MB)",
+      "bulk_max_rows": "Filas máximas de un fichero"
     },
     "help": {
       "user_quota_mb": "Espacio de las ejecuciones y ficheros de cada usuario; 0 = sin límite.",
@@ -1134,8 +1137,13 @@
       "run_retention_per_project": "Se conservan las más recientes de cada proyecto; 0 = sin máximo.",
       "upload_retention_days": "Se borran los ficheros que no use ninguna carga; 0 = nunca.",
       "quota_purge": "Al llegar a su cuota, se purgan las ejecuciones más antiguas del usuario (nunca las de la última hora ni las que use una ejecución en curso).",
-      "quota_purge_target_pct": "Porcentaje de la cuota hasta el que baja la purga."
+      "quota_purge_target_pct": "Porcentaje de la cuota hasta el que baja la purga.",
+      "upload_max_mb": "Hasta 2048 MB. Un fichero cuenta en la cuota del usuario.",
+      "upload_max_uncompressed_mb": "Frena los .xlsx que ocupan mucho más al descomprimirlos; también vale para las plantillas.",
+      "bulk_max_rows": "Un fichero con más filas no se puede previsualizar ni cargar."
     },
+    "uploadsTitle": "Carga de ficheros",
+    "uploadsIntro": "Límites de los ficheros CSV y Excel de la carga. Un CSV grande se lee y se carga por bloques; un Excel o una carga con plan paralelo se leen enteros en memoria. Con un proxy inverso, su límite de tamaño de petición (client_max_body_size en nginx) tiene que ser al menos este; ver la guía de despliegue.",
     "defaultHint": "Por defecto: {{value}} ({{env}}).",
     "reset": "Restablecer",
     "willReset": "Volverá al valor por defecto al guardar.",

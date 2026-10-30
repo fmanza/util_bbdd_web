@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.domain.projects.service import get_membership
 from app.domain.runs.service import usage_bytes
+from app.domain.storage.settings import effective_settings
 from app.domain.uploads import files
 from app.domain.uploads import service as uploads
 from app.domain.uploads.errors import UploadTooLargeError
@@ -69,8 +70,9 @@ def create_upload(
 ) -> UploadOut:
     """Guarda el fichero (editores). Se comprueba el contenido real, no solo la extensión."""
     declared = int(request.headers.get("content-length") or 0)
-    if declared > settings.upload_max_mb * 1024 * 1024 + _MULTIPART_OVERHEAD:
-        raise UploadTooLargeError(f"El máximo es {settings.upload_max_mb} MB.")
+    max_mb = effective_settings(db, settings).upload_max_mb  # administrable (ADR-012)
+    if declared > max_mb * 1024 * 1024 + _MULTIPART_OVERHEAD:
+        raise UploadTooLargeError(f"El máximo es {max_mb} MB.")
     membership = get_membership(db, user, project_id)
     upload = uploads.save_upload(
         db, user, membership, filename=file.filename, stream=file.file, settings=settings, ctx=ctx,

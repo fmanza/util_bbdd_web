@@ -62,3 +62,20 @@ bloquear.
 - **Purgar solo en el worker**: más predecible, pero el usuario recibiría el 409 hasta la siguiente pasada.
 - **Purgar también ficheros subidos y plantillas por cuota**: los ficheros tienen su propia retención y las plantillas
   no cuentan en la cuota; mezclarlos complicaría explicar qué se borra.
+
+## Enmienda (2026-10-30): límites de la carga de ficheros
+
+Tres ajustes más, en *Administración → Almacenamiento → Carga de ficheros*, con el mismo mecanismo (`app_settings`,
+la variable `UBW_*` como valor por defecto, sin reiniciar):
+
+| Clave | Variable | Rango |
+|---|---|---|
+| `upload_max_mb` | `UBW_UPLOAD_MAX_MB` (50) | 1–2048 |
+| `upload_max_uncompressed_mb` | `UBW_UPLOAD_MAX_UNCOMPRESSED_MB` (300) | 1–8192 |
+| `bulk_max_rows` | `UBW_BULK_MAX_ROWS` (1 000 000) | 1–50 000 000 |
+
+La API comprueba `Content-Length` y los bytes recibidos con el valor efectivo; el job de carga recibe los ajustes
+efectivos (`run_job` aplica `effective_settings`, antes solo los usaba el mantenimiento del worker), y las plantillas
+usan también el tamaño descomprimido efectivo. «Mi espacio» devuelve `upload_max_mb` para que la pantalla *Carga*
+muestre el máximo vigente a cualquier usuario. Un límite alto amplía lo que un editor puede subir (disco, CPU de la
+vista previa); lo siguen acotando la cuota, el rate limiting y el tope de 2048 MB.
