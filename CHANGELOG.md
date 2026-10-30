@@ -13,6 +13,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   `oracle_thick_mode` (`deployment.md`, `conexiones.md`, `troubleshooting.md`). Verificado con el 19.32 y
   `oracledb` 26.0.1.
 
+### Fixed
+
+- **Volcado con ciclos de FK de 3 o más tablas**: fallaba siempre con `preview_changed` («Las tablas o columnas
+  cambiaron…») porque util_bbdd da esas tablas en un orden distinto en cada proceso (GAPS G47); la huella ordena los
+  ciclos. Las vistas previas anteriores hay que repetirlas.
+
 ## [1.8.0] - 2026-10-30
 
 Diagramas Mermaid 12 en los informes de comparación. La API HTTP no cambia y no hay migraciones; la imagen trae

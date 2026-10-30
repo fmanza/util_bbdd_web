@@ -196,12 +196,17 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
 
 
 def structure_hash(preview: dict[str, Any]) -> str:
-    """Huella de lo que se va a cargar: tablas, destino, columnas omitidas y orden (no las filas, que cambian)."""
+    """Huella de lo que se va a cargar: tablas, destino, columnas omitidas y orden (no las filas, que cambian).
+
+    Los ciclos se ordenan: util_bbdd da sus tablas en un orden que depende de la semilla de hash del proceso (GAPS
+    G47), y la vista previa y el volcado corren en subprocesos distintos. El orden de carga sale de ``position``.
+    """
     shape = [
         (t["table"], t["target_table"], t["skipped_columns"], t["missing_target_columns"], t["position"])
         for t in preview["tables"]
     ]
-    payload = json.dumps([shape, preview["cycles"], preview["source_schema"], preview["target_schema"]])
+    cycles = sorted(sorted(component) for component in preview["cycles"])
+    payload = json.dumps([shape, cycles, preview["source_schema"], preview["target_schema"]])
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 

@@ -91,6 +91,50 @@ def test_structure_hash_ignores_rows_but_not_columns() -> None:
     assert structure_hash(base) != structure_hash(fewer_columns)
 
 
+def test_structure_hash_ignores_the_order_inside_cycles() -> None:
+    """G47: util_bbdd da las tablas de un ciclo en un orden que depende de la semilla de hash del proceso."""
+    base: dict[str, Any] = {"tables": [], "cycles": [["a", "b", "c"], ["x", "y"]], "source_schema": None,
+                            "target_schema": None}  # fmt: skip
+
+    assert structure_hash(base) == structure_hash({**base, "cycles": [["y", "x"], ["c", "a", "b"]]})
+    assert structure_hash(base) != structure_hash({**base, "cycles": [["a", "b", "d"], ["x", "y"]]})
+
+
+_HASH_IN_SUBPROCESS = """
+import sys
+from app.integrations.util_bbdd.catalog import build_params
+from app.integrations.util_bbdd.dump import DumpOptions, Endpoint, build_preview
+ends = [Endpoint("sqlite", build_params("sqlite", {"database": p}), None) for p in sys.argv[1:3]]
+print(build_preview(ends[0], ends[1], DumpOptions())["structure_hash"])
+"""
+
+
+def test_preview_hash_is_stable_across_processes_with_a_cycle_of_four(tmp_path: Path) -> None:
+    """G47: vista previa y volcado corren en subprocesos distintos; un ciclo de 3+ tablas no debe cambiar la huella."""
+    import os
+    import subprocess
+    import sys
+
+    star = """
+    CREATE TABLE a (id INTEGER PRIMARY KEY, b_id INTEGER REFERENCES b(id), c_id INTEGER REFERENCES c(id),
+                    d_id INTEGER REFERENCES d(id));
+    CREATE TABLE b (id INTEGER PRIMARY KEY, a_id INTEGER REFERENCES a(id));
+    CREATE TABLE c (id INTEGER PRIMARY KEY, a_id INTEGER REFERENCES a(id));
+    CREATE TABLE d (id INTEGER PRIMARY KEY, a_id INTEGER REFERENCES a(id));
+    """
+    source, target = _endpoints(tmp_path, star, star)
+    hashes = {
+        subprocess.run(  # noqa: S603 (intérprete y script fijos del test)
+            [sys.executable, "-c", _HASH_IN_SUBPROCESS, source.conn_params["database"], target.conn_params["database"]],
+            env={**os.environ, "PYTHONHASHSEED": seed}, cwd=Path(__file__).parents[2], capture_output=True, text=True,
+            check=True,
+        ).stdout.strip()
+        for seed in ("1", "2", "4", "6")
+    }  # fmt: skip
+
+    assert len(hashes) == 1
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"), [(None, ()), ("", ()), (" a , b,c ", ("a", "b", "c")), ("dbo.x", ("dbo.x",))]
 )
