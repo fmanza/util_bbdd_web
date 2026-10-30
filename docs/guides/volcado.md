@@ -44,6 +44,12 @@ sin tocar nada. No se puede volcar mientras haya una migración o un volcado en 
 
 Mientras carga, el detalle muestra las tablas terminadas y las filas escritas de la tabla en curso.
 
+> **Destino MariaDB o MySQL**: util_bbdd usa por defecto `read_timeout = 30` y `write_timeout = 60` (segundos de
+> espera del cliente por sentencia). Durante el volcado, las consultas al catálogo pueden esperar a los bloqueos del
+> vaciado y de los índices secundarios, y pasar de 30 s corta la conexión: falla con
+> `util_bbdd falló (InterfaceError)` y `Lost connection to server during query` en `volcado.jsonl`. Sube los dos
+> parámetros en la conexión destino (p. ej. `600`) antes de volcar.
+
 > Un volcado **en curso se puede cancelar** (con confirmación): para **entre lotes**, deshace la tabla en curso,
 > reactiva las constraints y termina como *cancelado*. Las tablas ya terminadas **quedan cargadas** en el destino; el
 > resultado las lista y el detalle por tabla está en `volcado.jsonl`. Si se agota el tiempo máximo
