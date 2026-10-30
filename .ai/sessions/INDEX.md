@@ -30,3 +30,4 @@
 | [2026-10-29-gaps-ola9](2026-10-29-gaps-ola9/TRACEABILITY.md) | new_feature + refactor + version_closure | Plan de la ola 9 y W-9 del plan de huecos con util_bbdd 5.1.0 (`NUMBER` de Oracle, G44) → 1.7.1 |
 | [2026-10-30-mermaid12](2026-10-30-mermaid12/TRACEABILITY.md) | new_feature | Mermaid 12 incrustado en el informe HTML de comparación y diagramas del Markdown en la SPA (G45) |
 | [2026-10-30-gaps-ola10](2026-10-30-gaps-ola10/TRACEABILITY.md) | new_feature + hotfix + version_closure | Oracle thick, hotfixes de volcado y migración, schema/tabla de la carga, plan de la ola 10 y W-10 con util_bbdd 5.2.0 (G45-G48) → 1.9.0 |
+| [2026-10-30-carga-1gb](2026-10-30-carga-1gb/TRACEABILITY.md) | hotfix + new_feature + version_closure | Hotfixes de la carga, ids propios y `exclude_autoincrement_pk`, límites administrables y CSV de hasta 1 GB por bloques → 1.10.0 |
