@@ -32,6 +32,7 @@ const PREVIEW: BulkPreview = {
   upload_filename: 'clientes.csv',
   identity_always: [],
   autoincrement_pk: [],
+  memory_warning: false,
 }; // prettier-ignore
 
 const SQL_ARTIFACT = {
@@ -117,6 +118,14 @@ describe('vista previa de la carga', () => {
     renderRoute(`/runs/${PREVIEW_ID}`);
 
     expect(await screen.findByText(title)).toBeInTheDocument();
+  });
+
+  it('un fichero grande: SQL de muestra y aviso de memoria con plan paralelo', async () => {
+    stubPreview({ preview: { ...PREVIEW, rows: 2_000_000, sql_sample_rows: 1000, memory_warning: true } });
+    renderRoute(`/runs/${PREVIEW_ID}`);
+
+    expect(await screen.findByText(/SQL de muestra: las primeras 1000 de 2000000 filas/)).toBeInTheDocument();
+    expect(screen.getByText('El plan paralelo lee el fichero entero en memoria')).toBeInTheDocument();
   });
 
   it('sin PK autoincremental en el fichero no avisa de los ids', async () => {

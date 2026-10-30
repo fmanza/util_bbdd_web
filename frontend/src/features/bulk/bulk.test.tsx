@@ -1,6 +1,6 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ADMIN, callsTo, session, stubApi } from '../../test/api';
 import { PROJECT, RUN } from '../../test/fixtures_runs';
@@ -64,25 +64,80 @@ function stubRoutes() {
   });
 }
 
-function stubTab(initial: Upload[] = [UPLOAD]) {
+/** `XMLHttpRequest` de la subida (con progreso): el test decide cuándo avanza y qué responde. */
+class FakeXhr {
+  static last: FakeXhr | null = null;
+  static onSuccess: () => void = () => undefined;
+  upload: {
+    onprogress: ((event: { loaded: number; total: number; lengthComputable: boolean }) => void) | null;
+  } = { onprogress: null };
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+  withCredentials = false;
+  status = 0;
+  statusText = '';
+  responseText = '';
+  method = '';
+  url = '';
+  headers: Record<string, string> = {};
+  body: unknown = null;
+  aborted = false;
+
+  open(method: string, url: string) {
+    this.method = method;
+    this.url = url;
+  }
+  setRequestHeader(name: string, value: string) {
+    this.headers[name] = value;
+  }
+  getResponseHeader() {
+    return null;
+  }
+  send(body: unknown) {
+    this.body = body;
+    FakeXhr.last = this;
+  }
+  abort() {
+    this.aborted = true;
+    this.onabort?.();
+  }
+  progress(loaded: number, total: number) {
+    act(() => this.upload.onprogress?.({ loaded, total, lengthComputable: true }));
+  }
+  respond(status: number, body: unknown) {
+    this.status = status;
+    this.responseText = JSON.stringify(body);
+    if (status < 300) FakeXhr.onSuccess();
+    act(() => this.onload?.());
+  }
+}
+
+function stubXhr(onSuccess: () => void = () => undefined) {
+  FakeXhr.last = null;
+  FakeXhr.onSuccess = onSuccess;
+  vi.stubGlobal('XMLHttpRequest', FakeXhr);
+}
+
+function stubTab(initial: Upload[] = [UPLOAD], extra: Record<string, unknown> = {}) {
   let uploads = initial;
+  stubXhr(() => {
+    uploads = [UPLOAD];
+  });
   return stubApi({
     ...session(ADMIN),
     'GET /api/v1/projects/5': { body: PROJECT },
     'GET /api/v1/projects/5/runs': { body: { items: [], total: 0 } },
     'GET /api/v1/projects/5/connections': { body: CONNECTIONS },
     'GET /api/v1/projects/5/uploads': () => ({ body: uploads }),
-    'POST /api/v1/projects/5/uploads': () => {
-      uploads = [UPLOAD];
-      return { status: 201, body: UPLOAD };
-    },
     [`DELETE /api/v1/projects/5/uploads/${UPLOAD.id}`]: { status: 204 },
     [`GET /api/v1/projects/5/uploads/${UPLOAD.id}/info`]: { body: INFO },
     'GET /api/v1/connections/2/metadata/schemas/public/tables/clientes': {
       body: { name: 'clientes', columns: COLUMNS },
     },
     'POST /api/v1/projects/5/runs': { status: 202, body: { ...RUN, id: '01JNEWNEWNEWNEWNEWNEWNEWNE' } },
-  });
+    ...extra,
+  } as Parameters<typeof stubApi>[0]);
 }
 
 async function openTab(user: ReturnType<typeof userEvent.setup>) {
@@ -91,20 +146,70 @@ async function openTab(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('pestaña Carga', () => {
-  it('sube un fichero como multipart y lo deja elegido', async () => {
-    const fetchMock = stubTab([]);
+  it('sube un fichero como multipart con su progreso y lo deja elegido', async () => {
+    stubTab([], { 'GET /api/v1/auth/me/storage': { body: { upload_max_mb: 1024 } } });
     const user = userEvent.setup();
 
     await openTab(user);
     expect(await screen.findByText('Todavía no hay ficheros en este proyecto.')).toBeInTheDocument();
+    expect(await screen.findByText(/Máximo 1024 MB/)).toBeInTheDocument();
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     await user.upload(input as HTMLInputElement, new File(['ID;nombre\n1;Ana\n'], 'clientes.csv'));
     await user.click(screen.getByRole('button', { name: 'Subir' }));
 
-    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/uploads')).toHaveLength(1));
-    const request = callsTo(fetchMock, 'POST', '/api/v1/projects/5/uploads')[0] as Request;
-    expect(request.headers.get('Content-Type')).toMatch(/^multipart\/form-data/);
+    await waitFor(() => expect(FakeXhr.last).not.toBeNull());
+    const xhr = FakeXhr.last as FakeXhr;
+    expect([xhr.method, xhr.url, xhr.body instanceof FormData]).toEqual([
+      'POST',
+      '/api/v1/projects/5/uploads',
+      true,
+    ]);
+    expect((xhr.body as FormData).get('file')).toBeInstanceOf(File);
+    xhr.progress(512 * 1024, 1024 * 1024);
+    expect(await screen.findByText('Subiendo: 50 % (512 KB de 1 MB)')).toBeInTheDocument();
+    xhr.respond(201, UPLOAD);
     expect(await screen.findByRole('combobox', { name: 'Fichero' })).toHaveValue(UPLOAD.id);
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('cancela una subida sin mostrar un error', async () => {
+    stubTab([]);
+    const user = userEvent.setup();
+
+    await openTab(user);
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input as HTMLInputElement, new File(['x'], 'grande.csv'));
+    await user.click(await screen.findByRole('button', { name: 'Subir' }));
+    await user.click(await screen.findByRole('button', { name: 'Cancelar la subida' }));
+
+    expect(FakeXhr.last?.aborted).toBe(true);
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Cancelar la subida' })).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('avisa antes de subir un fichero mayor que el máximo y muestra el 413 del servidor', async () => {
+    stubTab([], { 'GET /api/v1/auth/me/storage': { body: { upload_max_mb: 1 } } });
+    const user = userEvent.setup();
+
+    await openTab(user);
+    await screen.findByText(/Máximo 1 MB/);
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    await user.upload(input as HTMLInputElement, new File(['x'.repeat(2 * 1024 * 1024)], 'grande.csv'));
+
+    expect(await screen.findByText('El fichero ocupa 2 MB y el máximo es 1 MB.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Subir' })).toBeDisabled();
+
+    await user.upload(input as HTMLInputElement, new File(['x'], 'poco.csv'));
+    await user.click(screen.getByRole('button', { name: 'Subir' }));
+    await waitFor(() => expect(FakeXhr.last).not.toBeNull());
+    (FakeXhr.last as FakeXhr).respond(413, {
+      title: 'El fichero es demasiado grande',
+      status: 413,
+      detail: 'El máximo es 1 MB.',
+    });
+    expect(await screen.findByText('El máximo es 1 MB.')).toBeInTheDocument();
   });
 
   it('borra un fichero', async () => {

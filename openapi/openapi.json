@@ -495,6 +495,12 @@
             "description": "Filas del destino con la misma PK (las que update/delete tocarán)",
             "title": "Matches"
           },
+          "memory_warning": {
+            "default": false,
+            "description": "Plan paralelo con un fichero grande: la carga lo leerá entero en memoria",
+            "title": "Memory Warning",
+            "type": "boolean"
+          },
           "operation": {
             "enum": [
               "insert",
@@ -558,6 +564,18 @@
             ],
             "description": "Ruta del SQL generado dentro de outputs/ (null si hay errores)",
             "title": "Sql File"
+          },
+          "sql_sample_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "El SQL es de muestra: solo las primeras N filas del fichero (null = SQL completo)",
+            "title": "Sql Sample Rows"
           },
           "structure_hash": {
             "title": "Structure Hash",

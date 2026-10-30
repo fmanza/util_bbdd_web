@@ -1674,6 +1674,12 @@ export interface components {
              */
             matches: number | null;
             /**
+             * Memory Warning
+             * @description Plan paralelo con un fichero grande: la carga lo leerá entero en memoria
+             * @default false
+             */
+            memory_warning: boolean;
+            /**
              * Operation
              * @enum {string}
              */
@@ -1695,6 +1701,11 @@ export interface components {
              * @description Ruta del SQL generado dentro de outputs/ (null si hay errores)
              */
             sql_file: string | null;
+            /**
+             * Sql Sample Rows
+             * @description El SQL es de muestra: solo las primeras N filas del fichero (null = SQL completo)
+             */
+            sql_sample_rows?: number | null;
             /** Structure Hash */
             structure_hash: string;
             /** Table */

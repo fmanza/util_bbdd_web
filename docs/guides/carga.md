@@ -8,8 +8,13 @@ CSV o Excel, con `BulkCrud` de util_bbdd. La tabla destino debe existir. Diseño
 
 En el proyecto, pestaña **Carga** (rol editor) → *Ficheros*: elige un `.csv` o `.xlsx` y **Subir**.
 
-- Tamaño máximo por fichero: 50 MB (`UBW_UPLOAD_MAX_MB`); el Excel, como mucho 300 MB descomprimido. Cuentan para la
-  cuota del propietario del proyecto.
+- Tamaño máximo por fichero: el que se ve junto al selector (50 MB por defecto; un administrador lo cambia en
+  *Administración → Almacenamiento*, hasta 2048 MB). El Excel, como mucho 300 MB descomprimido. Cuentan para la cuota
+  del propietario del proyecto. Un fichero mayor que el máximo se avisa antes de enviarlo.
+- La subida muestra su **progreso** y se puede **cancelar**. Al terminar de enviarse se comprueba el contenido, que en
+  un fichero grande lleva unos segundos.
+- **Ficheros grandes: CSV.** Un CSV se lee y se carga por bloques, sin tenerlo entero en memoria; un Excel se lee
+  entero.
 - Se comprueba el **contenido real**: un `.xlsx` con macros, un fichero binario con extensión `.csv` o un zip que no
   es Excel se rechazan.
 - Los ficheros se borran a los **7 días** (`UBW_UPLOAD_RETENTION_DAYS`) salvo que una carga los use. Contienen datos
@@ -32,6 +37,9 @@ En *Nueva carga*:
 **Vista previa** lanza una ejecución que no escribe nada. Su detalle muestra las filas del fichero y de la tabla, las
 **filas afectadas** (las que ya existen por clave primaria: en insert, posibles duplicados), las primeras filas tal
 como se cargarán, las columnas ignoradas, el plan paralelo y el **SQL** que se ejecutaría (completo en Artefactos).
+Con más de 1 000 filas el SQL es **de muestra**: las primeras 1 000, y la cabecera del fichero lo dice. Las
+validaciones, las filas y las filas afectadas cubren el fichero entero. En un fichero grande, las filas afectadas se
+cuentan por bloques de 50 000 filas: una clave repetida en bloques distintos del fichero cuenta dos veces.
 
 Errores que impiden cargar: columnas que no existen en la tabla, columnas obligatorias sin valor en un insert, tabla
 sin clave primaria o fichero sin ella en update/delete, o un update sin columnas además de la clave.
@@ -51,6 +59,10 @@ vista previa **sin errores** y de **menos de 60 minutos**.
 La confirmación pide marcar que has revisado la vista previa y escribir el alias del destino; en **actualizar y
 borrar**, también el **número de filas afectadas**; si el plan no es atómico (más de un hilo), aceptarlo. Si no
 lo aceptas, util_bbdd carga en un solo hilo y en una sola transacción aunque el plan cambie al ejecutar.
+
+Sin plan paralelo, la carga lee el fichero por bloques y lo envía en **una sola transacción** (con «Apartar filas»
+incluido). Con plan paralelo junta el fichero en memoria para repartirlo: la vista previa avisa si es grande (más de
+200 MB).
 
 La carga usa el fichero y los parámetros de la vista previa. Antes de escribir comprueba de nuevo el fichero, la
 conexión, la estructura de la tabla y, en actualizar y borrar, que las filas afectadas sigan siendo las confirmadas:

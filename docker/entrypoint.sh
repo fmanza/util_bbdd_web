@@ -9,5 +9,12 @@ mkdir -p "${UBW_FILES_DIR:-/data/files}"
 if [ -n "${UBW_ORACLE_CLIENT_DIR:-}" ]; then
     export LD_LIBRARY_PATH="${UBW_FILES_DIR:-/data/files}/${UBW_ORACLE_CLIENT_DIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
+# Temporales en el volumen workspace, no en el tmpfs /tmp (RAM): una subida grande (multipart) pasa por aquí antes de
+# guardarse en uploads/. Se borran los restos de más de un día (las subidas en curso son más recientes).
+if [ -z "${TMPDIR:-}" ]; then
+    export TMPDIR="${UBW_WORKSPACE_DIR:-/workspace}/.tmp"
+fi
+mkdir -p "$TMPDIR"
+find "$TMPDIR" -mindepth 1 -mmin +1440 -delete 2>/dev/null || true
 alembic upgrade head
 exec "$@"

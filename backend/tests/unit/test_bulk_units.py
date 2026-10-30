@@ -214,6 +214,7 @@ def test_cancelled_atomic_load_is_undone_entirely(tmp_path: Path) -> None:
         ["rows"],
         {"rows": "Filas"},
         poll_seconds=0,
+        total=10,  # por bloques util_bbdd no sabe el total: lo da la vista previa
     )
 
     result = run_bulk(
@@ -519,7 +520,7 @@ def test_apply_job_ends_cancelled(
     }  # fmt: skip
     monkeypatch.setattr(job, "_recheck", lambda ctx, p: (params, preview))
     monkeypatch.setattr(job, "_source", lambda ctx, p: (tmp_path / "f.csv", "csv", {}))
-    monkeypatch.setattr(job, "_frame", lambda *a: None)
+    monkeypatch.setattr(job, "_frames", lambda *a: None)
     monkeypatch.setattr(job, "run_bulk", lambda *a, **k: calls.append(k) or result)
     ctx = SimpleNamespace(
         params={"preview_run": "01ARZ3NDEKTSV4RRFFQ69G5FAV", "confirm": "destino"},

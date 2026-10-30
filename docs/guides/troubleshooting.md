@@ -47,9 +47,9 @@
 | `restore`: «hay un worker en marcha» | La aplicación sigue arrancada | `docker compose stop` y `docker compose run --rm --no-deps …` |
 | `restore`: «… está dañado» | La copia no coincide con su `manifest.json` | Usar otra copia; no restaurar una incompleta |
 | Para dar soporte, ¿qué petición falló? | — | La «Referencia» del error es el `request_id`: búscalo en `docker compose logs web` |
-| Carga: 413 al subir un fichero | Supera `UBW_UPLOAD_MAX_MB` o el límite del proxy | Divide el fichero o sube ambos límites (`client_max_body_size`) |
+| Carga: 413 al subir un fichero | Supera el tamaño máximo (*Administración → Almacenamiento*) o el límite del proxy | Divide el fichero o sube ambos límites (`client_max_body_size`); ver [Ficheros grandes en la carga](deployment.md#ficheros-grandes-en-la-carga) |
 | Carga: 415/422 al subir | Extensión distinta de `.csv`/`.xlsx`, contenido que no corresponde o Excel con macros | Guarda el fichero como CSV o `.xlsx` sin macros |
-| Carga: `invalid_file` | Codificación, separador u hoja incorrectos, o más de `UBW_BULK_MAX_ROWS` filas | Fija separador y codificación en el formulario o divide el fichero |
+| Carga: `invalid_file` | Codificación, separador u hoja incorrectos, o más filas que las máximas (*Administración → Almacenamiento*) | Fija separador y codificación en el formulario o divide el fichero |
 | Carga: `preview_changed` | Cambiaron la tabla, el mapeo o las filas afectadas desde la vista previa | Repite la vista previa |
 | Carga: `bulk_partial` | Falló una partición de una carga paralela; las demás quedaron confirmadas | Revisa las particiones y corrige el destino |
 | Migración: 403 al aplicar | Sin «Puede aplicar DDL» o sin ser propietario | Un admin concede el permiso; aplica el propietario |

@@ -23,6 +23,8 @@ class RunProgress:
         phases: Fases de la operación en orden; el porcentaje se reparte a partes iguales entre ellas.
         labels: Texto de cada fase para el mensaje (por defecto, el nombre de la fase).
         poll_seconds: Intervalo mínimo entre dos lecturas de ``cancel_requested``.
+        total: Unidades de la operación cuando util_bbdd no las sabe (``total=None``, p. ej. la carga por bloques
+            ``bulk_*_from_chunks``): las conoce quien llama (las filas contadas en la vista previa).
     """
 
     def __init__(
@@ -33,6 +35,7 @@ class RunProgress:
         labels: Mapping[str, str] | None = None,
         *,
         poll_seconds: float = 2.0,
+        total: int | None = None,
     ) -> None:
         from util_bbdd.progress import CancellationToken
 
@@ -43,6 +46,7 @@ class RunProgress:
         self._labels = dict(labels or {})
         self._poll_seconds = poll_seconds
         self._polled_at: float | None = None
+        self._total = total
 
     def __call__(self, event: Any) -> None:
         self._report(self.message(event), self.percent(event))
@@ -52,13 +56,17 @@ class RunProgress:
         """Porcentaje del run: fases terminadas más la parte hecha de la actual."""
         if event.phase not in self._phases:
             return None
-        done = self._phases.index(event.phase) + (event.fraction or 0.0)
+        fraction = event.fraction
+        if fraction is None and self._total:
+            fraction = min(1.0, event.current / self._total)
+        done = self._phases.index(event.phase) + (fraction or 0.0)
         return min(99, int(done * 100 / len(self._phases)))
 
     def message(self, event: Any) -> str:
         label = str(self._labels.get(event.phase, event.phase))
-        if event.total:
-            text = f"{label}: {event.current} de {event.total}"
+        total = event.total or self._total
+        if total:
+            text = f"{label}: {event.current} de {total}"
             return f"{text} ({event.message})" if event.message else text
         return label
 

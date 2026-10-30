@@ -112,3 +112,26 @@ lote tenga una sola fila. La consecuencia «con apartar en Oracle valen las limi
   previa devuelve `autoincrement_pk` y el formulario marca la PK en el mapeo con el catálogo del explorador. Con la PK
   excluida no se cuentan coincidencias. SQLite refleja la PK con `autoincrement="auto"`: util_bbdd no la excluye y la
   vista previa lo avisa. Poner la PK en «(no cargar)» sigue siendo equivalente.
+
+## Enmienda (2026-10-30): ficheros grandes
+
+Para cargar CSV de hasta 1 GB sin tenerlos enteros en memoria:
+
+- **Lectura por bloques** (`domain/uploads/files.py`, `iter_frames`): `pandas.read_csv(chunksize=50 000)`. La
+  codificación se comprueba decodificando el fichero por bloques; antes se leía y decodificaba entero (varias veces su
+  tamaño en memoria) incluso para describir 5 filas. Un Excel sigue leyéndose entero.
+- **Vista previa**: el mapeo se valida con el primer bloque; las filas y las coincidencias por PK se cuentan
+  recorriendo el fichero (claves deduplicadas por bloque, no entre bloques). El SQL del modo seco se genera solo con
+  las **primeras 1 000 filas** (`sql_sample_rows` en la vista previa y una cabecera en `carga_<op>.sql`): con
+  millones de filas el SQL completo era inmanejable.
+- **Carga**: sin plan paralelo, `bulk_insert|update|delete_from_chunks` de util_bbdd (5.2.0). Consume los bloques de
+  forma perezosa en una sola `bulk_session` (atómica), con `on_progress`/`cancel_token` y con los rechazos de
+  `on_error="isolate"` (`RejectOptions`), igual que `*_from_df`. util_bbdd no conoce el total (`total=None`): el
+  progreso usa las filas contadas en la vista previa (mismo fichero, SHA-256). Con plan paralelo (`*_from_chunks` no
+  reparte en hilos), los bloques se juntan en un `DataFrame` y se usa `*_from_df`; la vista previa avisa
+  (`memory_warning`) si el fichero pasa de 200 MB.
+- **Subida**: el multipart se recibe en `TMPDIR` del volumen workspace (el *entrypoint* lo crea) en vez del `tmpfs`
+  `/tmp`, y la pantalla lo envía con `XMLHttpRequest` para mostrar el progreso y poder cancelarlo.
+
+Sin huecos nuevos en util_bbdd. Pendiente: la subida por partes reanudable, si la subida HTTP de 1 GB falla en redes
+inestables.

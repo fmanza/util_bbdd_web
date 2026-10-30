@@ -38,6 +38,12 @@ class BulkPreviewOut(_Bulk):
     parallel: BulkPlanOut
     sample: list[list[str | None]]
     sql_file: str | None = Field(description="Ruta del SQL generado dentro de outputs/ (null si hay errores)")
+    sql_sample_rows: int | None = Field(
+        default=None, description="El SQL es de muestra: solo las primeras N filas del fichero (null = SQL completo)"
+    )
+    memory_warning: bool = Field(
+        default=False, description="Plan paralelo con un fichero grande: la carga lo leerá entero en memoria"
+    )
     upload_filename: str | None = None
     target_engine: str
     structure_hash: str

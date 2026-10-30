@@ -313,6 +313,11 @@ export function BulkPreviewViewer({ run }: { run: RunDetail }) {
                 {(data.parallel.reasons ?? []).join(' · ')}
               </Alert>
             )}
+            {data.memory_warning && (
+              <Alert color="yellow" title={t('bulk.preview.memoryTitle')}>
+                {t('bulk.preview.memory')}
+              </Alert>
+            )}
             <Table striped withTableBorder aria-label={t('bulk.preview.sample')}>
               <Table.Thead>
                 <Table.Tr>
@@ -331,6 +336,11 @@ export function BulkPreviewViewer({ run }: { run: RunDetail }) {
                 ))}
               </Table.Tbody>
             </Table>
+            {data.sql_file && data.sql_sample_rows != null && (
+              <Text size="sm" c="dimmed">
+                {t('bulk.preview.sqlSample', { sample: data.sql_sample_rows, rows: data.rows })}
+              </Text>
+            )}
             {data.sql_file && <GeneratedSql run={run} file={data.sql_file} />}
             <ApplyPanel run={run} preview={data} />
           </>

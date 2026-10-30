@@ -19,6 +19,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   máximas, en *Administración → Almacenamiento → Carga de ficheros* y sin reiniciar (ADR-012 enmendado). La pantalla
   *Carga* muestra el máximo vigente y avisa antes de enviar un fichero que no cabe. API: tres campos más en
   `/admin/storage` y `upload_max_mb` en `/auth/me/storage`.
+- **Ficheros grandes en la carga** (CSV de hasta 1 GB): el CSV se lee, se previsualiza y se carga por bloques
+  (`bulk_*_from_chunks` de util_bbdd, una sola transacción) sin tenerlo entero en memoria. La vista previa genera el
+  SQL de las primeras 1 000 filas (`sql_sample_rows`) y avisa si se pide el plan paralelo, que lo lee entero, con un
+  fichero de más de 200 MB (`memory_warning`). La subida muestra su progreso y se puede cancelar, y se recibe en el
+  volumen workspace (`TMPDIR`), no en el `/tmp` en memoria. Guía de despliegue: proxy, disco, memoria y tiempo (ADR-010
+  enmendado).
 
 ### Fixed
 

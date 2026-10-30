@@ -133,7 +133,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Request-ID $request_id;  # mismo id en los logs del proxy y de la aplicación
         proxy_buffering off;                        # SSE de progreso (Fase 3)
-        client_max_body_size 51m;                   # subidas de la carga bulk: UBW_UPLOAD_MAX_MB + margen (Fase 9)
+        client_max_body_size 51m;                   # carga: «Tamaño máximo de un fichero» + margen (1025m para 1 GB)
+        proxy_request_buffering off;                # la subida pasa a la aplicación sin copiarse antes en el proxy
+        proxy_read_timeout 600s;                    # comprobar un fichero grande tras recibirlo lleva su tiempo
     }
     location = /metrics {
         allow 10.0.0.0/8;                           # solo el Prometheus de la red interna
@@ -148,7 +150,7 @@ server {
 ```caddyfile
 util-bbdd.example.internal {
     request_body {
-        max_size 51MB
+        max_size 51MB   # carga: «Tamaño máximo de un fichero» + margen (1025MB para 1 GB)
     }
     @metrics path /metrics
     handle @metrics {
@@ -170,8 +172,30 @@ Docker, las peticiones llegan desde la pasarela de la red de Docker: indica su I
 (`UBW_FORWARDED_ALLOW_IPS=172.16.0.0/12`). Sin eso, el rate limiting por IP y la auditoría ven la IP del proxy para
 todos los usuarios y HSTS no se envía.
 
-Si subes `UBW_UPLOAD_MAX_MB`, sube también el límite de cuerpo del proxy (nginx responde 413 antes de llegar a la
-aplicación). Los ficheros subidos se guardan en el volumen del workspace y cuentan para la cuota del usuario.
+Si subes el tamaño máximo de un fichero de carga, sube también el límite de cuerpo del proxy (nginx responde 413
+antes de llegar a la aplicación). Los ficheros subidos se guardan en el volumen del workspace y cuentan para la cuota
+del usuario. Para ficheros de cientos de MB, ver [Ficheros grandes en la carga](#ficheros-grandes-en-la-carga).
+
+### Ficheros grandes en la carga
+
+Los límites de la carga se cambian sin reiniciar en *Administración → Almacenamiento → Carga de ficheros* (ADR-012):
+tamaño máximo de un fichero (`UBW_UPLOAD_MAX_MB`, 50 MB por defecto, hasta 2048), tamaño descomprimido de un Excel
+(`UBW_UPLOAD_MAX_UNCOMPRESSED_MB`, 300) y filas máximas (`UBW_BULK_MAX_ROWS`, 1 000 000). Las variables son el valor
+por defecto. Para subir CSV de, por ejemplo, 1 GB:
+
+- **Proxy**: `client_max_body_size 1025m` (y `proxy_request_buffering off`) en nginx o `max_size 1025MB` en Caddy, y
+  tiempos de espera holgados. Una subida de 1 GB tarda minutos por una red lenta.
+- **Disco**: el multipart se recibe en un temporal del volumen workspace (`TMPDIR=<workspace>/.tmp`, que crea el
+  *entrypoint*; `/tmp` es un `tmpfs` en memoria) y después se copia a `uploads/`. Durante la subida el fichero ocupa
+  el doble. Fuera de Docker, apunta `TMPDIR` a un disco con espacio. Sube también la cuota del usuario.
+- **Memoria**: un CSV se lee y se carga por bloques de 50 000 filas, sin tenerlo entero en memoria. Un **Excel** y una
+  carga con **plan paralelo** sí se leen enteros: la vista previa avisa si se pide el plan paralelo con un fichero de
+  más de 200 MB. Para ficheros grandes, CSV y sin plan paralelo.
+- **Tiempo**: la vista previa recorre el fichero entero (filas y coincidencias por clave primaria) y la carga lo
+  vuelve a leer. Si una carga puede pasar de una hora, sube `UBW_JOB_TIMEOUT_SECONDS`.
+- **Destino**: sin plan paralelo la carga va en **una sola transacción**. Con millones de filas el motor necesita
+  espacio de deshacer y de log (undo/redo de Oracle, log de transacciones de SQL Server, WAL de PostgreSQL); si no lo
+  tiene, parte el fichero.
 
 ## Cabeceras y rate limiting
 

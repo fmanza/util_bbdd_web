@@ -1,6 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 
-import { api, ensureOk, unwrap } from '../../api/client';
+import {
+  ApiError,
+  api,
+  CSRF_COOKIES,
+  CSRF_HEADER,
+  ensureOk,
+  type Problem,
+  readCookie,
+  unwrap,
+} from '../../api/client';
 import type { components } from '../../api/schema';
 
 export type Upload = components['schemas']['UploadOut'];
@@ -28,24 +38,81 @@ export function useUploads(projectId: number) {
   });
 }
 
-/** Sube un fichero (`multipart/form-data`; el cliente añade la cabecera CSRF). */
+/** Bytes enviados de una subida en curso. */
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+}
+
+/** Si el error es la cancelación de una subida (no se muestra como error). */
+export function isAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+/**
+ * `POST …/uploads` como `multipart/form-data` con `XMLHttpRequest`: `fetch` no informa del avance de lo que se envía,
+ * y un fichero de cientos de MB necesita barra de progreso. Misma cabecera CSRF y mismos errores (`ApiError` con el
+ * *problem details*) que el cliente generado.
+ */
+function sendUpload(
+  projectId: number,
+  file: File,
+  onProgress: (progress: UploadProgress) => void,
+  signal: AbortSignal,
+): Promise<Upload> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/v1/projects/${projectId}/uploads`);
+    xhr.withCredentials = true;
+    const token = CSRF_COOKIES.map(readCookie).find(Boolean);
+    if (token) xhr.setRequestHeader(CSRF_HEADER, token);
+    xhr.upload.onprogress = (event) =>
+      onProgress({ loaded: event.loaded, total: event.lengthComputable ? event.total : file.size });
+    xhr.onload = () => {
+      let body: unknown = null;
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        // un proxy puede responder HTML (p. ej. 413 de nginx): queda el estado
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(body as Upload);
+        return;
+      }
+      const problem = (body as Problem | null) ?? { title: xhr.statusText || 'Error', status: xhr.status };
+      const requestId = problem.request_id ?? xhr.getResponseHeader('X-Request-ID') ?? undefined;
+      reject(
+        new ApiError(requestId ? { ...problem, request_id: requestId } : { ...problem, status: xhr.status }),
+      );
+    };
+    xhr.onerror = () => reject(new ApiError({ title: 'No se pudo enviar el fichero', status: 0 }));
+    xhr.onabort = () => reject(new DOMException('Subida cancelada', 'AbortError'));
+    signal.addEventListener('abort', () => xhr.abort());
+    const form = new FormData();
+    form.append('file', file);
+    xhr.send(form);
+  });
+}
+
+/** Sube un fichero con su progreso (`progress`, `null` si no hay subida) y la opción de cancelarlo (`cancel`). */
 export function useUploadFile(projectId: number) {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (file: File) =>
-      unwrap(
-        await api.POST('/api/v1/projects/{project_id}/uploads', {
-          params: { path: { project_id: projectId } },
-          body: { file: file as unknown as string },
-          bodySerializer: (body) => {
-            const form = new FormData();
-            form.append('file', body.file as unknown as Blob);
-            return form;
-          },
-        }),
-      ),
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
+  const controller = useRef<AbortController | null>(null);
+  const mutation = useMutation({
+    mutationFn: async (file: File) => {
+      controller.current = new AbortController();
+      setProgress({ loaded: 0, total: file.size });
+      try {
+        return await sendUpload(projectId, file, setProgress, controller.current.signal);
+      } finally {
+        controller.current = null;
+        setProgress(null);
+      }
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: uploadsKey(projectId) }),
   });
+  return { ...mutation, progress, cancel: () => controller.current?.abort() };
 }
 
 export function useDeleteUpload(projectId: number) {

@@ -13,10 +13,11 @@ from app.domain.projects.service import get_membership, get_project_connection
 from app.domain.runs.bulks import PREVIEW_PATH, RESULT_PATH, load_preview, project_upload, target_changed
 from app.domain.runs.operations import BulkApplyParams, BulkPreviewParams
 from app.domain.uploads.errors import UploadContentError
-from app.domain.uploads.files import ReadOptions, read_frame
+from app.domain.uploads.files import ReadOptions, iter_frames
 from app.domain.uploads.service import upload_file
 from app.integrations.util_bbdd.bulk import (
     BulkOptions,
+    Frames,
     MatchesChangedError,
     StructureChangedError,
     Target,
@@ -28,6 +29,9 @@ from app.integrations.util_bbdd.isolated import classify
 from app.integrations.util_bbdd.progress import RunProgress
 from app.jobs.context import JobContext, JobError
 from app.jobs.operations.documentation import _MESSAGES
+
+#: Con plan paralelo la carga junta el fichero en memoria: por encima de este tamaño la vista previa lo avisa (D-4).
+PARALLEL_MEMORY_WARNING_BYTES: Final = 200 * 1024 * 1024
 
 
 def _options(params: BulkPreviewParams, *, require_atomic: bool = False) -> BulkOptions:
@@ -83,9 +87,10 @@ def _source(ctx: JobContext, params: BulkPreviewParams) -> tuple[Path, str, dict
         return upload_file(upload, ctx.settings), upload.kind, fixed
 
 
-def _frame(ctx: JobContext, params: BulkPreviewParams, path: Path, kind: str) -> Any:
+def _frames(ctx: JobContext, params: BulkPreviewParams, path: Path, kind: str) -> Frames:
+    """Bloques del fichero; cada llamada lo vuelve a abrir (la integración lo recorre para contar y para cargar)."""
     options = ReadOptions(sheet=params.sheet, delimiter=params.delimiter, encoding=params.encoding)
-    return read_frame(path, kind, options, max_rows=ctx.settings.bulk_max_rows)  # type: ignore[arg-type]
+    return lambda: iter_frames(path, kind, options, max_rows=ctx.settings.bulk_max_rows)  # type: ignore[arg-type]
 
 
 def run_preview(ctx: JobContext) -> None:
@@ -95,15 +100,15 @@ def run_preview(ctx: JobContext) -> None:
     db_type, conn_params = ctx.connection_params(params.target_connection)
     ctx.progress("running", f"Validando contra «{params.table}» y generando el SQL")
     try:
-        frame = _frame(ctx, params, path, kind)
         preview = build_bulk_preview(
-            Target(db_type, conn_params, params.target_schema), frame, _options(params),
+            Target(db_type, conn_params, params.target_schema), _frames(ctx, params, path, kind), _options(params),
             outputs_dir=ctx.run_dir / "outputs", work_dir=ctx.run_dir / "work",
         )  # fmt: skip
     except Exception as exc:  # frontera de util_bbdd/pandas: el log solo lleva el tipo
         ctx.logger.error("Vista previa de carga fallida", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     preview.update(fixed, target_engine=db_type)
+    preview["memory_warning"] = params.parallel and path.stat().st_size > PARALLEL_MEMORY_WARNING_BYTES
     _write(ctx.run_dir / PREVIEW_PATH, preview)
     problems = f", {len(preview['errors'])} errores de validación" if preview["errors"] else ""
     ctx.progress("reporting", f"{preview['rows']} filas en el fichero{problems}", 100)
@@ -151,13 +156,14 @@ def run_apply(ctx: JobContext) -> None:
     db_type, conn_params = ctx.connection_params(preview_params.target_connection)
     ctx.progress("running", f"{preview['operation'].upper()} de {preview['rows']} filas en «{preview['table']}»")
     # Cancelar para entre lotes (util_bbdd 4.5.0, G1): en una sola transacción se deshace la carga entera.
+    # Por bloques util_bbdd no sabe cuántas filas hay (total=None): las contó la vista previa (mismo fichero, SHA-256).
     progress = RunProgress(
-        lambda message, pct: ctx.progress("running", message, pct), ctx.cancel_requested, ["rows"], {"rows": "Filas"}
-    )
+        lambda message, pct: ctx.progress("running", message, pct), ctx.cancel_requested, ["rows"], {"rows": "Filas"},
+        total=preview["rows"],
+    )  # fmt: skip
     try:
-        frame = _frame(ctx, preview_params, path, kind)
         result = run_bulk(
-            Target(db_type, conn_params, preview_params.target_schema), frame,
+            Target(db_type, conn_params, preview_params.target_schema), _frames(ctx, preview_params, path, kind),
             # Sin aceptar que no sea atómica, util_bbdd lo garantiza aunque su plan haya cambiado (G36).
             _options(preview_params, require_atomic=not params.accept_non_atomic),
             expected_structure=preview["structure_hash"], outputs_dir=ctx.run_dir / "outputs",

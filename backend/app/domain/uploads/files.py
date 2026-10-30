@@ -3,14 +3,20 @@
 El fichero viene del usuario: se comprueba que el contenido corresponde a la extensión (texto sin NUL para CSV, ZIP
 con ``xl/workbook.xml`` para ``.xlsx``), se limita el tamaño descomprimido de un ``.xlsx`` (*zip bombs*) y el número
 de filas. Las macros (``.xlsm``) no se admiten.
+
+Un CSV nunca se carga entero en memoria: la codificación se comprueba decodificándolo por bloques y ``iter_frames`` lo
+lee en bloques de ``CHUNK_ROWS`` filas (vista previa y carga de ficheros grandes). Un Excel se lee entero (su tamaño lo
+acota ``upload_max_uncompressed_mb``).
 """
 
 from __future__ import annotations
 
+import codecs
 import csv
-import io
 import re
 import zipfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePath
 from typing import Any, Final, Literal
@@ -21,7 +27,10 @@ Kind = Literal["csv", "xlsx"]
 KINDS: Final[dict[str, Kind]] = {".csv": "csv", ".xlsx": "xlsx"}
 ENCODINGS: Final = ("utf-8", "cp1252", "latin-1")
 DELIMITERS: Final = (",", ";", "\t", "|")
+#: Filas de cada bloque al leer un CSV por partes (vista previa y carga).
+CHUNK_ROWS: Final = 50_000
 _SNIFF_BYTES: Final = 64 * 1024
+_DECODE_BLOCK: Final = 1024 * 1024
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 
@@ -77,24 +86,63 @@ class ReadOptions:
     encoding: str | None = None
 
 
-def _csv_text(path: Path, encoding: str | None) -> tuple[str, str]:
-    """Texto del CSV y la codificación usada (la primera que funcione si no se indica)."""
-    raw = path.read_bytes()
-    for candidate in (encoding,) if encoding else ENCODINGS:
-        try:
-            return raw.decode("utf-8-sig" if candidate == "utf-8" else candidate), candidate
-        except (UnicodeDecodeError, LookupError):
-            continue
-    raise UploadContentError(f"El CSV no está en {encoding or 'UTF-8, Windows-1252 ni Latin-1'}.")
+def _codec(encoding: str) -> str:
+    return "utf-8-sig" if encoding == "utf-8" else encoding  # sin el BOM en la primera columna
 
 
-def _delimiter(text: str, delimiter: str | None) -> str:
-    if delimiter:
-        return delimiter
+def _decodes(path: Path, encoding: str) -> bool:
+    """Si el fichero entero se decodifica con ``encoding`` (por bloques, sin cargarlo en memoria)."""
     try:
-        return csv.Sniffer().sniff(text[:_SNIFF_BYTES], delimiters="".join(DELIMITERS)).delimiter
+        decoder = codecs.getincrementaldecoder(_codec(encoding))()
+        with path.open("rb") as handle:
+            while block := handle.read(_DECODE_BLOCK):
+                decoder.decode(block)
+        decoder.decode(b"", final=True)
+    except (UnicodeDecodeError, LookupError):
+        return False
+    return True
+
+
+def _csv_format(path: Path, options: ReadOptions) -> tuple[str, str]:
+    """Codificación (la indicada o la primera de ``ENCODINGS`` que funcione) y separador (el indicado o detectado)."""
+    candidates = (options.encoding,) if options.encoding else ENCODINGS
+    encoding = next((c for c in candidates if _decodes(path, c)), None)
+    if encoding is None:
+        raise UploadContentError(f"El CSV no está en {options.encoding or 'UTF-8, Windows-1252 ni Latin-1'}.")
+    if options.delimiter:
+        return encoding, options.delimiter
+    with path.open(encoding=_codec(encoding), newline="") as handle:
+        head = handle.read(_SNIFF_BYTES)
+    try:
+        return encoding, csv.Sniffer().sniff(head, delimiters="".join(DELIMITERS)).delimiter
     except csv.Error:
-        return ","
+        return encoding, ","
+
+
+@contextmanager
+def _reading() -> Iterator[None]:
+    """Errores de pandas/openpyxl como ``UploadContentError``: solo el tipo, nunca el contenido."""
+    try:
+        yield
+    except UploadContentError:
+        raise
+    except Exception as exc:
+        raise UploadContentError(f"No se pudo leer el fichero ({type(exc).__name__}).") from None
+
+
+def _read_csv(path: Path, csv_format: tuple[str, str], **kwargs: Any) -> Any:
+    import pandas as pd
+
+    encoding, delimiter = csv_format
+    return pd.read_csv(path, sep=delimiter, encoding=_codec(encoding), **kwargs)
+
+
+def _columns(frame: Any) -> Any:
+    """``frame`` con los nombres de columna limpios; sin columnas (p. ej. una hoja vacía), ``NoColumnsError``."""
+    if len(frame.columns) == 0:
+        raise NoColumnsError("El fichero no tiene columnas.")
+    frame.columns = [str(c).strip() for c in frame.columns]
+    return frame
 
 
 def sheet_names(path: Path) -> list[str]:
@@ -123,26 +171,52 @@ def read_frame(path: Path, kind: Kind, options: ReadOptions, *, max_rows: int, n
     import pandas as pd
 
     limit = nrows if nrows is not None else max_rows + 1
-    try:
+    with _reading():
         if kind == "csv":
-            text, _ = _csv_text(path, options.encoding)
-            frame = pd.read_csv(io.StringIO(text), sep=_delimiter(text, options.delimiter), nrows=limit)
+            frame = _read_csv(path, _csv_format(path, options), nrows=limit)
         else:
             sheets = sheet_names(path)
             sheet = options.sheet or sheets[0]
             if sheet not in sheets:
                 raise UploadContentError(f"El libro no tiene la hoja «{sheet}».")
             frame = pd.read_excel(path, sheet_name=sheet, engine="openpyxl", nrows=limit)
-    except UploadContentError:
-        raise
-    except Exception as exc:  # errores de pandas/openpyxl: solo el tipo, nunca el contenido
-        raise UploadContentError(f"No se pudo leer el fichero ({type(exc).__name__}).") from None
-    if len(frame.columns) == 0:
-        raise NoColumnsError("El fichero no tiene columnas.")
+    frame = _columns(frame)
     if nrows is None and len(frame) > max_rows:
         raise UploadContentError(f"El fichero tiene más de {max_rows} filas.")
-    frame.columns = [str(c).strip() for c in frame.columns]
     return frame
+
+
+def iter_frames(
+    path: Path, kind: Kind, options: ReadOptions, *, max_rows: int, chunk_rows: int = CHUNK_ROWS
+) -> Iterator[Any]:
+    """Bloques ``DataFrame`` del fichero, con las mismas columnas; siempre al menos uno (vacío si no hay filas).
+
+    Un CSV se lee por bloques de ``chunk_rows`` filas sin cargarlo entero; un Excel da un solo bloque (``read_frame``).
+    Cada llamada vuelve a abrir el fichero: sirve para recorrerlo varias veces (contar, cargar).
+
+    Raises:
+        UploadContentError: Como ``read_frame``; las filas de más se detectan al llegar a ellas.
+    """
+    if kind != "csv":
+        yield read_frame(path, kind, options, max_rows=max_rows)
+        return
+    csv_format = _csv_format(path, options)
+    with _reading():
+        header = _columns(_read_csv(path, csv_format, nrows=0))
+        reader = _read_csv(path, csv_format, chunksize=chunk_rows)
+    rows, chunks = 0, 0
+    with reader:
+        while True:
+            with _reading():
+                frame = next(reader, None)
+            if frame is None:
+                break
+            rows, chunks = rows + len(frame), chunks + 1
+            if rows > max_rows:
+                raise UploadContentError(f"El fichero tiene más de {max_rows} filas.")
+            yield _columns(frame)
+    if not chunks:
+        yield header
 
 
 def describe(path: Path, kind: Kind, options: ReadOptions) -> dict[str, Any]:
@@ -161,9 +235,7 @@ def describe(path: Path, kind: Kind, options: ReadOptions) -> dict[str, Any]:
     if kind == "xlsx":
         info["sheets"] = sheet_names(path)
     else:
-        text, encoding = _csv_text(path, options.encoding)
-        info["encoding"] = encoding
-        info["delimiter"] = _delimiter(text, options.delimiter)
+        info["encoding"], info["delimiter"] = _csv_format(path, options)
     return info
 
 

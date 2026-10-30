@@ -67,6 +67,7 @@ Reglas:
 | Retención de ejecuciones (días) y Ejecuciones por proyecto | Purgan las ejecuciones terminadas más antiguas o que sobran en cada proyecto |
 | Retención de ficheros de carga (días) | Borra los ficheros que no use ninguna carga |
 | Purga por cuota y su objetivo | Desactivada por defecto. Al llegar a su cuota, se purgan las ejecuciones terminadas más antiguas del usuario hasta bajar al objetivo (80 % por defecto). Nunca las terminadas hace menos de 60 minutos ni las que use una ejecución en curso |
+| Carga de ficheros: tamaño máximo, tamaño descomprimido de un Excel y filas máximas | Límites de la [carga](carga.md) (50 MB, 300 MB y 1 000 000 filas por defecto; hasta 2048 MB por fichero). Con un proxy inverso, su límite de cuerpo tiene que ser al menos el tamaño máximo: ver [Ficheros grandes en la carga](deployment.md#ficheros-grandes-en-la-carga) |
 
 Al **Guardar**, la pantalla enseña cuántas ejecuciones y ficheros (y cuánto espacio) purgará la siguiente pasada con los valores nuevos, y pide confirmación. Purgar una ejecución borra sus ficheros, pero conserva su historial (`run.json`). La tabla **Uso por usuario** muestra el espacio de cada uno frente a su cuota. Cada usuario ve el suyo en su menú → **Mi espacio**.
 

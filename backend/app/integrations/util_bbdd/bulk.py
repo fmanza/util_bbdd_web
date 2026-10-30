@@ -7,7 +7,11 @@
 - Con ``ParallelOptions`` y un plan de más de un hilo la operación deja de ser atómica (una transacción por
   partición, G36). ``ParallelPlan.atomic`` (util_bbdd 4.5.0) lo dice en la vista previa; al cargar sin
   ``accept_non_atomic`` se pide ``require_atomic=True``, que fuerza un hilo aunque el plan haya cambiado.
-- El fichero lo lee la web (``domain/uploads/files.py``) y llega aquí como ``DataFrame``.
+- El fichero lo lee la web (``domain/uploads/files.py``) y llega aquí como ``DataFrame`` o como función que lo abre y
+  da sus bloques (``Frames``): un CSV grande nunca está entero en memoria. La vista previa lo recorre por bloques
+  (filas y coincidencias por PK) y genera el SQL solo de las primeras ``SQL_SAMPLE_ROWS`` filas; la carga sin plan
+  paralelo usa ``bulk_*_from_chunks`` (una sola transacción, rechazos ``isolate`` incluidos). Con plan paralelo los
+  bloques se juntan en un ``DataFrame`` (``bulk_*_from_df``; ``*_from_chunks`` no reparte en hilos).
 - Progreso por lote y cancelación **entre lotes** (``on_progress``/``cancel_token``, util_bbdd 4.5.0, G1) con
   ``RunProgress``: util_bbdd deshace la transacción en curso y lanza ``OperationCancelledError``. En una carga de una
   sola transacción eso deshace **toda** la operación; en paralelo, las particiones terminadas quedan. ``result.json``
@@ -22,7 +26,8 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-from collections.abc import Iterable
+from collections.abc import Callable, Generator, Iterable, Iterator
+from contextlib import closing
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
@@ -34,11 +39,18 @@ from app.integrations.util_bbdd.sql import _engine_message
 
 Operation = Literal["insert", "update", "delete"]
 SAMPLE_ROWS: Final = 20
+#: Filas con las que se genera el SQL de la vista previa (D-1): con ficheros grandes, el SQL completo es inmanejable.
+#: Salen del primer bloque (``CHUNK_ROWS`` de la web, 50 000 filas).
+SQL_SAMPLE_ROWS: Final = 1_000
 _PK_BATCH: Final = 500
 _COMPOSITE_BATCH: Final = 200  # SQL Server admite 2100 parámetros por sentencia
 SQL_FILE: Final = "carga_{op}.sql"
 REJECTS_FILE: Final = "rechazos.csv"
 AUDIT_FILE: Final = "carga.jsonl"
+
+
+#: Abre el fichero y da sus bloques ``DataFrame`` (mismas columnas; al menos uno). Cada pasada lo vuelve a abrir.
+Frames = Callable[[], Iterator[Any]]
 
 
 class StructureChangedError(RuntimeError):
@@ -164,8 +176,33 @@ def _frame_records(frame: Any, limit: int) -> list[list[str | None]]:
     return rows
 
 
+def _frames(source: Any) -> Frames:
+    """``source`` como ``Frames``: un ``DataFrame`` es un solo bloque."""
+    if callable(source):
+        return source  # type: ignore[no-any-return]
+    return lambda: iter([source])
+
+
+def _close(chunks: Iterator[Any]) -> None:
+    close = getattr(chunks, "close", None)
+    if close is not None:
+        close()
+
+
+def _first(frames: Frames) -> Any:
+    """Primer bloque (da las columnas y la muestra) sin leer el resto del fichero."""
+    chunks = frames()
+    try:
+        return next(chunks)
+    finally:
+        _close(chunks)
+
+
 def _prepare(target: Target, frame: Any, options: BulkOptions) -> dict[str, Any]:
-    """Resuelve el mapeo del ``frame`` contra la tabla y valida. Devuelve lo que necesitan vista previa y carga."""
+    """Resuelve el mapeo de las columnas de ``frame`` (el primer bloque) contra la tabla y valida.
+
+    Devuelve lo que necesitan vista previa y carga; ``frame`` es ese bloque ya mapeado (``_mapped``).
+    """
     from sqlalchemy import inspect
     from util_bbdd import SyncDatabaseManager
     from util_bbdd.bulk import BulkCrud
@@ -217,13 +254,52 @@ def _prepare(target: Target, frame: Any, options: BulkOptions) -> dict[str, Any]
             f"Columnas GENERATED ALWAYS AS IDENTITY: {', '.join(always)}. Activa «Conservar los valores de columnas "
             "identity» o ponlas en «(no cargar)» para que las asigne la BD."
         )
-    mapped = frame[list(mapping["resolved"])].rename(columns=mapping["resolved"])
-    if options.operation == "delete" and pk and not errors:
-        mapped = mapped[pk]
-    return {
-        "frame": mapped, "crud": crud, "manager": manager, "engine": engine, "table": table, "pk": pk,
-        "schema": schema, "mapping": mapping, "errors": errors, "rows": len(frame),
+    prepared = {
+        "crud": crud, "manager": manager, "engine": engine, "table": table, "pk": pk,
+        "schema": schema, "mapping": mapping, "errors": errors,
     }  # fmt: skip
+    prepared["frame"] = _mapped(frame, prepared, options)
+    return prepared
+
+
+def _mapped(frame: Any, prepared: dict[str, Any], options: BulkOptions) -> Any:
+    """Bloque con las columnas de la tabla (las del mapeo resuelto; en un borrado, solo la PK)."""
+    resolved, pk = prepared["mapping"]["resolved"], prepared["pk"]
+    mapped = frame[list(resolved)].rename(columns=resolved)
+    if options.operation == "delete" and pk and not prepared["errors"]:
+        mapped = mapped[pk]
+    return mapped
+
+
+def _mapped_chunks(
+    frames: Frames, prepared: dict[str, Any], options: BulkOptions, rows: list[int]
+) -> Generator[Any, None, None]:
+    """Bloques mapeados del fichero; ``rows[0]`` acumula las filas leídas."""
+    chunks = frames()
+    try:
+        for chunk in chunks:
+            rows[0] += len(chunk)
+            yield _mapped(chunk, prepared, options)
+    finally:
+        _close(chunks)
+
+
+def _scan(
+    frames: Frames, prepared: dict[str, Any], options: BulkOptions, count_matches: bool
+) -> tuple[int, int | None]:
+    """Recorre el fichero por bloques: filas y, con ``count_matches``, coincidencias por PK en el destino.
+
+    Las claves se deduplican dentro de cada bloque, no entre bloques (un fichero de millones de claves no cabe en
+    memoria): una clave repetida en bloques distintos cuenta dos veces. Con un solo bloque el recuento es exacto.
+    """
+    rows = [0]
+    matches = 0
+    table, pk = prepared["table"], prepared["pk"]
+    with closing(_mapped_chunks(frames, prepared, options, rows)) as chunks:
+        for chunk in chunks:
+            if count_matches:
+                matches += _count_matches(prepared["engine"], table, _keys(chunk, pk), pk)
+    return rows[0], matches if count_matches else None
 
 
 def _keys(frame: Any, pk: list[str]) -> list[tuple[Any, ...]]:
@@ -240,29 +316,36 @@ def structure_hash(prepared: dict[str, Any], options: BulkOptions) -> str:
 
 
 def build_bulk_preview(
-    target: Target, frame: Any, options: BulkOptions, *, outputs_dir: Path, work_dir: Path
+    target: Target, source: Any, options: BulkOptions, *, outputs_dir: Path, work_dir: Path
 ) -> dict[str, Any]:
     """Modo seco: validaciones, muestra, filas afectadas, plan paralelo y SQL generado (sin tocar el destino).
+
+    ``source`` es un ``DataFrame`` o ``Frames``. Las columnas, la muestra y el SQL salen del primer bloque (el SQL, de
+    sus primeras ``SQL_SAMPLE_ROWS`` filas: ``sql_sample_rows`` lo dice si no es completo); filas y coincidencias, de
+    recorrer el fichero entero.
 
     Raises:
         LookupError: La tabla no existe.
     """
-    prepared = _prepare(target, frame, options)
+    frames = _frames(source)
+    prepared = _prepare(target, _first(frames), options)
     try:
         frame, crud, table, pk = prepared["frame"], prepared["crud"], prepared["table"], prepared["pk"]
-        matches = None
-        if _counts_pk(table, options, frame, pk) and not prepared["errors"]:
-            matches = _count_matches(prepared["engine"], table, _keys(frame, pk), pk)
-        plan = crud.parallel_plan(options.operation, len(frame))
+        counting = _counts_pk(table, options, frame, pk) and not prepared["errors"]
+        rows, matches = _scan(frames, prepared, options, counting)
+        plan = crud.parallel_plan(options.operation, rows)
         sql_file: str | None = None
-        if not prepared["errors"] and len(frame):
+        sample = frame.head(SQL_SAMPLE_ROWS)
+        sql_rows = len(sample) if rows > len(sample) else None
+        if not prepared["errors"] and len(sample):
             table_name = _qualified(prepared["schema"], options.table)
-            sql_file = _generate_sql(crud, frame, options, table_name, outputs_dir, work_dir)
+            header = f"-- SQL de muestra: primeras {sql_rows} de {rows} filas\n" if sql_rows is not None else ""
+            sql_file = _generate_sql(crud, sample, options, table_name, outputs_dir, work_dir, header=header)
         return {
             "table": options.table,
             "schema": prepared["schema"],
             "operation": options.operation,
-            "rows": prepared["rows"],
+            "rows": rows,
             "columns": list(frame.columns),
             "mapping": prepared["mapping"]["resolved"],
             "ignored_columns": prepared["mapping"]["ignored"],
@@ -273,6 +356,7 @@ def build_bulk_preview(
             "parallel": {"workers": plan.workers, "reasons": list(plan.reasons), "atomic": plan.atomic},
             "sample": _frame_records(frame, SAMPLE_ROWS),
             "sql_file": sql_file,
+            "sql_sample_rows": sql_rows if sql_file else None,
             "structure_hash": structure_hash(prepared, options),
             "identity_always": (
                 _identity_always(table, set(frame.columns) - _excluded(table, options))
@@ -294,6 +378,18 @@ def _call(crud: Any, options: BulkOptions, frame: Any, table: str, **kwargs: Any
         return
     method = {"update": crud.bulk_update_from_df, "delete": crud.bulk_delete_from_df}[options.operation]
     method(frame, table, **kwargs)
+
+
+def _stream(crud: Any, options: BulkOptions, chunks: Iterator[Any], table: str, **kwargs: Any) -> None:
+    """Carga por bloques (``bulk_*_from_chunks``): una sola transacción, sin generar SQL ni plan paralelo."""
+    if options.operation == "insert":
+        crud.bulk_insert_from_chunks(
+            chunks, table, override_identity=options.override_identity,
+            exclude_autoincrement_pk=options.exclude_autoincrement_pk, **kwargs,
+        )  # fmt: skip
+        return
+    method = {"update": crud.bulk_update_from_chunks, "delete": crud.bulk_delete_from_chunks}[options.operation]
+    method(chunks, table, **kwargs)
 
 
 def _autoincrement_pk(table: Any) -> list[str]:
@@ -336,9 +432,9 @@ def _sync_pk(crud: Any, table: str) -> list[dict[str, Any]]:
 
 
 def _generate_sql(
-    crud: Any, frame: Any, options: BulkOptions, table_name: str, outputs_dir: Path, work_dir: Path
+    crud: Any, frame: Any, options: BulkOptions, table_name: str, outputs_dir: Path, work_dir: Path, *, header: str = ""
 ) -> str:
-    """SQL de la operación sin ejecutarla (``dry_run=True``), en ``outputs/sql/carga_<op>.sql``."""
+    """SQL de la operación sin ejecutarla (``dry_run=True``), en ``outputs/sql/carga_<op>.sql`` (``header`` delante)."""
     work_dir.mkdir(parents=True, exist_ok=True)
     try:
         _call(crud, options, frame, table_name, dry_run=True, path_sql=work_dir)
@@ -346,6 +442,7 @@ def _generate_sql(
         target = outputs_dir / "sql" / SQL_FILE.format(op=options.operation)
         target.parent.mkdir(parents=True, exist_ok=True)
         with target.open("wb") as out:
+            out.write(header.encode("utf-8"))
             for part in produced:
                 out.write(part.read_bytes())
         return target.relative_to(outputs_dir).as_posix()
@@ -355,7 +452,7 @@ def _generate_sql(
 
 def run_bulk(
     target: Target,
-    frame: Any,
+    source: Any,
     options: BulkOptions,
     *,
     expected_structure: str,
@@ -365,7 +462,9 @@ def run_bulk(
 ) -> dict[str, Any]:
     """Vuelve a validar, exige la misma estructura y ejecuta la operación (``dry_run=False``).
 
-    Con ``progress`` emite el avance por lote y para entre lotes si se cancela su token (``cancelled`` en el resultado).
+    ``source`` es un ``DataFrame`` o ``Frames``. Sin plan paralelo carga por bloques (``bulk_*_from_chunks``); con él,
+    junta los bloques en memoria. Con ``progress`` emite el avance por lote y para entre lotes si se cancela su token
+    (``cancelled`` en el resultado).
 
     Returns:
         Resultado: filas del fichero, filas confirmadas según util_bbdd, coincidencias por PK, filas del destino antes y
@@ -375,10 +474,12 @@ def run_bulk(
         StructureChangedError: La tabla o el mapeo cambiaron. ``MatchesChangedError``: en update/delete, las filas
             afectadas ya no son ``expected_matches`` (las confirmadas). ``ValueError``: el fichero ya no valida.
     """
+    import pandas as pd
     from util_bbdd.audit import JsonLinesAuditSink
     from util_bbdd.bulk import AuditOptions, BatchOptions, BulkCrud, RejectOptions
 
-    prepared = _prepare(target, frame, options)
+    frames = _frames(source)
+    prepared = _prepare(target, _first(frames), options)
     try:
         if structure_hash(prepared, options) != expected_structure:
             raise StructureChangedError()
@@ -386,7 +487,7 @@ def run_bulk(
             raise ValueError("; ".join(prepared["errors"]))
         frame, table, pk, engine = prepared["frame"], prepared["table"], prepared["pk"], prepared["engine"]
         # Como en la vista previa: sin la PK en el fichero, o excluida, no se cuentan coincidencias.
-        matches = _count_matches(engine, table, _keys(frame, pk), pk) if _counts_pk(table, options, frame, pk) else None
+        matches = _scan(frames, prepared, options, True)[1] if _counts_pk(table, options, frame, pk) else None
         if options.operation != "insert" and expected_matches is not None and matches != expected_matches:
             raise MatchesChangedError(f"{matches}")
         before = _count(engine, table)
@@ -406,14 +507,19 @@ def run_bulk(
             ),
             parallel=_parallel(options),
         )
-        plan = crud.parallel_plan(options.operation, len(frame))
+        table_name = _qualified(prepared["schema"], options.table)
+        tracking = {"on_progress": progress, "cancel_token": progress.token if progress is not None else None}
+        rows = [0]
         error: str | None = None
         cancelled = False
         try:
-            _call(
-                crud, options, frame, _qualified(prepared["schema"], options.table), dry_run=False,
-                on_progress=progress, cancel_token=progress.token if progress is not None else None,
-            )  # fmt: skip
+            if options.parallel:  # el reparto en hilos necesita el DataFrame entero (acotado por bulk_max_rows)
+                with closing(_mapped_chunks(frames, prepared, options, rows)) as chunks:
+                    whole = pd.concat(list(chunks), ignore_index=True)
+                _call(crud, options, whole, table_name, dry_run=False, **tracking)
+            else:
+                with closing(_mapped_chunks(frames, prepared, options, rows)) as chunks:
+                    _stream(crud, options, chunks, table_name, **tracking)
         except Exception as exc:  # fallo o cancelación: el resultado lo cuenta (filas antes/después)
             if is_cancellation(exc):
                 cancelled = True
@@ -421,6 +527,7 @@ def run_bulk(
                 error = _clean(str(exc.__cause__ or exc))
         finally:
             sink.close()
+        plan = crud.parallel_plan(options.operation, rows[0])
         after = _count(engine, table)
         parallel = crud.last_parallel_result
         partitions = [
@@ -437,7 +544,7 @@ def run_bulk(
         return {
             "operation": options.operation,
             "table": options.table,
-            "rows": len(frame),
+            "rows": rows[0],
             "committed": committed,
             "matches": matches,
             "target_rows_before": before,
