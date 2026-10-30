@@ -234,8 +234,11 @@ describe('resultado de la carga', () => {
 
     expect(await screen.findByText('Filas después')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('Filas confirmadas')).toBeInTheDocument();
+    // Filas insertadas: lo que creció la tabla (12 − 10), no las 3 que util_bbdd cuenta como confirmadas (G37).
+    expect(screen.getByText('Filas insertadas').nextElementSibling).toHaveTextContent('2');
+    expect(screen.queryByText('Filas confirmadas')).not.toBeInTheDocument();
     expect(screen.queryByText('El recuento del destino no cuadra')).not.toBeInTheDocument();
+    expect(screen.queryByText('No se cargó ninguna fila')).not.toBeInTheDocument();
     expect(screen.getByText('Hay filas apartadas')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Particiones' })).toHaveTextContent('duplicate key');
     expect(screen.getByRole('link', { name: 'Ver la vista previa' })).toHaveAttribute(
@@ -265,6 +268,31 @@ describe('resultado de la carga', () => {
 
     expect(await screen.findByText('El recuento del destino no cuadra')).toBeInTheDocument();
     expect(screen.getByText(/confirmó 3 filas, pero la tabla creció en 1/)).toBeInTheDocument();
+  });
+
+  it('avisa si no se cargó ninguna fila porque todas se apartaron', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${APPLY_ID}`]: {
+        body: {
+          ...FINISHED, id: APPLY_ID, operation: 'bulk_apply', status: 'succeeded', my_role: 'owner',
+          params: { preview_run: PREVIEW_ID, confirm: 'destino' }, artifacts: [],
+        },
+      },
+      // Caso real: 400 filas con la PK ya existente; util_bbdd las da por confirmadas y las aparta todas.
+      [`GET /api/v1/runs/${APPLY_ID}/bulk-result`]: {
+        body: { ...RESULT, rows: 400, committed: 400, matches: 400, rejected: 400, partitions: [],
+                target_rows_before: 7386111, target_rows_after: 7386111 },
+      },
+    }); // prettier-ignore
+
+    renderRoute(`/runs/${APPLY_ID}`);
+
+    expect(await screen.findByText('No se cargó ninguna fila')).toBeInTheDocument();
+    expect(screen.getByText(/Las 400 filas del fichero se apartaron en rechazos.csv/)).toBeInTheDocument();
+    expect(screen.getByText('Filas insertadas').nextElementSibling).toHaveTextContent('0');
+    expect(screen.queryByText('Hay filas apartadas')).not.toBeInTheDocument();
   });
 
   it('una carga cancelada dice si se deshizo entera o qué particiones quedan', async () => {

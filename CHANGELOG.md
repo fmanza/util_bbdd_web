@@ -3,6 +3,14 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Fixed
+
+- **Resultado de la carga**: decía «400 filas confirmadas, 400 filas apartadas» cuando no se había insertado ninguna
+  (util_bbdd cuenta como confirmadas también las apartadas, G37). Ahora muestra las filas insertadas, actualizadas o
+  borradas de verdad y avisa «No se cargó ninguna fila» cuando todas se apartan (p. ej. PK duplicada en un insert).
+
 ## [1.9.0] - 2026-10-30
 
 util_bbdd 5.2.0 (ola 10 del plan de huecos: G45-G48 resueltos, ninguno abierto), Oracle en modo thick y schema y tabla

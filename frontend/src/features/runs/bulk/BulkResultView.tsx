@@ -4,8 +4,18 @@ import { Link } from 'react-router';
 
 import { isApiError } from '../../../api/client';
 import { ErrorAlert } from '../../../components/ErrorAlert';
-import { useBulkResult } from '../../bulk/useBulk';
+import { type BulkResult, useBulkResult } from '../../bulk/useBulk';
 import { isActive, type RunDetail } from '../useRuns';
+
+/**
+ * Filas que la carga cambió en el destino. `committed` de util_bbdd cuenta las enviadas, también las apartadas (G37):
+ * en un insert o un borrado manda el recuento de la tabla; en una actualización, las enviadas menos las apartadas.
+ */
+function appliedRows(data: BulkResult): number {
+  if (data.operation === 'insert') return data.target_rows_after - data.target_rows_before;
+  if (data.operation === 'delete') return data.target_rows_before - data.target_rows_after;
+  return (data.committed ?? 0) - (data.rejected ?? 0);
+}
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
@@ -21,8 +31,8 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 }
 
 /**
- * Resultado de una carga bulk (`bulk_apply`): filas confirmadas según util_bbdd, recuento del destino antes y
- * después como verificación (G37), rechazos y particiones (Fase 9).
+ * Resultado de una carga bulk (`bulk_apply`): filas aplicadas en el destino, recuento antes y después, rechazos (con
+ * aviso si se apartaron todas) y particiones (Fase 9).
  */
 export function BulkResultView({ run }: { run: RunDetail }) {
   const { t } = useTranslation();
@@ -30,6 +40,7 @@ export function BulkResultView({ run }: { run: RunDetail }) {
   const result = useBulkResult(run.id, finished);
   const previewId = String(run.params['preview_run']);
   const data = result.data;
+  const allRejected = Boolean(data && data.rows > 0 && (data.rejected ?? 0) === data.rows);
 
   return (
     <Card withBorder>
@@ -51,7 +62,7 @@ export function BulkResultView({ run }: { run: RunDetail }) {
           <>
             <SimpleGrid cols={{ base: 2, sm: 5 }}>
               <Stat label={t('bulk.result.rows')} value={data.rows} />
-              <Stat label={t('bulk.result.committed')} value={data.committed ?? '—'} />
+              <Stat label={t(`bulk.result.applied.${data.operation}`)} value={appliedRows(data)} />
               <Stat label={t('bulk.result.before')} value={data.target_rows_before} />
               <Stat label={t('bulk.result.after')} value={data.target_rows_after} />
               <Stat label={t('bulk.result.rejected')} value={data.rejected ?? 0} />
@@ -80,7 +91,12 @@ export function BulkResultView({ run }: { run: RunDetail }) {
                 {data.error}
               </Alert>
             )}
-            {(data.rejected ?? 0) > 0 && (
+            {allRejected && (
+              <Alert color="orange" title={t('bulk.result.allRejectedTitle')}>
+                {t('bulk.result.allRejected', { count: data.rows })}
+              </Alert>
+            )}
+            {(data.rejected ?? 0) > 0 && !allRejected && (
               <Alert color="yellow" title={t('bulk.result.rejectsTitle')}>
                 {t('bulk.result.rejects')}
               </Alert>

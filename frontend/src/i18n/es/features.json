@@ -1018,8 +1018,15 @@
       "preview": "Ver la vista previa",
       "pending": "El resultado estará disponible al terminar.",
       "rows": "Filas del fichero",
-      "committed": "Filas confirmadas",
-      "committedHelp": "Filas confirmadas: las que util_bbdd envió y confirmó, incluidas las apartadas y, en una actualización o un borrado, las claves que no existían. Antes y después: recuento de la tabla destino, que sirve de comprobación.",
+      "applied": {
+        "insert": "Filas insertadas",
+        "update": "Filas actualizadas",
+        "delete": "Filas borradas"
+      },
+      "committedHelp": "Insertadas y borradas: lo que cambió el recuento de la tabla destino (antes y después). Actualizadas: las filas enviadas sin rechazo, incluidas las claves que no existían. Las apartadas no se cargan: están en rechazos.csv.",
+      "allRejectedTitle": "No se cargó ninguna fila",
+      "allRejected_one": "La fila del fichero se apartó en rechazos.csv. Mira allí el motivo; si es una clave primaria duplicada, usa «Actualizar».",
+      "allRejected_other": "Las {{count}} filas del fichero se apartaron en rechazos.csv. Mira allí el motivo; si es una clave primaria duplicada, usa «Actualizar».",
       "before": "Filas antes",
       "after": "Filas después",
       "rejected": "Apartadas",

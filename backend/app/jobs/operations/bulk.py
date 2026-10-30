@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 from app.core.errors import AppError
 from app.db.models import Run, User
@@ -176,7 +176,7 @@ def run_apply(ctx: JobContext) -> None:
         "Carga",
         extra={
             "operation": result["operation"], "rows": result["rows"], "committed": result["committed"],
-            "changed": changed, "verified": result["verified"],
+            "changed": changed, "applied": applied_rows(result), "verified": result["verified"],
         },
     )  # fmt: skip
     failed = [p["index"] for p in result["partitions"] if p["error"]]
@@ -191,11 +191,36 @@ def run_apply(ctx: JobContext) -> None:
         raise JobError("bulk_failed", f"La carga falló: {result['error']}")
     if failed:
         raise JobError("bulk_partial", f"Fallaron {len(failed)} particiones; las demás quedaron confirmadas.")
-    extra = f", {result['rejected']} filas apartadas en rechazos.csv" if result["rejected"] else ""
+    ctx.progress("reporting", result_message(result), 100)
+
+
+#: Participio de cada operación para el mensaje final.
+_DONE: Final[dict[str, str]] = {
+    "insert": "insertadas", "update": "actualizadas (enviadas sin rechazo)", "delete": "borradas",
+}  # fmt: skip
+
+
+def applied_rows(result: dict[str, Any]) -> int:
+    """Filas que la carga cambió en el destino.
+
+    ``committed`` de util_bbdd cuenta las filas enviadas, también las apartadas (G37): en un insert o un borrado manda
+    el recuento de la tabla; en una actualización, que no cambia el recuento, las enviadas menos las apartadas
+    (incluye las claves que no existían).
+    """
+    if result["operation"] == "insert":
+        return int(result["target_rows_after"]) - int(result["target_rows_before"])
+    if result["operation"] == "delete":
+        return int(result["target_rows_before"]) - int(result["target_rows_after"])
+    return int(result["committed"] or 0) - int(result["rejected"] or 0)
+
+
+def result_message(result: dict[str, Any]) -> str:
+    """Mensaje final de una carga terminada: filas aplicadas, apartadas y aviso si todas se apartaron."""
+    operation = result["operation"].upper()
+    rejected = int(result["rejected"] or 0)
+    if result["rows"] and rejected == result["rows"]:
+        return f"{operation} terminado sin cargar ninguna fila: las {rejected} se apartaron en rechazos.csv"
+    extra = f", {rejected} filas apartadas en rechazos.csv" if rejected else ""
     # G37: el recuento del destino se mantiene como verificación de lo que util_bbdd dice haber confirmado.
     check = "; el recuento del destino no cuadra: revisa el resultado" if result["verified"] is False else ""
-    ctx.progress(
-        "reporting",
-        f"{result['operation'].upper()} terminado: {result['committed']} filas confirmadas{extra}{check}",
-        100,
-    )
+    return f"{operation} terminado: {applied_rows(result)} filas {_DONE[result['operation']]}{extra}{check}"

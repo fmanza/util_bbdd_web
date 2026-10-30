@@ -203,6 +203,31 @@ def test_cancelled_atomic_load_is_undone_entirely(tmp_path: Path) -> None:
         con.close()
 
 
+def _result(operation: str, rows: int, committed: int, rejected: int, before: int, after: int) -> dict[str, object]:
+    return {"operation": operation, "rows": rows, "committed": committed, "rejected": rejected,
+            "target_rows_before": before, "target_rows_after": after, "verified": None}  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    ("result", "applied", "message"),
+    [
+        # Caso real: todas las filas con PK duplicada; util_bbdd las cuenta como confirmadas (G37).
+        (_result("insert", 400, 400, 400, 7386111, 7386111), 0,
+         "INSERT terminado sin cargar ninguna fila: las 400 se apartaron en rechazos.csv"),
+        (_result("insert", 3, 3, 1, 10, 12), 2, "INSERT terminado: 2 filas insertadas, 1 filas apartadas en rechazos.csv"),
+        (_result("delete", 5, 5, 0, 10, 7), 3, "DELETE terminado: 3 filas borradas"),
+        (_result("update", 5, 5, 1, 10, 10), 4,
+         "UPDATE terminado: 4 filas actualizadas (enviadas sin rechazo), 1 filas apartadas en rechazos.csv"),
+        (_result("insert", 0, 0, 0, 10, 10), 0, "INSERT terminado: 0 filas insertadas"),
+    ],
+)  # fmt: skip
+def test_bulk_message_counts_applied_rows_not_committed(result: dict[str, object], applied: int, message: str) -> None:
+    from app.jobs.operations.bulk import applied_rows, result_message
+
+    assert applied_rows(result) == applied
+    assert result_message(result) == message
+
+
 @pytest.mark.parametrize("operation", ["insert", "update"])
 def test_preview_sql_with_dates_as_text(tmp_path: Path, operation: str) -> None:
     """G48 (util_bbdd 5.2.0): las fechas de un CSV llegan como texto; el SQL del modo seco las escribe tal cual."""
