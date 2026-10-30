@@ -228,6 +228,39 @@ def test_bulk_message_counts_applied_rows_not_committed(result: dict[str, object
     assert result_message(result) == message
 
 
+def test_insert_without_the_autoincrement_primary_key(tmp_path: Path) -> None:
+    """Un insert sin la columna de la PK (la asigna la BD): vista previa y carga, sin contar coincidencias por PK."""
+    import sqlite3
+
+    import pandas as pd
+
+    from app.integrations.util_bbdd.bulk import BulkOptions, Target, build_bulk_preview, run_bulk
+    from app.integrations.util_bbdd.catalog import build_params
+
+    database = tmp_path / "destino.db"
+    con = sqlite3.connect(database)
+    con.execute("CREATE TABLE clientes (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT)")
+    con.execute("INSERT INTO clientes (nombre) VALUES ('ana')")
+    con.commit()
+    con.close()
+    target = Target("sqlite", build_params("sqlite", {"database": str(database)}), None)
+    frame = pd.DataFrame({"nombre": ["eva", "luis"]})
+    options = BulkOptions(table="clientes", operation="insert")
+
+    preview = build_bulk_preview(target, frame, options, outputs_dir=tmp_path / "p", work_dir=tmp_path / "w")
+    result = run_bulk(target, frame, options, expected_structure=preview["structure_hash"], outputs_dir=tmp_path / "o")
+
+    assert preview["errors"] == [] and preview["matches"] is None
+    assert (result["error"], result["matches"], result["target_rows_after"]) == (None, None, 3)
+    con = sqlite3.connect(database)
+    try:
+        assert con.execute("SELECT id, nombre FROM clientes ORDER BY id").fetchall() == [
+            (1, "ana"), (2, "eva"), (3, "luis"),
+        ]  # fmt: skip
+    finally:
+        con.close()
+
+
 @pytest.mark.parametrize("operation", ["insert", "update"])
 def test_preview_sql_with_dates_as_text(tmp_path: Path, operation: str) -> None:
     """G48 (util_bbdd 5.2.0): las fechas de un CSV llegan como texto; el SQL del modo seco las escribe tal cual."""

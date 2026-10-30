@@ -316,7 +316,8 @@ def run_bulk(
         if prepared["errors"]:
             raise ValueError("; ".join(prepared["errors"]))
         frame, table, pk, engine = prepared["frame"], prepared["table"], prepared["pk"], prepared["engine"]
-        matches = _count_matches(engine, table, _keys(frame, pk), pk) if pk else None
+        # Como en la vista previa: un insert puede no traer la PK (autoincremental) y entonces no se cuentan coincidencias.
+        matches = _count_matches(engine, table, _keys(frame, pk), pk) if pk and set(pk) <= set(frame.columns) else None
         if options.operation != "insert" and expected_matches is not None and matches != expected_matches:
             raise MatchesChangedError(f"{matches}")
         before = _count(engine, table)

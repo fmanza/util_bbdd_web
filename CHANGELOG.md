@@ -10,6 +10,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **Resultado de la carga**: decía «400 filas confirmadas, 400 filas apartadas» cuando no se había insertado ninguna
   (util_bbdd cuenta como confirmadas también las apartadas, G37). Ahora muestra las filas insertadas, actualizadas o
   borradas de verdad y avisa «No se cargó ninguna fila» cuando todas se apartan (p. ej. PK duplicada en un insert).
+- **Insert sin la clave primaria**: con la columna de una PK autoincremental en «no cargar», la vista previa pasaba
+  pero la carga fallaba con «None of [Index(['ID'])] are in the [columns]»; ahora la BD asigna los ids.
 
 ## [1.9.0] - 2026-10-30
 
