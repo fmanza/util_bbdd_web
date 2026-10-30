@@ -48,8 +48,10 @@ async function previewLoad(page: Page, projectUrl: string, file: string, operati
   await page.getByRole('combobox', { name: 'Fichero', exact: true }).selectOption({ label: file });
   await page.getByRole('combobox', { name: 'Operación' }).selectOption({ label: operation });
   await page.getByRole('combobox', { name: 'Conexión destino' }).selectOption('destino');
-  await page.getByRole('textbox', { name: 'Tabla destino' }).fill('clientes');
-  await expect(page.getByRole('textbox', { name: 'Columna de la tabla para «id»' })).toHaveValue('id');
+  // Tabla elegida del catálogo de la conexión (schema vacío = el de la conexión); el mapeo ofrece sus columnas.
+  await page.getByRole('combobox', { name: 'Tabla destino' }).click();
+  await page.getByRole('option', { name: 'clientes', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Columna de la tabla para «id»' })).toHaveValue('id');
   await page.getByRole('button', { name: 'Vista previa' }).click();
   await waitStatus(page, 'Correcta', `${projectUrl}?tab=bulk`);
   await expect(page.getByRole('heading', { name: 'Vista previa de la carga' })).toBeVisible();
