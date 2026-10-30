@@ -257,6 +257,35 @@ oracledb 26.0.1 (wheel de la web):
 Orden: W-9.1 justo después de W-9.0, sin release de la web entre las dos (con las dos conversiones a la vez el
 resultado es el mismo: R9-6).
 
+### Grupo 10 — util_bbdd 5.2.0: huecos abiertos tras la web 1.8.0 (ola 10)
+
+G45 y G46 salieron con Mermaid 12 en la web 1.8.0; G47 y G48, con volcados y cargas reales (Oracle → MariaDB con un
+ciclo de 8 tablas; CSV con `DATETIME` en MariaDB). Planificada el 2026-10-30 sobre util_bbdd 5.1.0 (`d7972dc`, repo
+origen):
+
+| Hueco | Estado verificado |
+|---|---|
+| G45 | `comparar/reporters/html_reporter.py:30-34`: `MERMAID_VERSION = "10.9.8"`, URL de jsDelivr y SRI. La plantilla `diff_report.html.j2` usa `mermaid.initialize({startOnLoad: false})` y `mermaid.run({nodes, suppressErrors})` |
+| G46 | `comparar/reporters/_base.py:105`: `escape_mermaid_label` solo sustituye `"`, `[` y `]`. El Markdown construye además los ids de nodo con el mismo escape (`markdown_reporter.py:116-132`) |
+| G47 | `dump/_fk_graph.py:155`: `bfs_component` recorre `adj[node]` (un `set`); reproducido con un grafo en estrella de 4 tablas y `PYTHONHASHSEED` 1-6 (órdenes distintos) |
+| G48 | `bulk/_support/sql_helpers.py`: `_LiteralTemplate` decide el renderizador **por columna** (`String()` solo para JSON, P-20). `literal(str, Date/DateTime/Time)` con `literal_binds` da `CompileError` en SQLite, PostgreSQL, SQL Server, Oracle y MySQL/MariaDB |
+
+| Id | Commit | Huecos | Cambio | Ficheros | Tests |
+|---|---|---|---|---|---|
+| U-10.1 | `fix(bulk): fechas en texto en el SQL del modo seco` | G48 | Un valor `str` en una columna `Date`/`DateTime`/`Time` se escribe como literal `String()`, **decidido por valor**, en VALUES, SET y WHERE, tanto en `_LiteralTemplate` como en el camino anterior. Los objetos fecha, igual que hoy. Ni se convierte ni se interpreta el formato: el SQL lleva el texto que la BD recibiría al ejecutar | `bulk/_support/sql_helpers.py`, `CHANGELOG.md` | Por dialecto (SQLite, PostgreSQL, SQL Server, Oracle, MySQL/MariaDB): insert, update y delete con fecha en texto y con objeto fecha en `dry_run`; la ejecución (`dry_run=False`) no cambia |
+| U-10.2 | `fix(dump): ciclos de FK en orden estable` | G47 | `bfs_component` recorre `sorted(adj[node])` | `dump/_fk_graph.py`, `CHANGELOG.md` | Estrella de 4 tablas en subprocesos con varias `PYTHONHASHSEED`: el mismo `cycles`; los tests de `plan()`/`run()` sin cambios |
+| U-10.3 | `fix(comparar): etiquetas e ids de Mermaid sin saltos de línea` | G46 | `escape_mermaid_label`: `\r`, `\n` y caracteres de control → espacio, y `%%` neutralizado. Ids de nodo del Markdown solo `[A-Za-z0-9_]` (el resto `_`, con sufijo si dos coinciden) | `comparar/reporters/_base.py`, `comparar/reporters/markdown_reporter.py`, `CHANGELOG.md` | Nombres con `\n%%{init: …}%%`, `-->` y `;`: el diagrama no gana sentencias ni directivas; snapshot del HTML y del Markdown |
+| U-10.4 | `chore(comparar): Mermaid 12 por defecto` | G45 | `MERMAID_VERSION` 12.x y su SRI calculado sobre `dist/mermaid.min.js` del tarball de npm; plantilla comprobada con 12 (`initialize`, `run`). Si no es compatible, la fase sale de la ola (D10-4) | `comparar/reporters/html_reporter.py`, plantilla si hace falta, `CHANGELOG.md` | Constante y SRI contra el fichero; prueba manual del HTML con red |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo | Tests |
+|---|---|---|---|---|---|
+| W-10.0 | `chore(backend): util_bbdd 5.2.0` | — | Pin 5.2.0, URL del wheel y lock; excepción justificada de `exclude-newer` para util_bbdd si la release tiene menos de 2 semanas. Sin cambios de código | — | Suite completa |
+| W-10.1 | `test(backend): carga con fechas en texto` | G48 | Test: la vista previa de un CSV con `DATETIME` y `DATE` en texto (SQLite) genera `carga_insert.sql` con los valores; nota en `carga.md` (en Oracle, el literal depende de `NLS_DATE_FORMAT`, R10-2). GAPS: G48 **resuelto en util_bbdd 5.2.0** | No hay (D10-3) | El test nuevo; suite de carga |
+| W-10.2 | `docs: G45-G47 resueltos en util_bbdd 5.2.0` | G45, G46, G47 | GAPS y comentarios de `dump.py` (`structure_hash`) y de `mermaid.ts` | **Se mantienen** (D10-2): `stripMermaidConfig` y los ciclos ordenados en la huella | `zensical build --strict` |
+
+Orden: las fases `U-10.x` son independientes. W-10.1 y W-10.2 van después de W-10.0, en cualquier orden; luego
+`release: v1.9.0` (D10-5).
+
 ---
 
 ## 3. Orden de ejecución simultáneo
@@ -276,12 +305,13 @@ flowchart LR
         R5 --> U6["Ola 6<br/>U-T"] --> R6(["v4.6.0"])
         R6 --> U8["Ola 8<br/>U-8"] --> R8(["v5.0.0"])
         R8 --> U9["Ola 9<br/>U-9"] --> R9(["v5.1.0"])
+        R9 --> U10["Ola 10<br/>U-10"] --> R10(["v5.2.0"])
     end
     subgraph W["util_bbdd_web"]
         direction LR
         W1["W-1.0 + W-D + W-G"] --> W2["W-2.0 + W-C"] --> W3["W-3.0 + W-M"]
         W3 --> W4["W-4.0 + W-V"] --> W5["W-5.0 + W-B"] --> W6["W-6.0 + W-T"]
-        W6 --> W8["W-8.0 + W-8"] --> W9["W-9.0 + W-9"]
+        W6 --> W8["W-8.0 + W-8"] --> W9["W-9.0 + W-9"] --> W10["W-10.0 + W-10"]
     end
     R1 -.wheel.-> W1
     R2 -.wheel.-> W2
@@ -291,6 +321,7 @@ flowchart LR
     R6 -.wheel.-> W6
     R8 -.wheel.-> W8
     R9 -.wheel.-> W9
+    R10 -.wheel.-> W10
 ```
 
 | Paso | util_bbdd (commits en orden) | util_bbdd_web (commits en orden) | Sincronización |
@@ -305,6 +336,7 @@ flowchart LR
 | 7 (web ✅) | — | **W-6.0** `chore(backend): util_bbdd 4.6.0` → W-T1 → W-T2 → W-T3 → W-T4 → **`release: v1.6.0`** | Wheel 4.6.0 |
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
 | 9 (web ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ `fa13622` → **`release: v1.7.1`** ✅ (D9-3) | Wheel 5.1.0 |
+| 10 | U-10.1 → U-10.2 → U-10.3 → U-10.4 → **`release: v5.2.0`** | **W-10.0** `chore(backend): util_bbdd 5.2.0` → W-10.1 → W-10.2 → **`release: v1.9.0`** (D10-5) | Wheel 5.2.0 |
 
 Reglas de la tubería:
 
@@ -315,8 +347,8 @@ Reglas de la tubería:
   retrasa, la web sigue con la ola anterior o se queda parada; no se adelantan rodeos.
 - **Versiones de la web** (D5): cada ola de la web termina con su commit `release: v1.x.0` (`/version-closure`):
   1.1.0 tras W-1 (incluye lo que hoy está «Sin publicar»), 1.2.0 tras W-2 … 1.6.0 tras W-6 y 1.7.0 tras W-8
-  (D8-7: util_bbdd sube de MAJOR, pero la API HTTP de la web no cambia) y 1.7.1 tras W-9 (D9-3: PATCH, solo
-  retira un rodeo).
+  (D8-7: util_bbdd sube de MAJOR, pero la API HTTP de la web no cambia), 1.7.1 tras W-9 (D9-3: PATCH, solo
+  retira un rodeo) y 1.9.0 tras W-10 (D10-5: MINOR, `[Unreleased]` ya trae funcionalidad nueva).
 - **Si una fase `U-` cambia de alcance** al implementarla, se ajusta su `W-` antes de empezarla y se anota aquí.
 
 ---
@@ -440,6 +472,36 @@ Veredicto de la ola 9: **GO_CONDICIONAL**. Condiciones:
 1. ~~Aprobar D9-1 a D9-4~~ — hecho (2026-10-29).
 2. ~~Comprobar R9-3 (cursor asíncrono) en el banco durante U-9.1~~ — hecho (2026-10-29): `AsyncCursor` admite el
    conversor; D9-2 no se aplica.
+
+### Ola 10 (AUDIT_PLAN del 2026-10-30)
+
+| # | Riesgo | Mitigación |
+|---|---|---|
+| R10-1 | G48: un texto no ISO genera SQL en el modo seco que la BD rechazaría al ejecutar | Es lo mismo que pasa al ejecutar; la vista previa muestra lo que se enviará, no valida los valores |
+| R10-2 | G48 en Oracle: `'2026-10-18'` en una columna `DATE` depende de `NLS_DATE_FORMAT`; el SQL descargado puede no servir tal cual en otra sesión | Igual que al ejecutar con parámetros de texto; nota en el docstring de util_bbdd y en `carga.md` |
+| R10-3 | G47: cambia el orden visible de los ciclos | Solo presentación; la web ya ordena para la huella, así que no invalida vistas previas |
+| R10-4 | G46: ids de nodo nuevos en el Markdown para nombres raros | Solo nombres fuera de `[A-Za-z0-9_ ]`; nota en el CHANGELOG |
+| R10-5 | G45: Mermaid 12 puede cambiar la API de la plantilla o el dibujo | U-10.4 lo comprueba antes de cambiar la constante; si falla, D10-4. La web incrusta su Mermaid 12.2.0 y no se ve afectada |
+| R10-6 | `exclude-newer` impide fijar una versión de menos de 2 semanas | Excepción justificada en `exclude-newer-package`, como en olas anteriores |
+
+Seguridad: G46 cierra la inyección de directivas (`%%{init}`) en los diagramas de origen (hoy contenida en la web por
+`stripMermaidConfig` y el sandbox del informe); G45 deja de cargar por defecto un Mermaid antiguo; G48 no cambia qué
+se ejecuta, solo cómo se escribe el SQL del modo seco.
+
+Decisiones (aprobadas el 2026-10-30):
+
+| # | Decisión | Aprobado |
+|---|---|---|
+| D10-1 | Versión de util_bbdd | **5.2.0 (MINOR)**: G45 cambia la dependencia por defecto del informe; el resto son correcciones sin cambio de API |
+| D10-2 | Rodeos de G46 (`stripMermaidConfig`) y G47 (ciclos ordenados en `structure_hash`) | **Se mantienen** como defensa: cubren informes y vistas previas de versiones anteriores |
+| D10-3 | Rodeo temporal de G48 en la web (texto ISO → fecha) hasta la 5.2.0 | **No**; rodeo manual: el fichero como Excel con celdas de fecha |
+| D10-4 | Si Mermaid 12 no es compatible con la plantilla | U-10.4 sale de la ola y G45 sigue abierto; no se retrasa el resto |
+| D10-5 | Versión de la web tras la ola | **1.9.0 (MINOR)**: `[Unreleased]` trae Oracle thick y schema/tabla de la carga desde el catálogo |
+
+Veredicto de la ola 10: **GO_CONDICIONAL**. Condiciones:
+
+1. ~~Aprobar D10-1 a D10-5~~ — hecho (2026-10-30).
+2. Las fases `U-10.x` se ejecutan en una sesión de util_bbdd (§5.1); desde la web no se modifica util_bbdd.
 
 ---
 
