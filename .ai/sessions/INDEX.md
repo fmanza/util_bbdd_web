@@ -31,3 +31,4 @@
 | [2026-10-30-mermaid12](2026-10-30-mermaid12/TRACEABILITY.md) | new_feature | Mermaid 12 incrustado en el informe HTML de comparación y diagramas del Markdown en la SPA (G45) |
 | [2026-10-30-gaps-ola10](2026-10-30-gaps-ola10/TRACEABILITY.md) | new_feature + hotfix + version_closure | Oracle thick, hotfixes de volcado y migración, schema/tabla de la carga, plan de la ola 10 y W-10 con util_bbdd 5.2.0 (G45-G48) → 1.9.0 |
 | [2026-10-30-carga-1gb](2026-10-30-carga-1gb/TRACEABILITY.md) | hotfix + new_feature + version_closure | Hotfixes de la carga, ids propios y `exclude_autoincrement_pk`, límites administrables y CSV de hasta 1 GB por bloques → 1.10.0 |
+| [2026-10-31-v1.10.1](2026-10-31-v1.10.1/TRACEABILITY.md) | new_feature + audit_code + version_closure | Almacenamiento en dos apartados (*Cuota y retención* / *Carga de ficheros*), rechazo temprano de subidas y carga sin verificar → 1.10.1 |
