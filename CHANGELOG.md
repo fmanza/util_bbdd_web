@@ -13,6 +13,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   Los ejemplos de nginx y Caddy de `deployment.md` solo admiten ficheros grandes en las rutas de subida (1 MB en el
   resto: el JSON se lee en memoria antes de autenticar).
 
+### Changed
+
+- **Administración → Almacenamiento en dos apartados**: *Cuota y retención* (antes «Ajustes», con **Aplicar ahora**,
+  que pide al worker la retención y la purga) y *Carga de ficheros*, cada uno con su propio Guardar. Los límites de
+  la carga ya no pasan por la vista previa de la purga ni bloquean «Aplicar ahora» mientras se editan.
+
 ### Fixed
 
 - **Carga en MariaDB/MySQL con tablas grandes**: si el recuento de la tabla tras una carga ya confirmada superaba el

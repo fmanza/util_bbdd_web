@@ -1129,8 +1129,8 @@
   },
   "storage": {
     "title": "Almacenamiento",
-    "intro": "Cuota de espacio por usuario y retención de ejecuciones y ficheros. Cada ajuste parte de su variable UBW_* y se aplica sin reiniciar: la cuota al momento y la retención en la siguiente pasada del worker (cada hora) o con «Aplicar ahora».",
-    "settingsTitle": "Ajustes",
+    "intro": "Cuota de espacio por usuario, retención de ejecuciones y ficheros, y límites de la carga. Cada ajuste parte de su variable UBW_* y se aplica sin reiniciar: la cuota y los límites al momento y la retención en la siguiente pasada del worker (cada hora) o con «Aplicar ahora».",
+    "settingsTitle": "Cuota y retención",
     "fields": {
       "user_quota_mb": "Cuota por usuario (MB)",
       "run_retention_days": "Retención de ejecuciones (días)",
@@ -1155,6 +1155,7 @@
     },
     "uploadsTitle": "Carga de ficheros",
     "uploadsIntro": "Límites de los ficheros CSV y Excel de la carga. Un CSV grande se lee y se carga por bloques; un Excel o una carga con plan paralelo se leen enteros en memoria. Con un proxy inverso, su límite de tamaño de petición (client_max_body_size en nginx) tiene que ser al menos este; ver la guía de despliegue.",
+    "uploadsSaved": "Límites guardados: valen para las siguientes subidas y cargas.",
     "defaultHint": "Por defecto: {{value}} ({{env}}).",
     "reset": "Restablecer",
     "willReset": "Volverá al valor por defecto al guardar.",

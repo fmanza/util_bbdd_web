@@ -54,17 +54,21 @@ function stubAdmin(settings: StorageSettings | 'error' = SETTINGS) {
   });
 }
 
+/** Tarjeta de ajustes por su título: «Cuota y retención» o «Carga de ficheros». */
+const section = async (name: string) => screen.findByRole('region', { name });
+
 describe('Administración → Almacenamiento', () => {
   it('guarda un ajuste tras confirmar lo que se purgará', async () => {
     const fetchMock = stubAdmin();
     const user = userEvent.setup();
 
     renderRoute('/admin/storage');
-    const quota = await screen.findByRole('textbox', { name: 'Cuota por usuario (MB)' });
-    expect(screen.getByText(/Por defecto: 1024 \(UBW_USER_QUOTA_MB\)/)).toBeInTheDocument();
+    const retention = await section('Cuota y retención');
+    const quota = within(retention).getByRole('textbox', { name: 'Cuota por usuario (MB)' });
+    expect(within(retention).getByText(/Por defecto: 1024 \(UBW_USER_QUOTA_MB\)/)).toBeInTheDocument();
     await user.clear(quota);
     await user.type(quota, '300');
-    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    await user.click(within(retention).getByRole('button', { name: 'Guardar' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Confirmar los ajustes' });
     expect(within(dialog).getByText(/purgará 3 ejecuciones .* de 2 usuarios/)).toBeInTheDocument();
@@ -81,9 +85,10 @@ describe('Administración → Almacenamiento', () => {
     const user = userEvent.setup();
 
     renderRoute('/admin/storage');
-    await user.click(await screen.findByRole('button', { name: 'Restablecer Cuota por usuario (MB)' }));
-    expect(screen.getByText('Volverá al valor por defecto al guardar.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    const retention = await section('Cuota y retención');
+    await user.click(within(retention).getByRole('button', { name: 'Restablecer Cuota por usuario (MB)' }));
+    expect(within(retention).getByText('Volverá al valor por defecto al guardar.')).toBeInTheDocument();
+    await user.click(within(retention).getByRole('button', { name: 'Guardar' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Guardar' }));
 
     await waitFor(() => expect(callsTo(fetchMock, 'PATCH', URL)).toHaveLength(1));
@@ -100,9 +105,35 @@ describe('Administración → Almacenamiento', () => {
     expect(within(table).getByText('Sin límite')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Objetivo de la purga' })).toBeDisabled();
 
-    await user.click(screen.getByRole('button', { name: 'Aplicar ahora' }));
+    const retention = await section('Cuota y retención');
+    expect(
+      within(await section('Carga de ficheros')).queryByRole('button', { name: 'Aplicar ahora' }),
+    ).toBeNull();
+    await user.click(within(retention).getByRole('button', { name: 'Aplicar ahora' }));
     await waitFor(() => expect(callsTo(fetchMock, 'POST', `${URL}/maintenance`)).toHaveLength(1));
-    expect(await screen.findByRole('status')).toHaveTextContent('aplicará la retención');
+    expect(await within(retention).findByRole('status')).toHaveTextContent('aplicará la retención');
+  });
+
+  it('guarda los límites de la carga sin vista previa de la purga', async () => {
+    const fetchMock = stubAdmin();
+    const user = userEvent.setup();
+
+    renderRoute('/admin/storage');
+    const uploads = await section('Carga de ficheros');
+    const maxMb = within(uploads).getByRole('textbox', { name: 'Tamaño máximo de un fichero (MB)' });
+    await user.clear(maxMb);
+    await user.type(maxMb, '200');
+    // Un cambio pendiente en la carga no bloquea «Aplicar ahora» (es de la retención).
+    expect(
+      within(await section('Cuota y retención')).getByRole('button', { name: 'Aplicar ahora' }),
+    ).toBeEnabled();
+    await user.click(within(uploads).getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(callsTo(fetchMock, 'PATCH', URL)).toHaveLength(1));
+    expect(await callsTo(fetchMock, 'PATCH', URL)[0]?.json()).toEqual({ upload_max_mb: 200 });
+    expect(callsTo(fetchMock, 'POST', `${URL}/preview`)).toHaveLength(0);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(await within(uploads).findByRole('status')).toHaveTextContent('Límites guardados');
   });
 
   it('muestra el error si no se pueden cargar los ajustes', async () => {
