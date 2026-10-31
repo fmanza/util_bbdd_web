@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import shutil
 from collections.abc import Callable, Generator, Iterable, Iterator
 from contextlib import closing
@@ -38,6 +39,7 @@ from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.integrations.util_bbdd.sql import _engine_message
 
 Operation = Literal["insert", "update", "delete"]
+logger = logging.getLogger(__name__)
 SAMPLE_ROWS: Final = 20
 #: Filas con las que se genera el SQL de la vista previa (D-1): con ficheros grandes, el SQL completo es inmanejable.
 #: Salen del primer bloque (``CHUNK_ROWS`` de la web, 50 000 filas).
@@ -528,7 +530,14 @@ def run_bulk(
         finally:
             sink.close()
         plan = crud.parallel_plan(options.operation, rows[0])
-        after = _count(engine, table)
+        # La carga ya está confirmada: si el recuento falla (p. ej. read_timeout de 30 s de MariaDB/MySQL en una
+        # tabla grande), el resultado queda sin verificar (None) en lugar de dar la ejecución por fallida.
+        after: int | None
+        try:
+            after = _count(engine, table)
+        except Exception as exc:  # frontera del motor: solo el tipo, el mensaje puede llevar el host
+            logger.warning("Recuento del destino tras la carga fallido", extra={"exc_type": type(exc).__name__})
+            after = None
         parallel = crud.last_parallel_result
         partitions = [
             {"index": p.index, "rows": p.rows, "error": _clean(p.error) if p.error else None}
@@ -549,7 +558,9 @@ def run_bulk(
             "matches": matches,
             "target_rows_before": before,
             "target_rows_after": after,
-            "verified": verify(options.operation, before, after, committed, matches) if complete else None,
+            "verified": verify(options.operation, before, after, committed, matches)
+            if complete and after is not None
+            else None,
             "rejected": crud.rows_rejected,
             "error": error,
             "cancelled": cancelled,

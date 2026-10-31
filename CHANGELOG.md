@@ -3,6 +3,14 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Fixed
+
+- **Carga en MariaDB/MySQL con tablas grandes**: si el recuento de la tabla tras una carga ya confirmada superaba el
+  `read_timeout` (30 s por defecto), la ejecución acababa en «util_bbdd falló (InterfaceError)»; ahora termina con la
+  carga **sin verificar** y un aviso. API: `target_rows_after` del resultado de la carga admite `null`.
+
 ## [1.10.0] - 2026-10-30
 
 ### Added

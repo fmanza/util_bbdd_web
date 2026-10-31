@@ -232,7 +232,9 @@ def test_cancelled_atomic_load_is_undone_entirely(tmp_path: Path) -> None:
         con.close()
 
 
-def _result(operation: str, rows: int, committed: int, rejected: int, before: int, after: int) -> dict[str, object]:
+def _result(
+    operation: str, rows: int, committed: int, rejected: int, before: int, after: int | None
+) -> dict[str, object]:
     return {"operation": operation, "rows": rows, "committed": committed, "rejected": rejected,
             "target_rows_before": before, "target_rows_after": after, "verified": None}  # fmt: skip
 
@@ -248,6 +250,10 @@ def _result(operation: str, rows: int, committed: int, rejected: int, before: in
         (_result("update", 5, 5, 1, 10, 10), 4,
          "UPDATE terminado: 4 filas actualizadas (enviadas sin rechazo), 1 filas apartadas en rechazos.csv"),
         (_result("insert", 0, 0, 0, 10, 10), 0, "INSERT terminado: 0 filas insertadas"),
+        # Sin recuento posterior (read_timeout): lo que util_bbdd confirmó, menos las apartadas.
+        (_result("delete", 5, 5, 1, 10, None), 4,
+         "DELETE terminado: 4 filas borradas, 1 filas apartadas en rechazos.csv; no se pudo contar el destino tras la "
+         "carga (¿read_timeout de la conexión?): compruébalo en la tabla"),
     ],
 )  # fmt: skip
 def test_bulk_message_counts_applied_rows_not_committed(result: dict[str, object], applied: int, message: str) -> None:
@@ -255,6 +261,46 @@ def test_bulk_message_counts_applied_rows_not_committed(result: dict[str, object
 
     assert applied_rows(result) == applied
     assert result_message(result) == message
+
+
+def test_failed_count_after_the_load_leaves_it_unverified(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hotfix: el recuento tras una carga ya confirmada falla (read_timeout de MariaDB): resultado sin verificar."""
+    import sqlite3
+
+    import pandas as pd
+
+    from app.integrations.util_bbdd import bulk
+    from app.integrations.util_bbdd.bulk import BulkOptions, build_bulk_preview, run_bulk
+    from app.jobs.operations.bulk import applied_rows, result_message
+
+    target, database = _sqlite_target(tmp_path)
+    frame = pd.DataFrame({"id": [2, 3], "nombre": ["eva", "luis"]})
+    options = BulkOptions(table="clientes", operation="insert")
+    preview = build_bulk_preview(target, frame, options, outputs_dir=tmp_path / "p", work_dir=tmp_path / "w")  # type: ignore[arg-type]
+    real_count = bulk._count
+    calls: list[int] = []
+
+    def count(engine: object, table: object) -> int:
+        calls.append(1)
+        if len(calls) == 2:  # el de después de cargar
+            raise TimeoutError("Lost connection to server during query")
+        return real_count(engine, table)
+
+    monkeypatch.setattr(bulk, "_count", count)
+    result = run_bulk(target, frame, options, expected_structure=preview["structure_hash"], outputs_dir=tmp_path / "o")  # type: ignore[arg-type]
+
+    assert (result["error"], result["committed"], result["target_rows_before"]) == (None, 2, 1)
+    assert (result["target_rows_after"], result["verified"]) == (None, None)
+    assert applied_rows(result) == 2
+    assert result_message(result) == (
+        "INSERT terminado: 2 filas insertadas; no se pudo contar el destino tras la carga (¿read_timeout de la "
+        "conexión?): compruébalo en la tabla"
+    )
+    con = sqlite3.connect(database)
+    try:
+        assert con.execute("SELECT COUNT(*) FROM clientes").fetchone() == (3,)
+    finally:
+        con.close()
 
 
 def test_override_identity_is_passed_only_to_the_insert() -> None:

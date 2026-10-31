@@ -710,8 +710,16 @@
             "type": "string"
           },
           "target_rows_after": {
-            "title": "Target Rows After",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filas del destino tras la carga; null si no se pudieron contar (p. ej. read_timeout de MariaDB/MySQL en una tabla grande): la carga quedó confirmada pero sin verificar",
+            "title": "Target Rows After"
           },
           "target_rows_before": {
             "title": "Target Rows Before",

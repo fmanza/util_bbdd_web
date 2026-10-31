@@ -1063,6 +1063,8 @@
       "cancelledUndone": "La carga se deshizo entera: no se escribió nada en el destino.",
       "cancelledPartial_one": "Queda confirmada {{count}} fila de las particiones que terminaron antes de cancelar; las demás se deshicieron.",
       "cancelledPartial_other": "Quedan confirmadas {{count}} filas de las particiones que terminaron antes de cancelar; las demás se deshicieron.",
+      "uncountedTitle": "Carga confirmada sin verificar",
+      "uncounted": "util_bbdd confirmó la carga, pero la tabla destino no se pudo contar después (en MariaDB/MySQL, el read_timeout de la conexión, 30 s por defecto, se queda corto en tablas grandes). Comprueba el número de filas en el destino y no repitas la carga sin hacerlo.",
       "mismatchTitle": "El recuento del destino no cuadra",
       "mismatch": {
         "insert": "util_bbdd confirmó {{committed}} filas, pero la tabla creció en {{delta}}. Revisa el destino: otro proceso pudo escribir a la vez o un disparador cambió las filas.",

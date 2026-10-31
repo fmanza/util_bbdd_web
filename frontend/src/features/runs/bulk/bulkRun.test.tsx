@@ -304,6 +304,29 @@ describe('resultado de la carga', () => {
     expect(screen.getByText(/confirmó 3 filas, pero la tabla creció en 1/)).toBeInTheDocument();
   });
 
+  it('sin recuento posterior muestra «—» y avisa de que la carga quedó sin verificar', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ALLOWED),
+      [`GET /api/v1/runs/${APPLY_ID}`]: {
+        body: {
+          ...FINISHED, id: APPLY_ID, operation: 'bulk_apply', status: 'succeeded', my_role: 'owner',
+          params: { preview_run: PREVIEW_ID, confirm: 'destino' }, artifacts: [],
+        },
+      },
+      // Caso real: 7,4 M filas en MariaDB; el COUNT(*) posterior superó el read_timeout de 30 s.
+      [`GET /api/v1/runs/${APPLY_ID}/bulk-result`]: {
+        body: { ...RESULT, rejected: 0, partitions: [], target_rows_after: null, verified: null },
+      },
+    }); // prettier-ignore
+
+    renderRoute(`/runs/${APPLY_ID}`);
+
+    expect(await screen.findByText('Carga confirmada sin verificar')).toBeInTheDocument();
+    expect(screen.getByText('Filas después').nextElementSibling).toHaveTextContent('—');
+    expect(screen.getByText('Filas insertadas').nextElementSibling).toHaveTextContent('3');
+  });
+
   it('avisa si no se cargó ninguna fila porque todas se apartaron', async () => {
     stubEventSource();
     stubApi({

@@ -10,8 +10,10 @@ import { isActive, type RunDetail } from '../useRuns';
 /**
  * Filas que la carga cambió en el destino. `committed` de util_bbdd cuenta las enviadas, también las apartadas (G37):
  * en un insert o un borrado manda el recuento de la tabla; en una actualización, las enviadas menos las apartadas.
+ * Sin recuento posterior (`target_rows_after` null), las enviadas menos las apartadas en cualquier operación.
  */
 function appliedRows(data: BulkResult): number {
+  if (data.target_rows_after === null) return (data.committed ?? 0) - (data.rejected ?? 0);
   if (data.operation === 'insert') return data.target_rows_after - data.target_rows_before;
   if (data.operation === 'delete') return data.target_rows_before - data.target_rows_after;
   return (data.committed ?? 0) - (data.rejected ?? 0);
@@ -64,19 +66,24 @@ export function BulkResultView({ run }: { run: RunDetail }) {
               <Stat label={t('bulk.result.rows')} value={data.rows} />
               <Stat label={t(`bulk.result.applied.${data.operation}`)} value={appliedRows(data)} />
               <Stat label={t('bulk.result.before')} value={data.target_rows_before} />
-              <Stat label={t('bulk.result.after')} value={data.target_rows_after} />
+              <Stat label={t('bulk.result.after')} value={data.target_rows_after ?? '—'} />
               <Stat label={t('bulk.result.rejected')} value={data.rejected ?? 0} />
             </SimpleGrid>
             <Text size="xs" c="dimmed">
               {t('bulk.result.committedHelp')}
             </Text>
-            {data.verified === false && (
+            {data.verified === false && data.target_rows_after !== null && (
               <Alert color="orange" title={t('bulk.result.mismatchTitle')}>
                 {t(`bulk.result.mismatch.${data.operation}`, {
                   committed: data.committed ?? 0,
                   matches: data.matches ?? 0,
                   delta: Math.abs(data.target_rows_after - data.target_rows_before),
                 })}
+              </Alert>
+            )}
+            {data.target_rows_after === null && (
+              <Alert color="yellow" title={t('bulk.result.uncountedTitle')}>
+                {t('bulk.result.uncounted')}
               </Alert>
             )}
             {data.cancelled && (

@@ -89,6 +89,12 @@ enviadas, incluidas las apartadas): si no cuadra (otro proceso escribió a la ve
 avisa. Artefactos: `result.json`, la auditoría de util_bbdd `carga.jsonl` y, si se apartaron filas, `rechazos.csv`
 (datos de negocio).
 
+> **Destino MariaDB o MySQL con tablas grandes**: util_bbdd usa por defecto `read_timeout = 30` (segundos). Si el
+> recuento de la tabla tras la carga tarda más, la carga sigue confirmada pero el resultado sale **sin verificar**:
+> «Filas después» en «—», las filas aplicadas son las que util_bbdd confirmó y un aviso pide comprobar el destino. No
+> repitas la carga sin contarlo. Para tablas de millones de filas, sube `read_timeout` (p. ej. `600`) en la conexión
+> destino.
+
 ## Errores frecuentes
 
 | Código | Causa | Qué hacer |

@@ -85,7 +85,10 @@ class BulkResultOut(_Bulk):
     )
     matches: int | None = None
     target_rows_before: int
-    target_rows_after: int
+    target_rows_after: int | None = Field(
+        description="Filas del destino tras la carga; null si no se pudieron contar (p. ej. read_timeout de "
+        "MariaDB/MySQL en una tabla grande): la carga quedó confirmada pero sin verificar",
+    )
     verified: bool | None = Field(
         default=None,
         description="El recuento del destino antes/después cuadra con committed (false: revisar); null si no se "

@@ -1766,8 +1766,11 @@ export interface components {
             rows: number;
             /** Table */
             table: string;
-            /** Target Rows After */
-            target_rows_after: number;
+            /**
+             * Target Rows After
+             * @description Filas del destino tras la carga; null si no se pudieron contar (p. ej. read_timeout de MariaDB/MySQL en una tabla grande): la carga quedó confirmada pero sin verificar
+             */
+            target_rows_after: number | null;
             /** Target Rows Before */
             target_rows_before: number;
             /**

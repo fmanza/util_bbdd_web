@@ -180,7 +180,8 @@ def run_apply(ctx: JobContext) -> None:
         ctx.logger.error("Carga fallida", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     _write(ctx.run_dir / RESULT_PATH, result)
-    changed = abs(result["target_rows_after"] - result["target_rows_before"])
+    after = result["target_rows_after"]
+    changed = None if after is None else abs(after - result["target_rows_before"])
     ctx.logger.info(
         "Carga",
         extra={
@@ -214,8 +215,11 @@ def applied_rows(result: dict[str, Any]) -> int:
 
     ``committed`` de util_bbdd cuenta las filas enviadas, también las apartadas (G37): en un insert o un borrado manda
     el recuento de la tabla; en una actualización, que no cambia el recuento, las enviadas menos las apartadas
-    (incluye las claves que no existían).
+    (incluye las claves que no existían). Sin recuento posterior (``target_rows_after`` None), las enviadas menos las
+    apartadas en cualquier operación.
     """
+    if result["target_rows_after"] is None:
+        return int(result["committed"] or 0) - int(result["rejected"] or 0)
     if result["operation"] == "insert":
         return int(result["target_rows_after"]) - int(result["target_rows_before"])
     if result["operation"] == "delete":
@@ -232,6 +236,8 @@ def result_message(result: dict[str, Any]) -> str:
     extra = f", {rejected} filas apartadas en rechazos.csv" if rejected else ""
     # G37: el recuento del destino se mantiene como verificación de lo que util_bbdd dice haber confirmado.
     check = "; el recuento del destino no cuadra: revisa el resultado" if result["verified"] is False else ""
+    if result["target_rows_after"] is None:
+        check = "; no se pudo contar el destino tras la carga (¿read_timeout de la conexión?): compruébalo en la tabla"
     sync_errors = [s["error"] or s["status"] for s in result.get("pk_sync", []) if s["status"] == "error"]
     sync = f"; no se pudo ajustar el contador de la PK: {sync_errors[0]}" if sync_errors else ""
     return f"{operation} terminado: {applied_rows(result)} filas {_DONE[result['operation']]}{extra}{check}{sync}"
