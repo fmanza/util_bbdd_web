@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api import health, metrics
+from app.api.upload_guard import UploadGuard
 from app.api.v1 import router as v1_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers, problem
@@ -50,6 +51,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.limiter = limiter
     app.state.http_metrics = http_metrics
     metrics.register_collectors(http_metrics.registry)
+    # Por dentro de HttpMiddleware: sus 401/413 también llevan request_id, cabeceras, métricas y rate limit.
+    app.add_middleware(UploadGuard)
     app.add_middleware(HttpMiddleware, settings=settings, limiter=limiter, metrics=http_metrics)
     app.include_router(metrics.router)
 

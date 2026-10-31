@@ -5,6 +5,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Security
+
+- **Subidas rechazadas antes de recibirlas**: un `POST` de subida (carga y plantillas de documento) sin sesión (401),
+  sin token CSRF (403), sin `Content-Length` (411, nuevo en el contrato) o que declara más del máximo (413) se
+  rechaza solo con las cabeceras; antes la app escribía el fichero entero en disco y después respondía el error.
+  Los ejemplos de nginx y Caddy de `deployment.md` solo admiten ficheros grandes en las rutas de subida (1 MB en el
+  resto: el JSON se lee en memoria antes de autenticar).
+
 ### Fixed
 
 - **Carga en MariaDB/MySQL con tablas grandes**: si el recuento de la tabla tras una carga ya confirmada superaba el

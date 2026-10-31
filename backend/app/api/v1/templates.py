@@ -39,6 +39,7 @@ _EDITOR: dict[int | str, dict[str, Any]] = {
 }  # fmt: skip
 _UPLOAD: dict[int | str, dict[str, Any]] = {
     409: {"description": "Nombre repetido o límite de plantillas"},
+    411: {"description": "Falta Content-Length"},
     413: {"description": "Demasiado grande"},
     415: {"description": "No es .docx, .dotx, .xlsx ni .xltx (o tiene macros)"},
     422: {"description": "Contenido no válido, no seguro o (Word) le faltan estilos"},

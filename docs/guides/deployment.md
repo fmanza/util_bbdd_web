@@ -133,7 +133,16 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Request-ID $request_id;  # mismo id en los logs del proxy y de la aplicación
         proxy_buffering off;                        # SSE de progreso (Fase 3)
-        client_max_body_size 51m;                   # carga: «Tamaño máximo de un fichero» + margen (1025m para 1 GB)
+        client_max_body_size 1m;                    # JSON: FastAPI lee el cuerpo en memoria antes de autenticar
+    }
+    # Solo las subidas (carga y plantillas) admiten ficheros grandes.
+    location ~ ^/api/v1/(projects/\d+/(uploads|document-templates)|admin/document-templates)$ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
+        client_max_body_size 51m;                   # «Tamaño máximo de un fichero» + margen (1025m para 1 GB)
         proxy_request_buffering off;                # la subida pasa a la aplicación sin copiarse antes en el proxy
         proxy_read_timeout 600s;                    # comprobar un fichero grande tras recibirlo lleva su tiempo
     }
@@ -149,8 +158,14 @@ server {
 
 ```caddyfile
 util-bbdd.example.internal {
-    request_body {
-        max_size 51MB   # carga: «Tamaño máximo de un fichero» + margen (1025MB para 1 GB)
+    # Solo las subidas (carga y plantillas) admiten ficheros grandes; el JSON se lee en memoria antes de autenticar.
+    @uploads path_regexp ^/api/v1/(projects/\d+/(uploads|document-templates)|admin/document-templates)$
+    request_body @uploads {
+        max_size 51MB   # «Tamaño máximo de un fichero» + margen (1025MB para 1 GB)
+    }
+    @other not path_regexp ^/api/v1/(projects/\d+/(uploads|document-templates)|admin/document-templates)$
+    request_body @other {
+        max_size 1MB
     }
     @metrics path /metrics
     handle @metrics {
@@ -188,6 +203,8 @@ por defecto. Para subir CSV de, por ejemplo, 1 GB:
 - **Disco**: el multipart se recibe en un temporal del volumen workspace (`TMPDIR=<workspace>/.tmp`, que crea el
   *entrypoint*; `/tmp` es un `tmpfs` en memoria) y después se copia a `uploads/`. Durante la subida el fichero ocupa
   el doble. Fuera de Docker, apunta `TMPDIR` a un disco con espacio. Sube también la cuota del usuario.
+  Antes de recibir nada, la app rechaza la subida sin sesión (401), sin token CSRF (403), sin `Content-Length`
+  (411) o con un `Content-Length` por encima del máximo (413): sin sesión no se escribe ni un byte en disco.
 - **Memoria**: un CSV se lee y se carga por bloques de 50 000 filas, sin tenerlo entero en memoria. Un **Excel** y una
   carga con **plan paralelo** sí se leen enteros: la vista previa avisa si se pide el plan paralelo con un fichero de
   más de 200 MB. Para ficheros grandes, CSV y sin plan paralelo.

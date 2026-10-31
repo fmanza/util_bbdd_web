@@ -6337,6 +6337,9 @@
           "409": {
             "description": "Nombre repetido o límite de plantillas"
           },
+          "411": {
+            "description": "Falta Content-Length"
+          },
           "413": {
             "description": "Demasiado grande"
           },
@@ -8937,6 +8940,9 @@
           "409": {
             "description": "Nombre repetido o límite de plantillas"
           },
+          "411": {
+            "description": "Falta Content-Length"
+          },
           "413": {
             "description": "Demasiado grande"
           },
@@ -9720,6 +9726,9 @@
           },
           "409": {
             "description": "Cuota superada"
+          },
+          "411": {
+            "description": "Falta Content-Length"
           },
           "413": {
             "description": "Demasiado grande"

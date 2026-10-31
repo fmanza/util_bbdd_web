@@ -40,7 +40,7 @@ _COMMON: Final = (
 #: origen opaco, y sus subrecursos (JS, CSS, imágenes) serían *cross-origin* para ``CORP: same-origin``.
 _CORP: Final = ("Cross-Origin-Resource-Policy", "same-origin")
 #: Subidas de ficheros: carga bulk y plantillas de documento (ADR-011), con su propio límite por hora.
-_UPLOAD_PATH: Final = re.compile(r"^/api/v1/(projects/\d+/(uploads|document-templates)|admin/document-templates)$")
+UPLOAD_PATH: Final = re.compile(r"^/api/v1/(projects/\d+/(uploads|document-templates)|admin/document-templates)$")
 _UNLIMITED: Final = frozenset({"/api/health", "/metrics"})
 
 
@@ -152,7 +152,7 @@ class HttpMiddleware:
             rule, name = self.api_rule, "api"
         else:
             key, rule, name = "ip:" + client_ip(scope), self.anonymous_rule, "anonymous"
-        if scope.get("method") == "POST" and _UPLOAD_PATH.match(path):
+        if scope.get("method") == "POST" and UPLOAD_PATH.match(path):
             wait = self.limiter.hit("up:" + key, self.upload_rule)
             if wait is not None:
                 return "uploads", wait

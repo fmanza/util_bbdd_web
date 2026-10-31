@@ -135,3 +135,14 @@ Para cargar CSV de hasta 1 GB sin tenerlos enteros en memoria:
 
 Sin huecos nuevos en util_bbdd. Pendiente: la subida por partes reanudable, si la subida HTTP de 1 GB falla en redes
 inestables.
+
+## Enmienda (2026-10-31): rechazo temprano de las subidas
+
+FastAPI lee el multipart entero (a `TMPDIR`) **antes** de resolver las dependencias del endpoint: sin sesión, sin
+CSRF o con un tamaño excesivo, el 401/403/413 llegaba con el fichero ya escrito en disco. El middleware ASGI
+`UploadGuard` (`app/api/upload_guard.py`, por dentro de `HttpMiddleware`) decide con las cabeceras, sin leer el
+cuerpo, en los `POST` de subida (carga y plantillas de documento): sesión válida (401), CSRF (403), `Content-Length`
+presente (411) y no mayor que `upload_max_mb` efectivo o `template_max_mb` más 64 KB (413). El endpoint mantiene sus
+comprobaciones (membresía, rol, cuota, tamaño real y contenido). Al responder sin leer el cuerpo, uvicorn cierra la
+conexión: un navegador que siga enviando puede ver un error de red en lugar del *problem details*; la pantalla ya
+avisa del tamaño antes de subir.

@@ -56,7 +56,8 @@ def _out(upload: Any) -> UploadOut:
 @router.post(
     "/{project_id}/uploads", response_model=UploadOut, status_code=status.HTTP_201_CREATED, summary="Subir un fichero",
     responses={**_401, **_404, 403: {"description": "Rol inferior a editor"}, 409: {"description": "Cuota superada"},
-               413: {"description": "Demasiado grande"}, 415: {"description": "No es .csv ni .xlsx"},
+               411: {"description": "Falta Content-Length"}, 413: {"description": "Demasiado grande"},
+               415: {"description": "No es .csv ni .xlsx"},
                422: {"description": "El contenido no es válido"}},
 )  # fmt: skip
 def create_upload(

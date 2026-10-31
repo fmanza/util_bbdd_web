@@ -4133,6 +4133,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Falta Content-Length */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Demasiado grande */
             413: {
                 headers: {
@@ -6559,6 +6566,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Falta Content-Length */
+            411: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Demasiado grande */
             413: {
                 headers: {
@@ -7234,6 +7248,13 @@ export interface operations {
             };
             /** @description Cuota superada */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Falta Content-Length */
+            411: {
                 headers: {
                     [name: string]: unknown;
                 };
