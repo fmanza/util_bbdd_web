@@ -288,6 +288,27 @@ Orden: las fases `U-10.x` son independientes. W-10.1 y W-10.2 van después de W-
 
 ---
 
+### Grupo 11 — util_bbdd 5.4.0: salida Markdown para la web 1.12.0 (ola 11)
+
+G50 y G51 salieron con las tarjetas por formato y el visor Markdown de la web 1.12.0. Planificada el 2026-11-06 sobre
+util_bbdd 5.3.0 (`2841111d`, repo origen) y la web 1.12.0 (`39cf285`); detalle, estado verificado y contrato HTTP en
+la sesión `.ai/sessions/2026-11-06-gaps-g50-g51/` (`PLAN.md` y `AUDIT_PLAN.md`).
+
+| Id | Commit | Huecos | Cambio | Tests |
+|---|---|---|---|---|
+| U-11.1 | `feat(doc): Mermaid del sitio Markdown referenciado sin copiarlo` | G50 | `imprimir["markdown"]["mermaid_js_ref"]`: ruta relativa a `docs/` (sin `..` ni raíz) o URL `https://`, escrita en `extra_javascript` sin copiar; con ruta relativa, `theme.font: false`. Excluyente con `mermaid_js` | `mkdocs.yml`, nada copiado ni en `files`, rechazos de rutas y esquemas; `zensical build --strict` con y sin el fichero (AUDIT T3, T4) |
+| U-11.2 | `feat(doc): índice de páginas en manifest.json` | G51 | `manifest.json` `format_version` 2 con `pages`: `path`, `title` (texto plano), `section`, `role`, `letter`, `id`/`kind` del catálogo; determinista; se sigue leyendo un v1 | `pages` ↔ `.md` escritos, títulos sin escapes, ids = `catalog.json`, determinismo, limpieza sobre un v1 |
+
+| Id | Commit | Huecos | Cambio en la web | Rodeo | Tests |
+|---|---|---|---|---|---|
+| W-11.0 | `chore(backend): util_bbdd 5.4.0` | — | Pin, URL del wheel y lock | — | Suite completa |
+| W-11.1 | `feat(backend): Mermaid de la documentación Markdown fuera de cada ejecución` | G50 | El job pasa `mermaid_js_ref` y anota `markdown_mermaid` en `run.json`; `zip_stream` con entradas extra; el ZIP Markdown y el completo añaden `UBW_MERMAID_JS` (sin duplicar la copia de ejecuciones antiguas; si falta, `X-UBW-Warning`) | Se retira la copia (D11-4: las antiguas se quedan) | ZIP con el fichero, sin duplicados, fichero ausente, tamaño del run |
+| W-11.2 | `feat(backend,frontend): árbol del visor Markdown desde el índice de páginas` | G51 | `GET /runs/{id}/markdown-pages` (`source` `manifest` o `paths`); árbol con títulos y búsqueda por nombre real | La deducción por rutas **se mantiene** para ejecuciones 5.3.0 (D11-8) | Índice v2, v1, corrupto, rutas no registradas, permisos; contrato `pages` ↔ ficheros |
+| W-11.3 | `docs: G50 y G51 resueltos en util_bbdd 5.4.0` | G50, G51 | GAPS, guía, ADR-007, ROADMAP | — | `zensical build --strict` |
+
+Orden: U-11.1 y U-11.2 independientes → `release: v5.4.0`. En la web, W-11.0 → (W-11.1, W-11.2) → W-11.3 →
+`release: v1.13.0` (D11-7).
+
 ## 3. Orden de ejecución simultáneo
 
 Los dos repositorios avanzan **en tubería**: mientras la web adapta la ola *n* (ya publicada), util_bbdd implementa
@@ -306,12 +327,14 @@ flowchart LR
         R6 --> U8["Ola 8<br/>U-8"] --> R8(["v5.0.0"])
         R8 --> U9["Ola 9<br/>U-9"] --> R9(["v5.1.0"])
         R9 --> U10["Ola 10<br/>U-10"] --> R10(["v5.2.0"])
+        R10 -.-> U11["Ola 11<br/>U-11"] --> R11(["v5.4.0"])
     end
     subgraph W["util_bbdd_web"]
         direction LR
         W1["W-1.0 + W-D + W-G"] --> W2["W-2.0 + W-C"] --> W3["W-3.0 + W-M"]
         W3 --> W4["W-4.0 + W-V"] --> W5["W-5.0 + W-B"] --> W6["W-6.0 + W-T"]
         W6 --> W8["W-8.0 + W-8"] --> W9["W-9.0 + W-9"] --> W10["W-10.0 + W-10"]
+        W10 -.-> W11["W-11.0 + W-11"]
     end
     R1 -.wheel.-> W1
     R2 -.wheel.-> W2
@@ -322,6 +345,7 @@ flowchart LR
     R8 -.wheel.-> W8
     R9 -.wheel.-> W9
     R10 -.wheel.-> W10
+    R11 -.wheel.-> W11
 ```
 
 | Paso | util_bbdd (commits en orden) | util_bbdd_web (commits en orden) | Sincronización |
@@ -337,6 +361,7 @@ flowchart LR
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
 | 9 (web ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ `fa13622` → **`release: v1.7.1`** ✅ (D9-3) | Wheel 5.1.0 |
 | 10 (web ✅) | U-10.1 ✅ `87e5386` → U-10.2 ✅ `f1c0737` → U-10.3 ✅ `ad9fe85` → U-10.4 ✅ `c3a1d55` → **`release: v5.2.0`** ✅ `30e47bf` | **W-10.0** ✅ `a7d6e1e` `chore(backend): util_bbdd 5.2.0` → W-10.1 ✅ `f86056a` → W-10.2 ✅ `ddbaecc` → **`release: v1.9.0`** ✅ (D10-5) | Wheel 5.2.0 |
+| 11 | U-11.1 → U-11.2 → **`release: v5.4.0`** | **W-11.0** `chore(backend): util_bbdd 5.4.0` → W-11.1 → W-11.2 → W-11.3 → **`release: v1.13.0`** (D11-7) | Wheel 5.4.0 |
 
 Reglas de la tubería:
 
@@ -502,6 +527,29 @@ Veredicto de la ola 10: **GO_CONDICIONAL**. Condiciones:
 
 1. ~~Aprobar D10-1 a D10-5~~ — hecho (2026-10-30).
 2. Las fases `U-10.x` se ejecutan en una sesión de util_bbdd (§5.1); desde la web no se modifica util_bbdd.
+
+---
+
+### Ola 11 (AUDIT_PLAN del 2026-11-06)
+
+Detalle en `.ai/sessions/2026-11-06-gaps-g50-g51/AUDIT_PLAN.md`. Riesgos principales:
+el Mermaid del ZIP es el de la imagen al descargar (T1); comportamiento de `zensical`/Material con el fichero
+ausente, **pendiente de verificar** en U-11.1 (T3, T4); títulos del índice en texto plano (T5) y no confiables en la
+SPA (S3).
+
+| # | Decisión | Estado |
+|---|---|---|
+| D11-1 | G50: referenciar sin copiar + Mermaid añadido al ZIP por la web | Aprobada (2026-11-06) |
+| D11-2 | G51: `pages` en `manifest.json` (`format_version` 2) | Aprobada (2026-11-06) |
+| D11-3 | Web: `GET /runs/{id}/markdown-pages` y árbol con títulos; ejecuciones antiguas por rutas | Aprobada (2026-11-06) |
+| D11-4 | Copias de `mermaid.min.js` ya guardadas: se dejan | Aprobada (2026-11-06) |
+| D11-5 | Sin aviso si el Mermaid del ZIP difiere del de la generación (solo `sha256` en `run.json`) | Aprobada (2026-11-06) |
+| D11-6 | util_bbdd 5.4.0 (MINOR) | Aprobada (2026-11-06) |
+| D11-7 | Web 1.13.0 (MINOR) | Aprobada (2026-11-06) |
+| D11-8 | Deducción por rutas se mantiene para 5.3.0; la copia de Mermaid se retira | Aprobada (2026-11-06) |
+
+Veredicto de la ola 11: **GO_CONDICIONAL**. Condiciones: ~~aprobar D11-5 a D11-8~~ (hecho, 2026-11-06); U-11.1 resuelve T3/T4; U-11.2
+cumple T5; las fases `U-11.x` en una sesión de util_bbdd; W-11 solo con la release 5.4.0 publicada.
 
 ---
 
