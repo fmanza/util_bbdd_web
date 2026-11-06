@@ -181,6 +181,9 @@ class RunDetailOut(RunOut):
         default_factory=dict,
         description="Plantillas de la documentación por tipo (``word``, ``excel``, ``trace``): si se aplicó la elegida",
     )
+    relaunched_from_exists: bool = Field(
+        default=False, description="La ejecución de ``relaunched_from`` sigue existiendo (un admin pudo eliminarla)"
+    )
     has_diff: bool = Field(
         default=False,
         description="Tiene diff de esquemas para el visor (``GET /runs/{id}/diff``): una comparación o una documentación "

@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Query, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
+from sqlalchemy.orm import object_session
 
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
@@ -158,6 +159,7 @@ def _detail(access: service.RunAccess, user: User, settings: Settings) -> RunDet
         warnings_by_format=_warnings_by_format(manifest),
         templates_applied=_templates_applied(manifest),
         has_diff=_has_diff(run),
+        relaunched_from_exists=_exists(run, run.relaunched_from),
     )
 
 
@@ -177,6 +179,12 @@ def _templates_applied(manifest: dict[str, Any]) -> dict[str, bool]:
     if not isinstance(entries, list):
         return {}
     return {str(e["kind"]): bool(e.get("applied", False)) for e in entries if isinstance(e, dict) and "kind" in e}
+
+
+def _exists(run: Run, other_id: str | None) -> bool:
+    """Si la ejecución ``other_id`` sigue existiendo (un admin pudo eliminarla: «Relanzada desde» sin enlace, D7)."""
+    session = object_session(run)
+    return other_id is not None and session is not None and session.get(Run, other_id) is not None
 
 
 def _has_diff(run: Run) -> bool:

@@ -159,6 +159,43 @@
       "deleteLabel": "Borrar {{name}}",
       "deleteTitle": "Borrar query",
       "deleteBody": "Se borrará la query «{{name}}» de {{engine}}."
+    },
+    "runs": {
+      "title": "Ejecuciones de todos los proyectos",
+      "intro": "Solo los datos de cada ejecución, sin su contenido. Eliminar borra la ejecución y sus ficheros: desaparece del historial y no se puede deshacer (queda en la auditoría).",
+      "search": "Buscar por id, proyecto, operación o usuario",
+      "empty": "No hay ejecuciones con esos filtros.",
+      "created": "Creada",
+      "project": "Proyecto",
+      "operation": "Operación",
+      "status": "Estado",
+      "allStatuses": "Todos",
+      "user": "Usuario",
+      "size": "Tamaño",
+      "delete": "Eliminar",
+      "deleteLabel": "Eliminar la ejecución {{id}}",
+      "deleteProjectShort": "Todas las del proyecto",
+      "deleteProjectLabel": "Eliminar todas las ejecuciones de {{name}}",
+      "deleteTitle": "Eliminar la ejecución",
+      "deleteBody": "Se borran la ejecución, sus artefactos y su carpeta. No se puede deshacer.",
+      "summaryProject": "Proyecto: {{name}}",
+      "summaryRun": "Ejecución {{operation}}",
+      "summarySize": "Espacio que se libera: {{size}}",
+      "typeWord": "Escribe {{word}} para confirmar",
+      "deleteProjectTitle": "Eliminar las ejecuciones de «{{name}}»",
+      "deleteProjectBody_one": "El proyecto tiene {{count}} ejecución ({{size}}).",
+      "deleteProjectBody_other": "El proyecto tiene {{count}} ejecuciones ({{size}}).",
+      "deleteProjectSkips": "Se borran las terminadas. Las que estén en cola o en curso y los volcados con constraints sin restaurar se omiten. El proyecto no se borra.",
+      "typeProject": "Escribe el nombre del proyecto («{{name}}») para confirmar",
+      "deleteProject": "Eliminar las ejecuciones",
+      "deletedTitle": "Ejecuciones eliminadas",
+      "deleted_one": "{{count}} ejecución eliminada ({{size}} liberados).",
+      "deleted_other": "{{count}} ejecuciones eliminadas ({{size}} liberados).",
+      "skippedActive_one": "{{count}} en cola o en curso: no se ha borrado.",
+      "skippedActive_other": "{{count}} en cola o en curso: no se han borrado.",
+      "skippedDump_one": "{{count}} volcado con constraints sin restaurar: no se ha borrado.",
+      "skippedDump_other": "{{count}} volcados con constraints sin restaurar: no se han borrado.",
+      "close": "Cerrar"
     }
   },
   "engines": {
@@ -649,7 +686,8 @@
       "externalTitle": "Vas a salir de la aplicación",
       "externalBody": "El enlace abre esta dirección en otra pestaña. Comprueba que es la que esperas: el texto del enlace viene de la base de datos documentada o del mapa de trazabilidad.",
       "externalOpen": "Abrir en otra pestaña"
-    }
+    },
+    "relaunchedFromDeleted": "(eliminada)"
   },
   "explorer": {
     "open": "Explorar",
@@ -1274,5 +1312,9 @@
       "purgeBody": "Al llegar a tu cuota se purgan tus ejecuciones terminadas más antiguas hasta bajar al {{pct}} %. Nunca las de la última hora ni las que use una ejecución en curso."
     },
     "resetLabel": "Restablecer {{field}}"
+  },
+  "table": {
+    "sortBy": "Ordenar por {{column}}",
+    "range": "{{first}}-{{last}} de {{total}}"
   }
 }

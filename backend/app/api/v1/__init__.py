@@ -10,6 +10,7 @@ from app.api.deps import csrf_protect
 from app.api.v1 import (
     admin_allowlist,
     admin_queries,
+    admin_runs,
     admin_storage,
     audit,
     auth,
@@ -45,3 +46,4 @@ router.include_router(templates.router)
 router.include_router(templates.admin_router)
 router.include_router(templates.project_router)
 router.include_router(admin_storage.router)
+router.include_router(admin_runs.router)

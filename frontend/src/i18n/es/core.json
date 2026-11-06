@@ -36,7 +36,8 @@
     "allowlist": "Destinos permitidos",
     "queries": "Queries nombradas",
     "templates": "Plantillas",
-    "storage": "Almacenamiento"
+    "storage": "Almacenamiento",
+    "adminRuns": "Ejecuciones de todos"
   },
   "auth": {
     "loginIntro": "Inicia sesión con tu usuario.",

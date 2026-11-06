@@ -213,9 +213,16 @@ export function RunDetailPage() {
             <Table.Tr>
               <Table.Th>{t('runs.relaunchedFrom')}</Table.Th>
               <Table.Td>
-                <Anchor component={Link} to={`/runs/${run.relaunched_from}`}>
-                  <Code>{run.relaunched_from}</Code>
-                </Anchor>
+                {run.relaunched_from_exists ? (
+                  <Anchor component={Link} to={`/runs/${run.relaunched_from}`}>
+                    <Code>{run.relaunched_from}</Code>
+                  </Anchor>
+                ) : (
+                  // Un administrador la eliminó (D7): el id, sin enlace a un 404.
+                  <Text size="sm">
+                    <Code>{run.relaunched_from}</Code> {t('runs.relaunchedFromDeleted')}
+                  </Text>
+                )}
               </Table.Td>
             </Table.Tr>
           )}

@@ -106,6 +106,43 @@ export interface paths {
         patch: operations["update_global_api_v1_admin_document_templates__template_id__patch"];
         trace?: never;
     };
+    "/api/v1/admin/projects/{project_id}/runs/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Eliminar las ejecuciones de un proyecto
+         * @description Borra las terminadas; omite las activas y los volcados con constraints sin restaurar y dice cuántas.
+         */
+        post: operations["delete_project_runs_api_v1_admin_projects__project_id__runs_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/projects/{project_id}/runs/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ejecuciones de un proyecto (para confirmar el borrado) */
+        get: operations["project_runs_summary_api_v1_admin_projects__project_id__runs_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/queries": {
         parameters: {
             query?: never;
@@ -143,6 +180,43 @@ export interface paths {
         head?: never;
         /** Editar query nombrada */
         patch: operations["update_query_api_v1_admin_queries__query_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ejecuciones de todos los proyectos */
+        get: operations["list_runs_api_v1_admin_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Eliminar una ejecución
+         * @description Borra la fila, los artefactos y la carpeta; desaparece del historial (la auditoría guarda el resumen).
+         */
+        delete: operations["delete_run_api_v1_admin_runs__run_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/storage": {
@@ -1473,6 +1547,42 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdminRunOut */
+        AdminRunOut: {
+            /** Artifacts Count */
+            artifacts_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Id */
+            id: string;
+            /** Operation */
+            operation: string;
+            /** Project Id */
+            project_id: number;
+            /** Project Name */
+            project_name: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "purged";
+            /** Username */
+            username: string | null;
+        };
+        /** AdminRunPage */
+        AdminRunPage: {
+            /** Items */
+            items: components["schemas"]["AdminRunOut"][];
+            /** Total */
+            total: number;
+        };
         /**
          * AllowlistEntryIn
          * @description Destino permitido: red CIDR, IP, nombre de host o comodín ``*.dominio``.
@@ -3221,6 +3331,42 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ProjectRunsDelete */
+        ProjectRunsDelete: {
+            /**
+             * Confirm
+             * @description Nombre exacto del proyecto
+             */
+            confirm: string;
+        };
+        /** ProjectRunsDeleteOut */
+        ProjectRunsDeleteOut: {
+            /** Deleted */
+            deleted: number;
+            /** Freed Bytes */
+            freed_bytes: number;
+            /**
+             * Skipped Active
+             * @description En cola o en curso: no se borran
+             */
+            skipped_active: number;
+            /**
+             * Skipped Pending Dump
+             * @description Volcados con constraints sin restaurar (G31): no se borran
+             */
+            skipped_pending_dump: number;
+        };
+        /** ProjectRunsSummaryOut */
+        ProjectRunsSummaryOut: {
+            /** Project Id */
+            project_id: number;
+            /** Project Name */
+            project_name: string;
+            /** Runs */
+            runs: number;
+            /** Size Bytes */
+            size_bytes: number;
+        };
         /** ProjectUpdate */
         ProjectUpdate: {
             /** Description */
@@ -3394,6 +3540,12 @@ export interface components {
             project_name: string;
             /** Relaunched From */
             relaunched_from: string | null;
+            /**
+             * Relaunched From Exists
+             * @description La ejecución de ``relaunched_from`` sigue existiendo (un admin pudo eliminarla)
+             * @default false
+             */
+            relaunched_from_exists: boolean;
             /**
              * Site Url
              * @description URL firmada y temporal del sitio HTML generado (para el iframe con origen opaco)
@@ -4387,6 +4539,112 @@ export interface operations {
             };
         };
     };
+    delete_project_runs_api_v1_admin_projects__project_id__runs_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectRunsDelete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRunsDeleteOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Confirmación incorrecta */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    project_runs_summary_api_v1_admin_projects__project_id__runs_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRunsSummaryOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_queries_api_v1_admin_queries_get: {
         parameters: {
             query?: {
@@ -4599,6 +4857,115 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_runs_api_v1_admin_runs_get: {
+        parameters: {
+            query?: {
+                /** @description Id, proyecto, operación o usuario */
+                q?: string | null;
+                project_id?: number | null;
+                status?: ("queued" | "running" | "succeeded" | "failed" | "cancelled" | "purged") | null;
+                sort?: ("created_at" | "finished_at" | "project" | "operation" | "status" | "user" | "size") | null;
+                order?: ("asc" | "desc") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRunPage"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_run_api_v1_admin_runs__run_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Activa o volcado pendiente */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

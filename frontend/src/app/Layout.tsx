@@ -20,8 +20,11 @@ const ADMIN_SECTIONS = [
   'queries',
   'templates',
   'storage',
+  'runs',
   'audit',
 ] as const;
+/** Etiquetas de las secciones de administración que no coinciden con la clave de `nav` (evita dos «Ejecuciones»). */
+const ADMIN_LABELS: Partial<Record<(typeof ADMIN_SECTIONS)[number], string>> = { runs: 'nav.adminRuns' };
 
 export function Layout() {
   const { t } = useTranslation();
@@ -53,7 +56,12 @@ export function Layout() {
                 {t('nav.admin')}
               </Text>
               {ADMIN_SECTIONS.map((key) => (
-                <NavLink key={key} component={RouterNavLink} to={`/admin/${key}`} label={t(`nav.${key}`)} />
+                <NavLink
+                  key={key}
+                  component={RouterNavLink}
+                  to={`/admin/${key}`}
+                  label={t(ADMIN_LABELS[key] ?? `nav.${key}`)}
+                />
               ))}
             </>
           )}

@@ -138,6 +138,25 @@ describe('RunDetailPage', () => {
   });
 });
 
+describe('relanzada de una ejecución eliminada (D7)', () => {
+  it('muestra el id con enlace si existe y sin enlace si un admin la eliminó', async () => {
+    stubEventSource();
+    const ORIGINAL = '01JORIGINAL000000000000000';
+    stubApi({
+      ...session(ADMIN),
+      [`GET /api/v1/runs/${RUN_ID}`]: {
+        body: { ...FINISHED, relaunched_from: ORIGINAL, relaunched_from_exists: false },
+      },
+    });
+
+    renderRoute(`/runs/${RUN_ID}`);
+
+    expect(await screen.findByText('(eliminada)')).toBeInTheDocument();
+    expect(screen.getByText(ORIGINAL)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: ORIGINAL })).not.toBeInTheDocument();
+  });
+});
+
 describe('RunsPage', () => {
   it('lista las ejecuciones de mis proyectos', async () => {
     stubApi({ ...session(ADMIN), 'GET /api/v1/runs': { body: { items: [{ ...FINISHED }], total: 1 } } });

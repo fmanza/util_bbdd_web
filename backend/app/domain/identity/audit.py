@@ -42,6 +42,8 @@ class AuditAction:
     RUN_CREATE: Final = "run.create"
     RUN_CANCEL: Final = "run.cancel"
     RUN_PURGE: Final = "run.purge"
+    RUN_DELETE: Final = "run.delete"
+    PROJECT_RUNS_DELETE: Final = "project.runs_delete"
     SQL_EXECUTE: Final = "sql.execute"
     QUERY_EXECUTE: Final = "query.execute"
     QUERY_CREATE: Final = "query.create"

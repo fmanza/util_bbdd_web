@@ -1,6 +1,109 @@
 {
   "components": {
     "schemas": {
+      "AdminRunOut": {
+        "properties": {
+          "artifacts_count": {
+            "title": "Artifacts Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "operation": {
+            "title": "Operation",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "purged"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "project_name",
+          "operation",
+          "status",
+          "username",
+          "created_at",
+          "finished_at",
+          "size_bytes",
+          "artifacts_count"
+        ],
+        "title": "AdminRunOut",
+        "type": "object"
+      },
+      "AdminRunPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminRunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "AdminRunPage",
+        "type": "object"
+      },
       "AllowlistEntryIn": {
         "description": "Destino permitido: red CIDR, IP, nombre de host o comodín ``*.dominio``.",
         "properties": {
@@ -4029,6 +4132,80 @@
         "title": "ProjectPage",
         "type": "object"
       },
+      "ProjectRunsDelete": {
+        "properties": {
+          "confirm": {
+            "description": "Nombre exacto del proyecto",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "ProjectRunsDelete",
+        "type": "object"
+      },
+      "ProjectRunsDeleteOut": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "integer"
+          },
+          "freed_bytes": {
+            "title": "Freed Bytes",
+            "type": "integer"
+          },
+          "skipped_active": {
+            "description": "En cola o en curso: no se borran",
+            "title": "Skipped Active",
+            "type": "integer"
+          },
+          "skipped_pending_dump": {
+            "description": "Volcados con constraints sin restaurar (G31): no se borran",
+            "title": "Skipped Pending Dump",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted",
+          "skipped_active",
+          "skipped_pending_dump",
+          "freed_bytes"
+        ],
+        "title": "ProjectRunsDeleteOut",
+        "type": "object"
+      },
+      "ProjectRunsSummaryOut": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "project_name",
+          "runs",
+          "size_bytes"
+        ],
+        "title": "ProjectRunsSummaryOut",
+        "type": "object"
+      },
       "ProjectUpdate": {
         "properties": {
           "description": {
@@ -4497,6 +4674,12 @@
               }
             ],
             "title": "Relaunched From"
+          },
+          "relaunched_from_exists": {
+            "default": false,
+            "description": "La ejecución de ``relaunched_from`` sigue existiendo (un admin pudo eliminarla)",
+            "title": "Relaunched From Exists",
+            "type": "boolean"
           },
           "site_url": {
             "anyOf": [
@@ -6605,6 +6788,112 @@
         ]
       }
     },
+    "/api/v1/admin/projects/{project_id}/runs/delete": {
+      "post": {
+        "description": "Borra las terminadas; omite las activas y los volcados con constraints sin restaurar y dice cuántas.",
+        "operationId": "delete_project_runs_api_v1_admin_projects__project_id__runs_delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectRunsDelete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRunsDeleteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "422": {
+            "description": "Confirmación incorrecta"
+          }
+        },
+        "summary": "Eliminar las ejecuciones de un proyecto",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/projects/{project_id}/runs/summary": {
+      "get": {
+        "operationId": "project_runs_summary_api_v1_admin_projects__project_id__runs_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectRunsSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ejecuciones de un proyecto (para confirmar el borrado)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/queries": {
       "get": {
         "operationId": "list_queries_api_v1_admin_queries_get",
@@ -6804,6 +7093,221 @@
           }
         },
         "summary": "Editar query nombrada",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/runs": {
+      "get": {
+        "operationId": "list_runs_api_v1_admin_runs_get",
+        "parameters": [
+          {
+            "description": "Id, proyecto, operación o usuario",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Id, proyecto, operación o usuario",
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "queued",
+                    "running",
+                    "succeeded",
+                    "failed",
+                    "cancelled",
+                    "purged"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "created_at",
+                    "finished_at",
+                    "project",
+                    "operation",
+                    "status",
+                    "user",
+                    "size"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Order"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRunPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ejecuciones de todos los proyectos",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/runs/{run_id}": {
+      "delete": {
+        "description": "Borra la fila, los artefactos y la carpeta; desaparece del historial (la auditoría guarda el resumen).",
+        "operationId": "delete_run_api_v1_admin_runs__run_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "409": {
+            "description": "Activa o volcado pendiente"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eliminar una ejecución",
         "tags": [
           "admin"
         ]
