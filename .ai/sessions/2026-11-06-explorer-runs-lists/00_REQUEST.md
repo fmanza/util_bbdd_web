@@ -23,3 +23,6 @@ Fase pedida: **PLAN y AUDIT_PLAN**.
 
 D5-D8 (AUDIT_PLAN): aprobadas el 2026-11-06 («Si a todo»), junto con el commit `docs(plan)`. D6 enmienda D11-7 de
 la ola 11 (sesión `2026-11-06-gaps-g50-g51`): la web de esa ola pasa a 1.14.0.
+
+**Enmienda de D6 (2026-11-06)**: util_bbdd 5.4.0 se publicó antes de implementar esta sesión; por decisión del
+usuario la ola 11 sale como 1.13.0 y **esta sesión pasa a 1.14.0**.

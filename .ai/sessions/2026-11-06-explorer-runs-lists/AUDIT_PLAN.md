@@ -57,7 +57,7 @@ Revisión del [PLAN](PLAN.md). D1-D4 tomadas por el usuario ([00_REQUEST.md](00_
 | # | Decisión | Aprobado |
 |---|---|---|
 | D5 | Botón «Copiar» en el DDL | **Sí** (`CopyButton` de Mantine; útil con DDL largos) |
-| D6 | Versión | **1.13.0** para estos tres bloques; la ola 11 pasa a **1.14.0** (enmienda de D11-7) |
+| D6 | Versión | **1.14.0** para estos tres bloques (enmendada el 2026-11-06: antes 1.13.0; la ola 11, con util_bbdd 5.4.0 ya publicada, sale como 1.13.0) |
 | D7 | «Relanzada desde» que apunta a una ejecución borrada | Mostrar el id **sin enlace** cuando no existe (`RunDetailOut.relaunched_from_exists`) |
 | D8 | Confirmación del borrado de una ejecución | Escribir `ELIMINAR` (el id de 26 caracteres es poco práctico); el de proyecto, su nombre |
 

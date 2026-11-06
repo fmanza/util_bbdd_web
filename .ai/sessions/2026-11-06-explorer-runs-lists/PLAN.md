@@ -149,7 +149,7 @@ se valora en IMPLEMENT). Sin dependencias nuevas.
 | `fix(frontend): explorador a toda altura con scroll en cada apartado` | Bloque A |
 | `feat(backend,frontend): eliminar ejecuciones desde administración` | Bloque B (+ OpenAPI) |
 | `feat(backend,frontend): listas con orden, paginación de 25 y búsqueda` | Bloque C (+ OpenAPI) |
-| `release: v1.13.0` | D6 (aprobada): la ola 11 pasa a 1.14.0 |
+| `release: v1.14.0` | D6 (enmendada): la ola 11 sale antes como 1.13.0 |
 
 ## 7. Fuera de alcance
 
