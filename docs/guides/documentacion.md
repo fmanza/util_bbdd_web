@@ -96,10 +96,13 @@ contexto a una IA:
 | Mapa de trazabilidad | Un mapa del proyecto o global (ver abajo); vacío = sin trazabilidad |
 | Comparar con la documentación | Una documentación anterior **del mismo proyecto, conexión y schema, con Markdown**: añade `docs/changes.md` y `docs/changes.json` con los cambios de esquema |
 
-**Mermaid sin Internet**: la web copia su propio `mermaid.min.js` (`UBW_MERMAID_JS`, incluido en la imagen) en
-`docs/assets/javascripts/`, así el sitio publicado dibuja los diagramas sin salir a Internet (unos 5,5 MB por
-ejecución, que cuentan para la cuota; G50). Sin ese fichero, el `mkdocs.yml` carga Mermaid de unpkg y la ejecución termina
-con un aviso.
+**Mermaid sin Internet**: el `mkdocs.yml` carga `docs/assets/javascripts/mermaid.min.js`, y el **ZIP** lleva el
+`mermaid.min.js` de la web (`UBW_MERMAID_JS`, incluido en la imagen) en esa ruta, así el sitio publicado dibuja los
+diagramas sin salir a Internet. Desde la 1.13.0 (util_bbdd 5.4.0, G50) ese fichero **no se guarda en cada
+ejecución**: se añade al ZIP al descargarlo (antes eran unos 5,5 MB por ejecución en la cuota; las ejecuciones
+anteriores conservan su copia). Sin `UBW_MERMAID_JS` en el servidor: al generar, el `mkdocs.yml` carga Mermaid de
+unpkg y la ejecución termina con un aviso; al descargar, el ZIP sale sin el fichero, la respuesta lo avisa
+(`X-UBW-Warning`) y el sitio publicado cargará Mermaid de Internet.
 
 **Dónde verla**: en su tarjeta del detalle, con el visor Markdown (ver
 [Resultados](#resultados-una-tarjeta-por-formato)), o completa en su ZIP. Para el sitio con buscador de texto
@@ -144,13 +147,17 @@ que no son de un formato siguen en la cabecera. Si un formato pedido no llegó a
 resaltado SQL y la navegación funcionan desde el disco (comprobado en Chromium).
 
 **ZIP Markdown**: la carpeta `outputs/markdown/documentacion/` es publicable tal cual (`zensical build` o
-`mkdocs build`) e incluye `mermaid.min.js` para dibujar los diagramas sin Internet.
+`mkdocs build`) e incluye `mermaid.min.js` (el del servidor, añadido al descargar) para dibujar los diagramas sin
+Internet.
 
 **Visor Markdown**:
 
-- **Árbol** a la izquierda: *Sección* (Portada, Tablas, Vistas, Rutinas, Base de datos), el índice de la sección y,
-  en las secciones de más de 40 objetos, **letra inicial**. **Buscar página** filtra por nombre en todas las
-  secciones (muestra hasta 100 resultados).
+- **Árbol** a la izquierda: *Sección* (Portada, Tablas, Vistas, Rutinas, Base de datos, Trazabilidad, Cambios), el
+  índice de la sección y, en las secciones de más de 40 objetos, **letra inicial**. **Buscar página** filtra por
+  nombre y por ruta en todas las secciones (muestra hasta 100 resultados).
+- **Nombres reales**: desde la 1.13.0 (util_bbdd 5.4.0, G51) el árbol sale del índice de páginas de `manifest.json`
+  y muestra el nombre del objeto tal como está en la base de datos (`ACM_AGENDA`) y los títulos de los índices. En
+  las documentaciones anteriores se deduce de las carpetas y muestra el nombre del fichero (`acm-agenda`).
 - **Enlaces**: los enlaces entre páginas y a columnas (`#col-…`) navegan dentro del visor; **Página anterior** y
   **Página siguiente** recorren el historial del visor. La página abierta queda en la dirección
   (`?md=tables/pedidos.md`): se puede compartir con otro miembro del proyecto.

@@ -3,6 +3,25 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Changed
+
+- **util_bbdd 5.4.0** (sin dependencias nuevas; ola 11 del plan de huecos).
+- **Mermaid fuera de cada ejecución** (G50): una documentación Markdown ya no guarda su `mermaid.min.js` (unos 5,5 MB
+  menos en la cuota por ejecución); el `mkdocs.yml` lo referencia y el ZIP completo y el Markdown lo añaden al
+  descargar, así que la carpeta se sigue publicando sin Internet. Las ejecuciones anteriores conservan su copia. Si
+  falta en el servidor, el ZIP sale sin él con la cabecera `X-UBW-Warning`. `run.json` anota `markdown_mermaid`.
+- **Visor Markdown con nombres reales** (G51): el árbol sale del índice de páginas de `manifest.json` (util_bbdd
+  5.4.0) con el nombre de cada objeto tal como está en la base de datos y secciones propias para trazabilidad y
+  cambios; la búsqueda encuentra por nombre y por ruta. Las documentaciones anteriores siguen con el árbol deducido
+  de las carpetas.
+
+### Added
+
+- API: `GET /runs/{id}/markdown-pages` (`MarkdownPagesOut`: `source` `manifest` o `paths` y las páginas con su
+  `artifact_id`); cabecera `X-UBW-Warning` en `GET /runs/{id}/archive`.
+
 ## [1.12.0] - 2026-11-06
 
 ### Added

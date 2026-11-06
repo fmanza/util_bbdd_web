@@ -114,6 +114,21 @@ genera util_bbdd (`pedidos.md`, `../views/v.md#col-id`): se resuelven contra `ab
 - Sin cambios en `SITE_CSP`, en la URL firmada del sitio HTML ni en las vistas previas de los demás artefactos
   (`sandbox=""`).
 
+## Enmienda 2026-11-06 (1.13.0): Mermaid de la documentación Markdown fuera de cada ejecución
+
+Con util_bbdd 5.4.0 (G50) el job pasa `mermaid_js_ref` en lugar de copiar `UBW_MERMAID_JS` en cada ejecución: el
+`mkdocs.yml` referencia `assets/javascripts/mermaid.min.js` y el fichero no se guarda (unos 5,5 MB menos por
+ejecución en la cuota).
+
+- El ZIP completo y el Markdown añaden al descargar el `mermaid.min.js` del servidor en esa ruta (`zip_stream` con
+  entradas extra), si `run.json` dice `markdown_mermaid.mode = "referenced"` y la ejecución no tiene ya su copia (las
+  anteriores la conservan, D11-4). La ruta dentro del ZIP es una constante y el fichero sale de la configuración,
+  nunca de la petición ni de `run.json`; el `sha256` que guarda `run.json` es informativo.
+- Si el fichero ya no está en el servidor, el ZIP sale sin él con la cabecera `X-UBW-Warning`; el tema del sitio
+  publicado carga entonces Mermaid 11 de unpkg (verificado en util_bbdd 5.4.0).
+- El visor de la SPA no cambia: dibuja con el Mermaid de la SPA y nunca usa el del run. Tampoco cambia el informe
+  HTML de la comparación, que sigue incrustando su Mermaid (enmienda 2026-10-30).
+
 ## Alternativas descartadas
 
 - **`allow-same-origin` + scripts**: el sitio podría leer la cookie CSRF y llamar a la API como el usuario.
