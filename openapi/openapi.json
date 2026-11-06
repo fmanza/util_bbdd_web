@@ -10212,7 +10212,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful Response"
+            "description": "ZIP; con ``X-UBW-Warning`` si falta el Mermaid de la documentación Markdown en el servidor"
           },
           "401": {
             "description": "No autenticado"

@@ -7578,7 +7578,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description ZIP; con ``X-UBW-Warning`` si falta el Mermaid de la documentación Markdown en el servidor */
             200: {
                 headers: {
                     [name: string]: unknown;

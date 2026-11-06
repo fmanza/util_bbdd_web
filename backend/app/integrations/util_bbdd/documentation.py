@@ -15,8 +15,9 @@ Plantillas (ADR-011): van en ``imprimir["plantilla_word"]`` y ``imprimir["planti
 G41), que las valida al construir ``DatabaseDocumentation``. Si una falla, se genera de nuevo sin esa plantilla y la
 ejecución termina con un aviso en lugar de un error.
 
-Markdown (util_bbdd 5.3.0): bloque ``imprimir["markdown"]`` con ``mermaid_js`` local (la web no sale a Internet,
-ADR-007), mapa de trazabilidad (``trace_map``) y catálogo anterior (``previous``) opcionales. Sus diagramas son de
+Markdown (util_bbdd 5.3.0): bloque ``imprimir["markdown"]`` con Mermaid local (la web no sale a Internet,
+ADR-007), mapa de trazabilidad (``trace_map``) y catálogo anterior (``previous``) opcionales. Desde util_bbdd 5.4.0
+(G50) el Mermaid se **referencia** (``mermaid_js_ref``) sin copiarlo en cada ejecución: la web lo añade al ZIP. Sus diagramas son de
 Mermaid: no necesitan Graphviz. Los errores de esos ficheros (``DocumentationConfigError``) llevan rutas del servidor:
 ``markdown_input_error`` los convierte en un mensaje sin ellas.
 """
@@ -49,6 +50,9 @@ GRAPH_WORKERS: Final = 2
 _FORMAT_DIRS: Final[dict[str, str]] = {"word": "WORD", "excel": "EXCEL", "html": "HTML", "markdown": "MARKDOWN"}
 #: Formatos que se recolocan como carpeta entera (``outputs/<formato>/documentacion``) y su portada.
 _SITE_FORMATS: Final[dict[str, str]] = {"html": "index.html", "markdown": "docs/index.md"}
+#: Ruta del Mermaid que referencia el ``mkdocs.yml`` (relativa a ``docs/``) y artefacto que la web añade al ZIP (G50).
+MERMAID_JS_REF: Final = "assets/javascripts/mermaid.min.js"
+MARKDOWN_MERMAID_ARTIFACT: Final = f"outputs/markdown/documentacion/docs/{MERMAID_JS_REF}"
 #: Formatos cuyos diagramas dibuja Graphviz (``dot``); los del Markdown son de Mermaid.
 GRAPHVIZ_FORMATS: Final = frozenset({"word", "html"})
 #: Longitud máxima del mensaje de un mapa o catálogo anterior inválido (los errores del mapa van todos juntos).
@@ -128,6 +132,8 @@ class MarkdownInputs:
     """
 
     mermaid_js: Path | None = None
+    #: Mermaid referenciado sin copiar (util_bbdd 5.4.0, G50); excluyente con ``mermaid_js``.
+    mermaid_js_ref: str | None = None
     trace_map: Path | None = None
     trace_map_name: str = "mapa de trazabilidad"
     previous: Path | None = None
@@ -310,6 +316,8 @@ def _markdown_block(options: DocumentationOptions, inputs: MarkdownInputs | None
     block: dict[str, Any] = {"max_diagram_depth": options.markdown_diagram_depth}
     if options.markdown_site_name:
         block["site_name"] = options.markdown_site_name
+    if chosen.mermaid_js_ref is not None:
+        block["mermaid_js_ref"] = chosen.mermaid_js_ref
     files = (("mermaid_js", chosen.mermaid_js), ("trace_map", chosen.trace_map), ("previous", chosen.previous))
     for key, path in files:
         if path is not None:

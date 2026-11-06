@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import AsyncIterable
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Final, Literal
 
 import anyio
@@ -32,6 +32,7 @@ from app.domain.runs import bulks, dumps, migrations, service
 from app.domain.runs import diff as diff_domain
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters
+from app.integrations.util_bbdd.documentation import MARKDOWN_MERMAID_ARTIFACT
 from app.workspace.layout import run_dir, zip_stream
 
 project_router = APIRouter(prefix="/projects", tags=["runs"])
@@ -539,7 +540,10 @@ def site_file(run_id: str, token: str, path: str, db: DbSession, settings: Setti
 
 @router.get(
     "/{run_id}/archive", summary="Descargar ZIP de la ejecución", response_class=StreamingResponse,
-    responses={**_401, **_404, 422: {"description": "Formato no válido"}},
+    responses={
+        200: {"description": "ZIP; con ``X-UBW-Warning`` si falta el Mermaid de la documentación Markdown en el servidor"},
+        **_401, **_404, 422: {"description": "Formato no válido"},
+    },
 )  # fmt: skip
 def download_archive(
     run_id: str,
@@ -562,11 +566,34 @@ def download_archive(
     directory = run_dir(settings.workspace_dir, run.workspace_path)
     prefix = directory.name
     filename = prefix if archive_format is None else f"{prefix}_{archive_format}"
+    extras, missing = _archive_extras(run, archive_format, paths, settings)
+    headers = {"Content-Disposition": f'attachment; filename="{filename}.zip"', "X-Content-Type-Options": "nosniff"}
+    if missing:
+        headers["X-UBW-Warning"] = MERMAID_MISSING_WARNING
     return StreamingResponse(
-        zip_stream(directory, paths, prefix=prefix),
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}.zip"',
-            "X-Content-Type-Options": "nosniff",
-        },
+        zip_stream(directory, paths, prefix=prefix, extras=extras), media_type="application/zip", headers=headers
     )
+
+
+#: Cabecera del ZIP cuando falta el Mermaid referenciado (ASCII: va en una cabecera HTTP).
+MERMAID_MISSING_WARNING: Final = "mermaid.min.js no esta en el servidor: el sitio Markdown cargara Mermaid de Internet"
+
+
+def _archive_extras(
+    run: Run, archive_format: str | None, paths: list[str], settings: Settings
+) -> tuple[list[tuple[str, Path]], bool]:
+    """Mermaid de ``UBW_MERMAID_JS`` para el ZIP de una documentación que lo referencia sin copiarlo (G50).
+
+    Solo en el ZIP completo y en el Markdown, si ``run.json`` dice ``referenced`` y la ejecución no tiene ya su copia
+    (las anteriores a la 1.13.0 la guardan). La ruta dentro del ZIP es la constante del artefacto, no la de
+    ``run.json``. Devuelve también si falta el fichero en el servidor.
+    """
+    if archive_format not in (None, "markdown"):
+        return [], False
+    mermaid = (run.manifest or {}).get("markdown_mermaid")
+    if not isinstance(mermaid, dict) or mermaid.get("mode") != "referenced" or MARKDOWN_MERMAID_ARTIFACT in paths:
+        return [], False
+    source = settings.mermaid_js
+    if source is None or not source.is_file():
+        return [], True
+    return [(MARKDOWN_MERMAID_ARTIFACT, source)], False

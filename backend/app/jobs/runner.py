@@ -92,7 +92,15 @@ def _manifest(
         "templates": list(extra.get("templates", [])),
         "warnings": [str(w) for w in extra.get("warnings", [])],
         **_warnings_by_format(extra.get("warnings_by_format")),
+        **_markdown_mermaid(extra.get("markdown_mermaid")),
     }
+
+
+def _markdown_mermaid(value: Any) -> dict[str, Any]:
+    """``{"markdown_mermaid": {"mode", "path", "sha256"}}`` de una documentación con el Mermaid referenciado (G50)."""
+    if not isinstance(value, dict) or value.get("mode") != "referenced":
+        return {}
+    return {"markdown_mermaid": {k: str(value[k]) for k in ("mode", "path", "sha256") if k in value}}
 
 
 def _warnings_by_format(value: Any) -> dict[str, Any]:

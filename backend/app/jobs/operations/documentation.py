@@ -7,6 +7,8 @@ Markdown (util_bbdd 5.3.0): el mapa de trazabilidad (una plantilla ``trace``) y 
 anterior también se copian a ``inputs/``; a diferencia de las plantillas de Office, si faltan o no son válidos la
 ejecución falla (``invalid_trace_map``, ``invalid_previous``): una trazabilidad o unos cambios ausentes en silencio
 serían peores que un error. ``mermaid.min.js`` es el de ``UBW_MERMAID_JS``: la web no sale a Internet (ADR-007).
+Desde util_bbdd 5.4.0 (G50) no se copia en cada ejecución: ``mkdocs.yml`` lo referencia (``mermaid_js_ref``) y el ZIP
+lo añade al descargar; ``run.json`` lo anota en ``markdown_mermaid``.
 """
 
 from __future__ import annotations
@@ -25,6 +27,8 @@ from app.domain.templates.errors import TemplateNotFoundError
 from app.domain.templates.files import Kind, display_name
 from app.domain.templates.service import resolve_for_run, template_file
 from app.integrations.util_bbdd.documentation import (
+    MARKDOWN_MERMAID_ARTIFACT,
+    MERMAID_JS_REF,
     DocumentationOptions,
     DocumentTemplates,
     GraphOptions,
@@ -131,18 +135,26 @@ def _templates(
     return DocumentTemplates(**paths), entries, warnings
 
 
-def _record(ctx: JobContext, entries: list[dict[str, Any]], warnings: Warnings) -> None:
-    """``inputs/templates.json``: lo recoge ``run.json`` al cerrar el run (avisos en lista y por formato)."""
+def _record(
+    ctx: JobContext, entries: list[dict[str, Any]], warnings: Warnings, mermaid: dict[str, str] | None = None
+) -> None:
+    """``inputs/templates.json``: lo recoge ``run.json`` al cerrar el run (avisos en lista y por formato y, con el
+    Mermaid referenciado, ``markdown_mermaid``)."""
     flat = [message for kind in _FORMATS for message in warnings.get(kind, [])]
-    if entries or flat:
-        write_json_atomic(
-            ctx.run_dir / TEMPLATES_INPUT,
-            {"templates": entries, "warnings": flat, "warnings_by_format": {k: v for k, v in warnings.items() if v}},
-        )
+    if entries or flat or mermaid:
+        data: dict[str, Any] = {
+            "templates": entries,
+            "warnings": flat,
+            "warnings_by_format": {k: v for k, v in warnings.items() if v},
+        }
+        if mermaid:
+            data["markdown_mermaid"] = mermaid
+        write_json_atomic(ctx.run_dir / TEMPLATES_INPUT, data)
 
 
 def _mermaid_js(ctx: JobContext, warnings: Warnings) -> Path | None:
-    """``UBW_MERMAID_JS`` si existe; si no, el ``mkdocs.yml`` carga Mermaid de Internet y se avisa."""
+    """``UBW_MERMAID_JS`` si existe (se referencia, no se copia: G50); si no, el ``mkdocs.yml`` carga Mermaid de
+    Internet y se avisa."""
     path = ctx.settings.mermaid_js
     if path is not None and path.is_file():
         return path
@@ -205,8 +217,9 @@ def _markdown_inputs(
     if not params.markdown:
         return None
     trace = _trace_map(ctx, params, entries)
+    mermaid = _mermaid_js(ctx, warnings)
     return MarkdownInputs(
-        mermaid_js=_mermaid_js(ctx, warnings),
+        mermaid_js_ref=MERMAID_JS_REF if mermaid is not None else None,
         trace_map=trace[0] if trace else None,
         trace_map_name=f"«{trace[1]}»" if trace else "mapa de trazabilidad",
         previous=_previous(ctx, params),
@@ -261,7 +274,7 @@ def run_documentation(ctx: JobContext) -> None:
     summary.pop("warnings")  # los mismos que ``warnings_by_format``, ya agrupados
     for kind, messages in summary.pop("warnings_by_format").items():
         warnings.setdefault(kind, []).extend(messages)
-    _record(ctx, entries, warnings)
+    _record(ctx, entries, warnings, _mermaid_record(ctx, markdown))
     count = sum(len(messages) for messages in warnings.values())
     ctx.logger.info("Documentación generada", extra={**summary, "warnings": count})
     notice = " (con avisos)" if count else ""
@@ -270,6 +283,19 @@ def run_documentation(ctx: JobContext) -> None:
         f"{summary['tables']} tablas, {summary['views']} vistas y {summary['routines']} rutinas documentadas{notice}",
         100,
     )
+
+
+def _mermaid_record(ctx: JobContext, markdown: MarkdownInputs | None) -> dict[str, str] | None:
+    """``markdown_mermaid`` de ``run.json``: el ZIP añade ``UBW_MERMAID_JS`` en ``path``; ``sha256`` dice cuál era al
+    generar (informativo: el del ZIP es el del servidor al descargar)."""
+    path = ctx.settings.mermaid_js
+    if markdown is None or markdown.mermaid_js_ref is None or path is None or not path.is_file():
+        return None
+    return {
+        "mode": "referenced",
+        "path": MARKDOWN_MERMAID_ARTIFACT,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
 
 
 def run_relationship_graph(ctx: JobContext) -> None:

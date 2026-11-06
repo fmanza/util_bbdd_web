@@ -20,7 +20,7 @@ import re
 import shutil
 import tempfile
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -213,12 +213,18 @@ class _Drain(io.RawIOBase):
         return chunk
 
 
-def zip_stream(directory: Path, relatives: list[str], *, prefix: str) -> Iterator[bytes]:
-    """ZIP de ``relatives`` (rutas relativas a ``directory``) generado por trozos, sin fichero temporal."""
+def zip_stream(
+    directory: Path, relatives: list[str], *, prefix: str, extras: Sequence[tuple[str, Path]] = ()
+) -> Iterator[bytes]:
+    """ZIP de ``relatives`` (rutas relativas a ``directory``) generado por trozos, sin fichero temporal.
+
+    ``extras``: ficheros del servidor que no son artefactos del run (p. ej. el Mermaid referenciado, G50), como
+    ``(ruta dentro del ZIP, fichero)``. Sus rutas las fija el llamador, nunca la petición.
+    """
     sink = _Drain()
+    entries = [(relative, safe_path(directory, relative)) for relative in relatives]
     with zipfile.ZipFile(sink, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for relative in relatives:
-            path = safe_path(directory, relative)
+        for relative, path in [*entries, *extras]:
             if not path.is_file():
                 continue
             with path.open("rb") as source, archive.open(f"{prefix}/{relative}", "w", force_zip64=True) as target:

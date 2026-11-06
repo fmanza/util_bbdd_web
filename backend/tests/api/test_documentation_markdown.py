@@ -6,6 +6,7 @@ No necesita Graphviz: los diagramas del Markdown son de Mermaid.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import zipfile
@@ -37,6 +38,15 @@ def _trace(client: TestClient, project_id: object, content: bytes, filename: str
     return str(response.json()["id"])
 
 
+def _use_mermaid(monkeypatch: pytest.MonkeyPatch, settings: Settings, tmp_path: Path) -> Path:
+    """``UBW_MERMAID_JS`` para el worker (el subproceso lo lee del entorno) y para la API (``settings`` en caché)."""
+    mermaid_js = tmp_path / "mermaid.min.js"
+    mermaid_js.write_text("window.mermaid = {};", encoding="utf-8")
+    monkeypatch.setenv("UBW_MERMAID_JS", str(mermaid_js))
+    monkeypatch.setattr(settings, "mermaid_js", mermaid_js)
+    return mermaid_js
+
+
 def _paths(client: TestClient, run_id: str) -> dict[str, dict[str, Any]]:
     return {a["path"]: a for a in client.get(f"/api/v1/runs/{run_id}").json()["artifacts"]}
 
@@ -65,9 +75,7 @@ def test_markdown_generates_the_whole_folder(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mermaid_js = tmp_path / "mermaid.min.js"
-    mermaid_js.write_text("window.mermaid = {};", encoding="utf-8")
-    monkeypatch.setenv("UBW_MERMAID_JS", str(mermaid_js))  # el subproceso (spawn) lo lee del entorno
+    mermaid_js = _use_mermaid(monkeypatch, settings, tmp_path)
 
     run_id = launch(user_client, project["id"], "documentation", **ONLY_MARKDOWN, markdown_site_name="Tienda")
     run = wait_for(worker, db, run_id, timeout=180)
@@ -78,10 +86,18 @@ def test_markdown_generates_the_whole_folder(
         assert ROOT + name in paths, name
     assert paths[ROOT + "docs/index.md"]["kind"] == "markdown"
     assert any(p.startswith(ROOT + "docs/tables/") and p.endswith("pedidos.md") for p in paths)
-    assert ROOT + "docs/assets/javascripts/mermaid.min.js" in paths
+    # G50 (util_bbdd 5.4.0): Mermaid referenciado, no copiado en la ejecución.
+    assert ROOT + "docs/assets/javascripts/mermaid.min.js" not in paths
     directory = run_dir(settings.workspace_dir, str(run.workspace_path))
+    assert not (directory / ROOT / "docs/assets/javascripts/mermaid.min.js").exists()
+    manifest = json.loads((directory / "run.json").read_text(encoding="utf-8"))
+    assert manifest["markdown_mermaid"] == {
+        "mode": "referenced",
+        "path": ROOT + "docs/assets/javascripts/mermaid.min.js",
+        "sha256": hashlib.sha256(mermaid_js.read_bytes()).hexdigest(),
+    }
     mkdocs = (directory / ROOT / "mkdocs.yml").read_text(encoding="utf-8")
-    assert "extra_javascript" in mkdocs
+    assert "extra_javascript" in mkdocs and "assets/javascripts/mermaid.min.js" in mkdocs
     assert "Tienda" in mkdocs
     assert "unpkg" not in mkdocs
     pedidos = next(p for p in paths if p.startswith(ROOT + "docs/tables/") and p.endswith("pedidos.md"))
@@ -94,10 +110,21 @@ def test_markdown_generates_the_whole_folder(
 
     archive = user_client.get(f"/api/v1/runs/{run_id}/archive")
     assert archive.status_code == 200
+    assert "x-ubw-warning" not in archive.headers
     with zipfile.ZipFile(io.BytesIO(archive.content)) as zipped:
         names = zipped.namelist()
+        bundled = [n for n in names if n.endswith("markdown/documentacion/docs/assets/javascripts/mermaid.min.js")]
+        # El ZIP lleva el Mermaid del servidor (una sola vez), así que la carpeta se publica sin Internet.
+        assert len(bundled) == 1 and zipped.read(bundled[0]) == mermaid_js.read_bytes()
     assert any(n.endswith("markdown/documentacion/docs/index.md") for n in names)
     assert any(n.endswith("markdown/documentacion/mkdocs.yml") for n in names)
+
+    # Si el Mermaid del servidor desaparece, el ZIP sale sin él y lo avisa (el tema lo cargará de Internet).
+    monkeypatch.setattr(settings, "mermaid_js", tmp_path / "ya-no-esta.js")
+    without = user_client.get(f"/api/v1/runs/{run_id}/archive", params={"format": "markdown"})
+    assert without.status_code == 200 and "Mermaid" in without.headers["x-ubw-warning"]
+    with zipfile.ZipFile(io.BytesIO(without.content)) as zipped:
+        assert not any(n.endswith("mermaid.min.js") for n in zipped.namelist())
 
 
 def test_markdown_without_mermaid_js_warns(
@@ -130,12 +157,11 @@ def test_documentation_archive_by_format_preview_rules_and_page_layout(
     project: dict[str, object],  # noqa: F811
     worker: Worker,  # noqa: F811
     db: Session,
+    settings: Settings,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mermaid_js = tmp_path / "mermaid.min.js"
-    mermaid_js.write_text("window.mermaid = {};", encoding="utf-8")
-    monkeypatch.setenv("UBW_MERMAID_JS", str(mermaid_js))
+    _use_mermaid(monkeypatch, settings, tmp_path)
     params = {**ONLY_MARKDOWN, "excel": True, "html": True, "graphs": False}
 
     run_id = launch(user_client, project["id"], "documentation", **params)
@@ -148,7 +174,7 @@ def test_documentation_archive_by_format_preview_rules_and_page_layout(
 
     # Vista previa: solo las páginas .md de la carpeta Markdown (los auxiliares se descargan).
     assert paths[ROOT + "docs/index.md"]["previewable"] is True
-    for name in ("docs/catalog.json", "docs/llms.txt", "docs/assets/javascripts/mermaid.min.js", "mkdocs.yml"):
+    for name in ("docs/catalog.json", "docs/llms.txt", "mkdocs.yml"):
         assert paths[ROOT + name]["kind"] == "markdown" and paths[ROOT + name]["previewable"] is False, name
     catalog = paths[ROOT + "docs/catalog.json"]["id"]
     assert user_client.get(f"/api/v1/runs/{run_id}/artifacts/{catalog}/preview").status_code == 415
