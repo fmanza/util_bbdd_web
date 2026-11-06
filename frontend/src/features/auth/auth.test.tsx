@@ -118,13 +118,15 @@ describe('menú de usuario', () => {
     const user = userEvent.setup();
 
     renderRoute('/');
-    await user.click(await screen.findByRole('button', { name: /Menú de usuario de Admin/ }));
-    await user.click(await screen.findByRole('menuitem', { name: 'Cerrar sesión' }));
+    // Con la suite entera en paralelo, el arranque de la SPA y la redirección tras el logout pasan de 1 s a veces.
+    const slow = { timeout: 5000 };
+    await user.click(await screen.findByRole('button', { name: /Menú de usuario de Admin/ }, slow));
+    await user.click(await screen.findByRole('menuitem', { name: 'Cerrar sesión' }, slow));
 
-    expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Iniciar sesión' }, slow)).toBeInTheDocument();
     const [logout] = callsTo(fetchMock, 'POST', '/api/v1/auth/logout');
     expect(logout?.headers.get('X-CSRF-Token')).toBe('desde-cookie');
-  });
+  }, 15_000);
 });
 
 describe('ChangePasswordPage', () => {
