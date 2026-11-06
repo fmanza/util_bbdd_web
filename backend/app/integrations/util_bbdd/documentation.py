@@ -3,7 +3,8 @@
 - ``DatabaseDocumentation(manager, directorio_salida, fichero_salida, imprimir, formatos, batch_window_seconds=0)``:
   siempre con ``fichero_salida`` explícito y sin ventana de agrupación (GAPS G2; desde util_bbdd 5.0.0 la ventana por
   defecto ya es 0, pero se sigue pasando). Su salida
-  (``<dir>/<nombre>/{WORD,EXCEL,HTML}``) se recoloca en ``outputs/{word,excel,html}/`` del run.
+  (``<dir>/<nombre>/{WORD,EXCEL,HTML,MARKDOWN}``) se recoloca en ``outputs/{word,excel,html,markdown}/`` del run; HTML
+  y Markdown, como carpeta entera (``…/documentacion``).
 - ``GraphvizRelationshipGraphExt``: grafo paginado de una tabla o de todas las que tienen relaciones.
 
 El schema se pasa como argumento (``schema=``, util_bbdd 4.1.0; GAPS G22): en PostgreSQL, SQL Server y HSQLDB es el
@@ -13,11 +14,17 @@ lectura; GAPS G21). En SQLite no aplica (solo existe ``main``).
 Plantillas (ADR-011): van en ``imprimir["plantilla_word"]`` y ``imprimir["plantilla_excel"]`` (util_bbdd 4.1.0, G40 y
 G41), que las valida al construir ``DatabaseDocumentation``. Si una falla, se genera de nuevo sin esa plantilla y la
 ejecución termina con un aviso en lugar de un error.
+
+Markdown (util_bbdd 5.3.0): bloque ``imprimir["markdown"]`` con ``mermaid_js`` local (la web no sale a Internet,
+ADR-007), mapa de trazabilidad (``trace_map``) y catálogo anterior (``previous``) opcionales. Sus diagramas son de
+Mermaid: no necesitan Graphviz. Los errores de esos ficheros (``DocumentationConfigError``) llevan rutas del servidor:
+``markdown_input_error`` los convierte en un mensaje sin ellas.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import subprocess
 import zipfile
@@ -39,7 +46,17 @@ _GRAPH_COLUMN_MODE: Final[dict[str, str]] = {"relations_first": "compact", "rela
 
 #: Procesos ``dot`` simultáneos por job (util_bbdd usa por defecto todos los núcleos hasta 8).
 GRAPH_WORKERS: Final = 2
-_FORMAT_DIRS: Final[dict[str, str]] = {"word": "WORD", "excel": "EXCEL", "html": "HTML"}
+_FORMAT_DIRS: Final[dict[str, str]] = {"word": "WORD", "excel": "EXCEL", "html": "HTML", "markdown": "MARKDOWN"}
+#: Formatos que se recolocan como carpeta entera (``outputs/<formato>/documentacion``) y su portada.
+_SITE_FORMATS: Final[dict[str, str]] = {"html": "index.html", "markdown": "docs/index.md"}
+#: Formatos cuyos diagramas dibuja Graphviz (``dot``); los del Markdown son de Mermaid.
+GRAPHVIZ_FORMATS: Final = frozenset({"word", "html"})
+#: Longitud máxima del mensaje de un mapa o catálogo anterior inválido (los errores del mapa van todos juntos).
+_MAX_MESSAGE: Final = 2000
+#: Rutas absolutas (POSIX o Windows) que quedaran en un mensaje después de sustituir las conocidas. Solo cuentan si
+#: empiezan al principio o tras un espacio, una comilla o un paréntesis: así no se tocan las rutas relativas
+#: (``src/a/b.py``), las claves con ``/`` ni las URL (``https://…``, cuya barra sigue a ``:``).
+_ABSOLUTE_PATH: Final = re.compile(r"""(?<![^\s'"(])(?:[A-Za-z]:)?[\\/](?:[^\s'"():;,\\/]+[\\/])+[^\s'"():;,\\/]*""")
 #: Estilos que ``WordGenerator`` usa con nombre (``add_heading`` 0-3 y el DDL): si la plantilla no los tiene, python-docx
 #: lanza ``KeyError`` en mitad del documento (GAPS G41).
 WORD_REQUIRED_STYLES: Final = ("Title", "Heading 1", "Heading 2", "Heading 3", "No Spacing")
@@ -98,6 +115,65 @@ class DocumentationOptions:
     graph_orthogonal: bool = True
     tables_per_document: int = 50
     html_items_per_page: int = 15
+    markdown_site_name: str | None = None
+    markdown_diagram_depth: int = 2
+
+
+@dataclass(frozen=True)
+class MarkdownInputs:
+    """Ficheros del Markdown: copias en la carpeta del run o ficheros del servidor (nunca rutas del usuario).
+
+    ``trace_map`` (``.toml``/``.json``) y ``previous`` (``catalog.json`` de una documentación anterior) llevan el
+    nombre que se muestra en los errores en lugar de su ruta.
+    """
+
+    mermaid_js: Path | None = None
+    trace_map: Path | None = None
+    trace_map_name: str = "mapa de trazabilidad"
+    previous: Path | None = None
+    previous_name: str = "documentación anterior"
+
+
+class MarkdownInputError(ValueError):
+    """Mapa de trazabilidad (``kind="trace_map"``) o documentación anterior (``kind="previous"``) no válidos."""
+
+    def __init__(self, kind: Literal["trace_map", "previous"], message: str) -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.message = message
+
+
+def markdown_input_error(exc: BaseException, inputs: MarkdownInputs) -> MarkdownInputError | None:
+    """``DocumentationConfigError`` de ``markdown.trace_map`` o ``markdown.previous`` en la cadena de ``exc``, con las
+    rutas del servidor sustituidas por los nombres que se muestran; ``None`` si el fallo es otro."""
+    from util_bbdd.exceptions import DocumentationConfigError
+
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, DocumentationConfigError):
+            message = str(current)
+            if "markdown.trace_map" in message:
+                return MarkdownInputError("trace_map", public_message(message, inputs))
+            if "markdown.previous" in message:
+                return MarkdownInputError("previous", public_message(message, inputs))
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return None
+
+
+def public_message(message: str, inputs: MarkdownInputs) -> str:
+    """Mensaje sin rutas del servidor: cada fichero conocido por su nombre y cualquier otra ruta absoluta, fuera."""
+    for path, label in ((inputs.trace_map, inputs.trace_map_name), (inputs.previous, inputs.previous_name)):
+        if path is not None:
+            for variant in sorted({str(path), path.as_posix()}, key=len, reverse=True):
+                message = message.replace(variant, label)
+            message = message.replace(f"({path.name})", f"({label})").replace(f": {path.name}", f": {label}")
+    message = _ABSOLUTE_PATH.sub("<fichero>", message)
+    message = message.replace("markdown.trace_map", "El mapa de trazabilidad").replace(
+        "markdown.previous", "La documentación anterior"
+    )
+    return message if len(message) <= _MAX_MESSAGE else message[: _MAX_MESSAGE - 1] + "…"
 
 
 @dataclass(frozen=True)
@@ -165,11 +241,13 @@ def build_imprimir(
     table_style: str | None = None,
     excel_template: Path | None = None,
     excel_table_style: str | None = None,
+    markdown: MarkdownInputs | None = None,
 ) -> dict[str, Any]:
     """Configuración ``imprimir`` de ``DatabaseDocumentation`` (``PrintConfigManager``).
 
     Las plantillas son copias en la carpeta del run; ``table_style`` es el estilo de tabla de Word y
-    ``excel_table_style``, el del Excel (``table_style_excel``, util_bbdd 4.1.0).
+    ``excel_table_style``, el del Excel (``table_style_excel``, util_bbdd 4.1.0). El bloque ``markdown`` (util_bbdd
+    5.3.0) solo va si se pide ese formato: el resto de formatos no cambia.
     """
     extra: dict[str, Any] = {}
     if word_template is not None:
@@ -221,7 +299,21 @@ def build_imprimir(
         },
         "tablas_por_documento": options.tables_per_document,
         "html_items_por_pagina": options.html_items_per_page,
+        **({"markdown": _markdown_block(options, markdown)} if "markdown" in options.formats else {}),
     }
+
+
+def _markdown_block(options: DocumentationOptions, inputs: MarkdownInputs | None) -> dict[str, Any]:
+    """``imprimir["markdown"]``: tope de profundidad, título y ficheros (el resto, los valores de util_bbdd)."""
+    chosen = inputs or MarkdownInputs()
+    block: dict[str, Any] = {"max_diagram_depth": options.markdown_diagram_depth}
+    if options.markdown_site_name:
+        block["site_name"] = options.markdown_site_name
+    files = (("mermaid_js", chosen.mermaid_js), ("trace_map", chosen.trace_map), ("previous", chosen.previous))
+    for key, path in files:
+        if path is not None:
+            block[key] = str(path)
+    return block
 
 
 def _move(source: Path, target: Path) -> None:
@@ -241,9 +333,10 @@ def generate_documentation(
     work_dir: Path,
     name: str,
     templates: DocumentTemplates | None = None,
+    markdown: MarkdownInputs | None = None,
     progress: RunProgress | None = None,
 ) -> dict[str, Any]:
-    """Genera la documentación y la deja en ``outputs_dir/{word,excel,html/documentacion}``.
+    """Genera la documentación y la deja en ``outputs_dir/{word,excel,html/documentacion,markdown/documentacion}``.
 
     Con ``progress`` (GAPS G1, util_bbdd 4.1.0) el run muestra el avance por formato y tabla y se puede cancelar entre
     tablas (``OperationCancelledError``).
@@ -253,9 +346,10 @@ def generate_documentation(
         "templates_applied": {"word"|"excel": bool}}`` (solo los formatos con plantilla).
 
     Raises:
-        GraphvizMissingError y las excepciones de util_bbdd.
+        GraphvizMissingError (solo si hay diagramas de Word o HTML), MarkdownInputError (mapa de trazabilidad o
+        documentación anterior no válidos, con un mensaje sin rutas) y las excepciones de util_bbdd.
     """
-    if options.graphs and shutil.which("dot") is None:
+    if options.graphs and GRAPHVIZ_FORMATS & set(options.formats) and shutil.which("dot") is None:
         raise GraphvizMissingError("Graphviz (dot) no está instalado en el servidor.")
     chosen = templates or DocumentTemplates()
     outcome = _Outcome()
@@ -271,7 +365,13 @@ def generate_documentation(
             outcome,
             target_schema(db_type, schema),
             progress,
+            markdown,
         )
+    except Exception as exc:  # frontera de util_bbdd: los errores del mapa o del anterior, sin rutas
+        error = markdown_input_error(exc, markdown or MarkdownInputs())
+        if error is None:
+            raise
+        raise error from None
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
     return {**summary, "warnings": outcome.warnings, "templates_applied": outcome.applied}
@@ -288,6 +388,7 @@ def _document_with_template(
     outcome: _Outcome,
     schema: str | None,
     progress: RunProgress | None = None,
+    markdown: MarkdownInputs | None = None,
 ) -> dict[str, Any]:
     """Documenta con las plantillas; si falla por una (G40, G41), se repite sin ella (como mucho, sin las dos)."""
     word = templates.word if "word" in options.formats else None
@@ -299,6 +400,7 @@ def _document_with_template(
             table_style=templates.word_table_style,
             excel_template=excel,
             excel_table_style=templates.excel_table_style,
+            markdown=markdown,
         )
         try:
             summary = _document(params, db_type, options, outputs_dir, work_dir, name, imprimir, schema, progress)
@@ -360,10 +462,10 @@ def _document(
         folder = base / _FORMAT_DIRS[fmt]
         if not folder.exists():
             continue
-        if fmt == "html":
-            target = outputs_dir / "html" / "documentacion"
+        if fmt in _SITE_FORMATS:  # carpeta entera: el Markdown tiene docs/, mkdocs.yml y manifest.json
+            target = outputs_dir / fmt / "documentacion"
             _move(folder, target)
-            produced[fmt] = (target / "index.html").relative_to(outputs_dir).as_posix()
+            produced[fmt] = (target / _SITE_FORMATS[fmt]).relative_to(outputs_dir).as_posix()
         else:
             files = sorted(p for p in folder.iterdir() if p.is_file())
             for file in files:

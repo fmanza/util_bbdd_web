@@ -2,8 +2,10 @@
 
 Cada operación declara un modelo Pydantic (``extra="forbid"``) que valida los parámetros al encolar; los campos con
 ``ubw_kind="connection"`` son alias de una conexión del proyecto y los ``ubw_kind="template"``, el id de una plantilla
-de documento (``ubw_template_kind``: ``word`` o ``excel``, ADR-011). La implementación vive en ``app/jobs/operations``.
-Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones.
+de documento (``ubw_template_kind``: ``word``, ``excel`` o ``trace``, ADR-011); los ``ubw_kind="run"``, el id de una
+ejecución anterior del proyecto (``ubw_run_operation``). La implementación vive en ``app/jobs/operations``.
+Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones; los que tienen
+``ubw_requires`` solo se muestran si ese booleano está activado.
 Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
 Fase 7: ``migrate_plan`` y ``migrate_apply`` (este no sale en el formulario genérico: se lanza desde el plan).
 Fase 8: ``dump_preview`` (modo seco) y ``dump_apply`` (se lanza desde la vista previa); desde la 1.4.0,
@@ -21,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from app.domain.runs.errors import RunParamsError, UnknownOperationError
 
 ALIAS_PATTERN = r"^[a-z0-9_-]{1,32}$"
-ParamType = Literal["string", "integer", "float", "boolean", "connection", "template"]
+ParamType = Literal["string", "integer", "float", "boolean", "connection", "template", "run"]
 ULID_PATTERN = r"^[0-9A-HJKMNP-TV-Z]{26}$"
 
 
@@ -45,17 +47,16 @@ def _connection(description: str) -> Any:
     return Field(pattern=ALIAS_PATTERN, description=description, json_schema_extra={"ubw_kind": "connection"})
 
 
-def _group(group: str, default: Any, description: str, **extra: Any) -> Any:
-    return Field(default=default, description=description, json_schema_extra={"ubw_group": group}, **extra)
+def _group(group: str, default: Any, description: str, *, requires: str | None = None, **extra: Any) -> Any:
+    schema_extra: dict[str, Any] = {"ubw_group": group, **({"ubw_requires": requires} if requires else {})}
+    return Field(default=default, description=description, json_schema_extra=schema_extra, **extra)
 
 
-def _template(kind: str, description: str) -> Any:
-    return Field(
-        default=None,
-        pattern=ULID_PATTERN,
-        description=description,
-        json_schema_extra={"ubw_group": "templates", "ubw_kind": "template", "ubw_template_kind": kind},
-    )
+def _template(kind: str, description: str, *, group: str = "templates", requires: str | None = None) -> Any:
+    schema_extra: dict[str, Any] = {"ubw_group": group, "ubw_kind": "template", "ubw_template_kind": kind}
+    if requires:
+        schema_extra["ubw_requires"] = requires
+    return Field(default=None, pattern=ULID_PATTERN, description=description, json_schema_extra=schema_extra)
 
 
 #: Nombres de schema y tabla: identificadores (con ``$``, ``#``, ``.``, ``-`` y espacios), sin comillas ni ``;``, porque
@@ -68,8 +69,12 @@ SCHEMA_DESCRIPTION = (
 )
 
 
+#: Título del sitio Markdown: texto de una línea, sin caracteres de control.
+SITE_NAME_PATTERN = r"^[^\x00-\x1f\x7f]{1,100}$"
+
+
 class DocumentationParams(BaseModel):
-    """Documentación de un schema con ``DatabaseDocumentation`` de util_bbdd (Word, Excel y/o HTML)."""
+    """Documentación de un schema con ``DatabaseDocumentation`` de util_bbdd (Word, Excel, HTML y/o Markdown)."""
 
     connection: str = _connection("Alias de la conexión del proyecto que se documenta.")
     schema_name: str | None = Field(
@@ -78,6 +83,12 @@ class DocumentationParams(BaseModel):
     word: bool = _group("formats", True, "Documento Word (.docx).")
     excel: bool = _group("formats", True, "Libro Excel (.xlsx).")
     html: bool = _group("formats", True, "Sitio HTML navegable.")
+    markdown: bool = _group(
+        "formats",
+        False,
+        "Carpeta Markdown: una página por objeto, diagramas de Mermaid (sin Graphviz), catálogo JSON, ficheros para "
+        "IA y mkdocs.yml.",
+    )
     tables: bool = _group("tables", True, "Documentar las tablas.")
     table_columns: bool = _group("tables", True, "Columnas de cada tabla.")
     table_keys: bool = _group("tables", True, "Claves primarias, foráneas y únicas.")
@@ -90,7 +101,9 @@ class DocumentationParams(BaseModel):
     storage: bool = _group("extra", False, "Inventario de almacenamiento.")
     engine_conditions: bool = _group("extra", False, "Condiciones del motor (readiness).")
     charset: bool = _group("extra", False, "Charset y collation.")
-    graphs: bool = _group("graphs", True, "Diagramas de relaciones en Word y HTML (necesitan Graphviz).")
+    graphs: bool = _group(
+        "graphs", True, "Diagramas de relaciones: en Word y HTML con Graphviz; en Markdown, con Mermaid."
+    )
     graph_depth: int = _group("graphs", 1, "Niveles de relación en cada diagrama.", ge=1, le=3)
     graph_direction: Literal["both", "outgoing", "incoming"] = _group(
         "graphs", "both", "Relaciones que muestra cada diagrama."
@@ -102,11 +115,14 @@ class DocumentationParams(BaseModel):
         "o ninguna.",
     )
     graph_max_columns: int = _group("graphs", 8, "Columnas máximas por tabla del diagrama.", ge=1, le=50)
-    graph_data_types: bool = _group("graphs", False, "Mostrar el tipo de cada columna en el diagrama.")
+    graph_data_types: bool = _group(
+        "graphs", False, "Mostrar el tipo de cada columna en el diagrama (Word y HTML; Markdown siempre los muestra)."
+    )
     graph_orthogonal: bool = _group(
         "graphs",
         True,
-        "Relaciones en ángulo recto; desactívalo (curvas) si Graphviz no puede dibujar algún diagrama (GAPS G39).",
+        "Relaciones en ángulo recto; desactívalo (curvas) si Graphviz no puede dibujar algún diagrama (GAPS G39). No "
+        "aplica al Markdown.",
     )
     tables_per_document: int = _group("layout", 50, "Tablas por documento Word.", ge=1, le=500)
     html_items_per_page: int = _group("layout", 15, "Elementos por página del índice HTML.", ge=5, le=100)
@@ -119,18 +135,58 @@ class DocumentationParams(BaseModel):
         "excel",
         "Plantilla Excel del proyecto o global (tema, encabezado y pie, estilo de tabla); vacío = formato por defecto.",
     )
+    markdown_site_name: str | None = _group(
+        "markdown",
+        None,
+        "Título del sitio Markdown; vacío = «Documentación de <base de datos>».",
+        requires="markdown",
+        pattern=SITE_NAME_PATTERN,
+    )
+    markdown_diagram_depth: int = _group(
+        "markdown",
+        2,
+        "Tope de niveles de relación de los diagramas Markdown: se usa el menor entre este y los niveles de los "
+        "diagramas.",
+        requires="markdown",
+        ge=1,
+        le=3,
+    )
+    trace_map: str | None = _template(
+        "trace",
+        "Mapa de trazabilidad (.toml o .json) del proyecto o global: enlaza tablas, vistas, rutinas y columnas con "
+        "código, documentos y requisitos. Si no es válido, la ejecución falla con todos sus errores.",
+        group="markdown",
+        requires="markdown",
+    )
+    markdown_previous_run: str | None = Field(
+        default=None,
+        pattern=ULID_PATTERN,
+        description="Documentación anterior de la misma conexión y schema con Markdown: añade la página de cambios y "
+        "el visor de diferencias.",
+        json_schema_extra={
+            "ubw_group": "markdown",
+            "ubw_kind": "run",
+            "ubw_run_operation": "documentation",
+            "ubw_requires": "markdown",
+        },
+    )
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     @model_validator(mode="after")
     def _one_format(self) -> DocumentationParams:
-        if not (self.word or self.excel or self.html):
-            raise ValueError("Elige al menos un formato (Word, Excel o HTML).")
+        if not (self.word or self.excel or self.html or self.markdown):
+            raise ValueError("Elige al menos un formato (Word, Excel, HTML o Markdown).")
         # Una plantilla de un formato que no se genera no se usa: se descarta para no bloquear su borrado.
         if not self.word:
             self.word_template = None
         if not self.excel:
             self.excel_template = None
+        if not self.markdown:  # las opciones del Markdown, igual
+            self.markdown_site_name = self.trace_map = self.markdown_previous_run = None
+            self.markdown_diagram_depth = 2
+        elif self.markdown_site_name is not None:
+            self.markdown_site_name = self.markdown_site_name.strip() or None
         return self
 
 
@@ -387,6 +443,8 @@ class OperationParam:
     options: list[str] | None = None
     group: str | None = None
     template_kind: str | None = None
+    run_operation: str | None = None
+    requires: str | None = None
 
 
 @dataclass(frozen=True)
@@ -415,6 +473,8 @@ class OperationSpec:
                 kind = "connection"
             elif prop.get("ubw_kind") == "template":
                 kind = "template"
+            elif prop.get("ubw_kind") == "run":
+                kind = "run"
             elif raw_type == "integer":
                 kind = "integer"
             elif raw_type == "number":
@@ -435,6 +495,8 @@ class OperationSpec:
                     options=[str(o) for o in options] if options else None,
                     group=prop.get("ubw_group"),
                     template_kind=prop.get("ubw_template_kind"),
+                    run_operation=prop.get("ubw_run_operation"),
+                    requires=prop.get("ubw_requires"),
                 )
             )
         return result
@@ -455,7 +517,8 @@ OPERATIONS: dict[str, OperationSpec] = {
     "documentation": OperationSpec(
         name="documentation",
         title="Documentación de la base de datos",
-        description="Documenta un schema en Word, Excel y/o HTML con util_bbdd (tablas, vistas, rutinas y diagramas).",
+        description="Documenta un schema en Word, Excel, HTML y/o Markdown con util_bbdd (tablas, vistas, rutinas y "
+        "diagramas).",
         model=DocumentationParams,
     ),
     "relationship_graph": OperationSpec(

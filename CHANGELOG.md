@@ -3,6 +3,29 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Added
+
+- **Documentación Markdown** (util_bbdd 5.3.0): casilla *Markdown* en la documentación (desmarcada por defecto). Una
+  carpeta en `outputs/markdown/documentacion/` con una página por tabla, vista y rutina, diagramas ER de Mermaid
+  (**sin Graphviz**: una documentación solo Markdown no necesita `dot`), `catalog.json`, `llms.txt`,
+  `llms-full.txt`, `mkdocs.yml` y `manifest.json`; en *Artefactos* y en el ZIP. Mermaid es el de `UBW_MERMAID_JS`
+  (sin Internet, ADR-007); si falta, aviso. Opciones: título del sitio y profundidad máxima de los diagramas (1–3).
+- **Mapas de trazabilidad**: tipo de plantilla `trace` (`.toml`/`.json`, ≤ 1 MB, con ejemplo descargable) que se
+  elige al lanzar un Markdown. Si no es válido, la ejecución falla con `invalid_trace_map` y todos sus errores
+  (enmienda de ADR-011; G49).
+- **Comparar con la documentación anterior**: una documentación Markdown de la misma conexión y schema añade
+  `docs/changes.md` y `docs/changes.json`, que se abren en el visor de diferencias del detalle.
+
+### Changed
+
+- **util_bbdd 5.3.0** (sin dependencias nuevas).
+- API: `DocumentationParams` con `markdown`, `markdown_site_name`, `markdown_diagram_depth`, `trace_map` y
+  `markdown_previous_run`; `OperationParamOut` con el tipo `run` y los campos `run_operation` y `requires`;
+  `TemplateKind` con `trace`; `RunDetailOut.has_diff`; `GET /runs/{id}/diff` también para documentaciones con
+  cambios. Códigos de error nuevos de la ejecución: `invalid_trace_map` e `invalid_previous`.
+
 ## [1.10.1] - 2026-10-31
 
 ### Security

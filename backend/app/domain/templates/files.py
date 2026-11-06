@@ -6,13 +6,19 @@ o descargar al abrirlo: macros, objetos incrustados (OLE, ActiveX), relaciones e
 (plantilla adjunta remota, imágenes enlazadas…), campos DDE/INCLUDE/LINK y cualquier DTD (``<!DOCTYPE``: OOXML no la
 usa; sin ella no hay entidades). Los ``.dotx``/``.xltx`` se guardan como ``.docx``/``.xlsx`` (python-docx no abre
 plantillas). Word: deben estar los estilos que usa util_bbdd (GAPS G41).
+
+Mapas de trazabilidad (``trace``, documentación Markdown de util_bbdd 5.3.0): ``.toml`` o ``.json`` de 1 MB como mucho
+(el límite de util_bbdd), en UTF-8 y con un objeto en la raíz. Aquí solo se comprueba la sintaxis: el esquema (todos
+los errores juntos) lo valida util_bbdd al generar, porque su validador no es público (GAPS G49).
 """
 
 from __future__ import annotations
 
 import html
 import io
+import json
 import re
+import tomllib
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePath
@@ -27,16 +33,21 @@ from app.domain.templates.errors import TemplateContentError, TemplateTypeError
 from app.integrations.util_bbdd.documentation import WORD_REQUIRED_STYLES
 from app.integrations.util_bbdd.excel_template import DEFAULT_TABLE_STYLE, TABLE_STYLES, theme_is_safe
 
-Kind = Literal["word", "excel"]
-KINDS: Final[tuple[Kind, ...]] = ("word", "excel")
+Kind = Literal["word", "excel", "trace"]
+KINDS: Final[tuple[Kind, ...]] = ("word", "excel", "trace")
 #: Extensión → (tipo, es una plantilla de Office que hay que convertir).
 EXTENSIONS: Final[dict[str, tuple[Kind, bool]]] = {
     ".docx": ("word", False),
     ".dotx": ("word", True),
     ".xlsx": ("excel", False),
     ".xltx": ("excel", True),
+    ".toml": ("trace", False),
+    ".json": ("trace", False),
 }
-STORED_SUFFIX: Final[dict[str, str]] = {"word": "docx", "excel": "xlsx"}
+#: Extensión con la que se guarda cada tipo de Office; un mapa de trazabilidad conserva la suya (``stored_suffix``).
+STORED_SUFFIX: Final[dict[str, str]] = {"word": "docx", "excel": "xlsx", "trace": "toml"}
+#: Tamaño máximo de un mapa de trazabilidad: el de util_bbdd (``markdown.trace_map``).
+TRACE_MAX_BYTES: Final = 1_000_000
 _MACRO_EXTENSIONS: Final = frozenset({".docm", ".dotm", ".xlsm", ".xltm"})
 _MAIN_PART: Final[dict[Kind, str]] = {"word": "word/document.xml", "excel": "xl/workbook.xml"}
 _TEMPLATE_TYPES: Final[dict[Kind, tuple[bytes, bytes]]] = {
@@ -261,12 +272,65 @@ def check_template(path: Path, kind: Kind, *, max_uncompressed: int) -> Template
         TemplateContentError: No es del tipo declarado, es demasiado grande descomprimida, no es segura o (Word) le
             faltan estilos (``missing_styles`` en el *problem details*).
     """
+    if kind == "trace":
+        return _trace_info(path)
     _check_package(path, kind, max_uncompressed)
     return _word_info(path) if kind == "word" else _excel_info(path)
 
 
+def stored_suffix(kind: Kind, filename: str) -> str:
+    """Extensión del fichero guardado: la de Office del tipo o, en un mapa de trazabilidad, la suya (``toml``/``json``,
+    que util_bbdd usa para elegir el formato)."""
+    if kind == "trace":
+        return "json" if PurePath(filename).suffix.lower() == ".json" else "toml"
+    return STORED_SUFFIX[kind]
+
+
+def _trace_info(path: Path) -> TemplateInfo:
+    """Mapa de trazabilidad: tamaño, UTF-8 y sintaxis TOML o JSON con un objeto en la raíz (sin estilos de tabla)."""
+    if path.stat().st_size > TRACE_MAX_BYTES:
+        raise TemplateContentError(f"Un mapa de trazabilidad no puede superar {TRACE_MAX_BYTES // 1_000_000} MB.")
+    try:
+        text = path.read_bytes().decode("utf-8")
+        data: object = json.loads(text) if path.suffix.lower() == ".json" else tomllib.loads(text)
+    except UnicodeDecodeError:
+        raise TemplateContentError("El mapa de trazabilidad no está en UTF-8.") from None
+    except (ValueError, RecursionError) as exc:  # TOMLDecodeError y JSONDecodeError son ValueError
+        raise TemplateContentError(f"El mapa de trazabilidad no se puede leer: {exc}") from None
+    if not isinstance(data, dict):
+        raise TemplateContentError("El mapa de trazabilidad debe ser un objeto (tables, views, routines).")
+    return TemplateInfo(table_styles=[], table_style=None)
+
+
+_TRACE_EXAMPLE: Final = """\
+# Mapa de trazabilidad de la documentación Markdown (util_bbdd 5.3.0).
+# Las referencias son texto: no se leen del disco. Las URL http(s) se enlazan.
+version = 1
+
+[tables."PEDIDOS"]                       # nombre exacto o, si no es ambiguo, sin distinguir mayúsculas
+code = ["src/ventas/pedidos.py#Pedido"]
+functional = ["docs/functional/ventas.md#alta-de-pedido"]
+technical = ["docs/api/ventas.md"]
+requirements = ["REQ-012"]
+tags = ["ventas"]
+notes = "Cabecera de pedido."
+
+[tables."PEDIDOS".columns."CLIENTE_ID"]  # trazabilidad por columna
+code = ["src/ventas/pedidos.py#Pedido.cliente_id"]
+
+[views."V_PEDIDOS_ABIERTOS"]
+functional = ["docs/functional/ventas.md#pedidos-abiertos"]
+
+[routines."PROCEDURE:P_ALTA_PEDIDO"]     # TIPO:nombre
+code = ["src/ventas/alta.py"]
+"""
+
+
 def base_template(kind: Kind) -> bytes:
-    """Plantilla base: Word con todos los estilos que usa util_bbdd y en horizontal; Excel con encabezado y pie."""
+    """Plantilla base: Word con todos los estilos que usa util_bbdd y en horizontal; Excel con encabezado y pie; mapa de
+    trazabilidad de ejemplo en TOML."""
+    if kind == "trace":
+        return _TRACE_EXAMPLE.encode("utf-8")
     buffer = io.BytesIO()
     if kind == "word":
         document = docx.Document()

@@ -223,7 +223,7 @@ def enqueue(
         MigrationForbiddenError, DumpForbiddenError, RunStateError: Reglas de escritura en la BD destino
             (``migrations.check_apply``, ADR-008; ``dumps.check_apply`` y ``dumps.check_restore``, ADR-009).
     """
-    from app.domain.runs import bulks, dumps, migrations  # importan este módulo: aquí para evitar el ciclo
+    from app.domain.runs import bulks, documentations, dumps, migrations  # importan este módulo: evita el ciclo
 
     if not membership.can("editor"):
         raise ProjectForbiddenError()
@@ -251,6 +251,7 @@ def enqueue(
         bulks.check_apply(db, user, membership, clean, settings)
     elif spec.name == "documentation":
         check_run_templates(db, membership.project, clean)
+        documentations.check_launch(db, membership.project, clean, settings)
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
         raise TooManyRunsError(f"Tienes {active} ejecuciones en cola o en curso; espera a que terminen.")

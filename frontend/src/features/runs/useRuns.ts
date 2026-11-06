@@ -46,6 +46,23 @@ export function useProjectRuns(projectId: number, filters: RunFilters, page: num
   });
 }
 
+/** Ejecuciones correctas de `operation` en el proyecto (las 50 últimas), para elegir una anterior en el formulario. */
+export function useSucceededRuns(projectId: number, operation: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'runs', { operation, status: 'succeeded' }],
+    queryFn: async () =>
+      unwrap(
+        await api.GET('/api/v1/projects/{project_id}/runs', {
+          params: {
+            path: { project_id: projectId },
+            query: { status: 'succeeded', operation, limit: PAGE_SIZE, offset: 0 },
+          },
+        }),
+      ),
+    enabled: enabled && operation !== null,
+  });
+}
+
 export function useMyRuns(page: number) {
   return useQuery({
     queryKey: ['runs', 'mine', { page }],

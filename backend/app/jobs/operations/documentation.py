@@ -2,25 +2,35 @@
 
 Plantillas (ADR-011): se copian a ``inputs/`` tras comprobar su SHA-256 (la ejecución no depende de que sigan
 existiendo); si no están o no se pueden aplicar, la documentación sale con el formato por defecto y un aviso.
+
+Markdown (util_bbdd 5.3.0): el mapa de trazabilidad (una plantilla ``trace``) y el ``catalog.json`` de la documentación
+anterior también se copian a ``inputs/``; a diferencia de las plantillas de Office, si faltan o no son válidos la
+ejecución falla (``invalid_trace_map``, ``invalid_previous``): una trazabilidad o unos cambios ausentes en silencio
+serían peores que un error. ``mermaid.min.js`` es el de ``UBW_MERMAID_JS``: la web no sale a Internet (ADR-007).
 """
 
 from __future__ import annotations
 
 import hashlib
+import shutil
 from pathlib import Path
 from typing import Any
 
 from app.db.models import Project
 from app.db.session import new_session
+from app.domain.runs.documentations import previous_catalog
+from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import DocumentationParams, RelationshipGraphParams
 from app.domain.templates.errors import TemplateNotFoundError
-from app.domain.templates.files import STORED_SUFFIX, Kind
+from app.domain.templates.files import Kind, display_name
 from app.domain.templates.service import resolve_for_run, template_file
 from app.integrations.util_bbdd.documentation import (
     DocumentationOptions,
     DocumentTemplates,
     GraphOptions,
     GraphvizMissingError,
+    MarkdownInputError,
+    MarkdownInputs,
     generate_documentation,
     generate_graphs,
     graphviz_failed,
@@ -46,6 +56,8 @@ def _job_error(exc: Exception) -> JobError:
         return JobError("cancelled", "Cancelada por un usuario.")
     if isinstance(exc, GraphvizMissingError):
         return JobError("graphviz_missing", str(exc))
+    if isinstance(exc, MarkdownInputError):  # mensaje ya sin rutas del servidor
+        return JobError(f"invalid_{exc.kind}", exc.message)
     if isinstance(exc, LookupError):
         return JobError("invalid_params", str(exc))
     if graphviz_failed(exc):
@@ -59,7 +71,8 @@ def _job_error(exc: Exception) -> JobError:
 
 _LABELS = {"word": ("Word", "el documento Word"), "excel": ("Excel", "el libro Excel")}
 #: Fases de util_bbdd en el mensaje de progreso del run.
-_PHASES = {"metadata": "Leyendo el catálogo", "word": "Word", "excel": "Excel", "html": "HTML"}
+_PHASES = {"metadata": "Leyendo el catálogo", "word": "Word", "excel": "Excel", "html": "HTML", "markdown": "Markdown"}
+_FORMATS = ("word", "excel", "html", "markdown")
 
 
 def _copy_template(ctx: JobContext, project: Project | None, template_id: str, kind: Kind) -> tuple[Any, Path] | None:
@@ -75,7 +88,7 @@ def _copy_template(ctx: JobContext, project: Project | None, template_id: str, k
         return None
     if hashlib.sha256(data).hexdigest() != template.sha256:
         return None
-    target = ctx.run_dir / "inputs" / f"plantilla_{kind}.{STORED_SUFFIX[kind]}"
+    target = ctx.run_dir / "inputs" / f"plantilla_{kind}{Path(template.path).suffix}"  # util_bbdd usa la extensión
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
     return template, target
@@ -119,16 +132,91 @@ def _record(ctx: JobContext, entries: list[dict[str, Any]], warnings: list[str])
         write_json_atomic(ctx.run_dir / TEMPLATES_INPUT, {"templates": entries, "warnings": warnings})
 
 
+def _mermaid_js(ctx: JobContext, warnings: list[str]) -> Path | None:
+    """``UBW_MERMAID_JS`` si existe; si no, el ``mkdocs.yml`` carga Mermaid de Internet y se avisa."""
+    path = ctx.settings.mermaid_js
+    if path is not None and path.is_file():
+        return path
+    ctx.logger.warning("UBW_MERMAID_JS no existe: el sitio Markdown cargará Mermaid de Internet")
+    warnings.append("Mermaid no está instalado en el servidor: el sitio Markdown cargará los diagramas de Internet.")
+    return None
+
+
+def _trace_map(ctx: JobContext, params: DocumentationParams, entries: list[dict[str, Any]]) -> tuple[Path, str] | None:
+    """Mapa de trazabilidad elegido, copiado en ``inputs/``, y su nombre visible; lo anota en ``entries`` (``run.json``).
+
+    Raises:
+        JobError: ``invalid_trace_map`` si ya no está o su contenido cambió.
+    """
+    if not params.trace_map:
+        return None
+    with new_session() as db:
+        project = db.get(Project, ctx.project_id)
+        if project is not None:
+            db.expunge(project)
+    found = _copy_template(ctx, project, params.trace_map, "trace")
+    if found is None:
+        entries.append({"kind": "trace", "id": params.trace_map, "applied": False})
+        raise JobError("invalid_trace_map", "El mapa de trazabilidad ya no está disponible.")
+    template, path = found
+    entries.append({
+        "kind": "trace", "id": template.id, "scope": "global" if template.project_id is None else "project",
+        "name": template.name, "sha256": template.sha256,
+    })  # fmt: skip
+    return path, display_name(template.filename)
+
+
+def _previous(ctx: JobContext, params: DocumentationParams) -> Path | None:
+    """``catalog.json`` de la documentación anterior copiado en ``inputs/previous/`` (se comprueba otra vez aquí).
+
+    Raises:
+        JobError: ``invalid_previous`` si ya no es válida (purgada entre el encolado y el inicio, p. ej.).
+    """
+    if not params.markdown_previous_run:
+        return None
+    with new_session() as db:
+        project = db.get(Project, ctx.project_id)
+        try:
+            source = previous_catalog(db, project, ctx.params, ctx.settings) if project is not None else None
+        except RunParamsError as exc:
+            raise JobError("invalid_previous", exc.detail or "La documentación anterior no es válida.") from None
+    if source is None:
+        raise JobError("invalid_previous", "La documentación anterior no existe en el proyecto.")
+    target = ctx.run_dir / "inputs" / "previous" / "catalog.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, target)
+    return target
+
+
+def _markdown_inputs(
+    ctx: JobContext, params: DocumentationParams, entries: list[dict[str, Any]], warnings: list[str]
+) -> MarkdownInputs | None:
+    if not params.markdown:
+        return None
+    trace = _trace_map(ctx, params, entries)
+    return MarkdownInputs(
+        mermaid_js=_mermaid_js(ctx, warnings),
+        trace_map=trace[0] if trace else None,
+        trace_map_name=f"«{trace[1]}»" if trace else "mapa de trazabilidad",
+        previous=_previous(ctx, params),
+    )
+
+
 def run_documentation(ctx: JobContext) -> None:
     params = DocumentationParams.model_validate(ctx.params)
     ctx.progress("connecting", f"Preparando la conexión «{params.connection}»")
     db_type, conn_params = ctx.connection_params(params.connection)
-    formats = tuple(f for f in ("word", "excel", "html") if getattr(params, f))
+    formats = tuple(f for f in _FORMATS if getattr(params, f))
     options = DocumentationOptions(
         formats=formats,
         **params.model_dump(include=set(DocumentationOptions.__dataclass_fields__) - {"formats"}),
     )
     templates, entries, warnings = _templates(ctx, params)
+    try:
+        markdown = _markdown_inputs(ctx, params, entries, warnings)
+    except JobError:
+        _record(ctx, entries, warnings)
+        raise
     ctx.progress("running", f"Generando documentación ({', '.join(formats)})")
     try:
         summary = generate_documentation(
@@ -140,6 +228,7 @@ def run_documentation(ctx: JobContext) -> None:
             work_dir=ctx.run_dir / "work",
             name="documentacion",
             templates=templates,
+            markdown=markdown,
             progress=RunProgress(
                 lambda message, pct: ctx.progress("running", message, pct),
                 ctx.cancel_requested,
@@ -155,6 +244,7 @@ def run_documentation(ctx: JobContext) -> None:
         ctx.logger.error("Documentación fallida", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     applied: dict[str, bool] = summary.pop("templates_applied")
+    applied["trace"] = markdown is not None and markdown.trace_map is not None  # si no valía, ya habría fallado
     for entry in entries:
         entry.setdefault("applied", applied.get(entry["kind"], False))
     warnings += summary.pop("warnings")

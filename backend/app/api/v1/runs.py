@@ -137,7 +137,14 @@ def _detail(access: service.RunAccess, user: User, settings: Settings) -> RunDet
         artifacts=artifacts,
         site_url=_site_url(access, user, settings),
         warnings=[str(w) for w in (run.manifest or {}).get("warnings", [])],
+        has_diff=_has_diff(run),
     )
+
+
+def _has_diff(run: Run) -> bool:
+    """Si el visor de diferencias tiene qué abrir: ejecución correcta con el JSON de su diff registrado."""
+    path = diff_domain.DIFF_PATHS.get(run.operation)
+    return path is not None and run.status == "succeeded" and any(a.path == path for a in run.artifacts)
 
 
 def _filters(status_filter: RunStatus | None, operation: str | None, user_id: int | None, q: str | None) -> RunFilters:
@@ -345,7 +352,7 @@ def _items(items: list[diff_domain.DiffItem]) -> list[DiffItemOut]:
 
 
 @router.get(
-    "/{run_id}/diff", response_model=SchemaDiffOut, summary="Diff de una comparación de esquemas",
+    "/{run_id}/diff", response_model=SchemaDiffOut, summary="Diff de una comparación de esquemas o de los cambios de una documentación",
     responses={**_401, **_404, 413: {"description": "Demasiado grande para el visor"}},
 )  # fmt: skip
 def get_diff(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> SchemaDiffOut:

@@ -165,7 +165,17 @@ function counts(diff: SchemaDiff) {
   }));
 }
 
-function Viewer({ diff, runId, projectId }: { diff: SchemaDiff; runId: string; projectId: number }) {
+function Viewer({
+  diff,
+  runId,
+  projectId,
+  evolution,
+}: {
+  diff: SchemaDiff;
+  runId: string;
+  projectId: number;
+  evolution: boolean;
+}) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
@@ -270,22 +280,35 @@ function Viewer({ diff, runId, projectId }: { diff: SchemaDiff; runId: string; p
           </Tabs>
         </>
       )}
-      <DiffEvolutionPanel runId={runId} projectId={projectId} />
+      {evolution && <DiffEvolutionPanel runId={runId} projectId={projectId} />}
     </Stack>
   );
 }
 
-/** Visor del diff de una ejecución `compare` terminada (Fase 6). */
-export function DiffViewer({ runId, projectId }: { runId: string; projectId: number }) {
+/**
+ * Visor del diff de una ejecución `compare` terminada (Fase 6) o de los cambios de una documentación Markdown respecto
+ * de la anterior (`changes.json`, mismo formato). La evolución entre fechas solo existe entre comparaciones.
+ */
+export function DiffViewer({
+  runId,
+  projectId,
+  source = 'compare',
+}: {
+  runId: string;
+  projectId: number;
+  source?: 'compare' | 'documentation';
+}) {
   const { t } = useTranslation();
   const diff = useRunDiff(runId, true);
   return (
     <Card withBorder>
       <Stack>
-        <Title order={3}>{t('diff.title')}</Title>
+        <Title order={3}>{t(source === 'compare' ? 'diff.title' : 'diff.documentationTitle')}</Title>
         {diff.isPending && <Loader size="sm" aria-label={t('common.loading')} />}
         {diff.isError && <ErrorAlert error={diff.error} />}
-        {diff.data && <Viewer diff={diff.data} runId={runId} projectId={projectId} />}
+        {diff.data && (
+          <Viewer diff={diff.data} runId={runId} projectId={projectId} evolution={source === 'compare'} />
+        )}
       </Stack>
     </Card>
   );

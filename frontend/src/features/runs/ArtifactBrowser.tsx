@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes } from '../../components/format';
+import { stripFrontMatter } from './markdown';
 import { renderMermaidBlocks } from './mermaid';
 import { type Artifact, downloadUrl, isSiteFile, previewUrl, useArtifactText } from './useRuns';
 
@@ -37,7 +38,7 @@ function MarkdownPreview({ title, source }: { title: string; source: string }) {
   useEffect(() => {
     let alive = true;
     void import('marked').then(async ({ marked }) => {
-      const body = await renderMermaidBlocks(await marked.parse(source, { gfm: true }));
+      const body = await renderMermaidBlocks(await marked.parse(stripFrontMatter(source), { gfm: true }));
       if (alive) setHtml(body);
     });
     return () => {

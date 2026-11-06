@@ -1,6 +1,6 @@
 # Documentación y grafos de relaciones
 
-Guía de uso de las operaciones de documentación y grafos (desde la 0.6.0, Fase 5; vigente en 1.0.0). Se lanzan desde la pestaña *Ejecuciones* de un proyecto
+Guía de uso de las operaciones de documentación y grafos (desde la 0.6.0, Fase 5; Markdown desde la 1.11.0). Se lanzan desde la pestaña *Ejecuciones* de un proyecto
 (rol editor) sobre una conexión asociada al proyecto, y se ejecutan en el worker como cualquier ejecución.
 
 ## Documentación de la base de datos
@@ -10,14 +10,15 @@ Documenta un schema con `DatabaseDocumentation` de util_bbdd.
 | Sección del formulario | Opciones |
 |---|---|
 | (general) | **Conexión** (alias del proyecto) y **Schema**: vacío = el de la conexión |
-| Formatos | **Word** (.docx), **Excel** (.xlsx) y **Sitio HTML**; al menos uno |
+| Formatos | **Word** (.docx), **Excel** (.xlsx), **Sitio HTML** y **Markdown** (desde la 1.11.0; desmarcado por defecto); al menos uno |
 | Tablas | Tablas, columnas, claves (PK, FK, únicas), índices y DDL |
 | Vistas | Vistas (columnas) y su DDL |
 | Rutinas | Procedimientos y funciones |
 | Información adicional | Datos de la BD (versión), almacenamiento, condiciones del motor, charset y collation |
-| Diagramas | Diagramas de relaciones en Word y HTML, con profundidad (1–3), dirección y columnas de cada tabla (ver abajo) |
+| Diagramas | Diagramas de relaciones: en Word y HTML con Graphviz y en Markdown con Mermaid; profundidad (1–3), dirección y columnas de cada tabla (ver abajo) |
 | Presentación | Tablas por documento Word (si hay más, se generan varios) y elementos por página del índice HTML |
 | Plantillas | **Plantilla Word** y **Plantilla Excel** del proyecto o globales; vacío = formato por defecto (ver abajo) |
+| Markdown | Solo con **Markdown** marcado: título del sitio, profundidad máxima de los diagramas, mapa de trazabilidad y documentación anterior con la que comparar ([Documentación Markdown](#documentación-markdown)) |
 
 **Columnas en el diagrama** (independiente de la opción *Columnas* de *Tablas*, que controla la tabla de columnas del
 documento):
@@ -75,6 +76,54 @@ Al terminar, el detalle de la ejecución muestra la tarjeta **Documentación**:
   temporal (caduca con la inactividad de la sesión, 60 minutos por defecto): si caduca, recarga el detalle.
 - **Descargar ZIP** baja todo, incluido el sitio completo para abrirlo sin servidor.
 
+### Documentación Markdown
+
+Desde la 1.11.0 (util_bbdd 5.3.0). Genera una carpeta pensada para versionar con git, publicar como sitio y dar
+contexto a una IA:
+
+- una página `.md` por tabla, vista y rutina (`docs/tables/…`, `docs/views/…`, `docs/routines/…`), con índices por
+  letra y una portada (`docs/index.md`);
+- diagramas ER de **Mermaid** en cada tabla: **no necesitan Graphviz** (una documentación solo Markdown funciona en
+  un servidor sin `dot`). *Mostrar tipos de columna* y *Relaciones en ángulo recto* no aplican: Mermaid siempre
+  muestra los tipos;
+- `docs/catalog.json` (catálogo de los objetos), `docs/llms.txt` y `docs/llms-full.txt` (para IA), `mkdocs.yml`
+  (listo para `zensical build` o `mkdocs build`) y `manifest.json`.
+
+| Opción | Efecto |
+|---|---|
+| Título del sitio | `site_name` del `mkdocs.yml`; vacío = «Documentación de <base de datos>» |
+| Profundidad máxima de los diagramas | 1–3 (2 por defecto). Se usa el menor entre este valor y la *Profundidad* de *Diagramas*; si recorta, la página lo avisa |
+| Mapa de trazabilidad | Un mapa del proyecto o global (ver abajo); vacío = sin trazabilidad |
+| Comparar con la documentación | Una documentación anterior **del mismo proyecto, conexión y schema, con Markdown**: añade `docs/changes.md` y `docs/changes.json` con los cambios de esquema |
+
+**Mermaid sin Internet**: la web copia su propio `mermaid.min.js` (`UBW_MERMAID_JS`, incluido en la imagen) en
+`docs/assets/javascripts/`, así el sitio publicado dibuja los diagramas sin salir a Internet (unos 3 MB por
+ejecución, que cuentan para la cuota). Sin ese fichero, el `mkdocs.yml` carga Mermaid de unpkg y la ejecución termina
+con un aviso.
+
+**Dónde verla**: en *Artefactos* (la vista previa dibuja Markdown y diagramas; los enlaces entre páginas no navegan)
+o completa en **Descargar ZIP**. Para el sitio navegable, publícala con Zensical o MkDocs fuera de la web.
+
+**Mapa de trazabilidad**: un `.toml` (recomendado: admite comentarios) o `.json` de hasta 1 MB que enlaza tablas,
+vistas, rutinas y columnas con código, documentos funcionales y técnicos y requisitos. Se gestiona como una plantilla
+más (pestaña **Plantillas** del proyecto o *Administración → Plantillas*), con su **ejemplo** descargable. Al subirlo
+se comprueba la sintaxis; los campos los comprueba util_bbdd al generar: **si el mapa no es válido, la ejecución
+falla** (`invalid_trace_map`) con **todos** los errores en el mensaje, para corregirlos de una vez. Con mapa, la
+documentación añade `docs/traceability.md` (cobertura, matriz y entradas del mapa que no casan con ningún objeto).
+
+```toml
+[tables."PEDIDOS"]
+code = ["src/ventas/pedidos.py#Pedido"]
+requirements = ["REQ-012"]
+
+[tables."PEDIDOS".columns."CLIENTE_ID"]
+code = ["src/ventas/pedidos.py#Pedido.cliente_id"]
+```
+
+**Cambios respecto de la anterior**: la documentación nueva lleva un apartado **Cambios respecto de la documentación
+anterior** en su detalle con el mismo visor que la comparación de esquemas (sin *Comparar con otra ejecución*). La
+ejecución copia el `catalog.json` de la anterior: purgar después la anterior no la afecta.
+
 ## Grafo de relaciones
 
 Dibuja con Graphviz las claves foráneas alrededor de una tabla (`GraphvizRelationshipGraphExt`).
@@ -100,6 +149,8 @@ El detalle muestra una **galería** con las primeras 12 imágenes; el resto est�
 | `graphviz_missing` | El servidor no tiene Graphviz | La imagen oficial lo incluye; en otra instalación, instala `graphviz` |
 | `graphviz_failed` | Graphviz no pudo dibujar los diagramas. Desde util_bbdd 4.1.0 un diagrama que falla deja un aviso en su lugar y el documento sigue, así que es raro (GAPS G39) | Desmarca «Relaciones en ángulo recto», reduce la profundidad o desactiva los diagramas |
 | `connection_failed` | La BD no responde o rechaza las credenciales | Prueba la conexión desde su ficha |
+| `invalid_trace_map` | El mapa de trazabilidad tiene campos o tipos que util_bbdd no admite (el mensaje los lista todos), o ya no está | Corrige el mapa y súbelo de nuevo, o lanza sin mapa |
+| `invalid_previous` | La documentación anterior se purgó antes de empezar la ejecución, o es de otro motor | Elige otra o lanza sin comparar |
 
-Documentar un schema grande lleva tiempo (cada diagrama es un proceso `dot`); el límite es el de cualquier
+Documentar un schema grande lleva tiempo (cada diagrama de Word o HTML es un proceso `dot`); el límite es el de cualquier
 ejecución (`UBW_JOB_TIMEOUT_SECONDS`, 1 hora por defecto).

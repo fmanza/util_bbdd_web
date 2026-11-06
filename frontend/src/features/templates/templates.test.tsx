@@ -65,6 +65,31 @@ async function openTab(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('pestaña Plantillas del proyecto', () => {
+  it('muestra los mapas de trazabilidad sin estilo de tabla y enlaza el ejemplo', async () => {
+    const trace: DocumentTemplate = {
+      ...OWN,
+      id: '01JTEMPLATETRACE0000000000',
+      kind: 'trace',
+      name: 'Ventas',
+      filename: 'ventas.toml',
+      table_style: null,
+      table_styles: [],
+    };
+    stubProject(ADMIN, 'editor', [trace]);
+    const user = userEvent.setup();
+
+    await openTab(user);
+    const row = (await screen.findByText('Ventas')).closest('tr') as HTMLElement;
+    expect(within(row).getByText('Trazabilidad')).toBeInTheDocument();
+    expect(within(row).queryByRole('combobox')).not.toBeInTheDocument();
+    expect(within(row).getByText('—')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Mapa de trazabilidad de ejemplo' })).toHaveAttribute(
+      'href',
+      '/api/v1/document-templates/base/trace',
+    );
+    expect(document.querySelector<HTMLInputElement>('input[type="file"]')?.accept).toContain('.toml');
+  });
+
   it('sube una plantilla como multipart con su nombre', async () => {
     const fetchMock = stubProject(ADMIN, 'editor', []);
     const user = userEvent.setup();

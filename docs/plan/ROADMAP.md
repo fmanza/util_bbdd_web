@@ -163,7 +163,18 @@ wheel de util_bbdd 4.0.0 en la release `v4.0.0` con hash en `uv.lock`.
 Resolver en util_bbdd los huecos de [UTIL_BBDD_GAPS.md](UTIL_BBDD_GAPS.md) y retirar los rodeos de la web, por
 tipo de ejecución y en paralelo en los dos repositorios: [UTIL_BBDD_GAPS_PLAN.md](UTIL_BBDD_GAPS_PLAN.md).
 
+## Después de la 1.0: documentación Markdown ✅
+
+Formato **Markdown** de util_bbdd 5.3.0 en la operación `documentation` (1.11.0; sesión
+`.ai/sessions/2026-11-06-doc-markdown/`): carpeta completa en `outputs/markdown/documentacion/`, Mermaid local
+(`UBW_MERMAID_JS`), mapa de trazabilidad como plantilla `trace` (ADR-011) y cambios respecto de una documentación
+anterior en el visor de diferencias. Guía: [documentacion.md](../guides/documentacion.md#documentación-markdown). No es un
+hueco de API: es capacidad nueva (G49, validador público del mapa, queda abierto).
+
 ## Mejoras opcionales (fuera de fase, decidir al planificar)
+
+- Sitio de la documentación Markdown construido con `zensical build` en el job y servido por URL firmada, como el HTML
+  (ADR-007); necesita Zensical en la imagen de runtime (ADR nuevo).
 
 - Plantillas de ejecución por proyecto.
 - Ejecuciones programadas (cron por proyecto), después de la 1.0.

@@ -44,7 +44,7 @@ function UploadForm({ scope }: { scope: TemplateScope }) {
         <Group align="flex-end">
           <FileInput
             label={t('templates.file')}
-            accept=".docx,.dotx,.xlsx,.xltx"
+            accept=".docx,.dotx,.xlsx,.xltx,.toml,.json"
             value={file}
             onChange={setFile}
             clearable
@@ -181,7 +181,10 @@ function TemplatesTable({
                 </Table.Td>
               )}
               <Table.Td>
-                {editable(template) ? (
+                {template.kind === 'trace' ? (
+                  // Un mapa de trazabilidad no tiene estilos de tabla.
+                  <Text size="sm">—</Text>
+                ) : editable(template) ? (
                   <NativeSelect
                     size="xs"
                     aria-label={t('templates.tableStyleOf', { name: template.name })}
@@ -289,6 +292,9 @@ export function TemplatesPanel({ scope, canEdit }: { scope: TemplateScope; canEd
         </Anchor>
         <Anchor href={baseTemplateUrl('excel')} size="sm">
           {t('templates.baseExcel')}
+        </Anchor>
+        <Anchor href={baseTemplateUrl('trace')} size="sm">
+          {t('templates.baseTrace')}
         </Anchor>
       </Group>
       {canEdit ? (

@@ -236,6 +236,9 @@ export function RunDetailPage() {
       {run.operation === 'compare' && run.status === 'succeeded' && (
         <DiffViewer runId={run.id} projectId={run.project_id} />
       )}
+      {run.operation === 'documentation' && run.has_diff && (
+        <DiffViewer runId={run.id} projectId={run.project_id} source="documentation" />
+      )}
       {run.status !== 'purged' && <RunOutputs run={run} />}
 
       <Title order={3}>{t('runs.artifacts')}</Title>

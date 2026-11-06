@@ -7,11 +7,12 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-TemplateKind = Literal["word", "excel"]
+#: ``trace``: mapa de trazabilidad de la documentación Markdown (``.toml``/``.json``).
+TemplateKind = Literal["word", "excel", "trace"]
 
 
 class TemplateOut(BaseModel):
-    """Plantilla Word o Excel (sin la ruta en el servidor)."""
+    """Plantilla Word o Excel, o mapa de trazabilidad (sin la ruta en el servidor)."""
 
     model_config = ConfigDict(from_attributes=True)
 

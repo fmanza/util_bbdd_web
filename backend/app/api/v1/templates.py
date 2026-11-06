@@ -66,7 +66,7 @@ def _check_length(request: Request, settings: Settings) -> None:
 
 def _file(template: DocumentTemplate, settings: Settings) -> FileResponse:
     path = service.template_file(template, settings)
-    name = f"{PurePath(template.filename).stem}.{STORED_SUFFIX[template.kind]}"
+    name = f"{PurePath(template.filename).stem}{PurePath(template.path).suffix}"  # la extensión guardada
     return FileResponse(
         path, media_type=mime_type(name), filename=name, content_disposition_type="attachment", headers=_SAFE_HEADERS
     )
@@ -82,11 +82,13 @@ def list_global(_: CurrentUser, db: DbSession, kind: KindQuery = None) -> list[T
 
 @router.get(
     "/base/{kind}", summary="Plantilla base", response_class=Response,
-    responses={**_401, 200: {"description": "Word con los estilos que usa la documentación, o Excel de ejemplo"}},
+    responses={**_401, 200: {"description": "Word con los estilos que usa la documentación, Excel de ejemplo o mapa de "
+                                            "trazabilidad de ejemplo (TOML)"}},
 )  # fmt: skip
 def download_base(kind: TemplateKind, _: CurrentUser) -> Response:
-    """Punto de partida con todos los estilos necesarios (Word en horizontal; Excel con encabezado y pie)."""
-    name = f"plantilla_base.{STORED_SUFFIX[kind]}"
+    """Punto de partida con todos los estilos necesarios (Word en horizontal; Excel con encabezado y pie) o mapa de
+    trazabilidad de ejemplo."""
+    name = "mapa_trazabilidad.toml" if kind == "trace" else f"plantilla_base.{STORED_SUFFIX[kind]}"
     return Response(
         base_template(kind),
         media_type=mime_type(name),

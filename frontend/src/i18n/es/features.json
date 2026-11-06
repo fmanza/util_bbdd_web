@@ -392,6 +392,7 @@
         "word": "Word",
         "excel": "Excel",
         "html": "Sitio HTML",
+        "markdown": "Markdown",
         "tables": "Tablas",
         "table_columns": "Columnas",
         "table_keys": "Claves",
@@ -414,7 +415,11 @@
         "tables_per_document": "Tablas por documento Word",
         "html_items_per_page": "Elementos por página HTML",
         "word_template": "Plantilla Word",
-        "excel_template": "Plantilla Excel"
+        "excel_template": "Plantilla Excel",
+        "markdown_site_name": "Título del sitio",
+        "markdown_diagram_depth": "Profundidad máxima de los diagramas",
+        "trace_map": "Mapa de trazabilidad",
+        "markdown_previous_run": "Comparar con la documentación"
       },
       "relationship_graph": {
         "connection": "Conexión",
@@ -487,7 +492,10 @@
       "noTemplate": "Sin plantilla (formato por defecto)",
       "projectTemplates": "Del proyecto",
       "globalTemplates": "Globales",
-      "templatesError": "No se pudieron cargar las plantillas"
+      "templatesError": "No se pudieron cargar las plantillas",
+      "noRun": "Ninguna",
+      "runOption": "{{date}} · {{user}}",
+      "runsError": "No se pudieron cargar las ejecuciones anteriores"
     },
     "artifactsBrowser": {
       "empty": "Esta ejecución no ha generado artefactos.",
@@ -518,7 +526,8 @@
       "load": "Carga",
       "errors": "Errores",
       "performance": "Rendimiento",
-      "templates": "Plantillas"
+      "templates": "Plantillas",
+      "markdown": "Markdown"
     },
     "options": {
       "both": "Ambas direcciones",
@@ -554,6 +563,8 @@
       "documentation": "Documentación",
       "openSite": "Abrir en pestaña nueva",
       "siteTitle": "Sitio HTML de la documentación",
+      "markdownTitle": "Documentación Markdown",
+      "markdownHint": "Carpeta con una página por objeto, catálogo JSON, ficheros para IA y mkdocs.yml (publicable con Zensical o MkDocs). Ábrela en Artefactos (empieza por la portada) o descárgala completa en el ZIP.",
       "downloadLabel": "Descargar {{name}}",
       "graphs_one": "{{count}} grafo",
       "graphs_other": "{{count}} grafos",
@@ -656,6 +667,7 @@
   },
   "diff": {
     "title": "Diferencias de esquema",
+    "documentationTitle": "Cambios respecto de la documentación anterior",
     "source": "Origen",
     "target": "Destino",
     "filter": "Filtrar por nombre",
@@ -1091,12 +1103,13 @@
   },
   "templates": {
     "title": "Plantillas de documento",
-    "intro": "Plantillas Word y Excel que se pueden elegir al lanzar la documentación. Sin plantilla, la documentación usa el formato por defecto.",
+    "intro": "Plantillas Word y Excel y mapas de trazabilidad que se pueden elegir al lanzar la documentación. Sin plantilla, la documentación usa el formato por defecto.",
     "introGlobal": "Plantillas disponibles en todos los proyectos. Cada proyecto puede añadir las suyas.",
-    "limits": "Word (.docx, .dotx): portada, encabezado, pie y estilos; necesita los estilos Título, Título 1 a 3 y Sin espaciado, y se respeta su orientación. Excel (.xlsx, .xltx): tema (colores y fuentes), encabezado y pie y configuración de página; sin portada ni imágenes en el encabezado. Sin macros, objetos incrustados ni vínculos externos.",
+    "limits": "Word (.docx, .dotx): portada, encabezado, pie y estilos; necesita los estilos Título, Título 1 a 3 y Sin espaciado, y se respeta su orientación. Excel (.xlsx, .xltx): tema (colores y fuentes), encabezado y pie y configuración de página; sin portada ni imágenes en el encabezado. Sin macros, objetos incrustados ni vínculos externos. Mapa de trazabilidad (.toml, .json, hasta 1 MB): enlaza tablas, vistas, rutinas y columnas del Markdown con código, documentos y requisitos; al subirlo se comprueba la sintaxis y, al generar, todos sus campos.",
     "base": "Plantillas base",
     "baseWord": "Word base",
     "baseExcel": "Excel base",
+    "baseTrace": "Mapa de trazabilidad de ejemplo",
     "upload": "Subir plantilla",
     "file": "Fichero",
     "name": "Nombre",
@@ -1106,7 +1119,8 @@
     "kind": "Tipo",
     "kinds": {
       "word": "Word",
-      "excel": "Excel"
+      "excel": "Excel",
+      "trace": "Trazabilidad"
     },
     "scope": "Ámbito",
     "scopes": {

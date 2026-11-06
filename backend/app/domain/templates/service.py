@@ -1,4 +1,5 @@
-"""Plantillas Word y Excel de la documentación (ADR-011): globales (admins) o de un proyecto (editores).
+"""Plantillas Word y Excel y mapas de trazabilidad de la documentación (ADR-011): globales (admins) o de un proyecto
+(editores).
 
 El fichero se copia en bloques a un temporal (``.tmp-<id>``) contando bytes; si supera ``template_max_mb`` se borra y
 se responde 413. Después se convierte (``.dotx``/``.xltx``), se comprueba y se renombra a ``<id>.<docx|xlsx>``; el
@@ -36,15 +37,23 @@ from app.domain.templates.errors import (
     TemplateNotFoundError,
     TemplateTooLargeError,
 )
-from app.domain.templates.files import STORED_SUFFIX, Kind, check_template, display_name, kind_for, untemplate
+from app.domain.templates.files import (
+    TRACE_MAX_BYTES,
+    Kind,
+    check_template,
+    display_name,
+    kind_for,
+    stored_suffix,
+    untemplate,
+)
 from app.workspace.layout import safe_path
 
 logger = logging.getLogger(__name__)
 
 _CHUNK: Final = 1024 * 1024
 #: Parámetros de ``documentation`` que apuntan a una plantilla, y su tipo.
-RUN_PARAMS: Final[dict[str, Kind]] = {"word_template": "word", "excel_template": "excel"}
-_KIND_LABEL: Final[dict[str, str]] = {"word": "Word", "excel": "Excel"}
+RUN_PARAMS: Final[dict[str, Kind]] = {"word_template": "word", "excel_template": "excel", "trace_map": "trace"}
+_KIND_LABEL: Final[dict[str, str]] = {"word": "Word", "excel": "Excel", "trace": "de trazabilidad"}
 _UNIQUE_NAME: Final = "uq_document_templates_scope_kind_name"
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -165,15 +174,19 @@ def save_template(
     folder = templates_folder(settings.workspace_dir, project)
     folder.mkdir(parents=True, exist_ok=True)
     template_id = new_ulid()
-    tmp = folder / f".tmp-{template_id}.{STORED_SUFFIX[kind]}"  # openpyxl exige la extensión
+    suffix = stored_suffix(kind, shown)
+    tmp = folder / f".tmp-{template_id}.{suffix}"  # openpyxl exige la extensión; el mapa, para elegir el formato
     try:
-        _store(stream, tmp, settings.template_max_mb * 1024 * 1024, settings.template_max_mb)
+        if kind == "trace":  # límite de util_bbdd (1 MB), menor que el de las plantillas de Office
+            _store(stream, tmp, min(TRACE_MAX_BYTES, settings.template_max_mb * 1024 * 1024), 1)
+        else:
+            _store(stream, tmp, settings.template_max_mb * 1024 * 1024, settings.template_max_mb)
         if from_template:
             untemplate(tmp, kind)
         info = check_template(
             tmp, kind, max_uncompressed=effective_settings(db, settings).upload_max_uncompressed_mb * 1024 * 1024
         )
-        final = folder / f"{template_id}.{STORED_SUFFIX[kind]}"
+        final = folder / f"{template_id}.{suffix}"
         tmp.replace(final)
     except BaseException:
         tmp.unlink(missing_ok=True)

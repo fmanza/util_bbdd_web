@@ -88,3 +88,18 @@ encabezado y pie y sus colores corporativos, sin cambiar lo que pasa cuando no e
   problema de formato; se prefirió el formato por defecto con un aviso visible.
 - **Completar los estilos que faltan en la plantilla Word**: modificaría el fichero del usuario; se rechaza con un
   mensaje claro y se ofrece la plantilla base.
+
+## Enmienda (2026-11-06): mapas de trazabilidad con util_bbdd 5.3.0
+
+La documentación Markdown admite un **mapa de trazabilidad** (`markdown.trace_map`, `.toml` o `.json`). Se guarda en
+el mismo catálogo, como tipo `trace` de `document_templates` (cabe en `kind String(8)`; sin migración): hereda el
+ámbito proyecto/global, los permisos, el máximo por ámbito, el SHA-256, la copia a `inputs/` al lanzar y el bloqueo
+del borrado mientras lo use una ejecución en cola o en curso.
+
+- **Al subir**: extensión `.toml`/`.json` (se guarda con la suya: util_bbdd elige el formato por ella), 1 MB como
+  máximo (el límite de util_bbdd, menor que `UBW_TEMPLATE_MAX_MB`), UTF-8 y un objeto en la raíz. Sin estilos de tabla.
+  El esquema del mapa no se comprueba aquí: el validador de util_bbdd es privado (GAPS G49).
+- **Al generar, a diferencia de Word y Excel, un mapa que no vale hace fallar la ejecución** (`invalid_trace_map`) con
+  todos sus errores y sin rutas del servidor: una trazabilidad que falta en silencio es peor que un error, y el
+  usuario corrige el mapa de una vez.
+- La plantilla base del tipo es un mapa de ejemplo en TOML.

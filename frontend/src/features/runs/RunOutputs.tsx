@@ -11,6 +11,8 @@ const DOCUMENT_KINDS: Record<string, readonly string[]> = {
   compare: ['word', 'excel', 'markdown', 'sql'],
 };
 const DEFAULT_DOCUMENT_KINDS = ['word', 'excel'];
+/** Portada de la documentación Markdown (util_bbdd 5.3.0): la carpeta tiene un fichero por objeto, sin botones. */
+const MARKDOWN_INDEX = 'outputs/markdown/documentacion/docs/index.md';
 
 function fileName(artifact: Artifact): string {
   return artifact.path.split('/').at(-1) ?? artifact.path;
@@ -50,10 +52,13 @@ export function RunOutputs({ run }: { run: RunDetail }) {
   const documents = run.artifacts.filter((a) => kinds.includes(a.kind));
   const hasSql = isCompare && documents.some((a) => a.kind === 'sql');
   const graphs = run.artifacts.filter((a) => a.kind === 'graphs' && /\.(svg|png)$/i.test(a.path));
+  const hasMarkdown =
+    run.operation === 'documentation' && run.artifacts.some((a) => a.path === MARKDOWN_INDEX);
 
   if (
     !run.site_url &&
     documents.length === 0 &&
+    !hasMarkdown &&
     (run.operation !== 'relationship_graph' || graphs.length === 0)
   ) {
     return null;
@@ -90,6 +95,14 @@ export function RunOutputs({ run }: { run: RunDetail }) {
                 }}
               />
             )}
+          </Stack>
+        </Card>
+      )}
+      {hasMarkdown && (
+        <Card withBorder>
+          <Stack gap="xs">
+            <Title order={3}>{t('runs.outputs.markdownTitle')}</Title>
+            <Text size="sm">{t('runs.outputs.markdownHint')}</Text>
           </Stack>
         </Card>
       )}

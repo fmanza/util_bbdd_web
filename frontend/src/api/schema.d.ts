@@ -603,7 +603,8 @@ export interface paths {
         };
         /**
          * Plantilla base
-         * @description Punto de partida con todos los estilos necesarios (Word en horizontal; Excel con encabezado y pie).
+         * @description Punto de partida con todos los estilos necesarios (Word en horizontal; Excel con encabezado y pie) o mapa de
+         *     trazabilidad de ejemplo.
          */
         get: operations["download_base_api_v1_document_templates_base__kind__get"];
         put?: never;
@@ -1165,7 +1166,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Diff de una comparación de esquemas
+         * Diff de una comparación de esquemas o de los cambios de una documentación
          * @description Diferencias del destino respecto al origen de una ejecución ``compare`` correcta.
          */
         get: operations["get_diff_api_v1_runs__run_id__diff_get"];
@@ -2875,15 +2876,25 @@ export interface components {
             /** Required */
             required: boolean;
             /**
+             * Requires
+             * @description Solo se muestra (y se envía) si este parámetro booleano está activado
+             */
+            requires?: string | null;
+            /**
+             * Run Operation
+             * @description Con ``type=run``: operación de las ejecuciones anteriores del proyecto que se eligen
+             */
+            run_operation?: string | null;
+            /**
              * Template Kind
              * @description Con ``type=template``: tipo de plantilla de documento que se elige
              */
-            template_kind?: ("word" | "excel") | null;
+            template_kind?: ("word" | "excel" | "trace") | null;
             /**
              * Type
              * @enum {string}
              */
-            type: "string" | "integer" | "float" | "boolean" | "connection" | "template";
+            type: "string" | "integer" | "float" | "boolean" | "connection" | "template" | "run";
         };
         /**
          * ParamOut
@@ -3277,6 +3288,12 @@ export interface components {
             error_message: string | null;
             /** Finished At */
             finished_at: string | null;
+            /**
+             * Has Diff
+             * @description Tiene diff de esquemas para el visor (``GET /runs/{id}/diff``): una comparación o una documentación Markdown comparada con otra anterior
+             * @default false
+             */
+            has_diff: boolean;
             /** Id */
             id: string;
             /**
@@ -3637,7 +3654,7 @@ export interface components {
         };
         /**
          * TemplateOut
-         * @description Plantilla Word o Excel (sin la ruta en el servidor).
+         * @description Plantilla Word o Excel, o mapa de trazabilidad (sin la ruta en el servidor).
          */
         TemplateOut: {
             /**
@@ -3653,7 +3670,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "word" | "excel";
+            kind: "word" | "excel" | "trace";
             /** Name */
             name: string;
             /**
@@ -5759,7 +5776,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Solo plantillas de este tipo */
-                kind?: ("word" | "excel") | null;
+                kind?: ("word" | "excel" | "trace") | null;
             };
             header?: never;
             path?: never;
@@ -5799,13 +5816,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                kind: "word" | "excel";
+                kind: "word" | "excel" | "trace";
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Word con los estilos que usa la documentación, o Excel de ejemplo */
+            /** @description Word con los estilos que usa la documentación, Excel de ejemplo o mapa de trazabilidad de ejemplo (TOML) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6470,7 +6487,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Solo plantillas de este tipo */
-                kind?: ("word" | "excel") | null;
+                kind?: ("word" | "excel" | "trace") | null;
             };
             header?: never;
             path: {

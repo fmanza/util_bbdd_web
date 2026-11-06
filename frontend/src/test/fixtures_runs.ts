@@ -38,7 +38,7 @@ export const RUN: Run = {
   relaunched_from: null,
 };
 
-export const RUN_DETAIL: RunDetail = { ...RUN, my_role: 'owner', artifacts: [] };
+export const RUN_DETAIL: RunDetail = { ...RUN, my_role: 'owner', artifacts: [], has_diff: false };
 
 export const FINISHED: RunDetail = {
   ...RUN_DETAIL,

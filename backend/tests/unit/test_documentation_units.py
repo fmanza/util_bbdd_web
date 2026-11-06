@@ -240,16 +240,20 @@ def test_orthogonal_edges_reach_util_bbdd(monkeypatch: pytest.MonkeyPatch, tmp_p
 
 
 def test_options_fields_match_params() -> None:
-    """Cada opción de la capa de integración tiene su campo en el formulario (y viceversa salvo formatos y plantillas)."""
+    """Cada opción de la capa de integración tiene su campo en el formulario (y viceversa salvo formatos y ficheros:
+    plantillas, mapa de trazabilidad y documentación anterior, que llegan como rutas en ``DocumentTemplates`` y
+    ``MarkdownInputs``)."""
     params = set(get_operation("documentation").model.model_fields) - {
         "connection",
         "schema_name",
         "word_template",
         "excel_template",
+        "trace_map",
+        "markdown_previous_run",
     }
     options = set(DocumentationOptions.__dataclass_fields__) - {"formats"}
 
-    assert params - {"word", "excel", "html"} == options
+    assert params - {"word", "excel", "html", "markdown"} == options
 
 
 def test_graphviz_missing_is_detected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

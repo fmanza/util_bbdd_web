@@ -3314,12 +3314,37 @@
             "title": "Required",
             "type": "boolean"
           },
+          "requires": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Solo se muestra (y se envía) si este parámetro booleano está activado",
+            "title": "Requires"
+          },
+          "run_operation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Con ``type=run``: operación de las ejecuciones anteriores del proyecto que se eligen",
+            "title": "Run Operation"
+          },
           "template_kind": {
             "anyOf": [
               {
                 "enum": [
                   "word",
-                  "excel"
+                  "excel",
+                  "trace"
                 ],
                 "type": "string"
               },
@@ -3337,7 +3362,8 @@
               "float",
               "boolean",
               "connection",
-              "template"
+              "template",
+              "run"
             ],
             "title": "Type",
             "type": "string"
@@ -4296,6 +4322,12 @@
               }
             ],
             "title": "Finished At"
+          },
+          "has_diff": {
+            "default": false,
+            "description": "Tiene diff de esquemas para el visor (``GET /runs/{id}/diff``): una comparación o una documentación Markdown comparada con otra anterior",
+            "title": "Has Diff",
+            "type": "boolean"
           },
           "id": {
             "title": "Id",
@@ -5397,7 +5429,7 @@
         "type": "object"
       },
       "TemplateOut": {
-        "description": "Plantilla Word o Excel (sin la ruta en el servidor).",
+        "description": "Plantilla Word o Excel, o mapa de trazabilidad (sin la ruta en el servidor).",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -5415,7 +5447,8 @@
           "kind": {
             "enum": [
               "word",
-              "excel"
+              "excel",
+              "trace"
             ],
             "title": "Kind",
             "type": "string"
@@ -8057,7 +8090,8 @@
                 {
                   "enum": [
                     "word",
-                    "excel"
+                    "excel",
+                    "trace"
                   ],
                   "type": "string"
                 },
@@ -8107,7 +8141,7 @@
     },
     "/api/v1/document-templates/base/{kind}": {
       "get": {
-        "description": "Punto de partida con todos los estilos necesarios (Word en horizontal; Excel con encabezado y pie).",
+        "description": "Punto de partida con todos los estilos necesarios (Word en horizontal; Excel con encabezado y pie) o mapa de\ntrazabilidad de ejemplo.",
         "operationId": "download_base_api_v1_document_templates_base__kind__get",
         "parameters": [
           {
@@ -8117,7 +8151,8 @@
             "schema": {
               "enum": [
                 "word",
-                "excel"
+                "excel",
+                "trace"
               ],
               "title": "Kind",
               "type": "string"
@@ -8126,7 +8161,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Word con los estilos que usa la documentación, o Excel de ejemplo"
+            "description": "Word con los estilos que usa la documentación, Excel de ejemplo o mapa de trazabilidad de ejemplo (TOML)"
           },
           "401": {
             "description": "No autenticado"
@@ -8843,7 +8878,8 @@
                 {
                   "enum": [
                     "word",
-                    "excel"
+                    "excel",
+                    "trace"
                   ],
                   "type": "string"
                 },
@@ -10469,7 +10505,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Diff de una comparación de esquemas",
+        "summary": "Diff de una comparación de esquemas o de los cambios de una documentación",
         "tags": [
           "runs"
         ]

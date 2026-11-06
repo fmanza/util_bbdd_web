@@ -11,7 +11,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import type { TFunction } from 'i18next';
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -19,10 +19,18 @@ import { z } from 'zod';
 
 import { isApiError } from '../../api/client';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { formatDateTime } from '../../components/format';
 import { zodResolver } from '../../components/zodResolver';
 import type { ProjectConnection } from '../projects/useProjects';
 import { type DocumentTemplate, useTemplates } from '../templates/useTemplates';
-import { type Operation, type OperationParam, useLaunchRun, useOperations } from './useRuns';
+import {
+  type Operation,
+  type OperationParam,
+  type Run,
+  useLaunchRun,
+  useOperations,
+  useSucceededRuns,
+} from './useRuns';
 
 type Values = Record<string, string | boolean>;
 
@@ -37,7 +45,9 @@ function paramSchema(param: OperationParam, t: TFunction) {
         ctx.addIssue({ code: 'custom', message: t('auth.required') });
         return z.NEVER;
       }
-      return param.type === 'connection' || param.type === 'template' ? null : undefined;
+      return param.type === 'connection' || param.type === 'template' || param.type === 'run'
+        ? null
+        : undefined;
     }
     if (param.type === 'integer' || param.type === 'float') {
       const number = Number(value);
@@ -93,6 +103,35 @@ function templateOptions(templates: DocumentTemplate[], kind: string | null | un
   ];
 }
 
+/** Parámetros que, ocultos, se envían como `null` (la plantilla o la ejecución elegida no se usa); el resto se omite. */
+const NULL_WHEN_HIDDEN: ReadonlySet<OperationParam['type']> = new Set(['template', 'run']);
+
+/** Si `run` es de la misma conexión y schema que el formulario (y, en documentación, con Markdown). */
+function comparable(run: Run, values: Partial<Values>): boolean {
+  const schema = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+  return (
+    run.params['connection'] === values['connection'] &&
+    schema(run.params['schema']) === schema(values['schema']) &&
+    (run.operation !== 'documentation' || run.params['markdown'] === true)
+  );
+}
+
+/** Opciones de un parámetro de ejecución anterior: «ninguna» y las comparables, la más reciente primero. */
+function runOptions(runs: Run[], values: Partial<Values>, t: TFunction) {
+  return [
+    { value: '', label: t('runs.launch.noRun') },
+    ...runs
+      .filter((run) => comparable(run, values))
+      .map((run) => ({
+        value: run.id,
+        label: t('runs.launch.runOption', {
+          date: formatDateTime(run.finished_at ?? run.created_at),
+          user: run.username ?? '—',
+        }),
+      })),
+  ];
+}
+
 /** Parámetros sin grupo primero; después cada grupo en el orden en que aparece. */
 function sections(params: OperationParam[]): [string | null, OperationParam[]][] {
   const result = new Map<string | null, OperationParam[]>([[null, []]]);
@@ -128,12 +167,33 @@ function LaunchForm({
 
   const templateParams = operation.params.filter((p) => p.type === 'template');
   const templates = useTemplates({ kind: 'project', projectId }, templateParams.length > 0);
+  const runParam = operation.params.find((p) => p.type === 'run');
+  const previousRuns = useSucceededRuns(projectId, runParam?.run_operation ?? null, runParam !== undefined);
   const values = useWatch({ control: form.control });
   const sourceType = connections.find((c) => c.alias === values['source_connection'])?.db_type;
-  // Una plantilla solo se ofrece si su formato (`word`, `excel`) se va a generar.
+  // Un parámetro con `requires` solo se ofrece si ese interruptor está activado (las opciones del Markdown); una
+  // plantilla sin él, si su formato (`word`, `excel`) se va a generar.
   const paramVisible = (param: OperationParam) =>
-    (param.type !== 'template' || !param.template_kind || values[param.template_kind] === true) &&
+    (param.requires
+      ? values[param.requires] === true
+      : param.type !== 'template' || !param.template_kind || values[param.template_kind] === true) &&
     (!ORACLE_SOURCE_PARAMS.has(param.name) || sourceType === 'oracle');
+  // Al desactivar un interruptor, sus opciones vuelven al valor por defecto: un valor no válido en un campo oculto
+  // bloquearía el envío con un error que no se ve.
+  useEffect(() => {
+    for (const param of operation.params) {
+      if (param.requires && values[param.requires] !== true && values[param.name] !== defaultValue(param)) {
+        form.resetField(param.name);
+      }
+    }
+  }, [operation, values, form]);
+  // Una ejecución anterior elegida que deja de ser comparable (otra conexión o schema) se quita.
+  const selectedRun = runParam ? values[runParam.name] : undefined;
+  useEffect(() => {
+    if (!runParam || typeof selectedRun !== 'string' || selectedRun === '' || !previousRuns.data) return;
+    const still = previousRuns.data.items.some((run) => run.id === selectedRun && comparable(run, values));
+    if (!still) form.setValue(runParam.name, '');
+  }, [runParam, selectedRun, previousRuns.data, values, form]);
   const targetEngine = values['target_engine'];
   const groupVisible = (group: string | null) =>
     group === null ||
@@ -141,11 +201,13 @@ function LaunchForm({
     (typeof targetEngine === 'string' && ENGINE_GROUPS[group].includes(targetEngine));
 
   const onSubmit = form.handleSubmit((values) => {
-    const hidden = new Set(templateParams.filter((p) => !paramVisible(p)).map((p) => p.name));
+    const hiddenParams = operation.params.filter((p) => !paramVisible(p));
+    const nulled = new Set(hiddenParams.filter((p) => NULL_WHEN_HIDDEN.has(p.type)).map((p) => p.name));
+    const omitted = new Set(hiddenParams.filter((p) => p.requires && !nulled.has(p.name)).map((p) => p.name));
     const params = Object.fromEntries(
       Object.entries(values)
-        .filter(([, value]) => value !== undefined)
-        .map(([name, value]) => [name, hidden.has(name) ? null : value]),
+        .filter(([name, value]) => value !== undefined && !omitted.has(name))
+        .map(([name, value]) => [name, nulled.has(name) ? null : value]),
     );
     launch.mutate(
       { operation: operation.name, params },
@@ -203,6 +265,18 @@ function LaunchForm({
               value={typeof field.value === 'string' ? field.value : ''}
               onChange={(event) => field.onChange(event.currentTarget.value)}
               error={error ?? (templates.isError ? t('runs.launch.templatesError') : undefined)}
+            />
+          );
+        }
+        if (param.type === 'run') {
+          return (
+            <NativeSelect
+              label={label}
+              description={param.description}
+              data={runOptions(previousRuns.data?.items ?? [], values, t)}
+              value={typeof field.value === 'string' ? field.value : ''}
+              onChange={(event) => field.onChange(event.currentTarget.value)}
+              error={error ?? (previousRuns.isError ? t('runs.launch.runsError') : undefined)}
             />
           );
         }
