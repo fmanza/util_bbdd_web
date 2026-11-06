@@ -171,6 +171,14 @@ Formato **Markdown** de util_bbdd 5.3.0 en la operación `documentation` (1.11.0
 anterior en el visor de diferencias. Guía: [documentacion.md](../guides/documentacion.md#documentación-markdown). No es un
 hueco de API: es capacidad nueva (G49, validador público del mapa, queda abierto).
 
+## Después de la 1.0: salida de la documentación por formato ✅
+
+Detalle de una documentación con una tarjeta por formato (Word, Excel, HTML, Markdown), ZIP por formato
+(`GET /runs/{id}/archive?format=`), avisos por formato, vista previa solo de las páginas `.md` y visor Markdown con
+árbol, buscador y navegación entre páginas (1.12.0; sesión `.ai/sessions/2026-11-06-doc-output-cards/`; enmienda de
+ADR-007). G50 (`mermaid.min.js` copiado en cada run) y G51 (índice de páginas de la documentación) quedan abiertos.
+Guía: [documentacion.md](../guides/documentacion.md#resultados-una-tarjeta-por-formato).
+
 ## Mejoras opcionales (fuera de fase, decidir al planificar)
 
 - Sitio de la documentación Markdown construido con `zensical build` en el job y servido por URL firmada, como el HTML

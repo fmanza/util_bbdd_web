@@ -1,20 +1,18 @@
 import { Alert, Badge, Button, Card, Group, List, Stack, Text, Title } from '@mantine/core';
-import type { ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ErrorAlert } from '../../../components/ErrorAlert';
 import { formatBytes } from '../../../components/format';
-import { MarkdownPreview } from '../ArtifactBrowser';
 import {
   type Artifact,
   type DocumentationFormat,
-  MARKDOWN_DOC_ROOT,
   type RunDetail,
   archiveUrl,
   downloadUrl,
   isActive,
-  useArtifactText,
 } from '../useRuns';
+import { MarkdownViewer } from './MarkdownViewer';
+import { buildPages } from './markdownNav';
 
 /** Orden de las tarjetas y valor por defecto de cada casilla del formulario (`DocumentationParams`). */
 const FORMATS: readonly { format: DocumentationFormat; byDefault: boolean }[] = [
@@ -23,7 +21,6 @@ const FORMATS: readonly { format: DocumentationFormat; byDefault: boolean }[] = 
   { format: 'html', byDefault: true },
   { format: 'markdown', byDefault: false },
 ];
-const MARKDOWN_INDEX = `${MARKDOWN_DOC_ROOT}docs/index.md`;
 
 function fileName(artifact: Artifact): string {
   return artifact.path.split('/').at(-1) ?? artifact.path;
@@ -151,20 +148,11 @@ function HtmlCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
   );
 }
 
-function MarkdownIndex({ run, index }: { run: RunDetail; index: Artifact }) {
-  const { t } = useTranslation();
-  const text = useArtifactText(run.id, index);
-  if (text.isPending) return <Text size="sm">{t('common.loading')}</Text>;
-  if (text.isError) return <ErrorAlert error={text.error} />;
-  return <MarkdownPreview title={t('runs.outputs.markdownPage', { path: 'index.md' })} source={text.data} />;
-}
-
 function MarkdownCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
   const { t } = useTranslation();
-  const pages = files.filter((a) => a.previewable && a.path.startsWith(MARKDOWN_DOC_ROOT));
+  const pages = useMemo(() => buildPages(files), [files]);
   // Ficheros auxiliares (catálogo, ficheros para IA, configuración del sitio): solo descarga.
   const auxiliary = files.filter((a) => !a.previewable && !a.path.includes('/assets/'));
-  const index = pages.find((a) => a.path === MARKDOWN_INDEX);
   return (
     <FormatCard run={run} format="markdown" files={files}>
       {pages.length > 0 && (
@@ -180,7 +168,7 @@ function MarkdownCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
           <DownloadButtons runId={run.id} artifacts={auxiliary} />
         </Stack>
       )}
-      {index && <MarkdownIndex run={run} index={index} />}
+      {pages.length > 0 && <MarkdownViewer runId={run.id} artifacts={files} pages={pages} />}
     </FormatCard>
   );
 }
@@ -190,10 +178,17 @@ function MarkdownCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
  * descripción, sus ficheros, sus avisos y su ZIP (`GET /runs/{id}/archive?format=`).
  */
 export function DocumentationOutputs({ run }: { run: RunDetail }) {
+  // Listas estables por formato: el visor Markdown memoriza su árbol a partir de ellas.
+  const byFormat = useMemo(() => {
+    const groups = new Map<string, Artifact[]>();
+    for (const artifact of run.artifacts)
+      groups.set(artifact.kind, [...(groups.get(artifact.kind) ?? []), artifact]);
+    return groups;
+  }, [run.artifacts]);
   if (isActive(run.status)) return null;
   const formats = documentationFormats(run);
   if (formats.length === 0) return null;
-  const files = (format: DocumentationFormat) => run.artifacts.filter((a) => a.kind === format);
+  const files = (format: DocumentationFormat) => byFormat.get(format) ?? [];
   return (
     <Stack>
       {formats.map((format) => {

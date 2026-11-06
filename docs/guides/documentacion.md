@@ -97,12 +97,13 @@ contexto a una IA:
 | Comparar con la documentación | Una documentación anterior **del mismo proyecto, conexión y schema, con Markdown**: añade `docs/changes.md` y `docs/changes.json` con los cambios de esquema |
 
 **Mermaid sin Internet**: la web copia su propio `mermaid.min.js` (`UBW_MERMAID_JS`, incluido en la imagen) en
-`docs/assets/javascripts/`, así el sitio publicado dibuja los diagramas sin salir a Internet (unos 3 MB por
-ejecución, que cuentan para la cuota). Sin ese fichero, el `mkdocs.yml` carga Mermaid de unpkg y la ejecución termina
+`docs/assets/javascripts/`, así el sitio publicado dibuja los diagramas sin salir a Internet (unos 5,5 MB por
+ejecución, que cuentan para la cuota; G50). Sin ese fichero, el `mkdocs.yml` carga Mermaid de unpkg y la ejecución termina
 con un aviso.
 
-**Dónde verla**: en *Artefactos* (la vista previa dibuja Markdown y diagramas; los enlaces entre páginas no navegan)
-o completa en **Descargar ZIP**. Para el sitio navegable, publícala con Zensical o MkDocs fuera de la web.
+**Dónde verla**: en su tarjeta del detalle, con el visor Markdown (ver
+[Resultados](#resultados-una-tarjeta-por-formato)), o completa en su ZIP. Para el sitio con buscador de texto
+completo, publica el ZIP con Zensical o MkDocs fuera de la web.
 
 **Mapa de trazabilidad**: un `.toml` (recomendado: admite comentarios) o `.json` de hasta 1 MB que enlaza tablas,
 vistas, rutinas y columnas con código, documentos funcionales y técnicos y requisitos. Se gestiona como una plantilla
@@ -123,6 +124,45 @@ code = ["src/ventas/pedidos.py#Pedido.cliente_id"]
 **Cambios respecto de la anterior**: la documentación nueva lleva un apartado **Cambios respecto de la documentación
 anterior** en su detalle con el mismo visor que la comparación de esquemas (sin *Comparar con otra ejecución*). La
 ejecución copia el `catalog.json` de la anterior: purgar después la anterior no la afecta.
+
+### Resultados: una tarjeta por formato
+
+Desde la 1.12.0, el detalle de una documentación muestra **una tarjeta por formato pedido** (Word, Excel, HTML y
+Markdown), cada una con su descripción, número de ficheros y tamaño, la marca **Con plantilla** si se aplicó la
+elegida, **sus avisos** (plantilla no disponible, Mermaid ausente…) y **Descargar ZIP** solo con ese formato
+(`GET /api/v1/runs/{id}/archive?format=word|excel|html|markdown`; sin `format`, el ZIP completo de siempre). Los avisos
+que no son de un formato siguen en la cabecera. Si un formato pedido no llegó a generarse, su tarjeta lo dice.
+
+| Tarjeta | Contenido | Vista previa |
+|---|---|---|
+| Word | Un botón por documento (varios si se pidió un número de tablas por documento) | No: descárgalo |
+| Excel | El libro | No: descárgalo |
+| HTML | El sitio navegable en la página y **Abrir en pestaña nueva** | Sí (ADR-007) |
+| Markdown | Visor con árbol, buscador y navegación entre páginas; **Ficheros auxiliares** (`catalog.json`, `llms.txt`, `llms-full.txt`, `mkdocs.yml`, `manifest.json`) para descargar | Solo las páginas `.md` |
+
+**ZIP HTML sin conexión**: descomprímelo y abre `outputs/html/documentacion/index.html`; el índice, el buscador, el
+resaltado SQL y la navegación funcionan desde el disco (comprobado en Chromium).
+
+**ZIP Markdown**: la carpeta `outputs/markdown/documentacion/` es publicable tal cual (`zensical build` o
+`mkdocs build`) e incluye `mermaid.min.js` para dibujar los diagramas sin Internet.
+
+**Visor Markdown**:
+
+- **Árbol** a la izquierda: *Sección* (Portada, Tablas, Vistas, Rutinas, Base de datos), el índice de la sección y,
+  en las secciones de más de 40 objetos, **letra inicial**. **Buscar página** filtra por nombre en todas las
+  secciones (muestra hasta 100 resultados).
+- **Enlaces**: los enlaces entre páginas y a columnas (`#col-…`) navegan dentro del visor; **Página anterior** y
+  **Página siguiente** recorren el historial del visor. La página abierta queda en la dirección
+  (`?md=tables/pedidos.md`): se puede compartir con otro miembro del proyecto.
+- Un enlace a un fichero que no es una página (`catalog.json`…) ofrece su descarga; uno a una página que no existe,
+  un aviso. Un enlace **externo** (`http`/`https`, p. ej. del mapa de trazabilidad) pide confirmación mostrando la
+  dirección completa y se abre en otra pestaña; cualquier otro esquema (`javascript:`, `data:`, `file:`…) se ignora.
+- Seguridad: cada página se muestra en un iframe con origen opaco, sin red y con el HTML limpiado (ADR-007, enmienda
+  de la 1.12.0).
+
+**Artefactos** ya no lista los ficheros de la carpeta Markdown (son miles en un schema grande): los cuenta y remite a
+su tarjeta. `mermaid.min.js`, `catalog.json`, `llms-full.txt` y el resto de ficheros que no son páginas no tienen vista
+previa (antes daban un error genérico al abrirlos): se descargan.
 
 ## Grafo de relaciones
 

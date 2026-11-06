@@ -40,7 +40,7 @@ const MARKDOWN_STYLE =
   'pre,code{background:#f4f4f5;padding:2px 4px;border-radius:4px}';
 const KIND_ORDER = ['html', 'markdown', 'sql', 'graphs', 'word', 'excel', 'log', 'manifest', 'other'];
 
-export function MarkdownPreview({ title, source }: { title: string; source: string }) {
+function MarkdownPreview({ title, source }: { title: string; source: string }) {
   const [html, setHtml] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;

@@ -3,6 +3,33 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Added
+
+- **Una tarjeta por formato** en el detalle de una documentación (Word, Excel, HTML y Markdown): descripción, ficheros
+  y tamaño, marca *Con plantilla*, sus avisos y **ZIP solo de ese formato**. Un formato pedido que no llegó a
+  generarse se muestra «sin ficheros».
+- **Visor de la documentación Markdown**: árbol por sección con paginación por letra, buscador de páginas, enlaces
+  entre páginas y a columnas, historial propio (anterior/siguiente), página compartible en la URL (`?md=`) y enlaces
+  externos con confirmación. Iframe con origen opaco, CSP con nonce y HTML limpiado con DOMPurify (enmienda de
+  ADR-007).
+
+### Changed
+
+- API: `GET /runs/{id}/archive?format=word|excel|html|markdown` (opcional; 404 si la ejecución no tiene ese formato,
+  422 si no es válido); `RunDetailOut.warnings_by_format` y `RunDetailOut.templates_applied`. `run.json` guarda
+  `warnings_by_format` en las documentaciones.
+- En una carpeta Markdown solo las páginas `.md` tienen vista previa: `mermaid.min.js`, `catalog.json`,
+  `llms-full.txt`, `mkdocs.yml`… se descargan (también en ejecuciones anteriores, sin migración).
+- *Artefactos* ya no lista la carpeta de la documentación Markdown (la cuenta y remite a su tarjeta).
+- Frontend: `dompurify` pasa a dependencia directa, en la versión que ya instalaba Mermaid (3.4.17).
+
+### Fixed
+
+- La vista previa de un artefacto demasiado grande o sin vista previa muestra el mensaje de la API («descárgalo»)
+  en lugar de «Se ha producido un error».
+
 ## [1.11.0] - 2026-11-06
 
 ### Added

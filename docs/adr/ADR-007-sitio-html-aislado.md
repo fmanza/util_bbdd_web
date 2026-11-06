@@ -89,6 +89,31 @@ El informe HTML de comparación y la vista previa de su Markdown mostraban el di
   admite scripts en línea.
 - La E2E de la comparación comprueba el `<svg>` en el informe (origen opaco) y en la vista previa del Markdown.
 
+## Enmienda 2026-11-06: visor de la documentación Markdown con puente de navegación
+
+La vista previa Markdown (`iframe srcdoc` con `sandbox=""`, sin scripts) no puede seguir los enlaces relativos que
+genera util_bbdd (`pedidos.md`, `../views/v.md#col-id`): se resuelven contra `about:srcdoc`. El visor de la 1.12.0
+(sesión `2026-11-06-doc-output-cards`, alternativa M2) los sigue sin exponer la SPA:
+
+- El iframe pasa a `sandbox="allow-scripts"` **sin** `allow-same-origin`: origen opaco (sin cookie, sin API, sin
+  acceso al DOM del padre).
+- CSP en el `srcdoc`: `default-src 'none'; script-src 'nonce-<aleatorio por render>'; img-src data:;
+  style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'`. Solo se ejecuta el script del
+  puente; un `<script>` o un `on*` que se colara no tiene el nonce y el navegador lo bloquea (comprobado en Chromium).
+- El HTML de `marked`, con los SVG de Mermaid ya dibujados en la SPA (`securityLevel: 'strict'`), pasa por
+  **DOMPurify** antes de añadir el script: sin `script`, `iframe`, `object`, `embed`, `form`, `base`, `meta`, `link`,
+  `on*` ni `javascript:`. `foreignObject` se admite como punto de integración HTML porque Mermaid 12 dibuja ahí las
+  etiquetas de los diagramas; su contenido pasa por las mismas reglas. DOMPurify pasa a dependencia directa del
+  frontend (la versión que ya instalaba Mermaid; el árbol de dependencias no cambia).
+- El puente resuelve dentro las anclas (`#col-…`) y manda el resto de clics al padre con
+  `postMessage({type: 'ubw-md-nav', href}, <origen de la SPA>)`. El padre acepta solo mensajes cuyo `event.source` es
+  la ventana de ese iframe (`event.origin` es `"null"`), con ese formato y `href` de 2048 caracteres como mucho, y
+  resuelve el destino **solo entre los artefactos registrados** de `docs/` (sin salir de la carpeta): nunca construye
+  una URL de la API con el texto del enlace. Externos: solo `http:`/`https:`, con confirmación y
+  `noopener,noreferrer`.
+- Sin cambios en `SITE_CSP`, en la URL firmada del sitio HTML ni en las vistas previas de los demás artefactos
+  (`sandbox=""`).
+
 ## Alternativas descartadas
 
 - **`allow-same-origin` + scripts**: el sitio podría leer la cookie CSRF y llamar a la API como el usuario.

@@ -617,7 +617,37 @@
     "cancelBulkBody": "La carga se detendrá antes del siguiente lote. Sin plan paralelo va en una sola transacción y se deshace entera: no queda nada en el destino. Con plan paralelo, las particiones ya terminadas quedan confirmadas.",
     "cancelBulk": "Cancelar entre lotes",
     "keepLoading": "Seguir cargando",
-    "warningsTitle": "La ejecución terminó con avisos"
+    "warningsTitle": "La ejecución terminó con avisos",
+    "markdownViewer": {
+      "tree": "Páginas de la documentación Markdown",
+      "search": "Buscar página",
+      "searchPlaceholder": "Nombre de tabla, vista o rutina",
+      "section": "Sección",
+      "sections": {
+        "root": "Portada",
+        "tables": "Tablas",
+        "views": "Vistas",
+        "routines": "Rutinas",
+        "database": "Base de datos",
+        "other": "Otras"
+      },
+      "letters": "Letra inicial",
+      "pages": "Páginas",
+      "sectionIndex": "Índice de la sección",
+      "letterIndex": "Índice · {{letter}}",
+      "results_one": "{{count}} página encontrada",
+      "results_other": "{{count}} páginas encontradas",
+      "resultsCapped": "Se muestran {{shown}} de {{count}} páginas: afina la búsqueda.",
+      "back": "Página anterior",
+      "forward": "Página siguiente",
+      "download": "Descargar página",
+      "downloadPage": "Descargar {{path}}",
+      "missing": "El enlace apunta a una página que no está en esta documentación",
+      "notAPage": "El enlace apunta a un fichero sin vista previa",
+      "externalTitle": "Vas a salir de la aplicación",
+      "externalBody": "El enlace abre esta dirección en otra pestaña. Comprueba que es la que esperas: el texto del enlace viene de la base de datos documentada o del mapa de trazabilidad.",
+      "externalOpen": "Abrir en otra pestaña"
+    }
   },
   "explorer": {
     "open": "Explorar",
