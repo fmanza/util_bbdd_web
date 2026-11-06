@@ -91,7 +91,16 @@ def _manifest(
         "artifacts": artifacts,
         "templates": list(extra.get("templates", [])),
         "warnings": [str(w) for w in extra.get("warnings", [])],
+        **_warnings_by_format(extra.get("warnings_by_format")),
     }
+
+
+def _warnings_by_format(value: Any) -> dict[str, Any]:
+    """``{"warnings_by_format": {formato: [aviso, …]}}`` de la documentación (solo si los hay y son válidos)."""
+    if not isinstance(value, dict):
+        return {}
+    grouped = {str(k): [str(w) for w in v] for k, v in value.items() if isinstance(v, list) and v}
+    return {"warnings_by_format": grouped} if grouped else {}
 
 
 def _connections(db: Any, run: Run) -> list[dict[str, Any]]:

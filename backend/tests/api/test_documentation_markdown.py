@@ -114,8 +114,76 @@ def test_markdown_without_mermaid_js_warns(
     run = wait_for(worker, db, run_id, timeout=180)
 
     assert run.status == "succeeded", (run.error_code, run.error_message)
-    warnings = user_client.get(f"/api/v1/runs/{run_id}").json()["warnings"]
-    assert any("Mermaid" in w for w in warnings)
+    detail = user_client.get(f"/api/v1/runs/{run_id}").json()
+    assert any("Mermaid" in w for w in detail["warnings"])
+    assert list(detail["warnings_by_format"]) == ["markdown"]
+    assert detail["warnings_by_format"]["markdown"] == [w for w in detail["warnings"] if "Mermaid" in w]
+
+
+#: Carpetas de páginas de la documentación Markdown de util_bbdd 5.3.0 de las que depende el árbol del visor de la web
+#: (``frontend/src/features/runs/documentation/markdownNav.ts``). Mientras G51 siga abierto, este test avisa si cambian.
+MARKDOWN_SECTIONS = {"tables", "views", "routines", "database"}
+
+
+def test_documentation_archive_by_format_preview_rules_and_page_layout(
+    user_client: TestClient,
+    project: dict[str, object],  # noqa: F811
+    worker: Worker,  # noqa: F811
+    db: Session,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mermaid_js = tmp_path / "mermaid.min.js"
+    mermaid_js.write_text("window.mermaid = {};", encoding="utf-8")
+    monkeypatch.setenv("UBW_MERMAID_JS", str(mermaid_js))
+    params = {**ONLY_MARKDOWN, "excel": True, "html": True, "graphs": False}
+
+    run_id = launch(user_client, project["id"], "documentation", **params)
+    run = wait_for(worker, db, run_id, timeout=180)
+
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+    detail = user_client.get(f"/api/v1/runs/{run_id}").json()
+    assert detail["warnings_by_format"] == {} and detail["templates_applied"] == {}
+    paths = {a["path"]: a for a in detail["artifacts"]}
+
+    # Vista previa: solo las páginas .md de la carpeta Markdown (los auxiliares se descargan).
+    assert paths[ROOT + "docs/index.md"]["previewable"] is True
+    for name in ("docs/catalog.json", "docs/llms.txt", "docs/assets/javascripts/mermaid.min.js", "mkdocs.yml"):
+        assert paths[ROOT + name]["kind"] == "markdown" and paths[ROOT + name]["previewable"] is False, name
+    catalog = paths[ROOT + "docs/catalog.json"]["id"]
+    assert user_client.get(f"/api/v1/runs/{run_id}/artifacts/{catalog}/preview").status_code == 415
+
+    # Contrato con util_bbdd (T2, G51): las páginas están en la raíz de docs/ o en una de las secciones conocidas.
+    pages = [p.removeprefix(ROOT + "docs/") for p in paths if p.startswith(ROOT + "docs/") and p.endswith(".md")]
+    sections = {page.split("/")[0] for page in pages if "/" in page}
+    assert sections <= MARKDOWN_SECTIONS, sections
+    assert {"tables", "views"} <= sections
+    assert "index.md" in pages and "tables/index.md" in pages and "views/index.md" in pages
+    assert any(page.startswith("tables/index-") for page in pages)
+    assert all(page.count("/") <= 1 for page in pages)
+
+    def archive(fmt: str) -> tuple[int, str, list[str]]:
+        response = user_client.get(f"/api/v1/runs/{run_id}/archive", params={"format": fmt})
+        if response.status_code != 200:
+            return response.status_code, "", []
+        with zipfile.ZipFile(io.BytesIO(response.content)) as zipped:
+            return 200, response.headers["content-disposition"], zipped.namelist()
+
+    status, disposition, names = archive("markdown")
+    assert status == 200 and disposition.endswith('_markdown.zip"')
+    assert names and all("/outputs/markdown/" in n for n in names)
+    assert any(n.endswith("markdown/documentacion/mkdocs.yml") for n in names)
+    assert any(n.endswith("docs/assets/javascripts/mermaid.min.js") for n in names)
+    status, _, names = archive("html")
+    assert status == 200 and names and all("/outputs/html/" in n for n in names)
+    assert any(n.endswith("outputs/html/documentacion/index.html") for n in names)
+    status, _, names = archive("excel")
+    assert status == 200 and len(names) == 1 and names[0].endswith(".xlsx")
+    assert archive("word")[0] == 404  # formato no pedido
+    assert archive("pdf")[0] == 422
+    complete = user_client.get(f"/api/v1/runs/{run_id}/archive")
+    with zipfile.ZipFile(io.BytesIO(complete.content)) as zipped:
+        assert any(n.endswith("/run.json") for n in zipped.namelist())
 
 
 def test_markdown_options_are_dropped_without_markdown(

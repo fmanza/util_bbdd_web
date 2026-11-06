@@ -95,6 +95,9 @@ export function RunDetailPage() {
       : undefined;
   const cancelTexts = CANCEL_TEXTS[stepKind ?? 'migrate'];
   const params = Object.entries(run.params);
+  // Los avisos de un formato de la documentación salen en su tarjeta; aquí, el resto (y todos en ejecuciones antiguas).
+  const byFormat = new Set(Object.values(run.warnings_by_format ?? {}).flat());
+  const generalWarnings = (run.warnings ?? []).filter((warning) => !byFormat.has(warning));
 
   return (
     <Stack maw={1100}>
@@ -171,10 +174,10 @@ export function RunDetailPage() {
               {run.error_message}
             </Alert>
           )}
-          {(run.warnings ?? []).length > 0 && (
+          {generalWarnings.length > 0 && (
             <Alert color="yellow" title={t('runs.warningsTitle')}>
               <List size="sm">
-                {(run.warnings ?? []).map((warning) => (
+                {generalWarnings.map((warning) => (
                   <List.Item key={warning}>{warning}</List.Item>
                 ))}
               </List>

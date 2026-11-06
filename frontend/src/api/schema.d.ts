@@ -1050,7 +1050,7 @@ export interface paths {
         };
         /**
          * Descargar ZIP de la ejecución
-         * @description ZIP generado al vuelo con todos los artefactos registrados.
+         * @description ZIP generado al vuelo con todos los artefactos registrados o, con ``format``, solo los de ese tipo.
          */
         get: operations["download_archive_api_v1_runs__run_id__archive_get"];
         put?: never;
@@ -3333,6 +3333,13 @@ export interface components {
              * @enum {string}
              */
             status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "purged";
+            /**
+             * Templates Applied
+             * @description Plantillas de la documentación por tipo (``word``, ``excel``, ``trace``): si se aplicó la elegida
+             */
+            templates_applied?: {
+                [key: string]: boolean;
+            };
             /** User Id */
             user_id: number | null;
             /** Username */
@@ -3342,6 +3349,13 @@ export interface components {
              * @description Avisos de la ejecución (p. ej. una plantilla que no se pudo aplicar)
              */
             warnings?: string[];
+            /**
+             * Warnings By Format
+             * @description Avisos de la documentación por formato (``word``, ``excel``, ``markdown``), también incluidos en ``warnings``; vacío en ejecuciones anteriores a la 1.12.0
+             */
+            warnings_by_format?: {
+                [key: string]: string[];
+            };
         };
         /**
          * RunOut
@@ -7552,7 +7566,10 @@ export interface operations {
     };
     download_archive_api_v1_runs__run_id__archive_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Solo los artefactos de ese formato de la documentación */
+                format?: ("word" | "excel" | "html" | "markdown") | null;
+            };
             header?: never;
             path: {
                 run_id: string;
@@ -7582,14 +7599,12 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description Formato no válido */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };

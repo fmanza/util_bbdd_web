@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import time
 from collections.abc import AsyncIterable
-from typing import Annotated, Any, Final
+from pathlib import PurePosixPath
+from typing import Annotated, Any, Final, Literal
 
 import anyio
 from fastapi import APIRouter, Depends, Query, status
@@ -43,6 +44,11 @@ _403: dict[int | str, dict[str, Any]] = {403: {"description": "Tu rol no lo perm
 #: Tipos con vista previa: HTML y SVG en ``iframe sandbox``; el resto como texto plano.
 SANDBOXED_KINDS: Final = frozenset({"html", "graphs"})
 TEXT_KINDS: Final = frozenset({"markdown", "sql", "log", "manifest"})
+#: Bajo ``outputs/markdown/`` también hay ``mermaid.min.js``, ``catalog.json``, ``llms*.txt``, ``mkdocs.yml``…: solo
+#: las páginas ``.md`` tienen vista previa (el tipo guardado no cambia; las ejecuciones antiguas también se arreglan).
+MARKDOWN_PREVIEW_SUFFIXES: Final = frozenset({".md"})
+#: Formatos de la documentación con ZIP propio (``GET /runs/{id}/archive?format=…``): el tipo de sus artefactos.
+ArchiveFormat = Literal["word", "excel", "html", "markdown"]
 PREVIEW_MAX_BYTES: Final = 2 * 1024 * 1024
 SSE_POLL_SECONDS: Final = 1.0
 #: CSP de las vistas previas: sin scripts, sin peticiones salientes, origen opaco (``sandbox``).
@@ -73,6 +79,8 @@ class PreviewTooLargeError(AppError):
 
 
 def _previewable(artifact: Artifact) -> bool:
+    if artifact.kind == "markdown":
+        return PurePosixPath(artifact.path).suffix.lower() in MARKDOWN_PREVIEW_SUFFIXES
     return artifact.kind in SANDBOXED_KINDS or artifact.kind in TEXT_KINDS
 
 
@@ -127,6 +135,7 @@ def _site_url(access: service.RunAccess, user: User, settings: Settings) -> str 
 
 def _detail(access: service.RunAccess, user: User, settings: Settings) -> RunDetailOut:
     run = access.run
+    manifest: dict[str, Any] = run.manifest or {}
     base = _run_out(run, len(run.artifacts))
     artifacts = [
         ArtifactOut.model_validate(a).model_copy(update={"previewable": _previewable(a)}) for a in run.artifacts
@@ -136,9 +145,29 @@ def _detail(access: service.RunAccess, user: User, settings: Settings) -> RunDet
         my_role=access.membership.role,
         artifacts=artifacts,
         site_url=_site_url(access, user, settings),
-        warnings=[str(w) for w in (run.manifest or {}).get("warnings", [])],
+        warnings=[str(w) for w in manifest.get("warnings", [])],
+        warnings_by_format=_warnings_by_format(manifest),
+        templates_applied=_templates_applied(manifest),
         has_diff=_has_diff(run),
     )
+
+
+def _warnings_by_format(manifest: dict[str, Any]) -> dict[str, list[str]]:
+    value = manifest.get("warnings_by_format")
+    if not isinstance(value, dict):
+        return {}
+    return {str(k): [str(w) for w in v] for k, v in value.items() if isinstance(v, list)}
+
+
+def _templates_applied(manifest: dict[str, Any]) -> dict[str, bool]:
+    """Por tipo de plantilla (``word``, ``excel``, ``trace``), si se aplicó la elegida (``run.json``, ADR-011).
+
+    Sin ``applied`` (la ejecución falló antes de saberlo) cuenta como no aplicada.
+    """
+    entries = manifest.get("templates")
+    if not isinstance(entries, list):
+        return {}
+    return {str(e["kind"]): bool(e.get("applied", False)) for e in entries if isinstance(e, dict) and "kind" in e}
 
 
 def _has_diff(run: Run) -> bool:
@@ -510,18 +539,34 @@ def site_file(run_id: str, token: str, path: str, db: DbSession, settings: Setti
 
 @router.get(
     "/{run_id}/archive", summary="Descargar ZIP de la ejecución", response_class=StreamingResponse,
-    responses={**_401, **_404},
+    responses={**_401, **_404, 422: {"description": "Formato no válido"}},
 )  # fmt: skip
-def download_archive(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> StreamingResponse:
-    """ZIP generado al vuelo con todos los artefactos registrados."""
+def download_archive(
+    run_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    settings: SettingsDep,
+    archive_format: Annotated[
+        ArchiveFormat | None,
+        Query(alias="format", description="Solo los artefactos de ese formato de la documentación"),
+    ] = None,
+) -> StreamingResponse:
+    """ZIP generado al vuelo con todos los artefactos registrados o, con ``format``, solo los de ese tipo."""
     access = service.get_access(db, user, run_id)
     run = access.run
-    if run.workspace_path is None or not run.artifacts:
-        raise ArtifactNotFoundError("La ejecución no tiene artefactos.")
+    paths = [a.path for a in run.artifacts if archive_format is None or a.kind == archive_format]
+    if run.workspace_path is None or not paths:
+        raise ArtifactNotFoundError(
+            "La ejecución no tiene artefactos." if archive_format is None else "La ejecución no tiene ese formato."
+        )
     directory = run_dir(settings.workspace_dir, run.workspace_path)
     prefix = directory.name
+    filename = prefix if archive_format is None else f"{prefix}_{archive_format}"
     return StreamingResponse(
-        zip_stream(directory, [a.path for a in run.artifacts], prefix=prefix),
+        zip_stream(directory, paths, prefix=prefix),
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{prefix}.zip"', "X-Content-Type-Options": "nosniff"},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}.zip"',
+            "X-Content-Type-Options": "nosniff",
+        },
     )

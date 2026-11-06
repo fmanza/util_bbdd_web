@@ -190,6 +190,7 @@ class DocumentTemplates:
 class _Outcome:
     warnings: list[str] = field(default_factory=list)
     applied: dict[str, bool] = field(default_factory=dict)
+    by_format: dict[str, list[str]] = field(default_factory=dict)
 
 
 def word_template_failed(exc: BaseException) -> bool:
@@ -343,7 +344,8 @@ def generate_documentation(
 
     Returns:
         ``{"tables", "views", "routines", "formats": {formato: ruta relativa a outputs_dir}, "warnings": [...],
-        "templates_applied": {"word"|"excel": bool}}`` (solo los formatos con plantilla).
+        "warnings_by_format": {"word"|"excel": [...]}, "templates_applied": {"word"|"excel": bool}}`` (solo los
+        formatos con plantilla).
 
     Raises:
         GraphvizMissingError (solo si hay diagramas de Word o HTML), MarkdownInputError (mapa de trazabilidad o
@@ -374,7 +376,12 @@ def generate_documentation(
         raise error from None
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
-    return {**summary, "warnings": outcome.warnings, "templates_applied": outcome.applied}
+    return {
+        **summary,
+        "warnings": outcome.warnings,
+        "warnings_by_format": outcome.by_format,
+        "templates_applied": outcome.applied,
+    }
 
 
 def _document_with_template(
@@ -427,7 +434,9 @@ def _fallback(outcome: _Outcome, kind: Literal["word", "excel"], exc: BaseExcept
     logger.warning(f"Plantilla {label} no aplicada", extra={"template_fallback": kind, "exc_type": type(exc).__name__})
     outcome.applied[kind] = False
     target = "el documento Word" if kind == "word" else "el libro Excel"
-    outcome.warnings.append(f"La plantilla {label} no se pudo aplicar: {target} usa el formato por defecto.")
+    message = f"La plantilla {label} no se pudo aplicar: {target} usa el formato por defecto."
+    outcome.warnings.append(message)
+    outcome.by_format.setdefault(kind, []).append(message)
 
 
 def _document(

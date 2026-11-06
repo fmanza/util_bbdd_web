@@ -18,7 +18,14 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes } from '../../components/format';
 import { stripFrontMatter } from './markdown';
 import { renderMermaidBlocks } from './mermaid';
-import { type Artifact, downloadUrl, isSiteFile, previewUrl, useArtifactText } from './useRuns';
+import {
+  type Artifact,
+  downloadUrl,
+  isMarkdownDocFile,
+  isSiteFile,
+  previewUrl,
+  useArtifactText,
+} from './useRuns';
 
 // HTML y SVG se muestran en un iframe aislado: sin `allow-scripts` ni `allow-same-origin` (origen opaco); la API
 // añade además una CSP `sandbox`.
@@ -33,7 +40,7 @@ const MARKDOWN_STYLE =
   'pre,code{background:#f4f4f5;padding:2px 4px;border-radius:4px}';
 const KIND_ORDER = ['html', 'markdown', 'sql', 'graphs', 'word', 'excel', 'log', 'manifest', 'other'];
 
-function MarkdownPreview({ title, source }: { title: string; source: string }) {
+export function MarkdownPreview({ title, source }: { title: string; source: string }) {
   const [html, setHtml] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -97,8 +104,9 @@ function Preview({ runId, artifact }: { runId: string; artifact: Artifact }) {
 /** Navegador de artefactos de una ejecución: lista por tipo y vista previa. */
 export function ArtifactBrowser({ runId, artifacts }: { runId: string; artifacts: Artifact[] }) {
   const { t } = useTranslation();
-  const listed = artifacts.filter((a) => !isSiteFile(a));
-  const hidden = artifacts.length - listed.length;
+  const listed = artifacts.filter((a) => !isSiteFile(a) && !isMarkdownDocFile(a));
+  const hidden = artifacts.filter(isSiteFile).length;
+  const markdownHidden = artifacts.filter(isMarkdownDocFile).length;
   const sorted = [...listed].sort(
     (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.path.localeCompare(b.path),
   );
@@ -125,6 +133,11 @@ export function ArtifactBrowser({ runId, artifacts }: { runId: string; artifacts
         {hidden > 0 && (
           <Text size="xs" c="dimmed" px="sm">
             {t('runs.artifactsBrowser.siteHidden', { count: hidden })}
+          </Text>
+        )}
+        {markdownHidden > 0 && (
+          <Text size="xs" c="dimmed" px="sm">
+            {t('runs.artifactsBrowser.markdownHidden', { count: markdownHidden })}
           </Text>
         )}
       </Stack>

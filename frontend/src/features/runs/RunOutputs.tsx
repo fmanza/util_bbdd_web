@@ -2,17 +2,15 @@ import { Alert, Anchor, Button, Card, Group, Image, SimpleGrid, Stack, Text, Tit
 import { useTranslation } from 'react-i18next';
 
 import { formatBytes } from '../../components/format';
+import { DocumentationOutputs } from './documentation/DocumentationOutputs';
 import { type Artifact, type RunDetail, downloadUrl, previewUrl } from './useRuns';
 
 /** Máximo de imágenes de la galería; el resto sigue en el navegador de artefactos. */
 const GALLERY_LIMIT = 12;
-/** Tipos que se ofrecen como descarga directa: documentación (Fase 5) e informes de la comparación (Fase 6). */
+/** Tipos que se ofrecen como descarga directa en los informes de la comparación (Fase 6). */
 const DOCUMENT_KINDS: Record<string, readonly string[]> = {
   compare: ['word', 'excel', 'markdown', 'sql'],
 };
-const DEFAULT_DOCUMENT_KINDS = ['word', 'excel'];
-/** Portada de la documentación Markdown (util_bbdd 5.3.0): la carpeta tiene un fichero por objeto, sin botones. */
-const MARKDOWN_INDEX = 'outputs/markdown/documentacion/docs/index.md';
 
 function fileName(artifact: Artifact): string {
   return artifact.path.split('/').at(-1) ?? artifact.path;
@@ -39,7 +37,8 @@ function DownloadButtons({ runId, artifacts }: { runId: string; artifacts: Artif
 }
 
 /**
- * Resultados destacados de la documentación y los grafos (Fase 5) y de la comparación de esquemas (Fase 6).
+ * Resultados destacados de la documentación (una tarjeta por formato, `DocumentationOutputs`), los grafos (Fase 5) y
+ * la comparación de esquemas (Fase 6).
  *
  * El sitio HTML de util_bbdd necesita sus scripts (navegación y resaltado SQL): el iframe permite scripts pero **no**
  * `allow-same-origin`, así que su origen es opaco y no puede leer la SPA, la cookie ni llamar a la API. Se carga desde
@@ -48,17 +47,17 @@ function DownloadButtons({ runId, artifacts }: { runId: string; artifacts: Artif
 export function RunOutputs({ run }: { run: RunDetail }) {
   const { t } = useTranslation();
   const isCompare = run.operation === 'compare';
-  const kinds = DOCUMENT_KINDS[run.operation] ?? DEFAULT_DOCUMENT_KINDS;
+  const kinds = DOCUMENT_KINDS[run.operation] ?? [];
   const documents = run.artifacts.filter((a) => kinds.includes(a.kind));
   const hasSql = isCompare && documents.some((a) => a.kind === 'sql');
   const graphs = run.artifacts.filter((a) => a.kind === 'graphs' && /\.(svg|png)$/i.test(a.path));
-  const hasMarkdown =
-    run.operation === 'documentation' && run.artifacts.some((a) => a.path === MARKDOWN_INDEX);
 
+  if (run.operation === 'documentation') {
+    return <DocumentationOutputs run={run} />;
+  }
   if (
     !run.site_url &&
     documents.length === 0 &&
-    !hasMarkdown &&
     (run.operation !== 'relationship_graph' || graphs.length === 0)
   ) {
     return null;
@@ -95,14 +94,6 @@ export function RunOutputs({ run }: { run: RunDetail }) {
                 }}
               />
             )}
-          </Stack>
-        </Card>
-      )}
-      {hasMarkdown && (
-        <Card withBorder>
-          <Stack gap="xs">
-            <Title order={3}>{t('runs.outputs.markdownTitle')}</Title>
-            <Text size="sm">{t('runs.outputs.markdownHint')}</Text>
           </Stack>
         </Card>
       )}

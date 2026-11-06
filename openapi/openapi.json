@@ -4443,6 +4443,14 @@
             "title": "Status",
             "type": "string"
           },
+          "templates_applied": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Plantillas de la documentación por tipo (``word``, ``excel``, ``trace``): si se aplicó la elegida",
+            "title": "Templates Applied",
+            "type": "object"
+          },
           "user_id": {
             "anyOf": [
               {
@@ -4472,6 +4480,17 @@
             },
             "title": "Warnings",
             "type": "array"
+          },
+          "warnings_by_format": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": "Avisos de la documentación por formato (``word``, ``excel``, ``markdown``), también incluidos en ``warnings``; vacío en ejecuciones anteriores a la 1.12.0",
+            "title": "Warnings By Format",
+            "type": "object"
           }
         },
         "required": [
@@ -10154,7 +10173,7 @@
     },
     "/api/v1/runs/{run_id}/archive": {
       "get": {
-        "description": "ZIP generado al vuelo con todos los artefactos registrados.",
+        "description": "ZIP generado al vuelo con todos los artefactos registrados o, con ``format``, solo los de ese tipo.",
         "operationId": "download_archive_api_v1_runs__run_id__archive_get",
         "parameters": [
           {
@@ -10164,6 +10183,30 @@
             "schema": {
               "title": "Run Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Solo los artefactos de ese formato de la documentación",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "word",
+                    "excel",
+                    "html",
+                    "markdown"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Solo los artefactos de ese formato de la documentación",
+              "title": "Format"
             }
           }
         ],
@@ -10178,14 +10221,7 @@
             "description": "No existe o no eres miembro del proyecto"
           },
           "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
+            "description": "Formato no válido"
           }
         },
         "summary": "Descargar ZIP de la ejecución",

@@ -69,6 +69,9 @@ def _job_error(exc: Exception) -> JobError:
     return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
 
 
+#: Avisos por formato (``word``, ``excel``, ``markdown``): cada tarjeta de salida muestra los suyos.
+Warnings = dict[str, list[str]]
+
 _LABELS = {"word": ("Word", "el documento Word"), "excel": ("Excel", "el libro Excel")}
 #: Fases de util_bbdd en el mensaje de progreso del run.
 _PHASES = {"metadata": "Leyendo el catálogo", "word": "Word", "excel": "Excel", "html": "HTML", "markdown": "Markdown"}
@@ -96,12 +99,12 @@ def _copy_template(ctx: JobContext, project: Project | None, template_id: str, k
 
 def _templates(
     ctx: JobContext, params: DocumentationParams
-) -> tuple[DocumentTemplates, list[dict[str, Any]], list[str]]:
+) -> tuple[DocumentTemplates, list[dict[str, Any]], Warnings]:
     """Plantillas elegidas (copias en ``inputs/``), su registro para ``run.json`` y los avisos de las que faltan."""
     chosen: dict[Kind, str | None] = {"word": params.word_template, "excel": params.excel_template}
     paths: dict[str, Any] = {}
     entries: list[dict[str, Any]] = []
-    warnings: list[str] = []
+    warnings: Warnings = {}
     if not any(chosen.values()):
         return DocumentTemplates(), entries, warnings
     with new_session() as db:
@@ -114,7 +117,9 @@ def _templates(
         found = _copy_template(ctx, project, template_id, kind)
         if found is None:
             label, output = _LABELS[kind]
-            warnings.append(f"La plantilla {label} ya no está disponible: {output} usa el formato por defecto.")
+            warnings.setdefault(kind, []).append(
+                f"La plantilla {label} ya no está disponible: {output} usa el formato por defecto."
+            )
             entries.append({"kind": kind, "id": template_id, "applied": False})
             continue
         template, path = found
@@ -126,19 +131,25 @@ def _templates(
     return DocumentTemplates(**paths), entries, warnings
 
 
-def _record(ctx: JobContext, entries: list[dict[str, Any]], warnings: list[str]) -> None:
-    """``inputs/templates.json``: lo recoge ``run.json`` al cerrar el run."""
-    if entries or warnings:
-        write_json_atomic(ctx.run_dir / TEMPLATES_INPUT, {"templates": entries, "warnings": warnings})
+def _record(ctx: JobContext, entries: list[dict[str, Any]], warnings: Warnings) -> None:
+    """``inputs/templates.json``: lo recoge ``run.json`` al cerrar el run (avisos en lista y por formato)."""
+    flat = [message for kind in _FORMATS for message in warnings.get(kind, [])]
+    if entries or flat:
+        write_json_atomic(
+            ctx.run_dir / TEMPLATES_INPUT,
+            {"templates": entries, "warnings": flat, "warnings_by_format": {k: v for k, v in warnings.items() if v}},
+        )
 
 
-def _mermaid_js(ctx: JobContext, warnings: list[str]) -> Path | None:
+def _mermaid_js(ctx: JobContext, warnings: Warnings) -> Path | None:
     """``UBW_MERMAID_JS`` si existe; si no, el ``mkdocs.yml`` carga Mermaid de Internet y se avisa."""
     path = ctx.settings.mermaid_js
     if path is not None and path.is_file():
         return path
     ctx.logger.warning("UBW_MERMAID_JS no existe: el sitio Markdown cargará Mermaid de Internet")
-    warnings.append("Mermaid no está instalado en el servidor: el sitio Markdown cargará los diagramas de Internet.")
+    warnings.setdefault("markdown", []).append(
+        "Mermaid no está instalado en el servidor: el sitio Markdown cargará los diagramas de Internet."
+    )
     return None
 
 
@@ -189,7 +200,7 @@ def _previous(ctx: JobContext, params: DocumentationParams) -> Path | None:
 
 
 def _markdown_inputs(
-    ctx: JobContext, params: DocumentationParams, entries: list[dict[str, Any]], warnings: list[str]
+    ctx: JobContext, params: DocumentationParams, entries: list[dict[str, Any]], warnings: Warnings
 ) -> MarkdownInputs | None:
     if not params.markdown:
         return None
@@ -247,10 +258,13 @@ def run_documentation(ctx: JobContext) -> None:
     applied["trace"] = markdown is not None and markdown.trace_map is not None  # si no valía, ya habría fallado
     for entry in entries:
         entry.setdefault("applied", applied.get(entry["kind"], False))
-    warnings += summary.pop("warnings")
+    summary.pop("warnings")  # los mismos que ``warnings_by_format``, ya agrupados
+    for kind, messages in summary.pop("warnings_by_format").items():
+        warnings.setdefault(kind, []).extend(messages)
     _record(ctx, entries, warnings)
-    ctx.logger.info("Documentación generada", extra={**summary, "warnings": len(warnings)})
-    notice = " (con avisos)" if warnings else ""
+    count = sum(len(messages) for messages in warnings.values())
+    ctx.logger.info("Documentación generada", extra={**summary, "warnings": count})
+    notice = " (con avisos)" if count else ""
     ctx.progress(
         "reporting",
         f"{summary['tables']} tablas, {summary['views']} vistas y {summary['routines']} rutinas documentadas{notice}",

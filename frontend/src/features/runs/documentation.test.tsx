@@ -16,6 +16,41 @@ import {
   SITE_URL,
 } from '../../test/fixtures_runs';
 import { renderRoute } from '../../test/render';
+import type { Artifact, RunDetail } from './useRuns';
+
+const mdArtifact = (id: number, path: string, previewable: boolean, size = 2048): Artifact => ({
+  id,
+  path: `outputs/markdown/documentacion/${path}`,
+  kind: 'markdown',
+  mime: 'text/markdown',
+  size_bytes: size,
+  sha256: 'c'.repeat(64),
+  created_at: '2026-10-20T08:00:04Z',
+  previewable,
+});
+
+/** Documentación con los cuatro formatos, avisos por formato y plantilla Excel aplicada. */
+const CARDS_RUN: RunDetail = {
+  ...DOC_RUN,
+  params: { connection: 'origen', word: true, excel: true, html: true, markdown: true },
+  warnings: [
+    'La plantilla Word no se pudo aplicar: el documento Word usa el formato por defecto.',
+    'Aviso general de la ejecución.',
+  ],
+  warnings_by_format: {
+    word: ['La plantilla Word no se pudo aplicar: el documento Word usa el formato por defecto.'],
+  },
+  templates_applied: { word: false, excel: true },
+  artifacts: [
+    ...DOC_RUN.artifacts.filter((a) => a.kind !== 'markdown'),
+    mdArtifact(71, 'docs/index.md', true),
+    mdArtifact(72, 'docs/tables/pedidos.md', true),
+    mdArtifact(73, 'docs/catalog.json', false, 3_600_000),
+    mdArtifact(74, 'docs/llms-full.txt', false, 12_000_000),
+    mdArtifact(75, 'docs/assets/javascripts/mermaid.min.js', false, 5_500_000),
+    mdArtifact(76, 'mkdocs.yml', false),
+  ],
+};
 
 describe('formulario de documentación', () => {
   it('agrupa los parámetros, ofrece opciones y avisa del schema en Oracle', async () => {
@@ -101,6 +136,98 @@ describe('resultados de la documentación', () => {
     expect(markdown).toHaveAttribute('sandbox', '');
     expect(markdown.getAttribute('srcdoc')).toContain('<h1>Hola</h1>');
     expect(markdown.getAttribute('srcdoc')).toContain("default-src 'none'");
+  });
+
+  it('una tarjeta por formato con su ZIP, sus avisos y su plantilla; la lista sin la carpeta Markdown', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ADMIN),
+      [`GET /api/v1/runs/${RUN_ID}`]: { body: CARDS_RUN },
+      [`GET /api/v1/runs/${RUN_ID}/artifacts/71/preview`]: { text: '# Portada' },
+    });
+
+    renderRoute(`/runs/${RUN_ID}`);
+
+    const word = await screen.findByRole('region', { name: 'Word' });
+    const excel = screen.getByRole('region', { name: 'Excel' });
+    const html = screen.getByRole('region', { name: 'HTML' });
+    const markdown = screen.getByRole('region', { name: 'Markdown' });
+    for (const [card, format] of [
+      [word, 'word'],
+      [excel, 'excel'],
+      [html, 'html'],
+      [markdown, 'markdown'],
+    ] as const) {
+      expect(within(card).getByRole('link', { name: /^Descargar ZIP de / })).toHaveAttribute(
+        'href',
+        `/api/v1/runs/${RUN_ID}/archive?format=${format}`,
+      );
+    }
+    // Avisos: el de Word en su tarjeta, el resto en la cabecera.
+    expect(within(word).getByText(/La plantilla Word no se pudo aplicar/)).toBeInTheDocument();
+    expect(screen.getAllByText(/La plantilla Word no se pudo aplicar/)).toHaveLength(1);
+    expect(screen.getByText('Aviso general de la ejecución.')).toBeInTheDocument();
+    expect(within(excel).getByText('Con plantilla')).toBeInTheDocument();
+    expect(within(word).queryByText('Con plantilla')).not.toBeInTheDocument();
+    expect(within(html).getByTitle('Sitio HTML de la documentación')).toHaveAttribute('src', SITE_URL);
+    // Markdown: auxiliares para descargar (sin mermaid.min.js) y portada en el iframe sin permisos.
+    expect(within(markdown).getByText('2 páginas')).toBeInTheDocument();
+    expect(within(markdown).getByRole('link', { name: 'Descargar catalog.json' })).toHaveAttribute(
+      'href',
+      `/api/v1/runs/${RUN_ID}/artifacts/73`,
+    );
+    expect(within(markdown).getByRole('link', { name: 'Descargar mkdocs.yml' })).toBeInTheDocument();
+    expect(
+      within(markdown).queryByRole('link', { name: 'Descargar mermaid.min.js' }),
+    ).not.toBeInTheDocument();
+    const index = await within(markdown).findByTitle('Página Markdown index.md');
+    expect(index.getAttribute('srcdoc')).toContain('<h1>Portada</h1>');
+    // El navegador de artefactos no lista la carpeta Markdown.
+    expect(
+      screen.getByText('6 ficheros de la documentación Markdown: ábrelos en su tarjeta.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('pedidos.md')).not.toBeInTheDocument();
+  });
+
+  it('muestra un formato pedido sin ficheros y ninguno no pedido', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ADMIN),
+      [`GET /api/v1/runs/${RUN_ID}`]: {
+        body: {
+          ...DOC_RUN,
+          params: { connection: 'origen', word: true, excel: false, html: false, markdown: false },
+          site_url: null,
+          artifacts: [],
+        },
+      },
+    });
+
+    renderRoute(`/runs/${RUN_ID}`);
+
+    const word = await screen.findByRole('region', { name: 'Word' });
+    expect(within(word).getByText('Sin ficheros: este formato no llegó a generarse.')).toBeInTheDocument();
+    expect(within(word).queryByRole('link', { name: /ZIP/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Excel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Markdown' })).not.toBeInTheDocument();
+  });
+
+  it('una vista previa demasiado grande muestra el mensaje de la API', async () => {
+    stubEventSource();
+    stubApi({
+      ...session(ADMIN),
+      [`GET /api/v1/runs/${RUN_ID}`]: { body: DOC_RUN },
+      [`GET /api/v1/runs/${RUN_ID}/artifacts/25/preview`]: {
+        status: 413,
+        body: { title: 'El artefacto es demasiado grande para la vista previa; descárgalo', status: 413 },
+      },
+    });
+
+    renderRoute(`/runs/${RUN_ID}`);
+
+    expect(
+      await screen.findByText('El artefacto es demasiado grande para la vista previa; descárgalo'),
+    ).toBeInTheDocument();
   });
 
   it('muestra la galería de un grafo de relaciones', async () => {

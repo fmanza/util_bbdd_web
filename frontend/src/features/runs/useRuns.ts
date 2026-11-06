@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-import { api, ensureOk, unwrap } from '../../api/client';
+import { ApiError, type Problem, api, ensureOk, unwrap } from '../../api/client';
 import type { components } from '../../api/schema';
 
 export type Run = components['schemas']['RunOut'];
@@ -192,7 +192,11 @@ export function useArtifactText(runId: string, artifact: Artifact | null) {
       const url = new URL(previewUrl(runId, artifact?.id ?? 0), globalThis.location.origin);
       const response = await globalThis.fetch(new Request(url, { credentials: 'same-origin' }));
       if (!response.ok) {
-        throw new Error(response.statusText || String(response.status));
+        // El *problem details* de la API (p. ej. 413 «demasiado grande, descárgalo») en lugar de un error genérico.
+        const problem = (await response.json().catch(() => null)) as Problem | null;
+        throw new ApiError(
+          problem?.title ? problem : { title: response.statusText || 'Error', status: response.status },
+        );
       }
       return response.text();
     },
@@ -205,9 +209,19 @@ export const previewUrl = (runId: string, artifactId: number) =>
   `/api/v1/runs/${encodeURIComponent(runId)}/artifacts/${artifactId}/preview`;
 export const downloadUrl = (runId: string, artifactId: number) =>
   `/api/v1/runs/${encodeURIComponent(runId)}/artifacts/${artifactId}`;
-export const archiveUrl = (runId: string) => `/api/v1/runs/${encodeURIComponent(runId)}/archive`;
+/** Formatos de la documentación con ZIP propio (`?format=`). */
+export type DocumentationFormat = 'word' | 'excel' | 'html' | 'markdown';
+export const archiveUrl = (runId: string, format?: DocumentationFormat) =>
+  `/api/v1/runs/${encodeURIComponent(runId)}/archive${format ? `?format=${format}` : ''}`;
 
 /** Ficheros del sitio HTML (subcarpetas de `outputs/html/`): se ven en el iframe de la documentación, no en la lista. */
 export function isSiteFile(artifact: Artifact): boolean {
   return artifact.kind === 'html' && artifact.path.split('/').length > 3;
+}
+
+/** Carpeta de la documentación Markdown (util_bbdd 5.3.0): miles de ficheros que se ven en su tarjeta, no en la lista. */
+export const MARKDOWN_DOC_ROOT = 'outputs/markdown/documentacion/';
+
+export function isMarkdownDocFile(artifact: Artifact): boolean {
+  return artifact.kind === 'markdown' && artifact.path.startsWith(MARKDOWN_DOC_ROOT);
 }

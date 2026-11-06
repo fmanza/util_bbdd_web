@@ -273,11 +273,12 @@ describe('resultados de la documentación Markdown', () => {
       ...session(ADMIN),
       [`GET /api/v1/runs/${RUN_ID}`]: { body: MARKDOWN_RUN },
       [`GET /api/v1/runs/${RUN_ID}/diff`]: { body: SCHEMA_DIFF },
+      [`GET /api/v1/runs/${RUN_ID}/artifacts/61/preview`]: { text: '# Portada' },
     });
 
     renderRoute(`/runs/${RUN_ID}`);
 
-    expect(await screen.findByRole('heading', { name: 'Documentación Markdown' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Markdown' })).toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: 'Cambios respecto de la documentación anterior' }),
     ).toBeInTheDocument();

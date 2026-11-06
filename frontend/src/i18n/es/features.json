@@ -505,7 +505,9 @@
       "download": "Descargar",
       "downloadLabel": "Descargar {{path}}",
       "siteHidden_one": "{{count}} fichero del sitio HTML: ábrelo en la tarjeta de arriba.",
-      "siteHidden_other": "{{count}} ficheros del sitio HTML: ábrelo en la tarjeta de arriba."
+      "siteHidden_other": "{{count}} ficheros del sitio HTML: ábrelo en la tarjeta de arriba.",
+      "markdownHidden_one": "{{count}} fichero de la documentación Markdown: ábrelo en su tarjeta.",
+      "markdownHidden_other": "{{count}} ficheros de la documentación Markdown: ábrelos en su tarjeta."
     },
     "groups": {
       "formats": "Formatos",
@@ -563,8 +565,6 @@
       "documentation": "Documentación",
       "openSite": "Abrir en pestaña nueva",
       "siteTitle": "Sitio HTML de la documentación",
-      "markdownTitle": "Documentación Markdown",
-      "markdownHint": "Carpeta con una página por objeto, catálogo JSON, ficheros para IA y mkdocs.yml (publicable con Zensical o MkDocs). Ábrela en Artefactos (empieza por la portada) o descárgala completa en el ZIP.",
       "downloadLabel": "Descargar {{name}}",
       "graphs_one": "{{count}} grafo",
       "graphs_other": "{{count}} grafos",
@@ -574,7 +574,36 @@
       "reports": "Informes de la comparación",
       "reportTitle": "Informe HTML de la comparación",
       "sqlTitle": "El script SQL no se ha ejecutado",
-      "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta."
+      "sqlWarning": "Transforma el destino para igualarlo al origen e incluye DROP de lo que sobra. Revísalo antes de aplicarlo a mano; la web no lo ejecuta.",
+      "formats": {
+        "word": {
+          "title": "Word",
+          "description": "Documento Word (.docx) con el diccionario de datos; varios si se pidió un documento por bloque de tablas. Sin vista previa: descárgalo."
+        },
+        "excel": {
+          "title": "Excel",
+          "description": "Libro Excel (.xlsx) con una hoja por sección del catálogo. Sin vista previa: descárgalo."
+        },
+        "html": {
+          "title": "HTML",
+          "description": "Sitio navegable con buscador y resaltado SQL. El ZIP se abre sin conexión: descomprímelo y abre outputs/html/documentacion/index.html."
+        },
+        "markdown": {
+          "title": "Markdown",
+          "description": "Carpeta con una página por objeto, catálogo JSON, ficheros para IA y mkdocs.yml. El ZIP es publicable con Zensical o MkDocs (outputs/markdown/documentacion) e incluye Mermaid para dibujar los diagramas sin Internet."
+        }
+      },
+      "withTemplate": "Con plantilla",
+      "zip": "Descargar ZIP",
+      "zipLabel": "Descargar ZIP de {{format}}",
+      "filesSummary_one": "{{count}} fichero · {{size}}",
+      "filesSummary_other": "{{count}} ficheros · {{size}}",
+      "noFiles": "Sin ficheros: este formato no llegó a generarse.",
+      "formatWarnings": "Avisos de este formato",
+      "markdownPages_one": "{{count}} página",
+      "markdownPages_other": "{{count}} páginas",
+      "markdownPage": "Página Markdown {{path}}",
+      "auxiliaryFiles": "Ficheros auxiliares"
     },
     "cancelApplyTitle": "Cancelar la aplicación",
     "cancelApplyBody": "La aplicación se detendrá antes de la siguiente sentencia. Las sentencias ya aplicadas quedan en el destino (el DDL no se deshace) y el informe dirá cuántas.",

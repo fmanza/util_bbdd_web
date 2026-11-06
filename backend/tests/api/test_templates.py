@@ -348,6 +348,7 @@ def test_documentation_applies_word_and_excel_templates(
     assert manifest["warnings"] == []
     detail = user_client.get(f"/api/v1/runs/{run_id}").json()
     assert detail["warnings"] == [] and not any(a["path"].startswith("inputs/") for a in detail["artifacts"])
+    assert detail["templates_applied"] == {"word": True, "excel": True} and detail["warnings_by_format"] == {}
 
 
 def _replace_file(db: Session, settings: Settings, template_id: str, content: bytes) -> None:
@@ -389,6 +390,8 @@ def test_templates_that_cannot_be_applied_fall_back_with_a_warning(
         "La plantilla Word no se pudo aplicar: el documento Word usa el formato por defecto.",
         "La plantilla Excel no se pudo aplicar: el libro Excel usa el formato por defecto.",
     ]
+    assert detail["warnings_by_format"] == {"word": detail["warnings"][:1], "excel": detail["warnings"][1:]}
+    assert detail["templates_applied"] == {"word": False, "excel": False}
     manifest = json.loads((directory / "run.json").read_text(encoding="utf-8"))
     assert [t["applied"] for t in manifest["templates"]] == [False, False]
     log = (directory / "logs" / "run.log").read_text(encoding="utf-8")

@@ -172,6 +172,15 @@ class RunDetailOut(RunOut):
     warnings: list[str] = Field(
         default_factory=list, description="Avisos de la ejecución (p. ej. una plantilla que no se pudo aplicar)"
     )
+    warnings_by_format: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Avisos de la documentación por formato (``word``, ``excel``, ``markdown``), también incluidos en "
+        "``warnings``; vacío en ejecuciones anteriores a la 1.12.0",
+    )
+    templates_applied: dict[str, bool] = Field(
+        default_factory=dict,
+        description="Plantillas de la documentación por tipo (``word``, ``excel``, ``trace``): si se aplicó la elegida",
+    )
     has_diff: bool = Field(
         default=False,
         description="Tiene diff de esquemas para el visor (``GET /runs/{id}/diff``): una comparación o una documentación "
