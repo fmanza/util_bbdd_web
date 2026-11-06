@@ -26,6 +26,11 @@ Al elegir una **tabla** se ven sus pestañas:
 
 Las **vistas** y **rutinas** muestran su DDL. Si el motor no lo devuelve (permisos, objetos cifrados), se indica.
 
+Desde la 1.14.0, en una pantalla ancha el árbol y la ficha ocupan el **alto de la ventana**, y cada pestaña se
+desplaza **dentro** de la ficha (vertical y horizontal), con la cabecera de las tablas fija: un DDL largo o una tabla
+de cientos de columnas se ven enteros sin desplazar la página. **Copiar DDL** (el icono sobre el DDL) lo copia al
+portapapeles. En el móvil, árbol y ficha van uno debajo del otro y la ficha se desplaza dentro.
+
 ## Queries nombradas
 
 Pestaña *Queries nombradas* del explorador: consultas preparadas por un administrador para el motor de la

@@ -3,6 +3,31 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Added
+
+- **Eliminar ejecuciones** (administradores): *Administración → Ejecuciones de todos* lista las de todos los
+  proyectos (solo metadatos) y permite eliminar una (escribiendo `ELIMINAR`) o todas las terminadas de un proyecto
+  (escribiendo su nombre, comprobado también en el servidor; omite las activas y los volcados con constraints sin
+  restaurar y dice cuántas). Borra fila, artefactos y carpeta; queda en la auditoría (`run.delete`,
+  `project.runs_delete`). API: `GET /admin/runs`, `DELETE /admin/runs/{id}`, `GET /admin/projects/{id}/runs/summary`
+  y `POST /admin/projects/{id}/runs/delete`; `RunDetailOut.relaunched_from_exists`.
+- **Listas con orden, 25 por página y búsqueda**: todas las listas de recursos. API: `sort` y `order` en usuarios,
+  sesiones, auditoría, conexiones, proyectos, uso de almacenamiento y ejecuciones (columnas permitidas por endpoint);
+  `q` nuevo en sesiones y auditoría.
+- **Copiar DDL** en el explorador.
+
+### Changed
+
+- Búsquedas con `%`, `_` y `\` tratados como texto (antes, comodines de `LIKE`).
+- «Mis ejecuciones» gana búsqueda; las tablas de ejecuciones, la columna *Tamaño*.
+
+### Fixed
+
+- **Explorador**: el DDL largo salía cortado a 480 px sin barra de desplazamiento. Ahora el árbol y la ficha ocupan
+  el alto de la ventana y cada pestaña se desplaza dentro.
+
 ## [1.13.0] - 2026-11-06
 
 ### Changed

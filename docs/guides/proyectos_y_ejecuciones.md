@@ -80,6 +80,14 @@ queda en el destino, salvo en una carga sin plan paralelo, que va en una sola tr
   **Descargar ZIP** baja la ejecución completa.
 - **Relanzar** crea una ejecución nueva con los mismos parámetros (indica de cuál procede).
 - **Purgar** borra los ficheros de una ejecución terminada para liberar cuota; el resumen queda en el historial.
+- **Eliminar** (solo administradores, desde *Administración → Ejecuciones de todos*) borra la ejecución por completo:
+  ficheros y fila, que desaparece del historial. Si una ejecución se relanzó desde otra que ya no existe, «Relanzada
+  de» muestra su id sin enlace y «(eliminada)».
+
+Las listas de ejecuciones (*Ejecuciones* y la pestaña del proyecto) se ordenan pulsando la cabecera de una columna
+(operación, usuario, estado, creada o tamaño), muestran **25 por página** y tienen búsqueda por id, operación, usuario
+o mensaje. Lo mismo vale para el resto de listas de la aplicación (ver
+[Usuarios y sesiones](usuarios_y_sesiones.md#listas)).
 
 Cada ejecución guarda en su carpeta un manifiesto `run.json` (operación, parámetros, conexiones por alias,
 versiones, tiempos, estado y artefactos con SHA-256) y un `run.log`. Ninguno contiene contraseñas.

@@ -71,6 +71,30 @@ Reglas:
 
 Al **Guardar** *Cuota y retención*, la pantalla enseña cuántas ejecuciones y ficheros (y cuánto espacio) purgará la siguiente pasada con los valores nuevos, y pide confirmación; los límites de la carga se guardan sin ella (no purgan nada). Purgar una ejecución borra sus ficheros, pero conserva su historial (`run.json`). La tabla **Uso por usuario** muestra el espacio de cada uno frente a su cuota. Cada usuario ve el suyo en su menú → **Mi espacio**.
 
+## Ejecuciones de todos los proyectos
+
+*Administración → Ejecuciones de todos* lista las ejecuciones de **todos** los proyectos, también de los que no eres
+miembro, con proyecto, operación, estado, usuario, tamaño y fecha. Solo los datos de la ejecución: sus parámetros,
+mensajes y ficheros siguen sin verse si no eres miembro del proyecto.
+
+- **Eliminar** borra una ejecución por completo (fila, ficheros y carpeta); desaparece del historial y no se puede
+  deshacer. Hay que escribir `ELIMINAR` para confirmarlo. No se pueden eliminar las que están en cola o en curso
+  (cancélalas antes) ni un volcado que dejó constraints sin restaurar en el destino (restáuralas antes).
+- **Todas las del proyecto** borra las ejecuciones terminadas de ese proyecto (el proyecto no se borra). El aviso dice
+  cuántas son y cuánto espacio ocupan, y hay que escribir el **nombre exacto del proyecto** (el servidor lo comprueba
+  también). Las que están en cola o en curso y los volcados con constraints pendientes se omiten, y el resultado dice
+  cuántas se borraron, cuántas se omitieron y por qué.
+
+Cada borrado queda en la **auditoría** (`run.delete` y `project.runs_delete`) con el resumen de lo borrado.
+
+## Listas
+
+Desde la 1.14.0 todas las listas (usuarios, sesiones, auditoría, uso de almacenamiento, destinos permitidos, queries
+nombradas, motores, conexiones, proyectos, sus miembros y conexiones, plantillas y ejecuciones) se **ordenan**
+pulsando la cabecera de una columna (ascendente, descendente y sin orden, en ese orden), muestran **25 filas por
+página** con el recuento («26-50 de 312») y tienen **búsqueda**. La búsqueda trata `%` y `_` como texto, no como
+comodines.
+
 ## Sesiones activas
 
 *Administración → Sesiones* lista las sesiones abiertas de todos los usuarios: IP, navegador, inicio, última

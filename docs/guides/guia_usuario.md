@@ -108,6 +108,7 @@ cancela, y solo puede haber una a la vez por destino.
     - **Queries nombradas**: consultas reutilizables del explorador.
     - **Plantillas**: plantillas Word y Excel globales de la documentación ([Documentación](documentacion.md#plantillas-word-y-excel)).
     - **Almacenamiento**: cuota, retención y purga por cuota sin reiniciar ([Usuarios y sesiones](usuarios_y_sesiones.md#almacenamiento)).
+    - **Ejecuciones de todos**: eliminar ejecuciones de cualquier proyecto, una o todas las de un proyecto ([Usuarios y sesiones](usuarios_y_sesiones.md#ejecuciones-de-todos-los-proyectos)).
     - **Auditoría**: inicios de sesión, cambios y escrituras.
 
     Detalle en [Usuarios y sesiones](usuarios_y_sesiones.md) y [Explorador y SQL](explorador.md).

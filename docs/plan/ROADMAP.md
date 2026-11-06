@@ -180,6 +180,13 @@ ADR-007). G50 (`mermaid.min.js` copiado en cada run) y G51 (índice de páginas 
 en util_bbdd 5.4.0 y la web 1.13.0 (ola 11: Mermaid añadido al ZIP, árbol con nombres reales).
 Guía: [documentacion.md](../guides/documentacion.md#resultados-una-tarjeta-por-formato).
 
+## Después de la 1.0: explorador, eliminación de ejecuciones y listas ✅
+
+Explorador a toda altura con scroll en cada pestaña (el DDL largo salía cortado) y «Copiar DDL»; *Administración →
+Ejecuciones de todos* para eliminar ejecuciones (fila y ficheros), una o todas las de un proyecto, con confirmación;
+y todas las listas con orden por columna, 25 filas por página y búsqueda (1.14.0; sesión
+`.ai/sessions/2026-11-06-explorer-runs-lists/`).
+
 ## Mejoras opcionales (fuera de fase, decidir al planificar)
 
 - Sitio de la documentación Markdown construido con `zensical build` en el job y servido por URL firmada, como el HTML
