@@ -17,7 +17,7 @@ import {
   Title,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
@@ -35,14 +35,17 @@ const BOTTOM = 16;
 const DESKTOP = '(min-width: 62em)';
 const MOBILE_TREE = 360;
 
-/** Alto disponible desde el contenedor hasta el final de la ventana (en escritorio); se recalcula al redimensionar. */
+/**
+ * Alto disponible desde el contenedor hasta el final de la ventana (en escritorio); se recalcula al redimensionar.
+ * Ref de callback: el contenedor aparece después del cargador de schemas, y hay que medir cuando ya existe.
+ */
 function useFillHeight(enabled: boolean) {
-  const ref = useRef<HTMLDivElement>(null);
+  const [node, setNode] = useState<HTMLDivElement | null>(null);
   const [height, setHeight] = useState<number>(MIN_HEIGHT);
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!enabled || node === null) return undefined;
     const update = () => {
-      const top = (ref.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
+      const top = node.getBoundingClientRect().top + window.scrollY;
       setHeight(Math.max(MIN_HEIGHT, Math.floor(window.innerHeight - top - BOTTOM)));
     };
     const frame = requestAnimationFrame(update);
@@ -51,8 +54,8 @@ function useFillHeight(enabled: boolean) {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', update);
     };
-  }, [enabled]);
-  return [ref, height] as const;
+  }, [enabled, node]);
+  return [setNode, height] as const;
 }
 
 function MetadataPanel({ connectionId }: { connectionId: number }) {
