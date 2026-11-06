@@ -13,7 +13,8 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
   publicar entonces; registro en §6). Ola 8 y W-8 hechas (util_bbdd 5.0.0, web 1.7.0; registro en §6). Ola 9
   (util_bbdd 5.1.0, Grupo 9: G44) planificada el 2026-10-29 con las decisiones D9-1 a D9-4 aprobadas el mismo día
   (§4) y hecha en util_bbdd el mismo día (5.1.0, publicada antes de W-9.0; registro en §6). Ola 9 y W-9 hechas (util_bbdd 5.1.0,
-  web 1.7.1; registro en §6).
+  web 1.7.1; registro en §6). Ola 10 y W-10 hechas (util_bbdd 5.2.0, web 1.9.0). Ola 11 (G50, G51) planificada
+  el 2026-11-06 con D11-1 a D11-8 y hecha el mismo día (util_bbdd 5.4.0, web 1.13.0; registro en §6).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -361,7 +362,7 @@ flowchart LR
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
 | 9 (web ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ `fa13622` → **`release: v1.7.1`** ✅ (D9-3) | Wheel 5.1.0 |
 | 10 (web ✅) | U-10.1 ✅ `87e5386` → U-10.2 ✅ `f1c0737` → U-10.3 ✅ `ad9fe85` → U-10.4 ✅ `c3a1d55` → **`release: v5.2.0`** ✅ `30e47bf` | **W-10.0** ✅ `a7d6e1e` `chore(backend): util_bbdd 5.2.0` → W-10.1 ✅ `f86056a` → W-10.2 ✅ `ddbaecc` → **`release: v1.9.0`** ✅ (D10-5) | Wheel 5.2.0 |
-| 11 | U-11.1 ✅ `a3025d3c` → U-11.2 ✅ `5b443659` → **`release: v5.4.0`** ✅ `35321259` | **W-11.0** `chore(backend): util_bbdd 5.4.0` → W-11.1 → W-11.2 → W-11.3 → **`release: v1.13.0`** (D11-7) | Wheel 5.4.0 |
+| 11 (web ✅) | U-11.1 ✅ `a3025d3c` → U-11.2 ✅ `5b443659` → **`release: v5.4.0`** ✅ `35321259` | **W-11.0** ✅ `9f7e57e` `chore(backend): util_bbdd 5.4.0` → W-11.1 ✅ `ded2592` → W-11.2 ✅ `a56e54c` → W-11.3 ✅ `c9c247a` → **`release: v1.13.0`** ✅ (D11-7) | Wheel 5.4.0 |
 
 Reglas de la tubería:
 
@@ -875,4 +876,14 @@ Sesión de util_bbdd: `.ai/sessions/2026-11-06-gaps-g50-g51/`. Tag `v5.4.0`, pub
 | U-11.1 | `a3025d3c` | `imprimir["markdown"]["mermaid_js_ref"]`: ruta relativa a `docs/` o `https://`; excluyente con `mermaid_js`; no comprueba que el fichero exista. T3/T4 verificados: sin el fichero, `zensical build --strict` y `mkdocs build --strict` no avisan y Material carga Mermaid 11 de unpkg (con Internet) |
 | U-11.2 | `5b443659` | `manifest.json` `format_version` 2 con `pages` (`path`, `title` en texto plano, `section`, `role`, `letter` solo en `letter` — `a`, `0-9`, `otros` —, `id` + `kind` solo en `object`); claves ausentes cuando no aplican; enmienda de ADR-006. T5 con test de `_`, `\|`, `*`, `<`, `&` |
 | release | `35321259` | Release `v5.4.0` (MINOR, D11-6) |
+
+### W-11 — util_bbdd_web con util_bbdd 5.4.0 (2026-11-06, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-11.0 | `9f7e57e` | Pin 5.4.0; en el lock solo cambia util_bbdd, con el hash del `.sha256` de la release (`3c494bb8…94022`). Sin excepción de `exclude-newer`. Suite 778 passed, 2 skipped (un fallo aislado de `test_previous_documentation_is_checked_on_launch` bajo carga, no repetido en dos ejecuciones) |
+| W-11.1 | `ded2592` | El job pasa `mermaid_js_ref`; `run.json` → `markdown_mermaid` (`mode`, `path`, `sha256`); `zip_stream` con entradas extra; el ZIP completo y el Markdown añaden `UBW_MERMAID_JS` sin duplicar la copia de ejecuciones anteriores; `X-UBW-Warning` si falta. Rodeo (copia por ejecución) **retirado** |
+| W-11.2 | `a56e54c` | `GET /runs/{id}/markdown-pages` (`source` `manifest` o `paths`); sin índice v2, `paths` con la lista vacía y el frontend deduce el árbol de las rutas (ajuste respecto del PLAN: la deducción no se duplica en el backend). Deducción por rutas **se mantiene** para ejecuciones 5.3.0 (D11-8) |
+| W-11.3 | `c9c247a` | GAPS G50 y G51 resueltos; guía, ADR-007 (enmienda), ROADMAP y CHANGELOG |
+| release | este commit | util_bbdd_web **1.13.0** (D11-7). F1 comprobado: documentación Markdown con util_bbdd 5.4.0 por la integración de la web, Mermaid añadido como el ZIP y `zensical build --strict` sin avisos (11 páginas, `mermaid.min.js` local) |
 
