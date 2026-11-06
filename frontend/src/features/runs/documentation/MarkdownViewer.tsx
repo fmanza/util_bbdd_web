@@ -32,6 +32,7 @@ import {
   type Section,
   formatLocation,
   initialOf,
+  objectName,
   parseLocation,
   resolveLink,
 } from './markdownNav';
@@ -104,6 +105,7 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
 }
 
 function pageLabel(page: Page, t: TFunction): string {
+  if (page.title) return objectName(page);
   if (page.role === 'index') return t('runs.markdownViewer.sectionIndex');
   if (page.role === 'letter')
     return t('runs.markdownViewer.letterIndex', { letter: page.stem.slice(6).toUpperCase() });
@@ -141,7 +143,11 @@ function PageTree({ pages, current, onOpen }: TreeProps) {
     : null;
 
   const needle = query.trim().toLowerCase();
-  const results = needle ? pages.filter((p) => p.path.toLowerCase().includes(needle)) : [];
+  const results = needle
+    ? pages.filter(
+        (p) => p.path.toLowerCase().includes(needle) || (p.title ?? '').toLowerCase().includes(needle),
+      )
+    : [];
   const listed = needle
     ? results.slice(0, MAX_RESULTS)
     : [
@@ -199,7 +205,8 @@ function PageTree({ pages, current, onOpen }: TreeProps) {
             <div role="listitem" key={page.path}>
               <NavLink
                 component="button"
-                label={needle ? page.path : pageLabel(page, t)}
+                label={pageLabel(page, t)}
+                description={needle ? page.path : undefined}
                 active={page.path === current.path}
                 aria-current={page.path === current.path ? 'page' : undefined}
                 onClick={() => onOpen(page)}

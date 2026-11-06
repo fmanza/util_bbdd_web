@@ -10,6 +10,7 @@ export type RunStatus = Run['status'];
 export type Artifact = components['schemas']['ArtifactOut'];
 export type Operation = components['schemas']['OperationOut'];
 export type OperationParam = components['schemas']['OperationParamOut'];
+export type MarkdownPages = components['schemas']['MarkdownPagesOut'];
 
 export const PAGE_SIZE = 50;
 export const ACTIVE_STATUSES: readonly RunStatus[] = ['queued', 'running'];
@@ -201,6 +202,17 @@ export function useArtifactText(runId: string, artifact: Artifact | null) {
       return response.text();
     },
     enabled: artifact !== null,
+    staleTime: Infinity,
+  });
+}
+
+/** Índice de páginas de la documentación Markdown (util_bbdd 5.4.0, G51); la ejecución está cerrada: no caduca. */
+export function useMarkdownPages(runId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['runs', runId, 'markdown-pages'],
+    queryFn: async () =>
+      unwrap(await api.GET('/api/v1/runs/{run_id}/markdown-pages', { params: { path: { run_id: runId } } })),
+    enabled,
     staleTime: Infinity,
   });
 }

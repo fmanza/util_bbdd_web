@@ -629,7 +629,9 @@
         "views": "Vistas",
         "routines": "Rutinas",
         "database": "Base de datos",
-        "other": "Otras"
+        "other": "Otras",
+        "traceability": "Trazabilidad",
+        "changes": "Cambios"
       },
       "letters": "Letra inicial",
       "pages": "Páginas",

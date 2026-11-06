@@ -3,7 +3,7 @@
 // trazabilidad), así que nunca se usa para construir una URL de la API sin pasar por `resolveLink`, que solo devuelve
 // artefactos registrados de la documentación (AUDIT_PLAN T6).
 
-import { type Artifact, MARKDOWN_DOC_ROOT } from '../useRuns';
+import { type Artifact, MARKDOWN_DOC_ROOT, type MarkdownPages } from '../useRuns';
 
 /** Raíz de las páginas: las rutas del visor (y de `?md=`) son relativas a esta carpeta. */
 export const DOCS_ROOT = `${MARKDOWN_DOC_ROOT}docs/`;
@@ -11,10 +11,19 @@ export const DOCS_ROOT = `${MARKDOWN_DOC_ROOT}docs/`;
 export const MAX_HREF = 2048;
 
 /**
- * Secciones del árbol, en orden. Dependen de la estructura de carpetas de util_bbdd 5.3.0 (`docs/tables/…`); el test de
- * contrato del backend (`test_documentation_archive_by_format_preview_rules_and_page_layout`) avisa si cambia (G51).
+ * Secciones del árbol, en orden. Desde util_bbdd 5.4.0 vienen del índice de `manifest.json` (G51, `pagesFromIndex`);
+ * en las ejecuciones anteriores se deducen de la estructura de carpetas de util_bbdd 5.3.0 (`buildPages`).
  */
-export const SECTIONS = ['root', 'tables', 'views', 'routines', 'database', 'other'] as const;
+export const SECTIONS = [
+  'root',
+  'tables',
+  'views',
+  'routines',
+  'database',
+  'traceability',
+  'changes',
+  'other',
+] as const;
 export type Section = (typeof SECTIONS)[number];
 
 export interface Page {
@@ -25,12 +34,20 @@ export interface Page {
   stem: string;
   /** `index` (índice de la sección), `letter` (`index-<letra>`) u `object` (una página por objeto). */
   role: 'index' | 'letter' | 'object';
+  /** Título en texto plano del índice de util_bbdd 5.4.0 (viene de la BD: se pinta como texto). */
+  title?: string;
   artifact: Artifact;
 }
 
+const MD_SUFFIX = /\.md$/;
 const KNOWN: ReadonlySet<string> = new Set(['tables', 'views', 'routines', 'database']);
 /** Páginas de la raíz que van primero, en este orden; el resto de la raíz, después por nombre. */
-const ROOT_ORDER = ['index.md', 'traceability.md', 'changes.md'];
+const ROOT_ORDER = ['index.md'];
+/** Páginas de la raíz con sección propia (como en el índice de util_bbdd 5.4.0). */
+const ROOT_SECTIONS: Readonly<Record<string, Section>> = {
+  'traceability.md': 'traceability',
+  'changes.md': 'changes',
+};
 
 function roleOf(stem: string): Page['role'] {
   if (stem === 'index') return 'index';
@@ -54,9 +71,11 @@ export function buildPages(artifacts: readonly Artifact[]): Page[] {
     const path = artifact.path.slice(DOCS_ROOT.length);
     const parts = path.split('/');
     const folder = parts.length === 1 ? 'root' : (parts[0] ?? '');
-    const section: Section = folder === 'root' ? 'root' : KNOWN.has(folder) ? (folder as Section) : 'other';
+    const section: Section =
+      folder === 'root' ? (ROOT_SECTIONS[path] ?? 'root') : KNOWN.has(folder) ? (folder as Section) : 'other';
     const stem = (parts.at(-1) ?? path).replace(/\.md$/, '');
-    pages.push({ path, section, stem, role: section === 'root' ? 'object' : roleOf(stem), artifact });
+    const role = folder === 'root' ? 'object' : roleOf(stem);
+    pages.push({ path, section, stem, role, artifact });
   }
   return pages.sort(
     (a, b) =>
@@ -66,9 +85,55 @@ export function buildPages(artifacts: readonly Artifact[]): Page[] {
   );
 }
 
+const INDEX_SECTIONS: Readonly<Record<string, Section>> = {
+  home: 'root',
+  tables: 'tables',
+  views: 'views',
+  routines: 'routines',
+  database: 'database',
+  traceability: 'traceability',
+  changes: 'changes',
+};
+
+/**
+ * Páginas del índice de util_bbdd 5.4.0 (`GET /runs/{id}/markdown-pages`), en su orden (el de la `nav`). Solo se usan
+ * las que corresponden a un artefacto `.md` de la ejecución (el backend ya las cruza; aquí se comprueba otra vez).
+ */
+export function pagesFromIndex(index: MarkdownPages['pages'], artifacts: readonly Artifact[]): Page[] {
+  const byId = new Map(artifacts.map((a) => [a.id, a]));
+  const pages: Page[] = [];
+  for (const entry of index) {
+    const artifact = byId.get(entry.artifact_id);
+    if (!artifact?.previewable || artifact.path !== DOCS_ROOT + entry.path) continue;
+    const stem = (entry.path.split('/').at(-1) ?? entry.path).replace(MD_SUFFIX, '');
+    const role = entry.role === 'index' || entry.role === 'letter' ? entry.role : 'object';
+    pages.push({
+      path: entry.path,
+      section: INDEX_SECTIONS[entry.section] ?? 'other',
+      stem,
+      role,
+      title: entry.title,
+      artifact,
+    });
+  }
+  // Orden estable: por sección; dentro de cada una, el de util_bbdd.
+  return pages
+    .map((page, i) => ({ page, i }))
+    .sort((a, b) => SECTIONS.indexOf(a.page.section) - SECTIONS.indexOf(b.page.section) || a.i - b.i)
+    .map(({ page }) => page);
+}
+
+/** Nombre para el árbol: el título sin el tipo (`Tabla: PEDIDOS` → `PEDIDOS`) o, sin índice, el *slug*. */
+export function objectName(page: Page): string {
+  if (!page.title) return page.stem;
+  const at = page.title.indexOf(': ');
+  const isObject = page.role === 'object' && page.section !== 'root';
+  return isObject && at > 0 ? page.title.slice(at + 2) : page.title;
+}
+
 /** Letra inicial (mayúscula) de una página de objeto; `#` si no empieza por una letra o un número. */
 export function initialOf(page: Page): string {
-  const first = page.stem.charAt(0).toUpperCase();
+  const first = objectName(page).charAt(0).toUpperCase();
   return /[\p{L}\p{N}]/u.test(first) ? first : '#';
 }
 

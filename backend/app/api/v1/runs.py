@@ -21,14 +21,22 @@ from app.api.v1.schemas_bulk import BulkPreviewOut, BulkResultOut
 from app.api.v1.schemas_diff import DiffEvolutionOut, DiffItemOut, SchemaDiffOut
 from app.api.v1.schemas_dump import DumpPendingConstraintsOut, DumpPreviewOut, DumpResultOut
 from app.api.v1.schemas_migrate import MigrationPlanOut, MigrationReportOut
-from app.api.v1.schemas_projects import ArtifactOut, RunCreate, RunDetailOut, RunOut, RunPage, RunStatus
+from app.api.v1.schemas_projects import (
+    ArtifactOut,
+    MarkdownPagesOut,
+    RunCreate,
+    RunDetailOut,
+    RunOut,
+    RunPage,
+    RunStatus,
+)
 from app.core.config import Settings
 from app.core.errors import AppError
 from app.core.security import site_token, verify_site_token
 from app.db.models import TERMINAL_STATUSES, Artifact, Run, User
 from app.db.session import new_session
 from app.domain.projects.service import get_membership
-from app.domain.runs import bulks, dumps, migrations, service
+from app.domain.runs import bulks, dumps, markdown_pages, migrations, service
 from app.domain.runs import diff as diff_domain
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters
@@ -372,6 +380,16 @@ def preview_artifact(
             path, media_type=media, filename=path.name, content_disposition_type="inline", headers=_SAFE_HEADERS
         )
     return PlainTextResponse(path.read_text(encoding="utf-8", errors="replace"), headers=_SAFE_HEADERS)
+
+
+@router.get(
+    "/{run_id}/markdown-pages", response_model=MarkdownPagesOut, summary="Páginas de la documentación Markdown",
+    responses={**_401, 404: {"description": "No existe, no eres miembro, no tiene documentación Markdown o se purgó"}},
+)  # fmt: skip
+def get_markdown_pages(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> MarkdownPagesOut:
+    """Índice de páginas de ``manifest.json`` (util_bbdd 5.4.0, G51) cruzado con los artefactos registrados."""
+    access = service.get_access(db, user, run_id)
+    return MarkdownPagesOut.model_validate(markdown_pages.load_pages(db, access.run, settings), from_attributes=True)
 
 
 # --- diff de esquemas (Fase 6) ------------------------------------------------------------------------------------

@@ -140,6 +140,7 @@ def test_run_of_other_project_is_404(
         ("DELETE", f"/api/v1/runs/{run['id']}"),
         ("GET", f"/api/v1/runs/{run['id']}/archive"),
         ("GET", f"/api/v1/runs/{run['id']}/artifacts/1"),
+        ("GET", f"/api/v1/runs/{run['id']}/markdown-pages"),
     ]:
         assert outsider.request(method, path).status_code == 404, path
     assert outsider.get("/api/v1/runs").json()["total"] == 0

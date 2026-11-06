@@ -10,9 +10,10 @@ import {
   archiveUrl,
   downloadUrl,
   isActive,
+  useMarkdownPages,
 } from '../useRuns';
 import { MarkdownViewer } from './MarkdownViewer';
-import { buildPages } from './markdownNav';
+import { buildPages, pagesFromIndex } from './markdownNav';
 
 /** Orden de las tarjetas y valor por defecto de cada casilla del formulario (`DocumentationParams`). */
 const FORMATS: readonly { format: DocumentationFormat; byDefault: boolean }[] = [
@@ -150,7 +151,13 @@ function HtmlCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
 
 function MarkdownCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
   const { t } = useTranslation();
-  const pages = useMemo(() => buildPages(files), [files]);
+  const hasPages = files.some((a) => a.previewable && a.path.endsWith('.md'));
+  const index = useMarkdownPages(run.id, hasPages);
+  // Índice de util_bbdd 5.4.0 (G51) si lo hay; si no (o si falla), el árbol deducido de las rutas (5.3.0).
+  const pages = useMemo(
+    () => (index.data?.source === 'manifest' ? pagesFromIndex(index.data.pages, files) : buildPages(files)),
+    [index.data, files],
+  );
   // Ficheros auxiliares (catálogo, ficheros para IA, configuración del sitio): solo descarga.
   const auxiliary = files.filter((a) => !a.previewable && !a.path.includes('/assets/'));
   return (
@@ -168,7 +175,11 @@ function MarkdownCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
           <DownloadButtons runId={run.id} artifacts={auxiliary} />
         </Stack>
       )}
-      {pages.length > 0 && <MarkdownViewer runId={run.id} artifacts={files} pages={pages} />}
+      {hasPages && index.isPending ? (
+        <Text size="sm">{t('common.loading')}</Text>
+      ) : (
+        pages.length > 0 && <MarkdownViewer runId={run.id} artifacts={files} pages={pages} />
+      )}
     </FormatCard>
   );
 }

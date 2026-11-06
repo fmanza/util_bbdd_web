@@ -147,11 +147,6 @@ def test_markdown_without_mermaid_js_warns(
     assert detail["warnings_by_format"]["markdown"] == [w for w in detail["warnings"] if "Mermaid" in w]
 
 
-#: Carpetas de páginas de la documentación Markdown de util_bbdd 5.3.0 de las que depende el árbol del visor de la web
-#: (``frontend/src/features/runs/documentation/markdownNav.ts``). Mientras G51 siga abierto, este test avisa si cambian.
-MARKDOWN_SECTIONS = {"tables", "views", "routines", "database"}
-
-
 def test_documentation_archive_by_format_preview_rules_and_page_layout(
     user_client: TestClient,
     project: dict[str, object],  # noqa: F811
@@ -179,14 +174,19 @@ def test_documentation_archive_by_format_preview_rules_and_page_layout(
     catalog = paths[ROOT + "docs/catalog.json"]["id"]
     assert user_client.get(f"/api/v1/runs/{run_id}/artifacts/{catalog}/preview").status_code == 415
 
-    # Contrato con util_bbdd (T2, G51): las páginas están en la raíz de docs/ o en una de las secciones conocidas.
-    pages = [p.removeprefix(ROOT + "docs/") for p in paths if p.startswith(ROOT + "docs/") and p.endswith(".md")]
-    sections = {page.split("/")[0] for page in pages if "/" in page}
-    assert sections <= MARKDOWN_SECTIONS, sections
-    assert {"tables", "views"} <= sections
-    assert "index.md" in pages and "tables/index.md" in pages and "views/index.md" in pages
-    assert any(page.startswith("tables/index-") for page in pages)
-    assert all(page.count("/") <= 1 for page in pages)
+    # Contrato con util_bbdd 5.4.0 (G51): el índice de manifest.json lista cada página .md una vez, con su artefacto.
+    pages = {p.removeprefix(ROOT + "docs/") for p in paths if p.startswith(ROOT + "docs/") and p.endswith(".md")}
+    index = user_client.get(f"/api/v1/runs/{run_id}/markdown-pages").json()
+    assert index["source"] == "manifest"
+    listed = [page["path"] for page in index["pages"]]
+    assert sorted(listed) == sorted(pages) and len(listed) == len(set(listed))
+    by_path = {page["path"]: page for page in index["pages"]}
+    assert all(paths[ROOT + "docs/" + p]["id"] == page["artifact_id"] for p, page in by_path.items())
+    assert (by_path["index.md"]["role"], by_path["index.md"]["section"]) == ("home", "home")
+    assert (by_path["tables/index.md"]["role"], by_path["tables/index.md"]["section"]) == ("index", "tables")
+    pedidos = next(page for p, page in by_path.items() if p.startswith("tables/") and p.endswith("pedidos.md"))
+    assert (pedidos["role"], pedidos["kind"]) == ("object", "table") and "pedidos" in pedidos["title"]
+    assert any(page["role"] == "letter" and page["letter"] for page in index["pages"])
 
     def archive(fmt: str) -> tuple[int, str, list[str]]:
         response = user_client.get(f"/api/v1/runs/{run_id}/archive", params={"format": fmt})
@@ -210,6 +210,53 @@ def test_documentation_archive_by_format_preview_rules_and_page_layout(
     complete = user_client.get(f"/api/v1/runs/{run_id}/archive")
     with zipfile.ZipFile(io.BytesIO(complete.content)) as zipped:
         assert any(n.endswith("/run.json") for n in zipped.namelist())
+
+
+def test_markdown_pages_fall_back_to_paths_and_only_list_registered_pages(
+    user_client: TestClient,
+    project: dict[str, object],  # noqa: F811
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+) -> None:
+    run_id = launch(user_client, project["id"], "documentation", **ONLY_MARKDOWN)
+    run = wait_for(worker, db, run_id, timeout=180)
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+    manifest = run_dir(settings.workspace_dir, str(run.workspace_path)) / ROOT / "manifest.json"
+    original = json.loads(manifest.read_text(encoding="utf-8"))
+    assert original["format_version"] >= 2
+
+    def pages_after(data: object) -> dict[str, Any]:
+        manifest.write_text(data if isinstance(data, str) else json.dumps(data), encoding="utf-8")
+        response = user_client.get(f"/api/v1/runs/{run_id}/markdown-pages")
+        assert response.status_code == 200, response.text
+        return dict(response.json())
+
+    # Páginas que no son artefactos de la ejecución (o valores desconocidos) se descartan.
+    foreign = [
+        {"path": "../../run.json", "title": "x", "section": "home", "role": "home"},
+        {"path": "no-existe.md", "title": "x", "section": "home", "role": "home"},
+        {"path": "index.md", "title": "x", "section": "otra", "role": "home"},
+        {"path": "index.md", "title": "x", "section": "home", "role": "jefe"},
+    ]
+    tampered = pages_after({**original, "pages": [*foreign, *original["pages"]]})
+    assert [page["path"] for page in tampered["pages"]] == [page["path"] for page in original["pages"]]
+    # Manifiesto 1 (util_bbdd 5.3.0), de otro formato o ilegible: el visor deduce el árbol de las rutas.
+    for data in ({**original, "format_version": 1}, {**original, "format": "otro"}, {"pages": []}, "{no es json"):
+        assert pages_after(data) == {"source": "paths", "pages": []}
+
+
+def test_markdown_pages_is_404_without_markdown(
+    user_client: TestClient,
+    project: dict[str, object],  # noqa: F811
+    worker: Worker,  # noqa: F811
+    db: Session,
+) -> None:
+    run_id = launch(user_client, project["id"], "documentation", connection="tienda", graphs=False, html=False)
+    assert wait_for(worker, db, run_id, timeout=180).status == "succeeded"
+
+    assert user_client.get(f"/api/v1/runs/{run_id}/markdown-pages").status_code == 404
+    assert user_client.get("/api/v1/runs/01ARZ3NDEKTSV4RRFFQ69G5FAV/markdown-pages").status_code == 404
 
 
 def test_markdown_options_are_dropped_without_markdown(

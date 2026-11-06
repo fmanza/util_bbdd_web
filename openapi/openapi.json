@@ -2635,6 +2635,101 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "MarkdownPageOut": {
+        "description": "Página de la documentación Markdown (índice de util_bbdd 5.4.0, G51). ``title`` viene de la BD documentada.",
+        "properties": {
+          "artifact_id": {
+            "description": "Artefacto de la página (vista previa y descarga)",
+            "title": "Artifact Id",
+            "type": "integer"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Solo en ``object``: tipo del catálogo",
+            "title": "Kind"
+          },
+          "letter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Solo en ``letter``",
+            "title": "Letter"
+          },
+          "path": {
+            "description": "Ruta relativa a ``docs/``",
+            "title": "Path",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "home",
+              "index",
+              "letter",
+              "object",
+              "page"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "section": {
+            "description": "``home``, ``tables``, ``views``, ``routines``, ``database``, ``traceability`` o ``changes``",
+            "title": "Section",
+            "type": "string"
+          },
+          "title": {
+            "description": "Título en texto plano (escápalo al pintarlo)",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "title",
+          "section",
+          "role",
+          "artifact_id"
+        ],
+        "title": "MarkdownPageOut",
+        "type": "object"
+      },
+      "MarkdownPagesOut": {
+        "description": "Árbol de la documentación Markdown: del índice de ``manifest.json`` o, sin él, ``paths`` (el visor lo deduce de\nlas rutas de los artefactos).",
+        "properties": {
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/MarkdownPageOut"
+            },
+            "title": "Pages",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "manifest",
+              "paths"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "pages"
+        ],
+        "title": "MarkdownPagesOut",
+        "type": "object"
+      },
       "Me": {
         "description": "Usuario de la sesión actual.",
         "properties": {
@@ -10824,6 +10919,55 @@
           }
         },
         "summary": "Progreso en vivo (SSE)",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/v1/runs/{run_id}/markdown-pages": {
+      "get": {
+        "description": "Índice de páginas de ``manifest.json`` (util_bbdd 5.4.0, G51) cruzado con los artefactos registrados.",
+        "operationId": "get_markdown_pages_api_v1_runs__run_id__markdown_pages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkdownPagesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "404": {
+            "description": "No existe, no eres miembro, no tiene documentación Markdown o se purgó"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Páginas de la documentación Markdown",
         "tags": [
           "runs"
         ]

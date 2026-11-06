@@ -188,6 +188,28 @@ class RunDetailOut(RunOut):
     )
 
 
+class MarkdownPageOut(_Out):
+    """Página de la documentación Markdown (índice de util_bbdd 5.4.0, G51). ``title`` viene de la BD documentada."""
+
+    path: str = Field(description="Ruta relativa a ``docs/``")
+    title: str = Field(description="Título en texto plano (escápalo al pintarlo)")
+    section: str = Field(
+        description="``home``, ``tables``, ``views``, ``routines``, ``database``, ``traceability`` o ``changes``"
+    )
+    role: Literal["home", "index", "letter", "object", "page"]
+    letter: str | None = Field(default=None, description="Solo en ``letter``")
+    kind: str | None = Field(default=None, description="Solo en ``object``: tipo del catálogo")
+    artifact_id: int = Field(description="Artefacto de la página (vista previa y descarga)")
+
+
+class MarkdownPagesOut(BaseModel):
+    """Árbol de la documentación Markdown: del índice de ``manifest.json`` o, sin él, ``paths`` (el visor lo deduce de
+    las rutas de los artefactos)."""
+
+    source: Literal["manifest", "paths"]
+    pages: list[MarkdownPageOut]
+
+
 class RunPage(BaseModel):
     items: list[RunOut]
     total: int

@@ -1278,6 +1278,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/markdown-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Páginas de la documentación Markdown
+         * @description Índice de páginas de ``manifest.json`` (util_bbdd 5.4.0, G51) cruzado con los artefactos registrados.
+         */
+        get: operations["get_markdown_pages_api_v1_runs__run_id__markdown_pages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/migration-report": {
         parameters: {
             query?: never;
@@ -2571,6 +2591,61 @@ export interface components {
             password: string;
             /** Username */
             username: string;
+        };
+        /**
+         * MarkdownPageOut
+         * @description Página de la documentación Markdown (índice de util_bbdd 5.4.0, G51). ``title`` viene de la BD documentada.
+         */
+        MarkdownPageOut: {
+            /**
+             * Artifact Id
+             * @description Artefacto de la página (vista previa y descarga)
+             */
+            artifact_id: number;
+            /**
+             * Kind
+             * @description Solo en ``object``: tipo del catálogo
+             */
+            kind?: string | null;
+            /**
+             * Letter
+             * @description Solo en ``letter``
+             */
+            letter?: string | null;
+            /**
+             * Path
+             * @description Ruta relativa a ``docs/``
+             */
+            path: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "home" | "index" | "letter" | "object" | "page";
+            /**
+             * Section
+             * @description ``home``, ``tables``, ``views``, ``routines``, ``database``, ``traceability`` o ``changes``
+             */
+            section: string;
+            /**
+             * Title
+             * @description Título en texto plano (escápalo al pintarlo)
+             */
+            title: string;
+        };
+        /**
+         * MarkdownPagesOut
+         * @description Árbol de la documentación Markdown: del índice de ``manifest.json`` o, sin él, ``paths`` (el visor lo deduce de
+         *     las rutas de los artefactos).
+         */
+        MarkdownPagesOut: {
+            /** Pages */
+            pages: components["schemas"]["MarkdownPageOut"][];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "manifest" | "paths";
         };
         /**
          * Me
@@ -8145,6 +8220,51 @@ export interface operations {
                 content?: never;
             };
             /** @description No existe o no eres miembro del proyecto */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_markdown_pages_api_v1_runs__run_id__markdown_pages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkdownPagesOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe, no eres miembro, no tiene documentación Markdown o se purgó */
             404: {
                 headers: {
                     [name: string]: unknown;

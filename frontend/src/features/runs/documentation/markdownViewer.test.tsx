@@ -178,8 +178,52 @@ describe('visor de la documentación Markdown', () => {
 
     await user.type(within(tree).getByRole('textbox', { name: 'Buscar página' }), 'v_ped');
     expect(within(tree).getByText('1 página encontrada')).toBeInTheDocument();
-    await user.click(within(tree).getByRole('button', { name: 'views/v_pedidos.md' }));
+    await user.click(within(tree).getByRole('button', { name: /views\/v_pedidos\.md/ }));
     await waitFor(() => expect(frame('views/v_pedidos.md')).toBeInTheDocument());
+  });
+
+  it('con el índice de util_bbdd 5.4.0 muestra los nombres reales y busca por ellos', async () => {
+    stubEventSource();
+    stubApi({
+      ...routes(),
+      [`GET /api/v1/runs/${RUN_ID}/markdown-pages`]: {
+        body: {
+          source: 'manifest',
+          pages: [
+            { path: 'index.md', title: 'Portada TIENDA', section: 'home', role: 'home', artifact_id: 101 },
+            { path: 'tables/index.md', title: 'Tablas', section: 'tables', role: 'index', artifact_id: 102 },
+            {
+              path: 'tables/pedidos.md',
+              title: 'Tabla: PEDIDOS_<b>2024</b>',
+              section: 'tables',
+              role: 'object',
+              kind: 'table',
+              artifact_id: 103,
+            },
+            {
+              path: 'views/v_pedidos.md',
+              title: 'Vista: V_PEDIDOS',
+              section: 'views',
+              role: 'object',
+              artifact_id: 104,
+            },
+          ],
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderRoute(`/runs/${RUN_ID}`);
+    const tree = await screen.findByRole('navigation', { name: 'Páginas de la documentación Markdown' });
+
+    await user.type(within(tree).getByRole('textbox', { name: 'Buscar página' }), 'PEDIDOS_<b>');
+    // El título viene de la BD: se pinta como texto, sin interpretar el HTML.
+    const result = within(tree).getByRole('button', { name: /PEDIDOS_<b>2024<\/b>/ });
+    expect(within(tree).queryByText('2024', { selector: 'b' })).not.toBeInTheDocument();
+    await user.click(result);
+    await waitFor(() => expect(frame('tables/pedidos.md')).toBeInTheDocument());
+    await user.clear(within(tree).getByRole('textbox', { name: 'Buscar página' }));
+    await user.selectOptions(within(tree).getByRole('combobox', { name: 'Sección' }), 'views');
+    expect(within(tree).getByRole('button', { name: 'V_PEDIDOS' })).toBeInTheDocument();
   });
 
   it('abre la página de ?md= (enlace compartible)', async () => {

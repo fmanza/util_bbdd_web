@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import type { Artifact } from '../useRuns';
 import { buildFrameDocument, frameCsp, navHref, sanitizeMarkdownHtml } from './markdownFrame';
-import { DOCS_ROOT, buildPages, initialOf, parseLocation, resolveLink } from './markdownNav';
+import {
+  DOCS_ROOT,
+  buildPages,
+  initialOf,
+  objectName,
+  pagesFromIndex,
+  parseLocation,
+  resolveLink,
+} from './markdownNav';
 
 let nextId = 1;
 const doc = (path: string, previewable = path.endsWith('.md')): Artifact => ({
@@ -33,17 +41,17 @@ const ARTIFACTS = [
 ];
 
 describe('buildPages', () => {
-  it('ordena la raíz (portada, trazabilidad, cambios) y luego secciones, índices y objetos', () => {
+  it('ordena portada, secciones (índices y objetos), base de datos, trazabilidad y cambios', () => {
     expect(buildPages(ARTIFACTS).map((p) => [p.section, p.path, p.role])).toEqual([
       ['root', 'index.md', 'object'],
-      ['root', 'traceability.md', 'object'],
-      ['root', 'changes.md', 'object'],
       ['tables', 'tables/index.md', 'index'],
       ['tables', 'tables/index-p.md', 'letter'],
       ['tables', 'tables/clientes.md', 'object'],
       ['tables', 'tables/pedidos.md', 'object'],
       ['views', 'views/v_pedidos.md', 'object'],
       ['database', 'database/info.md', 'object'],
+      ['traceability', 'traceability.md', 'object'],
+      ['changes', 'changes.md', 'object'],
     ]);
   });
 
@@ -53,6 +61,76 @@ describe('buildPages', () => {
       'C',
       'P',
     ]);
+  });
+});
+
+describe('pagesFromIndex (util_bbdd 5.4.0, G51)', () => {
+  const byPath = (path: string) => {
+    const artifact = ARTIFACTS.find((a) => a.path === `${DOCS_ROOT}${path}`);
+    if (!artifact) throw new Error(path);
+    return artifact;
+  };
+  const entry = (path: string, title: string, section: string, role: string, extra = {}) => ({
+    path,
+    title,
+    section,
+    role: role as 'home' | 'index' | 'letter' | 'object' | 'page',
+    artifact_id: byPath(path).id,
+    letter: null,
+    kind: null,
+    ...extra,
+  });
+  const INDEX = [
+    entry('index.md', 'Documentación de la Base de Datos - TIENDA', 'home', 'home'),
+    entry('tables/index.md', 'Tablas', 'tables', 'index'),
+    entry('tables/index-p.md', 'Tablas · P', 'tables', 'letter', { letter: 'p' }),
+    entry('tables/pedidos.md', 'Tabla: PEDIDOS_2024', 'tables', 'object', { kind: 'table' }),
+    entry('tables/clientes.md', 'Tabla: clientes', 'tables', 'object', { kind: 'table' }),
+    entry('traceability.md', 'Trazabilidad', 'traceability', 'page'),
+    entry('database/info.md', 'Información de la Base de Datos', 'database', 'page'),
+  ];
+
+  it('respeta el orden de util_bbdd dentro de cada sección y usa los títulos', () => {
+    const pages = pagesFromIndex(INDEX, ARTIFACTS);
+    expect(pages.map((p) => [p.section, p.path, p.role])).toEqual([
+      ['root', 'index.md', 'object'],
+      ['tables', 'tables/index.md', 'index'],
+      ['tables', 'tables/index-p.md', 'letter'],
+      ['tables', 'tables/pedidos.md', 'object'],
+      ['tables', 'tables/clientes.md', 'object'],
+      ['database', 'database/info.md', 'object'],
+      ['traceability', 'traceability.md', 'object'],
+    ]);
+    expect(pages.map(objectName)).toEqual([
+      'Documentación de la Base de Datos - TIENDA',
+      'Tablas',
+      'Tablas · P',
+      'PEDIDOS_2024',
+      'clientes',
+      'Información de la Base de Datos',
+      'Trazabilidad',
+    ]);
+    expect(pages.filter((p) => p.role === 'object' && p.section === 'tables').map(initialOf)).toEqual([
+      'P',
+      'C',
+    ]);
+  });
+
+  it('descarta entradas cuyo artefacto no cuadra con la ruta o no es una página', () => {
+    const catalog = byPath('catalog.json');
+    const pages = pagesFromIndex(
+      [
+        { ...entry('index.md', 'x', 'home', 'home'), artifact_id: byPath('tables/pedidos.md').id },
+        { ...entry('index.md', 'x', 'home', 'home'), path: 'catalog.json', artifact_id: catalog.id },
+        { ...entry('index.md', 'x', 'home', 'home'), artifact_id: 999_999 },
+      ],
+      ARTIFACTS,
+    );
+    expect(pages).toEqual([]);
+  });
+
+  it('sin título usa el slug', () => {
+    expect(buildPages(ARTIFACTS).map(objectName)).toContain('pedidos');
   });
 });
 
