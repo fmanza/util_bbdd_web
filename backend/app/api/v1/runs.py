@@ -40,7 +40,8 @@ from app.domain.projects.service import get_membership
 from app.domain.runs import bulks, dumps, markdown_pages, migrations, service
 from app.domain.runs import diff as diff_domain
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
-from app.domain.runs.service import RunFilters
+from app.domain.runs.service import RunFilters, RunSort
+from app.domain.sorting import SortOrder
 from app.integrations.util_bbdd.documentation import MARKDOWN_MERMAID_ARTIFACT
 from app.workspace.layout import run_dir, zip_stream
 
@@ -211,13 +212,21 @@ def list_project_runs(
     operation: Annotated[str | None, Query(max_length=32)] = None,
     user_id: Annotated[int | None, Query(ge=1)] = None,
     q: Annotated[str | None, Query(max_length=100, description="Id, operación, usuario o mensaje")] = None,
+    sort: RunSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> RunPage:
     """Una fila por ejecución, más recientes primero, con el número de artefactos."""
     membership = get_membership(db, user, project_id)
     rows, total = service.list_project_runs(
-        db, membership.project, _filters(status_filter, operation, user_id, q), limit=limit, offset=offset
+        db,
+        membership.project,
+        _filters(status_filter, operation, user_id, q),
+        limit=limit,
+        offset=offset,
+        sort=sort,
+        order=order,
     )
     return _page(db, rows, total)
 
@@ -252,12 +261,14 @@ def list_my_runs(
     status_filter: Annotated[RunStatus | None, Query(alias="status")] = None,
     operation: Annotated[str | None, Query(max_length=32)] = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
+    sort: RunSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> RunPage:
     """Ejecuciones de todos los proyectos de los que eres miembro."""
     rows, total = service.list_user_runs(
-        db, user, _filters(status_filter, operation, None, q), limit=limit, offset=offset
+        db, user, _filters(status_filter, operation, None, q), limit=limit, offset=offset, sort=sort, order=order
     )
     return _page(db, rows, total)
 

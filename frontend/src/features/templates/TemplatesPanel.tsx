@@ -9,15 +9,15 @@ import {
   Modal,
   NativeSelect,
   Stack,
-  Table,
   Text,
   TextInput,
   Title,
-  VisuallyHidden,
 } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DataTable } from '../../components/DataTable';
+import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes, formatDateTime } from '../../components/format';
 import {
@@ -144,109 +144,137 @@ function TemplatesTable({
   const editable = (template: DocumentTemplate) =>
     canEdit && (scope.kind === 'global' || template.scope === 'project');
 
+  const columns: Column<DocumentTemplate>[] = [
+    {
+      key: 'name',
+      header: t('templates.name'),
+      sortable: true,
+      searchable: true,
+      value: (tpl) => `${tpl.name} ${tpl.filename}`,
+      cell: (tpl) => (
+        <>
+          <Text size="sm">{tpl.name}</Text>
+          <Text size="xs" c="dimmed">
+            {tpl.filename} · {formatBytes(tpl.size_bytes)}
+          </Text>
+        </>
+      ),
+    },
+    {
+      key: 'kind',
+      header: t('templates.kind'),
+      sortable: true,
+      value: (tpl) => t(`templates.kinds.${tpl.kind}`),
+      cell: (tpl) => <Badge variant="light">{t(`templates.kinds.${tpl.kind}`)}</Badge>,
+    },
+    ...(scope.kind === 'project'
+      ? [
+          {
+            key: 'scope',
+            header: t('templates.scope'),
+            sortable: true,
+            value: (tpl: DocumentTemplate) => tpl.scope,
+            cell: (tpl: DocumentTemplate) => (
+              <Badge variant="outline" color={tpl.scope === 'global' ? 'gray' : 'blue'}>
+                {t(`templates.scopes.${tpl.scope}`)}
+              </Badge>
+            ),
+          },
+        ]
+      : []),
+    {
+      key: 'table_style',
+      header: t('templates.tableStyle'),
+      cell: (template) =>
+        template.kind === 'trace' ? (
+          // Un mapa de trazabilidad no tiene estilos de tabla.
+          <Text size="sm">—</Text>
+        ) : editable(template) ? (
+          <NativeSelect
+            size="xs"
+            aria-label={t('templates.tableStyleOf', { name: template.name })}
+            data={[
+              // Sin estilo elegido: Word usa el de util_bbdd y Excel `TableStyleMedium2`.
+              { value: '', label: t('templates.defaultStyle') },
+              ...template.table_styles,
+            ]}
+            value={template.table_style ?? ''}
+            disabled={update.isPending}
+            onChange={(event) =>
+              update.mutate({ id: template.id, table_style: event.currentTarget.value || null })
+            }
+          />
+        ) : (
+          <Text size="sm">{template.table_style ?? '—'}</Text>
+        ),
+    },
+    {
+      key: 'created_at',
+      header: t('templates.created'),
+      sortable: true,
+      value: (tpl) => tpl.created_at,
+      cell: (tpl) => (
+        <Text size="sm">
+          {formatDateTime(tpl.created_at)}
+          {tpl.username ? ` · ${tpl.username}` : ''}
+        </Text>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      hiddenHeader: true,
+      cell: (template) => (
+        <Group gap={4} wrap="nowrap">
+          <Button
+            component="a"
+            href={templateFileUrl(scope, template.id)}
+            size="xs"
+            variant="default"
+            aria-label={t('templates.downloadLabel', { name: template.name })}
+          >
+            {t('templates.download')}
+          </Button>
+          {editable(template) && (
+            <>
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => setRenaming(template)}
+                aria-label={t('templates.renameLabel', { name: template.name })}
+              >
+                {t('templates.rename')}
+              </Button>
+              <Button
+                size="xs"
+                color="red"
+                variant="light"
+                onClick={() => setDeleting(template)}
+                aria-label={t('templates.deleteLabel', { name: template.name })}
+              >
+                {t('common.delete')}
+              </Button>
+            </>
+          )}
+        </Group>
+      ),
+    },
+  ];
+
   return (
     <Stack gap="xs">
       {update.isError && <ErrorAlert error={update.error} />}
       {remove.isError && <ErrorAlert error={remove.error} />}
-      <Table striped withTableBorder aria-label={t('templates.title')}>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>{t('templates.name')}</Table.Th>
-            <Table.Th>{t('templates.kind')}</Table.Th>
-            {scope.kind === 'project' && <Table.Th>{t('templates.scope')}</Table.Th>}
-            <Table.Th>{t('templates.tableStyle')}</Table.Th>
-            <Table.Th>{t('templates.created')}</Table.Th>
-            <Table.Th>
-              <VisuallyHidden>{t('common.actions')}</VisuallyHidden>
-            </Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {templates.map((template) => (
-            <Table.Tr key={template.id}>
-              <Table.Td>
-                <Text size="sm">{template.name}</Text>
-                <Text size="xs" c="dimmed">
-                  {template.filename} · {formatBytes(template.size_bytes)}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Badge variant="light">{t(`templates.kinds.${template.kind}`)}</Badge>
-              </Table.Td>
-              {scope.kind === 'project' && (
-                <Table.Td>
-                  <Badge variant="outline" color={template.scope === 'global' ? 'gray' : 'blue'}>
-                    {t(`templates.scopes.${template.scope}`)}
-                  </Badge>
-                </Table.Td>
-              )}
-              <Table.Td>
-                {template.kind === 'trace' ? (
-                  // Un mapa de trazabilidad no tiene estilos de tabla.
-                  <Text size="sm">—</Text>
-                ) : editable(template) ? (
-                  <NativeSelect
-                    size="xs"
-                    aria-label={t('templates.tableStyleOf', { name: template.name })}
-                    data={[
-                      // Sin estilo elegido: Word usa el de util_bbdd y Excel `TableStyleMedium2`.
-                      { value: '', label: t('templates.defaultStyle') },
-                      ...template.table_styles,
-                    ]}
-                    value={template.table_style ?? ''}
-                    disabled={update.isPending}
-                    onChange={(event) =>
-                      update.mutate({ id: template.id, table_style: event.currentTarget.value || null })
-                    }
-                  />
-                ) : (
-                  <Text size="sm">{template.table_style ?? '—'}</Text>
-                )}
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm">
-                  {formatDateTime(template.created_at)}
-                  {template.username ? ` · ${template.username}` : ''}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Group gap={4} wrap="nowrap">
-                  <Button
-                    component="a"
-                    href={templateFileUrl(scope, template.id)}
-                    size="xs"
-                    variant="default"
-                    aria-label={t('templates.downloadLabel', { name: template.name })}
-                  >
-                    {t('templates.download')}
-                  </Button>
-                  {editable(template) && (
-                    <>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        onClick={() => setRenaming(template)}
-                        aria-label={t('templates.renameLabel', { name: template.name })}
-                      >
-                        {t('templates.rename')}
-                      </Button>
-                      <Button
-                        size="xs"
-                        color="red"
-                        variant="light"
-                        onClick={() => setDeleting(template)}
-                        aria-label={t('templates.deleteLabel', { name: template.name })}
-                      >
-                        {t('common.delete')}
-                      </Button>
-                    </>
-                  )}
-                </Group>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <DataTable
+        mode="client"
+        label={t('templates.title')}
+        searchLabel={t('templates.search')}
+        empty={t('table.noMatches')}
+        columns={columns}
+        rowKey={(template) => template.id}
+        rows={templates}
+        minWidth={760}
+      />
       {renaming && (
         <RenameModal key={renaming.id} scope={scope} template={renaming} onClose={() => setRenaming(null)} />
       )}

@@ -5,28 +5,30 @@ import {
   Loader,
   Modal,
   NativeSelect,
-  Pagination,
   Select,
   Stack,
-  Table,
   Text,
   Textarea,
   TextInput,
-  VisuallyHidden,
 } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
+import { DataTable } from '../../components/DataTable';
+import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { FIRST_PAGE, useListState } from '../../components/useListState';
 import { useMe } from '../auth/useAuth';
-import { useConnections } from '../connections/useConnections';
+import { OPTIONS_PAGE_SIZE, useConnections } from '../connections/useConnections';
 import { LaunchRunModal } from '../runs/LaunchRunModal';
 import { RunsTable } from '../runs/RunsTable';
-import { PAGE_SIZE, type RunStatus, useProjectRuns } from '../runs/useRuns';
+import { type RunStatus, useProjectRuns } from '../runs/useRuns';
 import {
   canRole,
+  type Member,
   type Project,
+  type ProjectConnection,
   type ProjectRole,
   useAddMember,
   useAddProjectConnection,
@@ -45,48 +47,42 @@ const ROLES: ProjectRole[] = ['owner', 'editor', 'viewer'];
 export function RunsTab({ project }: { project: Project }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<RunStatus | null>(null);
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
+  const list = useListState();
   const [launching, setLaunching] = useState(false);
-  const runs = useProjectRuns(project.id, { status, q: q.trim() }, page);
+  const runs = useProjectRuns(project.id, status, list.state);
   const connections = useProjectConnections(project.id);
 
   return (
     <Stack>
-      <Group justify="space-between" align="flex-end">
-        <Group align="flex-end">
-          <Select
-            label={t('runs.statusLabel')}
-            placeholder={t('runs.allStatuses')}
-            data={STATUSES.map((s) => ({ value: s, label: t(`runs.status.${s}`) }))}
-            value={status}
-            onChange={(next) => {
-              setStatus(next as RunStatus | null);
-              setPage(1);
-            }}
-            clearable
-            w={200}
-          />
-          <TextInput
-            label={t('runs.search')}
-            value={q}
-            onChange={(event) => {
-              setQ(event.currentTarget.value);
-              setPage(1);
-            }}
-            w={260}
-          />
-        </Group>
-        {canRole(project.my_role, 'editor') && (
+      {canRole(project.my_role, 'editor') && (
+        <Group justify="flex-end">
           <Button onClick={() => setLaunching(true)}>{t('runs.launch.open')}</Button>
-        )}
-      </Group>
+        </Group>
+      )}
       {runs.isPending && <Loader aria-label={t('common.loading')} />}
       {runs.isError && <ErrorAlert error={runs.error} />}
-      {runs.data && runs.data.items.length === 0 && <Text c="dimmed">{t('runs.emptyProject')}</Text>}
-      {runs.data && runs.data.items.length > 0 && <RunsTable runs={runs.data.items} />}
-      {runs.data && runs.data.total > PAGE_SIZE && (
-        <Pagination total={Math.ceil(runs.data.total / PAGE_SIZE)} value={page} onChange={setPage} />
+      {runs.data && (
+        <RunsTable
+          runs={runs.data.items}
+          total={runs.data.total}
+          label={t('projects.tabs.runs')}
+          empty={t('runs.emptyProject')}
+          toolbar={
+            <Select
+              label={t('runs.statusLabel')}
+              placeholder={t('runs.allStatuses')}
+              data={STATUSES.map((s) => ({ value: s, label: t(`runs.status.${s}`) }))}
+              value={status}
+              onChange={(next) => {
+                setStatus(next as RunStatus | null);
+                list.resetPage();
+              }}
+              clearable
+              w={200}
+            />
+          }
+          {...list.table}
+        />
       )}
       {launching && (
         <LaunchRunModal
@@ -103,7 +99,7 @@ export function RunsTab({ project }: { project: Project }) {
 export function ConnectionsTab({ project }: { project: Project }) {
   const { t } = useTranslation();
   const links = useProjectConnections(project.id);
-  const available = useConnections('', 1);
+  const available = useConnections(FIRST_PAGE, OPTIONS_PAGE_SIZE);
   const add = useAddProjectConnection(project.id);
   const remove = useRemoveProjectConnection(project.id);
   const [connectionId, setConnectionId] = useState<string | null>(null);
@@ -122,6 +118,60 @@ export function ConnectionsTab({ project }: { project: Project }) {
       },
     );
   };
+
+  const connectionColumns: Column<ProjectConnection>[] = [
+    {
+      key: 'alias',
+      header: t('projects.alias'),
+      sortable: true,
+      searchable: true,
+      value: (l) => l.alias,
+      cell: (l) => <Code>{l.alias}</Code>,
+    },
+    {
+      key: 'connection',
+      header: t('projects.connection'),
+      sortable: true,
+      searchable: true,
+      value: (l) => l.connection_name,
+      cell: (l) => l.connection_name,
+    },
+    {
+      key: 'db_type',
+      header: t('connections.engine'),
+      sortable: true,
+      searchable: true,
+      value: (l) => l.db_type,
+      cell: (l) => l.db_type,
+    },
+    {
+      key: 'access',
+      header: t('connections.access'),
+      sortable: true,
+      value: (l) => Number(l.read_only),
+      cell: (l) => (l.read_only ? t('connections.readOnly') : t('projects.readWrite')),
+    },
+    ...(editor
+      ? [
+          {
+            key: 'actions',
+            header: t('common.actions'),
+            hiddenHeader: true,
+            cell: (link: ProjectConnection) => (
+              <Button
+                size="xs"
+                color="red"
+                variant="light"
+                onClick={() => remove.mutate(link.alias)}
+                aria-label={t('projects.removeConnectionLabel', { alias: link.alias })}
+              >
+                {t('admin.allowlist.remove')}
+              </Button>
+            ),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <Stack>
@@ -159,46 +209,16 @@ export function ConnectionsTab({ project }: { project: Project }) {
       {links.isError && <ErrorAlert error={links.error} />}
       {links.data && links.data.length === 0 && <Text c="dimmed">{t('projects.noConnections')}</Text>}
       {links.data && links.data.length > 0 && (
-        <Table striped>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>{t('projects.alias')}</Table.Th>
-              <Table.Th>{t('projects.connection')}</Table.Th>
-              <Table.Th>{t('connections.engine')}</Table.Th>
-              <Table.Th>{t('connections.access')}</Table.Th>
-              {editor && (
-                <Table.Th>
-                  <VisuallyHidden>{t('common.actions')}</VisuallyHidden>
-                </Table.Th>
-              )}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {links.data.map((link) => (
-              <Table.Tr key={link.id}>
-                <Table.Td>
-                  <Code>{link.alias}</Code>
-                </Table.Td>
-                <Table.Td>{link.connection_name}</Table.Td>
-                <Table.Td>{link.db_type}</Table.Td>
-                <Table.Td>{link.read_only ? t('connections.readOnly') : t('projects.readWrite')}</Table.Td>
-                {editor && (
-                  <Table.Td>
-                    <Button
-                      size="xs"
-                      color="red"
-                      variant="light"
-                      onClick={() => remove.mutate(link.alias)}
-                      aria-label={t('projects.removeConnectionLabel', { alias: link.alias })}
-                    >
-                      {t('admin.allowlist.remove')}
-                    </Button>
-                  </Table.Td>
-                )}
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        <DataTable
+          mode="client"
+          label={t('projects.tabs.connections')}
+          searchLabel={t('projects.searchConnections')}
+          empty={t('table.noMatches')}
+          columns={connectionColumns}
+          rowKey={(link) => link.id}
+          rows={links.data}
+          initialSort={{ key: 'alias', order: 'asc' }}
+        />
       )}
     </Stack>
   );
@@ -216,6 +236,71 @@ export function MembersTab({ project }: { project: Project }) {
   const [role, setRole] = useState<ProjectRole>('viewer');
   const owner = canRole(project.my_role, 'owner');
   const roleOptions = ROLES.map((r) => ({ value: r, label: t(`projects.roles.${r}`) }));
+
+  const memberColumns: Column<Member>[] = [
+    {
+      key: 'username',
+      header: t('auth.username'),
+      sortable: true,
+      searchable: true,
+      value: (m) => m.username,
+      cell: (m) => m.username,
+    },
+    {
+      key: 'display_name',
+      header: t('admin.users.displayName'),
+      sortable: true,
+      searchable: true,
+      value: (m) => m.display_name,
+      cell: (m) => m.display_name,
+    },
+    {
+      key: 'role',
+      header: t('projects.role'),
+      sortable: true,
+      value: (m) => ROLES.indexOf(m.role),
+      cell: (member) =>
+        owner ? (
+          <Select
+            aria-label={t('projects.roleOf', { username: member.username })}
+            data={roleOptions}
+            value={member.role}
+            onChange={(next) => next && update.mutate({ userId: member.user_id, role: next as ProjectRole })}
+            allowDeselect={false}
+            w={160}
+          />
+        ) : (
+          t(`projects.roles.${member.role}`)
+        ),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      hiddenHeader: true,
+      cell: (member) => {
+        const self = member.user_id === me?.id;
+        return (
+          (owner || self) && (
+            <Button
+              size="xs"
+              color="red"
+              variant="light"
+              aria-label={
+                self ? t('projects.leave') : t('projects.removeMemberLabel', { username: member.username })
+              }
+              onClick={() =>
+                remove.mutate(member.user_id, {
+                  onSuccess: () => (self ? void navigate('/projects') : undefined),
+                })
+              }
+            >
+              {self ? t('projects.leave') : t('admin.allowlist.remove')}
+            </Button>
+          )
+        );
+      },
+    },
+  ];
 
   return (
     <Stack>
@@ -250,66 +335,15 @@ export function MembersTab({ project }: { project: Project }) {
       {members.isPending && <Loader aria-label={t('common.loading')} />}
       {members.isError && <ErrorAlert error={members.error} />}
       {members.data && (
-        <Table striped>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>{t('auth.username')}</Table.Th>
-              <Table.Th>{t('admin.users.displayName')}</Table.Th>
-              <Table.Th>{t('projects.role')}</Table.Th>
-              <Table.Th>
-                <VisuallyHidden>{t('common.actions')}</VisuallyHidden>
-              </Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {members.data.map((member) => {
-              const self = member.user_id === me?.id;
-              return (
-                <Table.Tr key={member.user_id}>
-                  <Table.Td>{member.username}</Table.Td>
-                  <Table.Td>{member.display_name}</Table.Td>
-                  <Table.Td>
-                    {owner ? (
-                      <Select
-                        aria-label={t('projects.roleOf', { username: member.username })}
-                        data={roleOptions}
-                        value={member.role}
-                        onChange={(next) =>
-                          next && update.mutate({ userId: member.user_id, role: next as ProjectRole })
-                        }
-                        allowDeselect={false}
-                        w={160}
-                      />
-                    ) : (
-                      t(`projects.roles.${member.role}`)
-                    )}
-                  </Table.Td>
-                  <Table.Td>
-                    {(owner || self) && (
-                      <Button
-                        size="xs"
-                        color="red"
-                        variant="light"
-                        aria-label={
-                          self
-                            ? t('projects.leave')
-                            : t('projects.removeMemberLabel', { username: member.username })
-                        }
-                        onClick={() =>
-                          remove.mutate(member.user_id, {
-                            onSuccess: () => (self ? void navigate('/projects') : undefined),
-                          })
-                        }
-                      >
-                        {self ? t('projects.leave') : t('admin.allowlist.remove')}
-                      </Button>
-                    )}
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
-          </Table.Tbody>
-        </Table>
+        <DataTable
+          mode="client"
+          label={t('projects.tabs.members')}
+          searchLabel={t('projects.searchMembers')}
+          empty={t('table.noMatches')}
+          columns={memberColumns}
+          rowKey={(member) => member.user_id}
+          rows={members.data}
+        />
       )}
     </Stack>
   );

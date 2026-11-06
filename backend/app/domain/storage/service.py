@@ -4,9 +4,10 @@ usuario y «Mi espacio». Los permisos (admin o el propio usuario) los comprueba
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from app.db.models import AppSetting, Run, Upload, User, utcnow
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.runs.service import retention_candidates
+from app.domain.sorting import SortOrder, like_pattern
 from app.domain.storage.purge import select_for_quota
 from app.domain.storage.settings import (
     MAINTENANCE_KEY,
@@ -174,16 +176,48 @@ def _bytes_by_user(db: Session, user_ids: list[int] | None = None) -> tuple[dict
     return runs, uploads
 
 
-def usage_page(db: Session, settings: Settings, *, q: str | None, limit: int, offset: int) -> tuple[list[Usage], int]:
-    """Uso por usuario, de más a menos espacio (con ``q``, solo usuarios cuyo nombre lo contiene)."""
+UsageSort = Literal["username", "used_bytes", "quota_bytes", "used_pct"]
+
+
+def _usage_key(sort: UsageSort) -> Callable[[Usage], Any]:
+    """Clave de orden en memoria (el uso se calcula por usuario); sin cuota va al final en ascendente."""
+    if sort == "username":
+        return lambda u: u.username.lower()
+    if sort == "used_bytes":
+        return lambda u: u.used_bytes
+    if sort == "quota_bytes":
+        return lambda u: (u.quota_bytes is None, u.quota_bytes or 0)
+    return lambda u: (u.used_pct is None, u.used_pct or 0)
+
+
+def usage_page(
+    db: Session,
+    settings: Settings,
+    *,
+    q: str | None,
+    limit: int,
+    offset: int,
+    sort: UsageSort | None = None,
+    order: SortOrder | None = None,
+) -> tuple[list[Usage], int]:
+    """Uso por usuario (de más a menos espacio si no se pide otro orden; con ``q``, solo usuarios cuyo nombre lo
+    contiene)."""
     effective = effective_settings(db, settings)
     query = select(User)
-    if q:
-        pattern = f"%{q.strip().lower()}%"
-        query = query.where(func.lower(User.username).like(pattern) | func.lower(User.display_name).like(pattern))
+    if q and q.strip():
+        pattern = like_pattern(q)
+        query = query.where(
+            func.lower(User.username).like(pattern, escape="\\")
+            | func.lower(User.display_name).like(pattern, escape="\\")
+        )
     users = db.scalars(query).all()
     runs, uploads = _bytes_by_user(db)
-    items = sorted((_usage(u, effective, runs, uploads) for u in users), key=lambda u: (-u.used_bytes, u.username))
+    usages = [_usage(u, effective, runs, uploads) for u in users]
+    if sort is None:
+        items = sorted(usages, key=lambda u: (-u.used_bytes, u.username))
+    else:
+        by_id = sorted(usages, key=lambda u: u.user_id, reverse=order == "desc")  # desempate estable
+        items = sorted(by_id, key=_usage_key(sort), reverse=order == "desc")
     return items[offset : offset + limit], len(items)
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any, Final, Literal
 
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, joinedload
@@ -13,6 +14,7 @@ from app.core.security import hash_token, new_session_token
 from app.db.models import User, UserSession, utcnow
 from app.domain.identity.audit import RequestContext
 from app.domain.identity.errors import SessionNotFoundError
+from app.domain.sorting import SortOrder, like_pattern, order_by
 
 # ``last_seen_at`` se escribe como mucho una vez por minuto y sesión: SQLite tiene un único escritor.
 TOUCH_INTERVAL = timedelta(seconds=60)
@@ -112,19 +114,48 @@ def get_session_by_id(db: Session, session_id: int) -> UserSession:
     return session
 
 
+SessionSort = Literal["user", "created_at", "last_seen_at", "expires_at", "ip"]
+_SESSION_SORT: Final[dict[str, Any]] = {
+    "user": func.lower(User.username),
+    "created_at": UserSession.created_at,
+    "last_seen_at": UserSession.last_seen_at,
+    "expires_at": UserSession.expires_at,
+    "ip": func.coalesce(UserSession.ip, ""),
+}
+
+
 def list_sessions(
-    db: Session, settings: Settings, *, user_id: int | None, limit: int, offset: int, now: datetime | None = None
+    db: Session,
+    settings: Settings,
+    *,
+    user_id: int | None,
+    limit: int,
+    offset: int,
+    now: datetime | None = None,
+    q: str | None = None,
+    sort: SessionSort | None = None,
+    order: SortOrder | None = None,
 ) -> tuple[list[UserSession], int]:
-    """Sesiones vigentes, más recientes primero, opcionalmente de un usuario."""
+    """Sesiones vigentes (actividad más reciente primero si no se pide otro orden), de un usuario o con ``q`` en el
+    usuario, la IP o el agente."""
     now = now or utcnow()
-    query = select(UserSession).where(UserSession.expires_at > now, UserSession.last_seen_at > now - _idle(settings))
+    query = (
+        select(UserSession)
+        .join(User, User.id == UserSession.user_id)
+        .where(UserSession.expires_at > now, UserSession.last_seen_at > now - _idle(settings))
+    )
     if user_id is not None:
         query = query.where(UserSession.user_id == user_id)
+    if q and q.strip():
+        pattern = like_pattern(q)
+        query = query.where(
+            or_(
+                func.lower(User.username).like(pattern, escape="\\"),
+                func.lower(func.coalesce(UserSession.ip, "")).like(pattern, escape="\\"),
+                func.lower(func.coalesce(UserSession.user_agent, "")).like(pattern, escape="\\"),
+            )
+        )
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = db.scalars(
-        query.options(joinedload(UserSession.user))
-        .order_by(UserSession.last_seen_at.desc())
-        .limit(limit)
-        .offset(offset)
-    ).all()
+    clauses = order_by(_SESSION_SORT, sort, order, default=[UserSession.last_seen_at.desc()], tiebreak=UserSession.id)
+    rows = db.scalars(query.options(joinedload(UserSession.user)).order_by(*clauses).limit(limit).offset(offset)).all()
     return list(rows), total

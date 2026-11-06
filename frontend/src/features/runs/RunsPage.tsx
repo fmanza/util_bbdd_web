@@ -1,16 +1,16 @@
-import { Center, Loader, Pagination, Stack, Text, Title } from '@mantine/core';
-import { useState } from 'react';
+import { Center, Loader, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { useListState } from '../../components/useListState';
 import { RunsTable } from './RunsTable';
-import { PAGE_SIZE, useMyRuns } from './useRuns';
+import { useMyRuns } from './useRuns';
 
 /** Ejecuciones recientes de todos mis proyectos. */
 export function RunsPage() {
   const { t } = useTranslation();
-  const [page, setPage] = useState(1);
-  const { data, isPending, isError, error } = useMyRuns(page);
+  const list = useListState();
+  const { data, isPending, isError, error } = useMyRuns(list.state);
 
   return (
     <Stack>
@@ -22,10 +22,15 @@ export function RunsPage() {
         </Center>
       )}
       {isError && <ErrorAlert error={error} />}
-      {data && data.items.length === 0 && <Text c="dimmed">{t('runs.empty')}</Text>}
-      {data && data.items.length > 0 && <RunsTable runs={data.items} showProject />}
-      {data && data.total > PAGE_SIZE && (
-        <Pagination total={Math.ceil(data.total / PAGE_SIZE)} value={page} onChange={setPage} />
+      {data && (
+        <RunsTable
+          runs={data.items}
+          total={data.total}
+          showProject
+          label={t('runs.title')}
+          empty={t('runs.empty')}
+          {...list.table}
+        />
       )}
     </Stack>
   );

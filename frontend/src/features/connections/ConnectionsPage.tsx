@@ -1,24 +1,13 @@
-import {
-  Anchor,
-  Badge,
-  Button,
-  Center,
-  Group,
-  Loader,
-  Pagination,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
-import { useState } from 'react';
+import { Anchor, Badge, Button, Center, Group, Loader, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import { DataTable } from '../../components/DataTable';
+import type { Column } from '../../components/tableState';
+import { useListState } from '../../components/useListState';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatDateTime } from '../../components/format';
-import { type ConnectionInfo, PAGE_SIZE, targetSummary, useConnections } from './useConnections';
+import { type ConnectionInfo, targetSummary, useConnections } from './useConnections';
 
 export function LastTestBadge({ connection }: { connection: ConnectionInfo }) {
   const { t } = useTranslation();
@@ -38,9 +27,52 @@ export function LastTestBadge({ connection }: { connection: ConnectionInfo }) {
 
 export function ConnectionsPage() {
   const { t } = useTranslation();
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
-  const { data, isPending, isError, error } = useConnections(q.trim(), page);
+  const list = useListState();
+  const { data, isPending, isError, error } = useConnections(list.state);
+  const columns: Column<ConnectionInfo>[] = [
+    {
+      key: 'name',
+      header: t('connections.name'),
+      sortable: true,
+      rowHeader: true,
+      cell: (c) => (
+        <Anchor component={Link} to={`/connections/${c.id}`}>
+          {c.name}
+        </Anchor>
+      ),
+    },
+    { key: 'db_type', header: t('connections.engine'), sortable: true, cell: (c) => c.db_type },
+    {
+      key: 'target',
+      header: t('connections.target'),
+      cell: (c) => (
+        <Text size="sm" ff="monospace">
+          {targetSummary(c) || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'visibility',
+      header: t('connections.access'),
+      sortable: true,
+      cell: (c) => (
+        <Group gap={4}>
+          {c.visibility === 'shared' && <Badge variant="light">{t('connections.visibility.shared')}</Badge>}
+          {c.read_only && (
+            <Badge variant="outline" color="gray">
+              {t('connections.readOnly')}
+            </Badge>
+          )}
+        </Group>
+      ),
+    },
+    {
+      key: 'last_test_at',
+      header: t('connections.lastTest'),
+      sortable: true,
+      cell: (c) => <LastTestBadge connection={c} />,
+    },
+  ];
 
   return (
     <Stack>
@@ -50,71 +82,25 @@ export function ConnectionsPage() {
           {t('connections.new')}
         </Button>
       </Group>
-      <TextInput
-        label={t('connections.search')}
-        value={q}
-        onChange={(event) => {
-          setQ(event.currentTarget.value);
-          setPage(1);
-        }}
-        maw={320}
-      />
       {isPending && (
         <Center>
           <Loader aria-label={t('common.loading')} />
         </Center>
       )}
       {isError && <ErrorAlert error={error} />}
-      {data && data.items.length === 0 && <Text c="dimmed">{t('connections.empty')}</Text>}
-      {data && data.items.length > 0 && (
-        <Table.ScrollContainer minWidth={820}>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('connections.name')}</Table.Th>
-                <Table.Th>{t('connections.engine')}</Table.Th>
-                <Table.Th>{t('connections.target')}</Table.Th>
-                <Table.Th>{t('connections.access')}</Table.Th>
-                <Table.Th>{t('connections.lastTest')}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.items.map((connection) => (
-                <Table.Tr key={connection.id}>
-                  <Table.Th scope="row">
-                    <Anchor component={Link} to={`/connections/${connection.id}`}>
-                      {connection.name}
-                    </Anchor>
-                  </Table.Th>
-                  <Table.Td>{connection.db_type}</Table.Td>
-                  <Table.Td>
-                    <Text size="sm" ff="monospace">
-                      {targetSummary(connection) || '—'}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap={4}>
-                      {connection.visibility === 'shared' && (
-                        <Badge variant="light">{t('connections.visibility.shared')}</Badge>
-                      )}
-                      {connection.read_only && (
-                        <Badge variant="outline" color="gray">
-                          {t('connections.readOnly')}
-                        </Badge>
-                      )}
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <LastTestBadge connection={connection} />
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      )}
-      {data && data.total > PAGE_SIZE && (
-        <Pagination total={Math.ceil(data.total / PAGE_SIZE)} value={page} onChange={setPage} />
+      {data && (
+        <DataTable
+          mode="server"
+          label={t('connections.title')}
+          searchLabel={t('connections.search')}
+          empty={t('connections.empty')}
+          columns={columns}
+          rowKey={(c) => c.id}
+          rows={data.items}
+          total={data.total}
+          minWidth={820}
+          {...list.table}
+        />
       )}
     </Stack>
   );

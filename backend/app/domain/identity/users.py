@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Final, Literal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -19,6 +20,7 @@ from app.domain.identity.errors import (
 )
 from app.domain.identity.passwords import check_policy, hash_password
 from app.domain.identity.sessions import revoke_user_sessions
+from app.domain.sorting import SortOrder, like_pattern, order_by
 
 
 def normalize_username(username: str) -> str:
@@ -59,14 +61,37 @@ def get_by_username(db: Session, username: str) -> User | None:
     return db.scalar(select(User).where(User.username == normalize_username(username)))
 
 
-def list_users(db: Session, *, q: str | None, limit: int, offset: int) -> tuple[list[User], int]:
-    """Usuarios ordenados por nombre, filtrados por texto en usuario o nombre visible."""
+UserSort = Literal["username", "display_name", "role", "created_at"]
+_USER_SORT: Final[dict[str, Any]] = {
+    "username": User.username,
+    "display_name": func.lower(User.display_name),
+    "role": User.role,
+    "created_at": User.created_at,
+}
+
+
+def list_users(
+    db: Session,
+    *,
+    q: str | None,
+    limit: int,
+    offset: int,
+    sort: UserSort | None = None,
+    order: SortOrder | None = None,
+) -> tuple[list[User], int]:
+    """Usuarios (por nombre de usuario si no se pide otro orden), filtrados por texto en usuario o nombre visible."""
     query = select(User)
-    if q:
-        pattern = f"%{q.strip().lower()}%"
-        query = query.where(or_(User.username.like(pattern), func.lower(User.display_name).like(pattern)))
+    if q and q.strip():
+        pattern = like_pattern(q)
+        query = query.where(
+            or_(
+                func.lower(User.username).like(pattern, escape="\\"),
+                func.lower(User.display_name).like(pattern, escape="\\"),
+            )
+        )
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = db.scalars(query.order_by(User.username).limit(limit).offset(offset)).all()
+    clauses = order_by(_USER_SORT, sort, order, default=[User.username], tiebreak=User.id)
+    rows = db.scalars(query.order_by(*clauses).limit(limit).offset(offset)).all()
     return list(rows), total
 
 

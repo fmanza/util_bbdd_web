@@ -9,6 +9,8 @@ from fastapi import APIRouter, Query
 from app.api.deps import AdminUser, DbSession
 from app.api.v1.schemas import MAX_PAGE_SIZE, AuditEntryOut, AuditPage
 from app.domain.identity import audit
+from app.domain.identity.audit import AuditSort
+from app.domain.sorting import SortOrder
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
@@ -24,9 +26,14 @@ def list_audit(
     db: DbSession,
     action: Annotated[str | None, Query(max_length=64, description="Acción o prefijo, p. ej. `auth.`")] = None,
     actor_id: Annotated[int | None, Query(ge=1)] = None,
+    q: Annotated[str | None, Query(max_length=100, description="Acción, actor, objetivo o IP")] = None,
+    sort: AuditSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> AuditPage:
-    """Eventos más recientes primero."""
-    rows, total = audit.list_entries(db, action=action, actor_id=actor_id, limit=limit, offset=offset)
+    """Eventos (más recientes primero si no se pide otro orden)."""
+    rows, total = audit.list_entries(
+        db, action=action, actor_id=actor_id, limit=limit, offset=offset, q=q, sort=sort, order=order
+    )
     return AuditPage(items=[AuditEntryOut.model_validate(e) for e in rows], total=total)

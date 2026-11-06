@@ -9,6 +9,8 @@ from fastapi import APIRouter, Query, status
 from app.api.deps import AdminUser, Context, CurrentSession, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE, SessionOut, SessionPage
 from app.domain.identity import auth, sessions
+from app.domain.identity.sessions import SessionSort
+from app.domain.sorting import SortOrder
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -25,11 +27,16 @@ def list_sessions(
     db: DbSession,
     settings: SettingsDep,
     user_id: Annotated[int | None, Query(ge=1)] = None,
+    q: Annotated[str | None, Query(max_length=100, description="Usuario, IP o agente")] = None,
+    sort: SessionSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> SessionPage:
-    """Sesiones vigentes, la actividad más reciente primero."""
-    rows, total = sessions.list_sessions(db, settings, user_id=user_id, limit=limit, offset=offset)
+    """Sesiones vigentes (la actividad más reciente primero si no se pide otro orden)."""
+    rows, total = sessions.list_sessions(
+        db, settings, user_id=user_id, limit=limit, offset=offset, q=q, sort=sort, order=order
+    )
     items = [
         SessionOut(
             id=s.id,

@@ -46,7 +46,8 @@
       "revokeLabel": "Revocar sesión de {{username}}",
       "confirmTitle": "Revocar sesión",
       "confirmBody": "Se cerrará la sesión de {{username}} desde {{ip}}.",
-      "confirmCurrent": "Es tu sesión actual: tendrás que volver a iniciar sesión."
+      "confirmCurrent": "Es tu sesión actual: tendrás que volver a iniciar sesión.",
+      "search": "Buscar por usuario, IP o navegador"
     },
     "audit": {
       "title": "Auditoría",
@@ -127,7 +128,8 @@
           "update": "Query editada",
           "delete": "Query borrada"
         }
-      }
+      },
+      "search": "Buscar por acción, actor, objetivo o IP"
     },
     "allowlist": {
       "title": "Destinos permitidos",
@@ -141,7 +143,8 @@
       "remove": "Quitar",
       "removeLabel": "Quitar {{pattern}}",
       "removeTitle": "Quitar destino",
-      "removeBody": "Las conexiones a «{{pattern}}» dejarán de poder usarse."
+      "removeBody": "Las conexiones a «{{pattern}}» dejarán de poder usarse.",
+      "search": "Buscar por patrón o descripción"
     },
     "queries": {
       "title": "Queries nombradas",
@@ -158,7 +161,8 @@
       "editLabel": "Editar {{name}}",
       "deleteLabel": "Borrar {{name}}",
       "deleteTitle": "Borrar query",
-      "deleteBody": "Se borrará la query «{{name}}» de {{engine}}."
+      "deleteBody": "Se borrará la query «{{name}}» de {{engine}}.",
+      "search": "Buscar por motor, nombre o descripción"
     },
     "runs": {
       "title": "Ejecuciones de todos los proyectos",
@@ -239,7 +243,8 @@
       "port": "puerto",
       "path": "ruta",
       "blocked": "no admitido"
-    }
+    },
+    "search": "Buscar motor"
   },
   "connections": {
     "title": "Conexiones",
@@ -352,7 +357,9 @@
     "delete": "Borrar proyecto",
     "deleteTitle": "Borrar proyecto",
     "deleteBody": "Se borrará el proyecto «{{name}}» con todas sus ejecuciones y ficheros. No se puede deshacer.",
-    "chooseConnection": "Elige una conexión"
+    "chooseConnection": "Elige una conexión",
+    "searchConnections": "Buscar por alias, conexión o motor",
+    "searchMembers": "Buscar miembro"
   },
   "runs": {
     "title": "Ejecuciones",
@@ -1240,7 +1247,8 @@
     "deleteTitle": "Borrar plantilla",
     "deleteBody": "Se borrará la plantilla «{{name}}». Las documentaciones ya generadas no cambian.",
     "readOnly": "Solo los editores del proyecto pueden subir, cambiar o borrar plantillas.",
-    "defaultStyle": "Por defecto"
+    "defaultStyle": "Por defecto",
+    "search": "Buscar plantilla"
   },
   "storage": {
     "title": "Almacenamiento",
@@ -1315,6 +1323,7 @@
   },
   "table": {
     "sortBy": "Ordenar por {{column}}",
-    "range": "{{first}}-{{last}} de {{total}}"
+    "range": "{{first}}-{{last}} de {{total}}",
+    "noMatches": "Nada coincide con la búsqueda."
   }
 }

@@ -1,10 +1,12 @@
-import { Anchor, Badge, Center, Loader, Stack, Table, Text, Title } from '@mantine/core';
+import { Anchor, Badge, Center, Loader, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import { DataTable } from '../../components/DataTable';
+import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { DriverBadges } from './DriverBadges';
-import { useEngines } from './useEngines';
+import { type Engine, useEngines } from './useEngines';
 
 export function YesNo({ value }: { value: boolean }) {
   const { t } = useTranslation();
@@ -19,6 +21,59 @@ export function EnginesPage() {
   const { t } = useTranslation();
   const { data, isPending, isError, error } = useEngines();
 
+  const columns: Column<Engine>[] = [
+    {
+      key: 'name',
+      header: t('engines.engine'),
+      sortable: true,
+      searchable: true,
+      rowHeader: true,
+      value: (e) => `${e.name} ${e.db_type}`,
+      cell: (e) => (
+        <Anchor component={Link} to={`/engines/${e.db_type}`}>
+          {e.name}
+        </Anchor>
+      ),
+    },
+    { key: 'versions', header: t('engines.versions'), cell: (e) => e.version_range || '—' },
+    {
+      key: 'port',
+      header: t('engines.port'),
+      sortable: true,
+      value: (e) => e.default_port ?? null,
+      cell: (e) => e.default_port ?? '—',
+    },
+    { key: 'drivers', header: t('engines.drivers'), cell: (e) => <DriverBadges engine={e} /> },
+    {
+      key: 'async',
+      header: t('engines.async'),
+      sortable: true,
+      value: (e) => Number(e.capabilities.async_supported),
+      cell: (e) => <YesNo value={e.capabilities.async_supported} />,
+    },
+    {
+      key: 'migrate_source',
+      header: t('engines.migrateSource'),
+      sortable: true,
+      value: (e) => Number(e.capabilities.migrate_source),
+      cell: (e) => <YesNo value={e.capabilities.migrate_source} />,
+    },
+    {
+      key: 'migrate_target',
+      header: t('engines.migrateTarget'),
+      sortable: true,
+      value: (e) => Number(e.capabilities.migrate_target),
+      cell: (e) => <YesNo value={e.capabilities.migrate_target} />,
+    },
+    {
+      key: 'readiness',
+      header: t('engines.readiness'),
+      sortable: true,
+      value: (e) => Number(e.capabilities.readiness),
+      cell: (e) => <YesNo value={e.capabilities.readiness} />,
+    },
+  ];
+
   return (
     <Stack>
       <Title order={2}>{t('engines.title')}</Title>
@@ -30,51 +85,17 @@ export function EnginesPage() {
       )}
       {isError && <ErrorAlert error={error} />}
       {data && (
-        <Table.ScrollContainer minWidth={900}>
-          <Table striped highlightOnHover>
-            <Table.Caption>{t('engines.matrixCaption')}</Table.Caption>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('engines.engine')}</Table.Th>
-                <Table.Th>{t('engines.versions')}</Table.Th>
-                <Table.Th>{t('engines.port')}</Table.Th>
-                <Table.Th>{t('engines.drivers')}</Table.Th>
-                <Table.Th>{t('engines.async')}</Table.Th>
-                <Table.Th>{t('engines.migrateSource')}</Table.Th>
-                <Table.Th>{t('engines.migrateTarget')}</Table.Th>
-                <Table.Th>{t('engines.readiness')}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.map((engine) => (
-                <Table.Tr key={engine.db_type}>
-                  <Table.Th scope="row">
-                    <Anchor component={Link} to={`/engines/${engine.db_type}`}>
-                      {engine.name}
-                    </Anchor>
-                  </Table.Th>
-                  <Table.Td>{engine.version_range || '—'}</Table.Td>
-                  <Table.Td>{engine.default_port ?? '—'}</Table.Td>
-                  <Table.Td>
-                    <DriverBadges engine={engine} />
-                  </Table.Td>
-                  <Table.Td>
-                    <YesNo value={engine.capabilities.async_supported} />
-                  </Table.Td>
-                  <Table.Td>
-                    <YesNo value={engine.capabilities.migrate_source} />
-                  </Table.Td>
-                  <Table.Td>
-                    <YesNo value={engine.capabilities.migrate_target} />
-                  </Table.Td>
-                  <Table.Td>
-                    <YesNo value={engine.capabilities.readiness} />
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+        <DataTable
+          mode="client"
+          label={t('engines.title')}
+          caption={t('engines.matrixCaption')}
+          searchLabel={t('engines.search')}
+          empty={t('table.noMatches')}
+          columns={columns}
+          rowKey={(engine) => engine.db_type}
+          rows={data}
+          minWidth={900}
+        />
       )}
     </Stack>
   );

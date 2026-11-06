@@ -1,14 +1,15 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, ensureOk, unwrap } from '../../api/client';
-import type { components } from '../../api/schema';
+import type { components, paths } from '../../api/schema';
+import { type ListState, listQuery } from '../../components/useListState';
 
 export type Project = components['schemas']['ProjectOut'];
 export type ProjectRole = Project['my_role'];
 export type Member = components['schemas']['MemberOut'];
 export type ProjectConnection = components['schemas']['ProjectConnectionOut'];
 
-export const PAGE_SIZE = 50;
+type ProjectSort = NonNullable<NonNullable<paths['/api/v1/projects']['get']['parameters']['query']>['sort']>;
 const RANK: Record<ProjectRole, number> = { viewer: 1, editor: 2, owner: 3 };
 
 /** El rol `role` llega al menos a `minimum` (viewer < editor < owner). */
@@ -16,13 +17,13 @@ export function canRole(role: ProjectRole | undefined, minimum: ProjectRole): bo
   return role !== undefined && RANK[role] >= RANK[minimum];
 }
 
-export function useProjects(q: string, page: number) {
+export function useProjects(list: ListState) {
   return useQuery({
-    queryKey: ['projects', { q, page }],
+    queryKey: ['projects', list],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/projects', {
-          params: { query: { q: q || null, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE } },
+          params: { query: listQuery<ProjectSort>(list) },
         }),
       ),
     placeholderData: keepPreviousData,

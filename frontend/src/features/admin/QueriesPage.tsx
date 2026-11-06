@@ -6,17 +6,17 @@ import {
   Modal,
   NativeSelect,
   Stack,
-  Table,
   Text,
   Textarea,
   TextInput,
   Title,
-  VisuallyHidden,
 } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isApiError } from '../../api/client';
+import { DataTable } from '../../components/DataTable';
+import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { useEngines } from '../engines/useEngines';
 import { type NamedQuery, useAdminQueries, useDeleteQuery, useSaveQuery } from '../explorer/useExplorer';
@@ -104,6 +104,69 @@ export function QueriesPage() {
   const [editing, setEditing] = useState<{ query: NamedQuery | null } | null>(null);
   const [deleting, setDeleting] = useState<NamedQuery | null>(null);
 
+  const columns: Column<NamedQuery>[] = [
+    {
+      key: 'db_type',
+      header: t('connections.engine'),
+      sortable: true,
+      searchable: true,
+      value: (q) => q.db_type,
+      cell: (q) => q.db_type,
+    },
+    {
+      key: 'name',
+      header: t('admin.queries.name'),
+      sortable: true,
+      searchable: true,
+      value: (q) => `${q.name} ${q.description}`,
+      cell: (q) => (
+        <>
+          <Code>{q.name}</Code>
+          {q.description && (
+            <Text size="xs" c="dimmed">
+              {q.description}
+            </Text>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'params',
+      header: t('admin.queries.params'),
+      cell: (q) => (
+        <Text size="sm" ff="monospace">
+          {q.params.join(', ') || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      hiddenHeader: true,
+      cell: (query) => (
+        <Group gap={4}>
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => setEditing({ query })}
+            aria-label={t('admin.queries.editLabel', { name: query.name })}
+          >
+            {t('common.edit')}
+          </Button>
+          <Button
+            size="xs"
+            color="red"
+            variant="light"
+            onClick={() => setDeleting(query)}
+            aria-label={t('admin.queries.deleteLabel', { name: query.name })}
+          >
+            {t('common.delete')}
+          </Button>
+        </Group>
+      ),
+    },
+  ];
+
   return (
     <Stack maw={1000}>
       <Group justify="space-between">
@@ -115,55 +178,15 @@ export function QueriesPage() {
       {queries.isError && <ErrorAlert error={queries.error} />}
       {queries.data && queries.data.length === 0 && <Text c="dimmed">{t('admin.queries.empty')}</Text>}
       {queries.data && queries.data.length > 0 && (
-        <Table striped>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>{t('connections.engine')}</Table.Th>
-              <Table.Th>{t('admin.queries.name')}</Table.Th>
-              <Table.Th>{t('admin.queries.params')}</Table.Th>
-              <Table.Th>
-                <VisuallyHidden>{t('common.actions')}</VisuallyHidden>
-              </Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {queries.data.map((query) => (
-              <Table.Tr key={query.id}>
-                <Table.Td>{query.db_type}</Table.Td>
-                <Table.Td>
-                  <Code>{query.name}</Code>
-                  {query.description && (
-                    <Text size="xs" c="dimmed">
-                      {query.description}
-                    </Text>
-                  )}
-                </Table.Td>
-                <Table.Td ff="monospace">{query.params.join(', ') || '—'}</Table.Td>
-                <Table.Td>
-                  <Group gap={4}>
-                    <Button
-                      size="xs"
-                      variant="light"
-                      onClick={() => setEditing({ query })}
-                      aria-label={t('admin.queries.editLabel', { name: query.name })}
-                    >
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      size="xs"
-                      color="red"
-                      variant="light"
-                      onClick={() => setDeleting(query)}
-                      aria-label={t('admin.queries.deleteLabel', { name: query.name })}
-                    >
-                      {t('common.delete')}
-                    </Button>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        <DataTable
+          mode="client"
+          label={t('admin.queries.title')}
+          searchLabel={t('admin.queries.search')}
+          empty={t('table.noMatches')}
+          columns={columns}
+          rowKey={(query) => query.id}
+          rows={queries.data}
+        />
       )}
       {editing && (
         <QueryModal key={editing.query?.id ?? 'new'} query={editing.query} onClose={() => setEditing(null)} />

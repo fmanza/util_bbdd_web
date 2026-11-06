@@ -1,21 +1,13 @@
-import {
-  Badge,
-  Center,
-  Code,
-  Loader,
-  Pagination,
-  SegmentedControl,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from '@mantine/core';
+import { Badge, Center, Code, Loader, SegmentedControl, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DataTable } from '../../components/DataTable';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatDateTime } from '../../components/format';
-import { PAGE_SIZE, useAudit } from './useAdmin';
+import type { Column } from '../../components/tableState';
+import { useListState } from '../../components/useListState';
+import { type AuditEntry, useAudit } from './useAdmin';
 
 // Filtro por prefijo de acción (`auth.login`, `user.create`…).
 const ACTION_FILTERS = [
@@ -34,8 +26,45 @@ const ACTION_FILTERS = [
 export function AuditPage() {
   const { t } = useTranslation();
   const [action, setAction] = useState('');
-  const [page, setPage] = useState(1);
-  const { data, isPending, isError, error } = useAudit(action, page);
+  const list = useListState();
+  const { data, isPending, isError, error } = useAudit(action, list.state);
+  const columns: Column<AuditEntry>[] = [
+    { key: 'ts', header: t('admin.audit.ts'), sortable: true, cell: (e) => formatDateTime(e.ts) },
+    {
+      key: 'action',
+      header: t('admin.audit.action'),
+      sortable: true,
+      cell: (e) => t(`admin.audit.actions.${e.action}`, { defaultValue: e.action }),
+    },
+    {
+      key: 'outcome',
+      header: t('admin.audit.outcome'),
+      sortable: true,
+      cell: (e) => (
+        <Badge color={e.outcome === 'success' ? 'green' : 'red'} variant="light">
+          {t(`admin.audit.outcomes.${e.outcome}`, { defaultValue: e.outcome })}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actor',
+      header: t('admin.audit.actor'),
+      sortable: true,
+      cell: (e) => e.actor_username ?? t('admin.audit.system'),
+    },
+    {
+      key: 'target',
+      header: t('admin.audit.target'),
+      sortable: true,
+      cell: (e) => (e.target_type ? `${e.target_type} #${e.target_id ?? ''}` : '—'),
+    },
+    { key: 'ip', header: t('admin.sessions.ip'), cell: (e) => e.ip ?? '—' },
+    {
+      key: 'details',
+      header: t('admin.audit.details'),
+      cell: (e) => (e.details ? <Code>{JSON.stringify(e.details)}</Code> : '—'),
+    },
+  ];
 
   return (
     <Stack>
@@ -50,7 +79,7 @@ export function AuditPage() {
           value={action}
           onChange={(value) => {
             setAction(value);
-            setPage(1);
+            list.resetPage();
           }}
           w="fit-content"
         />
@@ -61,47 +90,19 @@ export function AuditPage() {
         </Center>
       )}
       {isError && <ErrorAlert error={error} />}
-      {data && data.items.length === 0 && <Text c="dimmed">{t('admin.audit.empty')}</Text>}
-      {data && data.items.length > 0 && (
-        <Table.ScrollContainer minWidth={820}>
-          <Table striped>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('admin.audit.ts')}</Table.Th>
-                <Table.Th>{t('admin.audit.action')}</Table.Th>
-                <Table.Th>{t('admin.audit.outcome')}</Table.Th>
-                <Table.Th>{t('admin.audit.actor')}</Table.Th>
-                <Table.Th>{t('admin.audit.target')}</Table.Th>
-                <Table.Th>{t('admin.sessions.ip')}</Table.Th>
-                <Table.Th>{t('admin.audit.details')}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.items.map((entry) => (
-                <Table.Tr key={entry.id}>
-                  <Table.Td>{formatDateTime(entry.ts)}</Table.Td>
-                  <Table.Td>
-                    {t(`admin.audit.actions.${entry.action}`, { defaultValue: entry.action })}
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={entry.outcome === 'success' ? 'green' : 'red'} variant="light">
-                      {t(`admin.audit.outcomes.${entry.outcome}`, { defaultValue: entry.outcome })}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{entry.actor_username ?? t('admin.audit.system')}</Table.Td>
-                  <Table.Td>
-                    {entry.target_type ? `${entry.target_type} #${entry.target_id ?? ''}` : '—'}
-                  </Table.Td>
-                  <Table.Td>{entry.ip ?? '—'}</Table.Td>
-                  <Table.Td>{entry.details ? <Code>{JSON.stringify(entry.details)}</Code> : '—'}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      )}
-      {data && data.total > PAGE_SIZE && (
-        <Pagination total={Math.ceil(data.total / PAGE_SIZE)} value={page} onChange={setPage} />
+      {data && (
+        <DataTable
+          mode="server"
+          label={t('admin.audit.title')}
+          searchLabel={t('admin.audit.search')}
+          empty={t('admin.audit.empty')}
+          columns={columns}
+          rowKey={(e) => e.id}
+          rows={data.items}
+          total={data.total}
+          minWidth={820}
+          {...list.table}
+        />
       )}
     </Stack>
   );

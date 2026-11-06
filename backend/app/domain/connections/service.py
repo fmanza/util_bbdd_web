@@ -35,6 +35,7 @@ from app.domain.connections.params import resolve_paths, validate_params, with_t
 from app.domain.engines import get_engine
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
+from app.domain.sorting import SortOrder, like_pattern, order_by
 from app.integrations.util_bbdd import probe
 from app.integrations.util_bbdd.catalog import EngineDetail, InvalidParamsError, build_params
 
@@ -100,20 +101,41 @@ def can_edit(user: User, connection: Connection) -> bool:
     return connection.owner_id == user.id or (connection.visibility == "shared" and user.role == "admin")
 
 
+ConnectionSort = Literal["name", "db_type", "visibility", "last_test_at"]
+_CONNECTION_SORT: Final[dict[str, Any]] = {
+    "name": func.lower(Connection.name),
+    "db_type": Connection.db_type,
+    "visibility": Connection.visibility,
+    "last_test_at": Connection.last_test_at,
+}
+
+
 def list_connections(
-    db: Session, user: User, *, db_type: str | None, q: str | None, limit: int, offset: int
+    db: Session,
+    user: User,
+    *,
+    db_type: str | None,
+    q: str | None,
+    limit: int,
+    offset: int,
+    sort: ConnectionSort | None = None,
+    order: SortOrder | None = None,
 ) -> tuple[list[Connection], int]:
-    """Conexiones visibles para ``user`` ordenadas por nombre."""
+    """Conexiones visibles para ``user`` (por nombre si no se pide otro orden)."""
     query = select(Connection).where(_visible(user))
     if db_type:
         query = query.where(Connection.db_type == db_type)
-    if q:
-        pattern = f"%{q.strip().lower()}%"
+    if q and q.strip():
+        pattern = like_pattern(q)
         query = query.where(
-            or_(func.lower(Connection.name).like(pattern), func.lower(Connection.description).like(pattern))
+            or_(
+                func.lower(Connection.name).like(pattern, escape="\\"),
+                func.lower(Connection.description).like(pattern, escape="\\"),
+            )
         )
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = db.scalars(query.order_by(func.lower(Connection.name), Connection.id).limit(limit).offset(offset)).all()
+    clauses = order_by(_CONNECTION_SORT, sort, order, default=[func.lower(Connection.name)], tiebreak=Connection.id)
+    rows = db.scalars(query.order_by(*clauses).limit(limit).offset(offset)).all()
     return list(rows), total
 
 

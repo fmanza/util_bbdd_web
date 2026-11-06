@@ -1,7 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, ensureOk, unwrap } from '../../api/client';
-import type { components } from '../../api/schema';
+import type { components, paths } from '../../api/schema';
+import { type ListState, listQuery } from '../../components/useListState';
 
 export type StorageSettings = components['schemas']['StorageSettingsOut'];
 export type StorageUpdate = components['schemas']['StorageUpdate'];
@@ -10,7 +11,6 @@ export type PurgePreview = components['schemas']['PurgePreviewOut'];
 export type Usage = components['schemas']['UsageOut'];
 export type MyStorage = components['schemas']['MyStorageOut'];
 
-export const USAGE_PAGE_SIZE = 50;
 const settingsKey = ['admin', 'storage'] as const;
 
 export function useStorageSettings() {
@@ -46,13 +46,17 @@ export function useRequestMaintenance() {
   });
 }
 
-export function useStorageUsage(q: string, page: number) {
+type UsageSort = NonNullable<
+  NonNullable<paths['/api/v1/admin/storage/usage']['get']['parameters']['query']>['sort']
+>;
+
+export function useStorageUsage(list: ListState) {
   return useQuery({
-    queryKey: [...settingsKey, 'usage', { q, page }],
+    queryKey: [...settingsKey, 'usage', list],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/admin/storage/usage', {
-          params: { query: { q: q || null, limit: USAGE_PAGE_SIZE, offset: (page - 1) * USAGE_PAGE_SIZE } },
+          params: { query: listQuery<UsageSort>(list) },
         }),
       ),
     placeholderData: keepPreviousData,

@@ -24,6 +24,8 @@ export interface Column<T> {
   searchable?: boolean;
   /** Cabecera solo para lectores de pantalla (columna de acciones). */
   hiddenHeader?: boolean;
+  /** La celda identifica la fila (`<th scope="row">`): nombre o id. */
+  rowHeader?: boolean;
 }
 
 /** asc → desc → sin orden (el de la lista). */

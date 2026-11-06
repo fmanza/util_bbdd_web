@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import Any, Final, Literal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -37,6 +37,7 @@ from app.domain.projects.errors import (
     ProjectNameTakenError,
     ProjectNotFoundError,
 )
+from app.domain.sorting import SortOrder, like_pattern, order_by
 from app.workspace.layout import remove_tree, safe_path
 
 _RANK: Final[dict[str, int]] = {"viewer": 1, "editor": 2, "owner": 3}
@@ -79,18 +80,42 @@ def get_membership(db: Session, user: User, project_id: int, minimum: ProjectRol
     return membership
 
 
-def list_projects(db: Session, user: User, *, q: str | None, limit: int, offset: int) -> tuple[list[Membership], int]:
-    """Proyectos de los que ``user`` es miembro, por nombre."""
+ProjectSort = Literal["name", "role", "created_at", "updated_at"]
+_PROJECT_SORT: Final[dict[str, Any]] = {
+    "name": func.lower(Project.name),
+    "role": ProjectMember.role,
+    "created_at": Project.created_at,
+    "updated_at": Project.updated_at,
+}
+
+
+def list_projects(
+    db: Session,
+    user: User,
+    *,
+    q: str | None,
+    limit: int,
+    offset: int,
+    sort: ProjectSort | None = None,
+    order: SortOrder | None = None,
+) -> tuple[list[Membership], int]:
+    """Proyectos de los que ``user`` es miembro (por nombre si no se pide otro orden)."""
     query = (
         select(Project, ProjectMember.role)
         .join(ProjectMember, ProjectMember.project_id == Project.id)
         .where(ProjectMember.user_id == user.id)
     )
-    if q:
-        pattern = f"%{q.strip().lower()}%"
-        query = query.where(or_(func.lower(Project.name).like(pattern), func.lower(Project.description).like(pattern)))
+    if q and q.strip():
+        pattern = like_pattern(q)
+        query = query.where(
+            or_(
+                func.lower(Project.name).like(pattern, escape="\\"),
+                func.lower(Project.description).like(pattern, escape="\\"),
+            )
+        )
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = db.execute(query.order_by(func.lower(Project.name), Project.id).limit(limit).offset(offset)).all()
+    clauses = order_by(_PROJECT_SORT, sort, order, default=[func.lower(Project.name)], tiebreak=Project.id)
+    rows = db.execute(query.order_by(*clauses).limit(limit).offset(offset)).all()
     return [Membership(project=p, role=_role(r)) for p, r in rows], total
 
 

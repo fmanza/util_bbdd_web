@@ -6,9 +6,7 @@ import {
   Group,
   Loader,
   Modal,
-  Pagination,
   Stack,
-  Table,
   Text,
   Textarea,
   TextInput,
@@ -20,10 +18,13 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { z } from 'zod';
 
+import { DataTable } from '../../components/DataTable';
+import type { Column } from '../../components/tableState';
+import { useListState } from '../../components/useListState';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatDateTime } from '../../components/format';
 import { zodResolver } from '../../components/zodResolver';
-import { PAGE_SIZE, useCreateProject, useProjects } from './useProjects';
+import { type Project, useCreateProject, useProjects } from './useProjects';
 
 interface ProjectForm {
   name: string;
@@ -88,10 +89,43 @@ function CreateProjectModal({ opened, onClose }: { opened: boolean; onClose: () 
 
 export function ProjectsPage() {
   const { t } = useTranslation();
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
+  const list = useListState();
   const [creating, setCreating] = useState(false);
-  const { data, isPending, isError, error } = useProjects(q.trim(), page);
+  const { data, isPending, isError, error } = useProjects(list.state);
+  const columns: Column<Project>[] = [
+    {
+      key: 'name',
+      header: t('projects.name'),
+      sortable: true,
+      rowHeader: true,
+      cell: (p) => (
+        <Anchor component={Link} to={`/projects/${p.id}`}>
+          {p.name}
+        </Anchor>
+      ),
+    },
+    {
+      key: 'description',
+      header: t('projects.description'),
+      cell: (p) => (
+        <Text size="sm" lineClamp={1}>
+          {p.description || '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'role',
+      header: t('projects.myRole'),
+      sortable: true,
+      cell: (p) => <Badge variant="light">{t(`projects.roles.${p.my_role}`)}</Badge>,
+    },
+    {
+      key: 'updated_at',
+      header: t('projects.updatedAt'),
+      sortable: true,
+      cell: (p) => formatDateTime(p.updated_at),
+    },
+  ];
 
   return (
     <Stack>
@@ -99,58 +133,24 @@ export function ProjectsPage() {
         <Title order={2}>{t('projects.title')}</Title>
         <Button onClick={() => setCreating(true)}>{t('projects.new')}</Button>
       </Group>
-      <TextInput
-        label={t('projects.search')}
-        value={q}
-        onChange={(event) => {
-          setQ(event.currentTarget.value);
-          setPage(1);
-        }}
-        maw={320}
-      />
       {isPending && (
         <Center>
           <Loader aria-label={t('common.loading')} />
         </Center>
       )}
       {isError && <ErrorAlert error={error} />}
-      {data && data.items.length === 0 && <Text c="dimmed">{t('projects.empty')}</Text>}
-      {data && data.items.length > 0 && (
-        <Table.ScrollContainer minWidth={640}>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('projects.name')}</Table.Th>
-                <Table.Th>{t('projects.description')}</Table.Th>
-                <Table.Th>{t('projects.myRole')}</Table.Th>
-                <Table.Th>{t('projects.updatedAt')}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.items.map((project) => (
-                <Table.Tr key={project.id}>
-                  <Table.Th scope="row">
-                    <Anchor component={Link} to={`/projects/${project.id}`}>
-                      {project.name}
-                    </Anchor>
-                  </Table.Th>
-                  <Table.Td>
-                    <Text size="sm" lineClamp={1}>
-                      {project.description || '—'}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge variant="light">{t(`projects.roles.${project.my_role}`)}</Badge>
-                  </Table.Td>
-                  <Table.Td>{formatDateTime(project.updated_at)}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      )}
-      {data && data.total > PAGE_SIZE && (
-        <Pagination total={Math.ceil(data.total / PAGE_SIZE)} value={page} onChange={setPage} />
+      {data && (
+        <DataTable
+          mode="server"
+          label={t('projects.title')}
+          searchLabel={t('projects.search')}
+          empty={t('projects.empty')}
+          columns={columns}
+          rowKey={(p) => p.id}
+          rows={data.items}
+          total={data.total}
+          {...list.table}
+        />
       )}
       {creating && <CreateProjectModal opened onClose={() => setCreating(false)} />}
     </Stack>

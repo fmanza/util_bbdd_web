@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEntry
+from app.db.models import AuditEntry, User
+from app.domain.sorting import SortOrder, like_pattern, order_by
 
 
 class AuditAction:
@@ -103,15 +104,46 @@ def record(
     return entry
 
 
+AuditSort = Literal["ts", "action", "outcome", "actor", "target"]
+_AUDIT_SORT: Final[dict[str, Any]] = {
+    "ts": AuditEntry.ts,
+    "action": AuditEntry.action,
+    "outcome": AuditEntry.outcome,
+    "actor": func.lower(func.coalesce(User.username, "")),
+    "target": func.coalesce(AuditEntry.target_type, ""),
+}
+
+
 def list_entries(
-    db: Session, *, action: str | None, actor_id: int | None, limit: int, offset: int
+    db: Session,
+    *,
+    action: str | None,
+    actor_id: int | None,
+    limit: int,
+    offset: int,
+    q: str | None = None,
+    sort: AuditSort | None = None,
+    order: SortOrder | None = None,
 ) -> tuple[list[AuditEntry], int]:
-    """Eventos más recientes primero, filtrados por acción (prefijo) y actor."""
-    query = select(AuditEntry)
+    """Eventos (más recientes primero si no se pide otro orden), filtrados por acción (prefijo), actor y ``q`` (acción,
+    actor, objetivo o IP)."""
+    query = select(AuditEntry).join(User, User.id == AuditEntry.actor_user_id, isouter=True)
     if action:
         query = query.where(AuditEntry.action.startswith(action, autoescape=True))
     if actor_id is not None:
         query = query.where(AuditEntry.actor_user_id == actor_id)
+    if q and q.strip():
+        pattern = like_pattern(q)
+        query = query.where(
+            or_(
+                func.lower(AuditEntry.action).like(pattern, escape="\\"),
+                func.lower(func.coalesce(User.username, "")).like(pattern, escape="\\"),
+                func.lower(func.coalesce(AuditEntry.target_type, "")).like(pattern, escape="\\"),
+                func.lower(func.coalesce(AuditEntry.target_id, "")).like(pattern, escape="\\"),
+                func.lower(func.coalesce(AuditEntry.ip, "")).like(pattern, escape="\\"),
+            )
+        )
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = db.scalars(query.order_by(AuditEntry.id.desc()).limit(limit).offset(offset)).all()
+    clauses = order_by(_AUDIT_SORT, sort, order, default=[AuditEntry.id.desc()], tiebreak=AuditEntry.id)
+    rows = db.scalars(query.order_by(*clauses).limit(limit).offset(offset)).unique().all()
     return list(rows), total

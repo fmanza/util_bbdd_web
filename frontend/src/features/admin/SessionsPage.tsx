@@ -1,35 +1,86 @@
-import {
-  Badge,
-  Button,
-  Center,
-  Group,
-  Loader,
-  Modal,
-  Pagination,
-  Stack,
-  Table,
-  Text,
-  Title,
-  VisuallyHidden,
-} from '@mantine/core';
+import { Badge, Button, Center, Group, Loader, Modal, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DataTable } from '../../components/DataTable';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatDateTime } from '../../components/format';
-import { PAGE_SIZE, type SessionInfo, useRevokeSession, useSessions } from './useAdmin';
+import type { Column } from '../../components/tableState';
+import { useListState } from '../../components/useListState';
+import { type SessionInfo, useRevokeSession, useSessions } from './useAdmin';
 
 export function SessionsPage() {
   const { t } = useTranslation();
-  const [page, setPage] = useState(1);
+  const list = useListState();
   const [revoking, setRevoking] = useState<SessionInfo | null>(null);
-  const { data, isPending, isError, error } = useSessions(page);
+  const { data, isPending, isError, error } = useSessions(list.state);
   const revoke = useRevokeSession();
 
   const close = () => {
     setRevoking(null);
     revoke.reset();
   };
+  const columns: Column<SessionInfo>[] = [
+    {
+      key: 'user',
+      header: t('auth.username'),
+      sortable: true,
+      cell: (session) => (
+        <Group gap="xs">
+          {session.username}
+          {session.current && (
+            <Badge size="xs" variant="light">
+              {t('admin.sessions.current')}
+            </Badge>
+          )}
+        </Group>
+      ),
+    },
+    { key: 'ip', header: t('admin.sessions.ip'), sortable: true, cell: (s) => s.ip ?? '—' },
+    {
+      key: 'user_agent',
+      header: t('admin.sessions.userAgent'),
+      cell: (s) => (
+        <Text size="xs" lineClamp={1} title={s.user_agent ?? undefined}>
+          {s.user_agent ?? '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: t('admin.sessions.createdAt'),
+      sortable: true,
+      cell: (s) => formatDateTime(s.created_at),
+    },
+    {
+      key: 'last_seen_at',
+      header: t('admin.sessions.lastSeen'),
+      sortable: true,
+      cell: (s) => formatDateTime(s.last_seen_at),
+    },
+    {
+      key: 'expires_at',
+      header: t('admin.sessions.expiresAt'),
+      sortable: true,
+      cell: (s) => formatDateTime(s.expires_at),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      hiddenHeader: true,
+      cell: (session) => (
+        <Button
+          size="xs"
+          color="red"
+          variant="light"
+          onClick={() => setRevoking(session)}
+          aria-label={t('admin.sessions.revokeLabel', { username: session.username })}
+        >
+          {t('admin.sessions.revoke')}
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <Stack>
@@ -41,64 +92,19 @@ export function SessionsPage() {
         </Center>
       )}
       {isError && <ErrorAlert error={error} />}
-      {data && data.items.length === 0 && <Text c="dimmed">{t('admin.sessions.empty')}</Text>}
-      {data && data.items.length > 0 && (
-        <Table.ScrollContainer minWidth={820}>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('auth.username')}</Table.Th>
-                <Table.Th>{t('admin.sessions.ip')}</Table.Th>
-                <Table.Th>{t('admin.sessions.userAgent')}</Table.Th>
-                <Table.Th>{t('admin.sessions.createdAt')}</Table.Th>
-                <Table.Th>{t('admin.sessions.lastSeen')}</Table.Th>
-                <Table.Th>{t('admin.sessions.expiresAt')}</Table.Th>
-                <Table.Th>
-                  <VisuallyHidden>{t('common.actions')}</VisuallyHidden>
-                </Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.items.map((session) => (
-                <Table.Tr key={session.id}>
-                  <Table.Td>
-                    <Group gap="xs">
-                      {session.username}
-                      {session.current && (
-                        <Badge size="xs" variant="light">
-                          {t('admin.sessions.current')}
-                        </Badge>
-                      )}
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>{session.ip ?? '—'}</Table.Td>
-                  <Table.Td>
-                    <Text size="xs" lineClamp={1} title={session.user_agent ?? undefined}>
-                      {session.user_agent ?? '—'}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>{formatDateTime(session.created_at)}</Table.Td>
-                  <Table.Td>{formatDateTime(session.last_seen_at)}</Table.Td>
-                  <Table.Td>{formatDateTime(session.expires_at)}</Table.Td>
-                  <Table.Td>
-                    <Button
-                      size="xs"
-                      color="red"
-                      variant="light"
-                      onClick={() => setRevoking(session)}
-                      aria-label={t('admin.sessions.revokeLabel', { username: session.username })}
-                    >
-                      {t('admin.sessions.revoke')}
-                    </Button>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      )}
-      {data && data.total > PAGE_SIZE && (
-        <Pagination total={Math.ceil(data.total / PAGE_SIZE)} value={page} onChange={setPage} />
+      {data && (
+        <DataTable
+          mode="server"
+          label={t('admin.sessions.title')}
+          searchLabel={t('admin.sessions.search')}
+          empty={t('admin.sessions.empty')}
+          columns={columns}
+          rowKey={(s) => s.id}
+          rows={data.items}
+          total={data.total}
+          minWidth={820}
+          {...list.table}
+        />
       )}
       <Modal opened={revoking !== null} onClose={close} title={t('admin.sessions.confirmTitle')}>
         {revoking && (

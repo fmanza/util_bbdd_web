@@ -20,7 +20,8 @@ from app.api.v1.schemas import (
 )
 from app.db.models import Connection, User
 from app.domain.connections import service
-from app.domain.connections.service import ERROR_MESSAGES, ConnectionData
+from app.domain.connections.service import ERROR_MESSAGES, ConnectionData, ConnectionSort
+from app.domain.sorting import SortOrder
 
 router = APIRouter(prefix="/connections", tags=["connections"])
 
@@ -71,11 +72,15 @@ def list_connections(
     db: DbSession,
     db_type: Annotated[str | None, Query(max_length=32)] = None,
     q: Annotated[str | None, Query(max_length=100, description="Texto en nombre o descripción")] = None,
+    sort: ConnectionSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ConnectionPage:
     """Conexiones propias y compartidas."""
-    rows, total = service.list_connections(db, user, db_type=db_type, q=q, limit=limit, offset=offset)
+    rows, total = service.list_connections(
+        db, user, db_type=db_type, q=q, limit=limit, offset=offset, sort=sort, order=order
+    )
     return ConnectionPage(items=[_out(c, user) for c in rows], total=total)
 
 

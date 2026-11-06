@@ -9,7 +9,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
@@ -30,6 +30,7 @@ from app.domain.runs.errors import (
     TooManyRunsError,
 )
 from app.domain.runs.operations import get_operation, validate_params
+from app.domain.sorting import SortOrder, like_pattern, order_by
 from app.domain.storage.settings import effective_settings, quota_bytes
 from app.domain.templates.service import check_run_templates
 from app.workspace.layout import UnsafePathError, remove_tree, run_dir, run_relative_path, safe_path
@@ -77,36 +78,72 @@ def _filtered(query: Any, filters: RunFilters) -> Any:
         query = query.where(Run.operation == filters.operation)
     if filters.user_id is not None:
         query = query.where(Run.user_id == filters.user_id)
-    if filters.q:
-        pattern = f"%{filters.q.strip().lower()}%"
-        query = query.join(User, User.id == Run.user_id, isouter=True).where(
+    if filters.q and filters.q.strip():
+        pattern = like_pattern(filters.q)
+        query = query.where(
             or_(
-                func.lower(Run.id).like(pattern),
-                func.lower(Run.operation).like(pattern),
-                func.lower(User.username).like(pattern),
-                func.lower(func.coalesce(Run.progress_message, "")).like(pattern),
+                func.lower(Run.id).like(pattern, escape="\\"),
+                func.lower(Run.operation).like(pattern, escape="\\"),
+                func.lower(func.coalesce(User.username, "")).like(pattern, escape="\\"),
+                func.lower(func.coalesce(Run.progress_message, "")).like(pattern, escape="\\"),
             )
         )
     return query
 
 
-def list_project_runs(
-    db: Session, project: Project, filters: RunFilters, *, limit: int, offset: int
+RunSort = Literal["created_at", "operation", "status", "user", "size"]
+_RUN_SORT: Final[dict[str, Any]] = {
+    "created_at": Run.created_at,
+    "operation": Run.operation,
+    "status": Run.status,
+    "user": func.lower(func.coalesce(User.username, "")),
+    "size": Run.size_bytes,
+}
+
+
+def _base_runs() -> Any:
+    """``select(Run)`` con el usuario unido una vez (búsqueda y orden por usuario)."""
+    return select(Run).join(User, User.id == Run.user_id, isouter=True)
+
+
+def _page_runs(
+    db: Session, query: Any, *, limit: int, offset: int, sort: RunSort | None, order: SortOrder | None
 ) -> tuple[list[Run], int]:
-    """Historial del proyecto, más recientes primero (agrupado por ejecución: una fila por run)."""
-    query = _filtered(select(Run).where(Run.project_id == project.id), filters)
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = db.scalars(query.order_by(Run.created_at.desc(), Run.id.desc()).limit(limit).offset(offset)).unique().all()
+    clauses = order_by(_RUN_SORT, sort, order, default=[Run.created_at.desc()], tiebreak=Run.id)
+    rows = db.scalars(query.order_by(*clauses).limit(limit).offset(offset)).unique().all()
     return list(rows), total
 
 
-def list_user_runs(db: Session, user: User, filters: RunFilters, *, limit: int, offset: int) -> tuple[list[Run], int]:
-    """Ejecuciones recientes de todos los proyectos de los que ``user`` es miembro."""
+def list_project_runs(
+    db: Session,
+    project: Project,
+    filters: RunFilters,
+    *,
+    limit: int,
+    offset: int,
+    sort: RunSort | None = None,
+    order: SortOrder | None = None,
+) -> tuple[list[Run], int]:
+    """Historial del proyecto (más recientes primero si no se pide otro orden; una fila por run)."""
+    query = _filtered(_base_runs().where(Run.project_id == project.id), filters)
+    return _page_runs(db, query, limit=limit, offset=offset, sort=sort, order=order)
+
+
+def list_user_runs(
+    db: Session,
+    user: User,
+    filters: RunFilters,
+    *,
+    limit: int,
+    offset: int,
+    sort: RunSort | None = None,
+    order: SortOrder | None = None,
+) -> tuple[list[Run], int]:
+    """Ejecuciones de todos los proyectos de los que ``user`` es miembro (recientes primero por defecto)."""
     projects = select(ProjectMember.project_id).where(ProjectMember.user_id == user.id)
-    query = _filtered(select(Run).where(Run.project_id.in_(projects)), filters)
-    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
-    rows = db.scalars(query.order_by(Run.created_at.desc(), Run.id.desc()).limit(limit).offset(offset)).unique().all()
-    return list(rows), total
+    query = _filtered(_base_runs().where(Run.project_id.in_(projects)), filters)
+    return _page_runs(db, query, limit=limit, offset=offset, sort=sort, order=order)
 
 
 def get_access(db: Session, user: User, run_id: str, minimum: ProjectRole = "viewer") -> RunAccess:

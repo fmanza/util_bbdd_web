@@ -1,22 +1,11 @@
-import {
-  Button,
-  Center,
-  Code,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-  VisuallyHidden,
-} from '@mantine/core';
+import { Button, Center, Code, Group, Loader, Modal, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
+import { DataTable } from '../../components/DataTable';
+import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatDateTime } from '../../components/format';
 import { zodResolver } from '../../components/zodResolver';
@@ -55,6 +44,48 @@ export function AllowlistPage() {
     setDeleting(null);
     remove.reset();
   };
+
+  const columns: Column<AllowlistEntry>[] = [
+    {
+      key: 'pattern',
+      header: t('admin.allowlist.pattern'),
+      sortable: true,
+      searchable: true,
+      value: (e) => e.pattern,
+      cell: (e) => <Code>{e.pattern}</Code>,
+    },
+    {
+      key: 'description',
+      header: t('admin.allowlist.description'),
+      sortable: true,
+      searchable: true,
+      value: (e) => e.description,
+      cell: (e) => e.description || '—',
+    },
+    {
+      key: 'created_at',
+      header: t('admin.allowlist.createdAt'),
+      sortable: true,
+      value: (e) => e.created_at,
+      cell: (e) => formatDateTime(e.created_at),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      hiddenHeader: true,
+      cell: (entry) => (
+        <Button
+          size="xs"
+          color="red"
+          variant="light"
+          onClick={() => setDeleting(entry)}
+          aria-label={t('admin.allowlist.removeLabel', { pattern: entry.pattern })}
+        >
+          {t('admin.allowlist.remove')}
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <Stack maw={900}>
@@ -99,40 +130,16 @@ export function AllowlistPage() {
         </Text>
       )}
       {data && data.length > 0 && (
-        <Table striped>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>{t('admin.allowlist.pattern')}</Table.Th>
-              <Table.Th>{t('admin.allowlist.description')}</Table.Th>
-              <Table.Th>{t('admin.allowlist.createdAt')}</Table.Th>
-              <Table.Th>
-                <VisuallyHidden>{t('common.actions')}</VisuallyHidden>
-              </Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {data.map((entry) => (
-              <Table.Tr key={entry.id}>
-                <Table.Td>
-                  <Code>{entry.pattern}</Code>
-                </Table.Td>
-                <Table.Td>{entry.description || '—'}</Table.Td>
-                <Table.Td>{formatDateTime(entry.created_at)}</Table.Td>
-                <Table.Td>
-                  <Button
-                    size="xs"
-                    color="red"
-                    variant="light"
-                    onClick={() => setDeleting(entry)}
-                    aria-label={t('admin.allowlist.removeLabel', { pattern: entry.pattern })}
-                  >
-                    {t('admin.allowlist.remove')}
-                  </Button>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+        <DataTable
+          mode="client"
+          label={t('admin.allowlist.title')}
+          searchLabel={t('admin.allowlist.search')}
+          empty={t('table.noMatches')}
+          columns={columns}
+          rowKey={(entry) => entry.id}
+          rows={data}
+          initialSort={{ key: 'pattern', order: 'asc' }}
+        />
       )}
       <Modal opened={deleting !== null} onClose={closeDelete} title={t('admin.allowlist.removeTitle')}>
         {deleting && (

@@ -1,7 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, ensureOk, unwrap } from '../../api/client';
-import type { components } from '../../api/schema';
+import type { components, paths } from '../../api/schema';
+import { type ListState, listQuery } from '../../components/useListState';
 import { meQueryKey } from '../auth/useAuth';
 
 export type User = components['schemas']['UserOut'];
@@ -11,15 +12,18 @@ export type SessionInfo = components['schemas']['SessionOut'];
 export type AuditEntry = components['schemas']['AuditEntryOut'];
 export type Role = User['role'];
 
-export const PAGE_SIZE = 50;
+type Query<P extends keyof paths, M extends 'get'> = NonNullable<
+  NonNullable<paths[P][M]> extends { parameters: { query?: infer Q } } ? Q : never
+>;
+type SortOf<P extends keyof paths> = NonNullable<Query<P, 'get'> extends { sort?: infer S } ? S : never>;
 
-export function useUsers(q: string, page: number) {
+export function useUsers(list: ListState) {
   return useQuery({
-    queryKey: ['users', { q, page }],
+    queryKey: ['users', list],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/users', {
-          params: { query: { q: q || null, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE } },
+          params: { query: listQuery<SortOf<'/api/v1/users'>>(list) },
         }),
       ),
     placeholderData: keepPreviousData,
@@ -47,13 +51,13 @@ export function useUpdateUser() {
   });
 }
 
-export function useSessions(page: number) {
+export function useSessions(list: ListState) {
   return useQuery({
-    queryKey: ['sessions', { page }],
+    queryKey: ['sessions', list],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/sessions', {
-          params: { query: { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE } },
+          params: { query: listQuery<SortOf<'/api/v1/sessions'>>(list) },
         }),
       ),
     placeholderData: keepPreviousData,
@@ -74,14 +78,14 @@ export function useRevokeSession() {
   });
 }
 
-export function useAudit(action: string, page: number) {
+export function useAudit(action: string, list: ListState) {
   return useQuery({
-    queryKey: ['audit', { action, page }],
+    queryKey: ['audit', { action, ...list }],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/audit', {
           params: {
-            query: { action: action || null, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
+            query: { action: action || null, ...listQuery<SortOf<'/api/v1/audit'>>(list) },
           },
         }),
       ),

@@ -7,27 +7,26 @@ import {
   Loader,
   Modal,
   NumberInput,
-  Pagination,
   Progress,
   SimpleGrid,
   Stack,
   Switch,
-  Table,
   Text,
-  TextInput,
   Title,
 } from '@mantine/core';
 import { type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DataTable } from '../../components/DataTable';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes } from '../../components/format';
+import type { Column } from '../../components/tableState';
+import { useListState } from '../../components/useListState';
 import {
   type PurgePreview,
   type StorageKey,
   type StorageSettings,
   type StorageUpdate,
-  USAGE_PAGE_SIZE,
   type Usage,
   usePreviewStorage,
   useRequestMaintenance,
@@ -293,85 +292,78 @@ function usageColor(pct: number | null | undefined): string {
   return pct >= 80 ? 'yellow' : 'blue';
 }
 
-function UsageRow({ usage }: { usage: Usage }) {
-  const { t } = useTranslation();
-  return (
-    <Table.Tr>
-      <Table.Td>
-        <Text size="sm">{usage.display_name}</Text>
-        <Text size="xs" c="dimmed">
-          {usage.username}
-        </Text>
-      </Table.Td>
-      <Table.Td>{formatBytes(usage.used_bytes)}</Table.Td>
-      <Table.Td>
-        {usage.quota_bytes === null || usage.quota_bytes === undefined
-          ? t('storage.unlimited')
-          : formatBytes(usage.quota_bytes)}{' '}
-        <Badge size="xs" variant="light" color={usage.quota_source === 'user' ? 'grape' : 'gray'}>
-          {t(`storage.sources.${usage.quota_source}`)}
-        </Badge>
-      </Table.Td>
-      <Table.Td miw={140}>
-        {usage.used_pct === null || usage.used_pct === undefined ? (
-          '—'
-        ) : (
-          <Group gap="xs" wrap="nowrap">
-            <Progress
-              value={Math.min(usage.used_pct, 100)}
-              color={usageColor(usage.used_pct)}
-              w={80}
-              aria-label={t('storage.usedOf', { name: usage.username, pct: usage.used_pct })}
-            />
-            <Text size="xs">{usage.used_pct} %</Text>
-          </Group>
-        )}
-      </Table.Td>
-    </Table.Tr>
-  );
-}
-
 function UsageTable() {
   const { t } = useTranslation();
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
-  const usage = useStorageUsage(q.trim(), page);
+  const list = useListState();
+  const usage = useStorageUsage(list.state);
+  const columns: Column<Usage>[] = [
+    {
+      key: 'username',
+      header: t('storage.user'),
+      sortable: true,
+      cell: (u) => (
+        <>
+          <Text size="sm">{u.display_name}</Text>
+          <Text size="xs" c="dimmed">
+            {u.username}
+          </Text>
+        </>
+      ),
+    },
+    { key: 'used_bytes', header: t('storage.used'), sortable: true, cell: (u) => formatBytes(u.used_bytes) },
+    {
+      key: 'quota_bytes',
+      header: t('storage.quota'),
+      sortable: true,
+      cell: (u) => (
+        <>
+          {u.quota_bytes === null || u.quota_bytes === undefined
+            ? t('storage.unlimited')
+            : formatBytes(u.quota_bytes)}{' '}
+          <Badge size="xs" variant="light" color={u.quota_source === 'user' ? 'grape' : 'gray'}>
+            {t(`storage.sources.${u.quota_source}`)}
+          </Badge>
+        </>
+      ),
+    },
+    {
+      key: 'used_pct',
+      header: t('storage.percent'),
+      sortable: true,
+      cell: (u) =>
+        u.used_pct === null || u.used_pct === undefined ? (
+          '—'
+        ) : (
+          <Group gap="xs" wrap="nowrap" miw={140}>
+            <Progress
+              value={Math.min(u.used_pct, 100)}
+              color={usageColor(u.used_pct)}
+              w={80}
+              aria-label={t('storage.usedOf', { name: u.username, pct: u.used_pct })}
+            />
+            <Text size="xs">{u.used_pct} %</Text>
+          </Group>
+        ),
+    },
+  ];
   return (
     <Card withBorder>
       <Stack>
         <Title order={3}>{t('storage.usageTitle')}</Title>
-        <TextInput
-          label={t('storage.search')}
-          value={q}
-          onChange={(event) => {
-            setQ(event.currentTarget.value);
-            setPage(1);
-          }}
-          maxLength={64}
-          w={280}
-        />
         {usage.isPending && <Loader aria-label={t('common.loading')} />}
         {usage.isError && <ErrorAlert error={usage.error} />}
-        {usage.data && usage.data.items.length === 0 && <Text c="dimmed">{t('storage.noUsers')}</Text>}
-        {usage.data && usage.data.items.length > 0 && (
-          <Table striped aria-label={t('storage.usageTitle')}>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('storage.user')}</Table.Th>
-                <Table.Th>{t('storage.used')}</Table.Th>
-                <Table.Th>{t('storage.quota')}</Table.Th>
-                <Table.Th>{t('storage.percent')}</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {usage.data.items.map((item) => (
-                <UsageRow key={item.user_id} usage={item} />
-              ))}
-            </Table.Tbody>
-          </Table>
-        )}
-        {usage.data && usage.data.total > USAGE_PAGE_SIZE && (
-          <Pagination total={Math.ceil(usage.data.total / USAGE_PAGE_SIZE)} value={page} onChange={setPage} />
+        {usage.data && (
+          <DataTable
+            mode="server"
+            label={t('storage.usageTitle')}
+            searchLabel={t('storage.search')}
+            empty={t('storage.noUsers')}
+            columns={columns}
+            rowKey={(u) => u.user_id}
+            rows={usage.data.items}
+            total={usage.data.total}
+            {...list.table}
+          />
         )}
       </Stack>
     </Card>

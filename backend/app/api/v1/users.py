@@ -9,7 +9,8 @@ from fastapi import APIRouter, Query, status
 from app.api.deps import AdminUser, Context, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE, UserCreate, UserOut, UserPage, UserUpdate
 from app.domain.identity import users
-from app.domain.identity.users import UserChanges
+from app.domain.identity.users import UserChanges, UserSort
+from app.domain.sorting import SortOrder
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -24,11 +25,13 @@ def list_users(
     _: AdminUser,
     db: DbSession,
     q: Annotated[str | None, Query(max_length=64, description="Texto en usuario o nombre")] = None,
+    sort: UserSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> UserPage:
-    """Usuarios ordenados por nombre de usuario."""
-    rows, total = users.list_users(db, q=q, limit=limit, offset=offset)
+    """Usuarios (por nombre de usuario si no se pide otro orden)."""
+    rows, total = users.list_users(db, q=q, limit=limit, offset=offset, sort=sort, order=order)
     return UserPage(items=[UserOut.model_validate(u) for u in rows], total=total)
 
 

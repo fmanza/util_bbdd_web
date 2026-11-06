@@ -21,7 +21,8 @@ from app.api.v1.schemas_projects import (
 )
 from app.db.models import ProjectConnection, ProjectMember
 from app.domain.projects import service
-from app.domain.projects.service import Membership
+from app.domain.projects.service import Membership, ProjectSort
+from app.domain.sorting import SortOrder
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -73,11 +74,13 @@ def list_projects(
     user: CurrentUser,
     db: DbSession,
     q: Annotated[str | None, Query(max_length=100)] = None,
+    sort: ProjectSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ProjectPage:
     """Proyectos de los que eres miembro."""
-    rows, total = service.list_projects(db, user, q=q, limit=limit, offset=offset)
+    rows, total = service.list_projects(db, user, q=q, limit=limit, offset=offset, sort=sort, order=order)
     return ProjectPage(items=[_project(m) for m in rows], total=total)
 
 

@@ -2,7 +2,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useEffect, useState } from 'react';
 
 import { ApiError, type Problem, api, ensureOk, unwrap } from '../../api/client';
-import type { components } from '../../api/schema';
+import type { components, paths } from '../../api/schema';
+import { type ListState, listQuery } from '../../components/useListState';
 
 export type Run = components['schemas']['RunOut'];
 export type RunDetail = components['schemas']['RunDetailOut'];
@@ -12,32 +13,24 @@ export type Operation = components['schemas']['OperationOut'];
 export type OperationParam = components['schemas']['OperationParamOut'];
 export type MarkdownPages = components['schemas']['MarkdownPagesOut'];
 
-export const PAGE_SIZE = 50;
+/** Ejecuciones anteriores que se ofrecen en el formulario (no es una lista paginada). */
+const PICKER_SIZE = 50;
+type RunSort = NonNullable<NonNullable<paths['/api/v1/runs']['get']['parameters']['query']>['sort']>;
 export const ACTIVE_STATUSES: readonly RunStatus[] = ['queued', 'running'];
 
 export function isActive(status: RunStatus | undefined): boolean {
   return status !== undefined && ACTIVE_STATUSES.includes(status);
 }
 
-export interface RunFilters {
-  status: RunStatus | null;
-  q: string;
-}
-
-export function useProjectRuns(projectId: number, filters: RunFilters, page: number) {
+export function useProjectRuns(projectId: number, status: RunStatus | null, list: ListState) {
   return useQuery({
-    queryKey: ['projects', projectId, 'runs', { ...filters, page }],
+    queryKey: ['projects', projectId, 'runs', { status, ...list }],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/projects/{project_id}/runs', {
           params: {
             path: { project_id: projectId },
-            query: {
-              status: filters.status,
-              q: filters.q || null,
-              limit: PAGE_SIZE,
-              offset: (page - 1) * PAGE_SIZE,
-            },
+            query: { status, ...listQuery<RunSort>(list) },
           },
         }),
       ),
@@ -56,7 +49,7 @@ export function useSucceededRuns(projectId: number, operation: string | null, en
         await api.GET('/api/v1/projects/{project_id}/runs', {
           params: {
             path: { project_id: projectId },
-            query: { status: 'succeeded', operation, limit: PAGE_SIZE, offset: 0 },
+            query: { status: 'succeeded', operation, limit: PICKER_SIZE, offset: 0 },
           },
         }),
       ),
@@ -64,13 +57,13 @@ export function useSucceededRuns(projectId: number, operation: string | null, en
   });
 }
 
-export function useMyRuns(page: number) {
+export function useMyRuns(list: ListState) {
   return useQuery({
-    queryKey: ['runs', 'mine', { page }],
+    queryKey: ['runs', 'mine', list],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/runs', {
-          params: { query: { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE } },
+          params: { query: listQuery<RunSort>(list) },
         }),
       ),
     placeholderData: keepPreviousData,

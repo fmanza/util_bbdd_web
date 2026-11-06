@@ -1,23 +1,13 @@
-import {
-  Badge,
-  Button,
-  Center,
-  Group,
-  Loader,
-  Pagination,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Title,
-  VisuallyHidden,
-} from '@mantine/core';
+import { Badge, Button, Center, Group, Loader, Stack, Title } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DataTable } from '../../components/DataTable';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatDateTime } from '../../components/format';
-import { PAGE_SIZE, type User, useUsers } from './useAdmin';
+import type { Column } from '../../components/tableState';
+import { useListState } from '../../components/useListState';
+import { type User, useUsers } from './useAdmin';
 import { UserFormModal } from './UserFormModal';
 
 type Editing = { user: User | null } | null;
@@ -35,10 +25,41 @@ function UserStatus({ user }: { user: User }) {
 
 export function UsersPage() {
   const { t } = useTranslation();
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
+  const list = useListState();
   const [editing, setEditing] = useState<Editing>(null);
-  const { data, isPending, isError, error } = useUsers(q.trim(), page);
+  const { data, isPending, isError, error } = useUsers(list.state);
+  const columns: Column<User>[] = [
+    { key: 'username', header: t('auth.username'), sortable: true, cell: (u) => u.username },
+    {
+      key: 'display_name',
+      header: t('admin.users.displayName'),
+      sortable: true,
+      cell: (u) => u.display_name,
+    },
+    { key: 'role', header: t('admin.users.role'), sortable: true, cell: (u) => t(`roles.${u.role}`) },
+    { key: 'status', header: t('admin.users.status'), cell: (u) => <UserStatus user={u} /> },
+    {
+      key: 'created_at',
+      header: t('admin.users.createdAt'),
+      sortable: true,
+      cell: (u) => formatDateTime(u.created_at),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      hiddenHeader: true,
+      cell: (u) => (
+        <Button
+          size="xs"
+          variant="light"
+          onClick={() => setEditing({ user: u })}
+          aria-label={t('admin.users.editLabel', { username: u.username })}
+        >
+          {t('common.edit')}
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <Stack>
@@ -46,65 +67,25 @@ export function UsersPage() {
         <Title order={2}>{t('admin.users.title')}</Title>
         <Button onClick={() => setEditing({ user: null })}>{t('admin.users.new')}</Button>
       </Group>
-      <TextInput
-        label={t('admin.users.search')}
-        value={q}
-        onChange={(event) => {
-          setQ(event.currentTarget.value);
-          setPage(1);
-        }}
-        maw={320}
-      />
       {isPending && (
         <Center>
           <Loader aria-label={t('common.loading')} />
         </Center>
       )}
       {isError && <ErrorAlert error={error} />}
-      {data && data.items.length === 0 && <Text c="dimmed">{t('admin.users.empty')}</Text>}
-      {data && data.items.length > 0 && (
-        <Table.ScrollContainer minWidth={720}>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>{t('auth.username')}</Table.Th>
-                <Table.Th>{t('admin.users.displayName')}</Table.Th>
-                <Table.Th>{t('admin.users.role')}</Table.Th>
-                <Table.Th>{t('admin.users.status')}</Table.Th>
-                <Table.Th>{t('admin.users.createdAt')}</Table.Th>
-                <Table.Th>
-                  <VisuallyHidden>{t('common.actions')}</VisuallyHidden>
-                </Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {data.items.map((user) => (
-                <Table.Tr key={user.id}>
-                  <Table.Td>{user.username}</Table.Td>
-                  <Table.Td>{user.display_name}</Table.Td>
-                  <Table.Td>{t(`roles.${user.role}`)}</Table.Td>
-                  <Table.Td>
-                    <UserStatus user={user} />
-                  </Table.Td>
-                  <Table.Td>{formatDateTime(user.created_at)}</Table.Td>
-                  <Table.Td>
-                    <Button
-                      size="xs"
-                      variant="light"
-                      onClick={() => setEditing({ user })}
-                      aria-label={t('admin.users.editLabel', { username: user.username })}
-                    >
-                      {t('common.edit')}
-                    </Button>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
-      )}
-      {data && data.total > PAGE_SIZE && (
-        <Pagination total={Math.ceil(data.total / PAGE_SIZE)} value={page} onChange={setPage} />
+      {data && (
+        <DataTable
+          mode="server"
+          label={t('admin.users.title')}
+          searchLabel={t('admin.users.search')}
+          empty={t('admin.users.empty')}
+          columns={columns}
+          rowKey={(u) => u.id}
+          rows={data.items}
+          total={data.total}
+          minWidth={720}
+          {...list.table}
+        />
       )}
       {editing && (
         <UserFormModal

@@ -26,6 +26,8 @@ interface CommonProps<T> {
   minWidth?: number;
   /** Controles extra junto a la búsqueda (filtros propios de la lista). */
   toolbar?: ReactNode;
+  /** Pie visible de la tabla (`<caption>`). */
+  caption?: string;
 }
 
 interface ServerProps<T> extends CommonProps<T> {
@@ -97,7 +99,7 @@ function SortHeader<T>({
  */
 export function DataTable<T>(props: DataTableProps<T>) {
   const { t } = useTranslation();
-  const { columns, rowKey, label, searchLabel, empty, minWidth = 640, toolbar } = props;
+  const { columns, rowKey, label, searchLabel, empty, minWidth = 640, toolbar, caption } = props;
   const [clientQuery, setClientQuery] = useState('');
   const [clientSort, setClientSort] = useState<SortState | null>(
     props.mode === 'client' ? (props.initialSort ?? null) : null,
@@ -158,6 +160,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       ) : (
         <Table.ScrollContainer minWidth={minWidth}>
           <Table striped highlightOnHover aria-label={label}>
+            {caption && <Table.Caption>{caption}</Table.Caption>}
             <Table.Thead>
               <Table.Tr>
                 {columns.map((column) => (
@@ -168,9 +171,15 @@ export function DataTable<T>(props: DataTableProps<T>) {
             <Table.Tbody>
               {rows.map((row) => (
                 <Table.Tr key={rowKey(row)}>
-                  {columns.map((column) => (
-                    <Table.Td key={column.key}>{column.cell(row)}</Table.Td>
-                  ))}
+                  {columns.map((column) =>
+                    column.rowHeader ? (
+                      <Table.Th key={column.key} scope="row" fw={400}>
+                        {column.cell(row)}
+                      </Table.Th>
+                    ) : (
+                      <Table.Td key={column.key}>{column.cell(row)}</Table.Td>
+                    ),
+                  )}
                 </Table.Tr>
               ))}
             </Table.Tbody>

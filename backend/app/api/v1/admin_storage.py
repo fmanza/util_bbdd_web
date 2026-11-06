@@ -8,8 +8,9 @@ from fastapi import APIRouter, Query, status
 
 from app.api.deps import AdminUser, Context, DbSession, SettingsDep
 from app.api.v1.schemas_storage import PurgePreviewOut, StorageSettingsOut, StorageUpdate, UsageOut, UsagePage
+from app.domain.sorting import SortOrder
 from app.domain.storage import service
-from app.domain.storage.service import SettingState, Usage
+from app.domain.storage.service import SettingState, Usage, UsageSort
 
 router = APIRouter(prefix="/admin/storage", tags=["admin"])
 
@@ -68,8 +69,10 @@ def storage_usage(
     db: DbSession,
     settings: SettingsDep,
     q: Annotated[str | None, Query(max_length=64)] = None,
+    sort: UsageSort | None = None,
+    order: SortOrder | None = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> UsagePage:
-    items, total = service.usage_page(db, settings, q=q, limit=limit, offset=offset)
+    items, total = service.usage_page(db, settings, q=q, limit=limit, offset=offset, sort=sort, order=order)
     return UsagePage(items=[usage_out(u) for u in items], total=total)

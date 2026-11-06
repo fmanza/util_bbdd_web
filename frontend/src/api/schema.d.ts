@@ -307,7 +307,7 @@ export interface paths {
         };
         /**
          * Consultar auditoría
-         * @description Eventos más recientes primero.
+         * @description Eventos (más recientes primero si no se pide otro orden).
          */
         get: operations["list_audit_api_v1_audit_get"];
         put?: never;
@@ -1464,7 +1464,7 @@ export interface paths {
         };
         /**
          * Listar sesiones activas
-         * @description Sesiones vigentes, la actividad más reciente primero.
+         * @description Sesiones vigentes (la actividad más reciente primero si no se pide otro orden).
          */
         get: operations["list_sessions_api_v1_sessions_get"];
         put?: never;
@@ -1504,7 +1504,7 @@ export interface paths {
         };
         /**
          * Listar usuarios
-         * @description Usuarios ordenados por nombre de usuario.
+         * @description Usuarios (por nombre de usuario si no se pide otro orden).
          */
         get: operations["list_users_api_v1_users_get"];
         put?: never;
@@ -5131,6 +5131,8 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string | null;
+                sort?: ("username" | "used_bytes" | "quota_bytes" | "used_pct") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -5180,6 +5182,10 @@ export interface operations {
                 /** @description Acción o prefijo, p. ej. `auth.` */
                 action?: string | null;
                 actor_id?: number | null;
+                /** @description Acción, actor, objetivo o IP */
+                q?: string | null;
+                sort?: ("ts" | "action" | "outcome" | "actor" | "target") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -5441,6 +5447,8 @@ export interface operations {
                 db_type?: string | null;
                 /** @description Texto en nombre o descripción */
                 q?: string | null;
+                sort?: ("name" | "db_type" | "visibility" | "last_test_at") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -6449,6 +6457,8 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string | null;
+                sort?: ("name" | "role" | "created_at" | "updated_at") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -7471,6 +7481,8 @@ export interface operations {
                 user_id?: number | null;
                 /** @description Id, operación, usuario o mensaje */
                 q?: string | null;
+                sort?: ("created_at" | "operation" | "status" | "user" | "size") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -7868,6 +7880,8 @@ export interface operations {
                 status?: ("queued" | "running" | "succeeded" | "failed" | "cancelled" | "purged") | null;
                 operation?: string | null;
                 q?: string | null;
+                sort?: ("created_at" | "operation" | "status" | "user" | "size") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -8854,6 +8868,10 @@ export interface operations {
         parameters: {
             query?: {
                 user_id?: number | null;
+                /** @description Usuario, IP o agente */
+                q?: string | null;
+                sort?: ("user" | "created_at" | "last_seen_at" | "expires_at" | "ip") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -8952,6 +8970,8 @@ export interface operations {
             query?: {
                 /** @description Texto en usuario o nombre */
                 q?: string | null;
+                sort?: ("username" | "display_name" | "role" | "created_at") | null;
+                order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
             };

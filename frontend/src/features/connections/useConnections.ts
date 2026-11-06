@@ -1,7 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, ensureOk, unwrap } from '../../api/client';
-import type { components } from '../../api/schema';
+import type { components, paths } from '../../api/schema';
+import { type ListState, listQuery } from '../../components/useListState';
 
 export type ConnectionInfo = components['schemas']['ConnectionOut'];
 export type ConnectionCreate = components['schemas']['ConnectionCreate'];
@@ -10,15 +11,19 @@ export type ConnectionTest = components['schemas']['ConnectionTestOut'];
 export type Readiness = components['schemas']['ReadinessOut'];
 export type AllowlistEntry = components['schemas']['AllowlistEntryOut'];
 
-export const PAGE_SIZE = 50;
+type ConnectionSort = NonNullable<
+  NonNullable<paths['/api/v1/connections']['get']['parameters']['query']>['sort']
+>;
+/** Máximo de la API (`MAX_PAGE_SIZE`): los selectores de conexión necesitan más de una página de la lista. */
+export const OPTIONS_PAGE_SIZE = 200;
 
-export function useConnections(q: string, page: number) {
+export function useConnections(list: ListState, pageSize?: number) {
   return useQuery({
-    queryKey: ['connections', { q, page }],
+    queryKey: ['connections', { ...list, pageSize }],
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/connections', {
-          params: { query: { q: q || null, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE } },
+          params: { query: listQuery<ConnectionSort>(list, pageSize) },
         }),
       ),
     placeholderData: keepPreviousData,
