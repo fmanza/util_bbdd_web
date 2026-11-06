@@ -1,7 +1,7 @@
 # Producto — util_bbdd_web
 
 - **Qué es**: aplicación web multiusuario que expone la funcionalidad de la librería util_bbdd 4.3.0.
-- **Versión actual**: 1.11.0 (util_bbdd 5.3.0; documentación Markdown con Mermaid local, mapas de trazabilidad y cambios respecto de la documentación anterior). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
+- **Versión actual**: 1.12.0 (util_bbdd 5.3.0; una tarjeta por formato en el detalle de la documentación, ZIP por formato y visor Markdown con navegación entre páginas). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
 - **Usuarios**: equipos técnicos (DBA, desarrollo, migraciones) en una red interna; rol `admin` y rol `user`.
 
 ## Capacidades objetivo
