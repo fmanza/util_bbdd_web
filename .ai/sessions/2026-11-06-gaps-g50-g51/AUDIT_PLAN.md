@@ -75,7 +75,7 @@ Revisión del [PLAN](PLAN.md) antes de implementar. Decisiones D11-1 a D11-4 tom
 |---|---|---|
 | D11-5 | ¿Avisar si el Mermaid del ZIP difiere del de la generación (T1)? | **No**: solo se guarda el `sha256` en `run.json`; Mermaid 12.x es compatible |
 | D11-6 | Versión de util_bbdd | **5.4.0 (MINOR)**: opción y campo nuevos, compatibles |
-| D11-7 | Versión de la web | **1.13.0 (MINOR)**: endpoint nuevo |
+| D11-7 | Versión de la web | **1.14.0 (MINOR)**: endpoint nuevo. Enmendada el 2026-11-06 (antes 1.13.0): la 1.13.0 es la de la sesión `2026-11-06-explorer-runs-lists` (D6) |
 | D11-8 | Rodeos | La deducción del árbol por rutas **se mantiene** para ejecuciones 5.3.0; la copia de Mermaid **se retira** |
 
 ## Veredicto

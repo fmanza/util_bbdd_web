@@ -55,7 +55,7 @@ versión en su propio commit.
 
 Las dos fases son independientes. Se ejecutan en una sesión de util_bbdd (§5.1 del plan de huecos), no desde aquí.
 
-## 4. Fases en la web (W-11 → web 1.13.0)
+## 4. Fases en la web (W-11 → web 1.14.0; D11-7 enmendada)
 
 | Id | Commit | Hueco | Cambio | Rodeo | Tests |
 |---|---|---|---|---|---|
@@ -63,7 +63,7 @@ Las dos fases son independientes. Se ejecutan en una sesión de util_bbdd (§5.1
 | W-11.1 | `feat(backend): Mermaid de la documentación Markdown fuera de cada ejecución` | G50 | Job: si `UBW_MERMAID_JS` existe, pasa `mermaid_js_ref = "assets/javascripts/mermaid.min.js"` (no `mermaid_js`) y anota en `inputs/templates.json` → `run.json` `markdown_mermaid = {"mode": "referenced", "path": "outputs/markdown/documentacion/docs/assets/javascripts/mermaid.min.js", "sha256": …}`. Sin el fichero, como hoy (aviso; Material carga de unpkg). `zip_stream` admite **entradas extra** `(ruta en el ZIP, fichero del servidor)`; `download_archive` (sin `format` y con `markdown`) añade el Mermaid de `UBW_MERMAID_JS` en esa ruta si la ejecución lo tiene `referenced` y no hay ya un artefacto con esa ruta. Si al descargar el fichero ya no existe, el ZIP sale sin él y con cabecera `X-UBW-Warning` | Se retira la copia (D11-4: las antiguas se quedan) | Job: no hay `mermaid.min.js` en `outputs/`, `mkdocs.yml` lo referencia, `run.json` lo anota; ZIP `markdown` y completo con el fichero (mismo contenido que `UBW_MERMAID_JS`); ejecución antigua (copia registrada) sin duplicado; `UBW_MERMAID_JS` ausente al descargar; tamaño del run ~5,5 MB menor |
 | W-11.2 | `feat(backend,frontend): árbol del visor Markdown desde el índice de páginas` | G51 | Backend: `GET /api/v1/runs/{id}/markdown-pages` → `MarkdownPagesOut {source: "manifest" \| "paths", pages: [{path, title, section, role, letter, kind, artifact_id}]}`. Lee `outputs/markdown/documentacion/manifest.json` (artefacto registrado, ≤ 8 MB, `format` y `format_version ≥ 2`), y solo devuelve páginas cuyo `path` es un artefacto `.md` registrado; si no hay índice, `source = "paths"` con la deducción actual (portada en el backend). 404 si la ejecución no es una documentación con Markdown. Frontend: `useMarkdownPages`, `buildPages` acepta el índice; árbol con títulos, búsqueda por título y ruta, secciones `traceability`/`changes` | `markdownNav.buildPages` por rutas **se mantiene** como alternativa para ejecuciones anteriores a 5.4.0 | API: índice v2, manifiesto v1 → `paths`, manifiesto corrupto o enorme → `paths`, `path` no registrado descartado, 404, permisos (no miembro → 404). Frontend: títulos en el árbol, búsqueda por nombre real, alternativa por rutas. El test de contrato T2 pasa a comprobar `pages` contra los ficheros |
 | W-11.3 | `docs: G50 y G51 resueltos en util_bbdd 5.4.0` | G50, G51 | GAPS (resueltos), guía `documentacion.md` (Mermaid en el ZIP, árbol con nombres reales), ADR-007 (enmienda: Mermaid fuera del run), ROADMAP | — | `zensical build --strict` |
-| release | `release: v1.13.0` | — | MINOR (endpoint nuevo) | — | Comandos de desarrollo + prueba manual |
+| release | `release: v1.14.0` | — | MINOR (endpoint nuevo) | — | Comandos de desarrollo + prueba manual |
 
 Orden: W-11.0 → W-11.1 → W-11.2 → W-11.3 → release. W-11.1 y W-11.2 son independientes entre sí.
 

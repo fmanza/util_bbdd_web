@@ -307,7 +307,7 @@ la sesión `.ai/sessions/2026-11-06-gaps-g50-g51/` (`PLAN.md` y `AUDIT_PLAN.md`)
 | W-11.3 | `docs: G50 y G51 resueltos en util_bbdd 5.4.0` | G50, G51 | GAPS, guía, ADR-007, ROADMAP | — | `zensical build --strict` |
 
 Orden: U-11.1 y U-11.2 independientes → `release: v5.4.0`. En la web, W-11.0 → (W-11.1, W-11.2) → W-11.3 →
-`release: v1.13.0` (D11-7).
+`release: v1.14.0` (D11-7).
 
 ## 3. Orden de ejecución simultáneo
 
@@ -361,7 +361,7 @@ flowchart LR
 | 8 (web ✅) | U-8.1 ✅ `d7a8f51` → U-8.2 ✅ `152d6a4` → U-8.3 ✅ `9e25d84` → U-8.4 ✅ `11648d4` → U-8.5 ✅ `7f28ed9` → U-8.6 ✅ `251e51a` → **`release: v5.0.0`** ✅ `f495b21` (guía `api_5_0_migration.md` completa) | **W-8.0** ✅ `e6d6f1e` `chore(backend): util_bbdd 5.0.0` → W-8.1 ✅ `7327e42` → W-8.2 ✅ `314f42e` → W-8.3 ✅ `dbeb07e` → W-8.4 ✅ `55bcf2b` → **`release: v1.7.0`** ✅ (D8-7) | Wheel 5.0.0 |
 | 9 (web ✅) | U-9.1 ✅ `6ccca9c` → **`release: v5.1.0`** ✅ `d7972dc` | **W-9.0** ✅ `1bd3801` `chore(backend): util_bbdd 5.1.0` → W-9.1 ✅ `fa13622` → **`release: v1.7.1`** ✅ (D9-3) | Wheel 5.1.0 |
 | 10 (web ✅) | U-10.1 ✅ `87e5386` → U-10.2 ✅ `f1c0737` → U-10.3 ✅ `ad9fe85` → U-10.4 ✅ `c3a1d55` → **`release: v5.2.0`** ✅ `30e47bf` | **W-10.0** ✅ `a7d6e1e` `chore(backend): util_bbdd 5.2.0` → W-10.1 ✅ `f86056a` → W-10.2 ✅ `ddbaecc` → **`release: v1.9.0`** ✅ (D10-5) | Wheel 5.2.0 |
-| 11 | U-11.1 → U-11.2 → **`release: v5.4.0`** | **W-11.0** `chore(backend): util_bbdd 5.4.0` → W-11.1 → W-11.2 → W-11.3 → **`release: v1.13.0`** (D11-7) | Wheel 5.4.0 |
+| 11 | U-11.1 → U-11.2 → **`release: v5.4.0`** | **W-11.0** `chore(backend): util_bbdd 5.4.0` → W-11.1 → W-11.2 → W-11.3 → **`release: v1.14.0`** (D11-7) | Wheel 5.4.0 |
 
 Reglas de la tubería:
 
@@ -545,7 +545,7 @@ SPA (S3).
 | D11-4 | Copias de `mermaid.min.js` ya guardadas: se dejan | Aprobada (2026-11-06) |
 | D11-5 | Sin aviso si el Mermaid del ZIP difiere del de la generación (solo `sha256` en `run.json`) | Aprobada (2026-11-06) |
 | D11-6 | util_bbdd 5.4.0 (MINOR) | Aprobada (2026-11-06) |
-| D11-7 | Web 1.13.0 (MINOR) | Aprobada (2026-11-06) |
+| D11-7 | Web **1.14.0** (MINOR); antes 1.13.0, enmendada el mismo día: la 1.13.0 es la de la sesión `2026-11-06-explorer-runs-lists` | Aprobada (2026-11-06) |
 | D11-8 | Deducción por rutas se mantiene para 5.3.0; la copia de Mermaid se retira | Aprobada (2026-11-06) |
 
 Veredicto de la ola 11: **GO_CONDICIONAL**. Condiciones: ~~aprobar D11-5 a D11-8~~ (hecho, 2026-11-06); U-11.1 resuelve T3/T4; U-11.2
