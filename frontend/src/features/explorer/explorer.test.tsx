@@ -99,6 +99,38 @@ describe('ExplorerPage', () => {
     expect(within(schema).getByText('information_schema (sistema)')).toBeInTheDocument();
   });
 
+  it('cada apartado de la ficha tiene su propio scroll y el DDL largo se ve entero y se copia', async () => {
+    const ddl = Array.from({ length: 400 }, (_, i) => `  columna_${i} INTEGER,`).join('\n');
+    stubApi({
+      ...session(USER),
+      ...EXPLORER,
+      [`GET ${BASE}/metadata/schemas/main/ddl`]: { body: { kind: 'table', name: 'pedidos', ddl } },
+    });
+    const user = userEvent.setup();
+
+    renderRoute('/connections/7/explore');
+    await user.click(await screen.findByText('pedidos'));
+
+    // Antes: ScrollArea con solo `mah`, que no se desplaza y recortaba el DDL. Ahora, un área con alto completo.
+    for (const [tab, label] of [
+      ['Columnas (3)', 'Columnas (3)'],
+      ['Claves', 'Claves'],
+      ['Índices', 'Índices'],
+      ['Relaciones (1)', 'Relaciones (1)'],
+    ] as const) {
+      await user.click(screen.getByRole('tab', { name: tab }));
+      expect(
+        await screen.findByLabelText(label, { selector: '.mantine-ScrollArea-root' }),
+      ).toBeInTheDocument();
+    }
+    await user.click(screen.getByRole('tab', { name: 'DDL' }));
+    const area = await screen.findByLabelText('DDL', { selector: '.mantine-ScrollArea-root' });
+    expect(within(area).getByText(/columna_399 INTEGER/)).toBeInTheDocument();
+    expect(area.getAttribute('style') ?? '').not.toContain('max-height');
+    await user.click(screen.getByRole('button', { name: 'Copiar DDL' }));
+    expect(await navigator.clipboard.readText()).toBe(ddl); // portapapeles de user-event
+  });
+
   it('filtra objetos y refresca la caché', async () => {
     const fetchMock = stubApi({
       ...session(USER),

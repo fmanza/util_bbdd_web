@@ -3,8 +3,8 @@ import {
   Button,
   Card,
   Center,
+  Box,
   Checkbox,
-  Grid,
   Group,
   Loader,
   NativeSelect,
@@ -16,7 +16,8 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { useMemo, useState } from 'react';
+import { useMediaQuery } from '@mantine/hooks';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
@@ -27,8 +28,37 @@ import { NamedQueriesPanel } from './NamedQueriesPanel';
 import { ObjectDetail, type SelectedObject } from './ObjectDetail';
 import { useRefreshSchema, useSchemas, useSchemaTree } from './useExplorer';
 
+/** Alto mínimo de la vista en escritorio y margen inferior (el `padding` del `AppShell`). */
+const MIN_HEIGHT = 480;
+const BOTTOM = 16;
+/** Breakpoint `md` de Mantine: por encima, árbol y ficha en dos columnas con el alto de la ventana. */
+const DESKTOP = '(min-width: 62em)';
+const MOBILE_TREE = 360;
+
+/** Alto disponible desde el contenedor hasta el final de la ventana (en escritorio); se recalcula al redimensionar. */
+function useFillHeight(enabled: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number>(MIN_HEIGHT);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const update = () => {
+      const top = (ref.current?.getBoundingClientRect().top ?? 0) + window.scrollY;
+      setHeight(Math.max(MIN_HEIGHT, Math.floor(window.innerHeight - top - BOTTOM)));
+    };
+    const frame = requestAnimationFrame(update);
+    window.addEventListener('resize', update);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', update);
+    };
+  }, [enabled]);
+  return [ref, height] as const;
+}
+
 function MetadataPanel({ connectionId }: { connectionId: number }) {
   const { t } = useTranslation();
+  const desktop = useMediaQuery(DESKTOP) ?? false;
+  const [layoutRef, layoutHeight] = useFillHeight(desktop);
   const schemas = useSchemas(connectionId);
   const [showSystem, setShowSystem] = useState(false);
   const [chosen, setChosen] = useState<string | null>(null);
@@ -61,87 +91,108 @@ function MetadataPanel({ connectionId }: { connectionId: number }) {
   if (schemas.isError) return <ErrorAlert error={schemas.error} />;
 
   return (
-    <Grid>
-      <Grid.Col span={{ base: 12, md: 4 }}>
-        <Stack gap="xs">
-          <NativeSelect
-            label={t('explorer.schema')}
-            data={visibleSchemas.map((s) => ({
-              value: s.name,
-              label: s.system ? `${s.name} (${t('explorer.system')})` : s.name,
-            }))}
-            value={schema ?? ''}
-            onChange={(event) => {
-              setChosen(event.currentTarget.value);
-              setSelected(null);
-            }}
+    <Box
+      ref={layoutRef}
+      data-testid="explorer-layout"
+      style={
+        desktop
+          ? {
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
+              gap: 'var(--mantine-spacing-md)',
+              height: layoutHeight,
+            }
+          : { display: 'flex', flexDirection: 'column', gap: 'var(--mantine-spacing-md)' }
+      }
+    >
+      <Stack gap="xs" style={{ minHeight: 0 }}>
+        <NativeSelect
+          label={t('explorer.schema')}
+          data={visibleSchemas.map((s) => ({
+            value: s.name,
+            label: s.system ? `${s.name} (${t('explorer.system')})` : s.name,
+          }))}
+          value={schema ?? ''}
+          onChange={(event) => {
+            setChosen(event.currentTarget.value);
+            setSelected(null);
+          }}
+        />
+        <Checkbox
+          label={t('explorer.showSystem')}
+          checked={showSystem}
+          onChange={(event) => setShowSystem(event.currentTarget.checked)}
+        />
+        <TextInput
+          label={t('explorer.filter')}
+          value={filter}
+          onChange={(event) => setFilter(event.currentTarget.value)}
+        />
+        <Group justify="space-between">
+          <Text size="xs" c="dimmed">
+            {tree.data ? t('explorer.fetchedAt', { date: formatDateTime(tree.data.fetched_at) }) : ''}
+          </Text>
+          <Button
+            size="xs"
+            variant="light"
+            loading={refresh.isPending || tree.isFetching}
+            disabled={!schema}
+            onClick={() => schema && refresh.mutate(schema)}
+          >
+            {t('explorer.refresh')}
+          </Button>
+        </Group>
+        {tree.isPending && schema && <Loader size="sm" aria-label={t('common.loading')} />}
+        {tree.isError && <ErrorAlert error={tree.error} />}
+        {tree.data && (
+          <ScrollArea
+            h={desktop ? undefined : MOBILE_TREE}
+            style={desktop ? { flex: 1, minHeight: 0 } : undefined}
+            type="auto"
+          >
+            <nav aria-label={t('explorer.objects')}>
+              {(['table', 'view', 'routine'] as const).map((kind) => (
+                <NavLink
+                  key={kind}
+                  label={t(`explorer.groups.${kind}`, { count: groups[kind].length })}
+                  defaultOpened={kind === 'table'}
+                  childrenOffset={12}
+                >
+                  {groups[kind].map((item) => (
+                    <NavLink
+                      key={`${kind}-${item.name}`}
+                      label={item.name}
+                      active={selected?.kind === kind && selected.name === item.name}
+                      onClick={() => setSelected({ kind, name: item.name })}
+                    />
+                  ))}
+                </NavLink>
+              ))}
+            </nav>
+          </ScrollArea>
+        )}
+      </Stack>
+      <Card
+        withBorder
+        style={{
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          height: desktop ? undefined : '70dvh',
+        }}
+      >
+        {selected && schema ? (
+          <ObjectDetail
+            connectionId={connectionId}
+            schema={schema}
+            object={selected}
+            onOpenTable={(table) => setSelected({ kind: 'table', name: table })}
           />
-          <Checkbox
-            label={t('explorer.showSystem')}
-            checked={showSystem}
-            onChange={(event) => setShowSystem(event.currentTarget.checked)}
-          />
-          <TextInput
-            label={t('explorer.filter')}
-            value={filter}
-            onChange={(event) => setFilter(event.currentTarget.value)}
-          />
-          <Group justify="space-between">
-            <Text size="xs" c="dimmed">
-              {tree.data ? t('explorer.fetchedAt', { date: formatDateTime(tree.data.fetched_at) }) : ''}
-            </Text>
-            <Button
-              size="xs"
-              variant="light"
-              loading={refresh.isPending || tree.isFetching}
-              disabled={!schema}
-              onClick={() => schema && refresh.mutate(schema)}
-            >
-              {t('explorer.refresh')}
-            </Button>
-          </Group>
-          {tree.isPending && schema && <Loader size="sm" aria-label={t('common.loading')} />}
-          {tree.isError && <ErrorAlert error={tree.error} />}
-          {tree.data && (
-            <ScrollArea h={520} type="auto">
-              <nav aria-label={t('explorer.objects')}>
-                {(['table', 'view', 'routine'] as const).map((kind) => (
-                  <NavLink
-                    key={kind}
-                    label={t(`explorer.groups.${kind}`, { count: groups[kind].length })}
-                    defaultOpened={kind === 'table'}
-                    childrenOffset={12}
-                  >
-                    {groups[kind].map((item) => (
-                      <NavLink
-                        key={`${kind}-${item.name}`}
-                        label={item.name}
-                        active={selected?.kind === kind && selected.name === item.name}
-                        onClick={() => setSelected({ kind, name: item.name })}
-                      />
-                    ))}
-                  </NavLink>
-                ))}
-              </nav>
-            </ScrollArea>
-          )}
-        </Stack>
-      </Grid.Col>
-      <Grid.Col span={{ base: 12, md: 8 }}>
-        <Card withBorder mih={300}>
-          {selected && schema ? (
-            <ObjectDetail
-              connectionId={connectionId}
-              schema={schema}
-              object={selected}
-              onOpenTable={(table) => setSelected({ kind: 'table', name: table })}
-            />
-          ) : (
-            <Text c="dimmed">{t('explorer.chooseObject')}</Text>
-          )}
-        </Card>
-      </Grid.Col>
-    </Grid>
+        ) : (
+          <Text c="dimmed">{t('explorer.chooseObject')}</Text>
+        )}
+      </Card>
+    </Box>
   );
 }
 

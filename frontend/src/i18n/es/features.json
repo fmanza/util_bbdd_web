@@ -724,7 +724,9 @@
         "permission": "Necesitas el permiso «Puede ejecutar SQL libre»; pídeselo a un administrador.",
         "role": "Solo los editores y propietarios del proyecto pueden ejecutar SQL."
       }
-    }
+    },
+    "copyDdl": "Copiar DDL",
+    "copied": "Copiado"
   },
   "diff": {
     "title": "Diferencias de esquema",
