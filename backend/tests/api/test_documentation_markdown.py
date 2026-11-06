@@ -351,7 +351,8 @@ def test_previous_documentation_is_checked_on_launch(
     without_markdown = launch(user_client, project["id"], "documentation", connection="tienda", graphs=False)
     other_connection = launch(user_client, project["id"], "documentation", **{**ONLY_MARKDOWN, "connection": "sueltas"})
     for run_id in (without_markdown, other_connection):
-        assert wait_for(worker, db, run_id, timeout=180).status == "succeeded"
+        finished = wait_for(worker, db, run_id, timeout=180)
+        assert finished.status == "succeeded", (finished.error_code, finished.error_message)
 
     def rejected(previous: str) -> str:
         response = user_client.post(
