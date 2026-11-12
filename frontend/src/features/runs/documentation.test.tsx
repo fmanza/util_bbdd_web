@@ -49,6 +49,7 @@ const CARDS_RUN: RunDetail = {
     mdArtifact(74, 'docs/llms-full.txt', false, 12_000_000),
     mdArtifact(75, 'docs/assets/javascripts/mermaid.min.js', false, 5_500_000),
     mdArtifact(76, 'mkdocs.yml', false),
+    mdArtifact(77, 'README.md', true),
   ],
 };
 
@@ -96,8 +97,78 @@ describe('formulario de documentación', () => {
         connection: 'ventas',
         word: true,
         html: true,
+        table_frontier: true,
         graph_direction: 'outgoing',
         graph_columns: 'all',
+      },
+    });
+  });
+});
+
+describe('filtro de tablas del formulario (util_bbdd 5.5.0)', () => {
+  it('prueba los patrones con las tablas del schema y envía el filtro', async () => {
+    stubEventSource();
+    const base = `/api/v1/connections/${ORACLE_CONNECTION.connection_id}`;
+    const fetchMock = stubApi({
+      ...session(ADMIN),
+      'GET /api/v1/projects/5': { body: PROJECT },
+      'GET /api/v1/projects/5/runs': { body: { items: [], total: 0 } },
+      'GET /api/v1/projects/5/connections': { body: [ORACLE_CONNECTION] },
+      'GET /api/v1/operations': { body: [NOOP, DOCUMENTATION] },
+      [`GET ${base}/metadata/schemas`]: { body: { default: 'VENTAS', schemas: [] } },
+      [`GET ${base}/metadata/schemas/VENTAS`]: {
+        body: {
+          engine: 'oracle',
+          schema_name: 'VENTAS',
+          database: null,
+          fetched_at: '2026-11-12T10:00:00Z',
+          size_bytes: 10,
+          tables: ['MVG_PEDIDO', 'MVG_PEDIDO_BAK', 'COB_LINEA'].map((name) => ({
+            name,
+            comment: null,
+            columns: 2,
+          })),
+          views: [{ name: 'MVG_V', comment: null, materialized: false }],
+          routines: [],
+        },
+      },
+      'POST /api/v1/projects/5/runs': { status: 202, body: { ...RUN, status: 'queued' } },
+      [`GET /api/v1/runs/${RUN_ID}`]: { body: { ...DOC_RUN, status: 'queued', artifacts: [] } },
+    });
+    const user = userEvent.setup();
+
+    renderRoute('/projects/5');
+    await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.selectOptions(
+      await within(dialog).findByRole('combobox', { name: 'Operación' }),
+      'documentation',
+    );
+    const filter = await within(dialog).findByRole('group', { name: 'Filtro de tablas' });
+    // Sin conexión no se puede probar; la ayuda, sí
+    expect(within(filter).getByRole('button', { name: 'Probar patrones' })).toBeDisabled();
+    await user.click(within(filter).getByRole('button', { name: 'Cómo escribir los patrones' }));
+    expect(within(filter).getByText(/solo el módulo MVG/)).toBeInTheDocument();
+
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Conexión' }), 'ventas');
+    await user.type(within(filter).getByRole('textbox', { name: 'Incluir (patrones)' }), 'mvg_*');
+    await user.type(within(filter).getByRole('textbox', { name: 'Excluir (patrones)' }), '*_BAK');
+    await user.click(within(filter).getByRole('button', { name: 'Probar patrones' }));
+
+    expect(
+      await within(filter).findByText('Se documentan 1 de 3 tablas y 1 de 1 vistas.'),
+    ).toBeInTheDocument();
+    expect(within(filter).getByText('MVG_PEDIDO, MVG_V')).toBeInTheDocument();
+    expect(within(filter).getByText('MVG_PEDIDO_BAK, COB_LINEA')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Lanzar' }));
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')).toHaveLength(1));
+    expect(await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()).toMatchObject({
+      params: {
+        connection: 'ventas',
+        table_include: 'mvg_*',
+        table_exclude: '*_BAK',
+        table_frontier: true,
       },
     });
   });
@@ -177,6 +248,12 @@ describe('resultados de la documentación', () => {
       `/api/v1/runs/${RUN_ID}/artifacts/73`,
     );
     expect(within(markdown).getByRole('link', { name: 'Descargar mkdocs.yml' })).toBeInTheDocument();
+    // README.md (util_bbdd 5.5.0): aviso con su descarga; no es una página del visor (sigue en 2 páginas)
+    expect(within(markdown).getByText('Cómo ver la documentación fuera de la web')).toBeInTheDocument();
+    expect(within(markdown).getByRole('link', { name: 'Descargar README.md' })).toHaveAttribute(
+      'href',
+      `/api/v1/runs/${RUN_ID}/artifacts/77`,
+    );
     expect(
       within(markdown).queryByRole('link', { name: 'Descargar mermaid.min.js' }),
     ).not.toBeInTheDocument();
@@ -184,7 +261,7 @@ describe('resultados de la documentación', () => {
     expect(index.getAttribute('srcdoc')).toContain('<h1>Portada</h1>');
     // El navegador de artefactos no lista la carpeta Markdown.
     expect(
-      screen.getByText('6 ficheros de la documentación Markdown: ábrelos en su tarjeta.'),
+      screen.getByText('7 ficheros de la documentación Markdown: ábrelos en su tarjeta.'),
     ).toBeInTheDocument();
     expect(screen.queryByText('pedidos.md')).not.toBeInTheDocument();
   });

@@ -152,6 +152,9 @@ export const DOCUMENTATION: Operation = {
     param('schema', 'string'),
     param('word', 'boolean', { default: true, group: 'formats' }),
     param('html', 'boolean', { default: true, group: 'formats' }),
+    param('table_include', 'string', { group: 'filter' }),
+    param('table_exclude', 'string', { group: 'filter' }),
+    param('table_frontier', 'boolean', { default: true, group: 'filter' }),
     param('graph_direction', 'string', {
       default: 'both',
       group: 'graphs',

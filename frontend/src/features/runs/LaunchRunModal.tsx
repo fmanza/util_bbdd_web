@@ -23,6 +23,7 @@ import { formatDateTime } from '../../components/format';
 import { zodResolver } from '../../components/zodResolver';
 import type { ProjectConnection } from '../projects/useProjects';
 import { type DocumentTemplate, useTemplates } from '../templates/useTemplates';
+import { PatternPreview } from './PatternPreview';
 import {
   type Operation,
   type OperationParam,
@@ -130,6 +131,11 @@ function runOptions(runs: Run[], values: Partial<Values>, t: TFunction) {
         }),
       })),
   ];
+}
+
+/** Valor de texto de un campo del formulario (los interruptores no lo son). */
+function text(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
 }
 
 /** Parámetros sin grupo primero; después cada grupo en el orden en que aparece. */
@@ -336,7 +342,18 @@ function LaunchForm({
             if (group === null) return <Stack key="__main__">{fields}</Stack>;
             return (
               <Fieldset key={group} legend={t(`runs.groups.${group}`, { defaultValue: group })}>
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>{fields}</SimpleGrid>
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                  {fields}
+                  {group === 'filter' && operation.name === 'documentation' && (
+                    <PatternPreview
+                      connections={connections}
+                      connectionAlias={text(values['connection'])}
+                      schema={text(values['schema'])}
+                      include={text(values['table_include'])}
+                      exclude={text(values['table_exclude'])}
+                    />
+                  )}
+                </SimpleGrid>
               </Fieldset>
             );
           })}

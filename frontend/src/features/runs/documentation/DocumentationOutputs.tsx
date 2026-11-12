@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Card, Group, List, Stack, Text, Title } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Card, Group, List, Stack, Text, Title } from '@mantine/core';
 import { type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -7,6 +7,7 @@ import {
   type Artifact,
   type DocumentationFormat,
   type RunDetail,
+  MARKDOWN_DOC_ROOT,
   archiveUrl,
   downloadUrl,
   isActive,
@@ -165,12 +166,24 @@ function MarkdownCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
   );
   // Ficheros auxiliares (catálogo, ficheros para IA, configuración del sitio): solo descarga.
   const auxiliary = files.filter((a) => !a.previewable && !a.path.includes('/assets/'));
+  // README.md (util_bbdd 5.5.0): cómo ver la documentación fuera de la web; va en el ZIP, fuera de docs/
+  const readme = files.find((a) => a.path === `${MARKDOWN_DOC_ROOT}README.md`);
   return (
     <FormatCard run={run} format="markdown" files={files}>
       {pages.length > 0 && (
         <Text size="xs" c="dimmed">
           {t('runs.outputs.markdownPages', { count: pages.length })}
         </Text>
+      )}
+      {readme && (
+        <Alert color="blue" variant="light" title={t('runs.outputs.readmeTitle')}>
+          <Stack gap={4}>
+            <Text size="sm">{t('runs.outputs.readmeHint')}</Text>
+            <Anchor href={downloadUrl(run.id, readme.id)} size="sm">
+              {t('runs.outputs.readmeDownload')}
+            </Anchor>
+          </Stack>
+        </Alert>
       )}
       {auxiliary.length > 0 && (
         <Stack gap={4}>

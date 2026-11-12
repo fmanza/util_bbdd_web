@@ -275,14 +275,30 @@ def run_documentation(ctx: JobContext) -> None:
     for kind, messages in summary.pop("warnings_by_format").items():
         warnings.setdefault(kind, []).extend(messages)
     _record(ctx, entries, warnings, _mermaid_record(ctx, markdown))
+    # Frontera del filtro (util_bbdd 5.5.0): en el mensaje final; en el log, solo cuántas (son nombres de la BD)
+    frontier: list[str] = summary.pop("frontier", [])
     count = sum(len(messages) for messages in warnings.values())
-    ctx.logger.info("Documentación generada", extra={**summary, "warnings": count})
+    ctx.logger.info("Documentación generada", extra={**summary, "frontier": len(frontier), "warnings": count})
     notice = " (con avisos)" if count else ""
     ctx.progress(
         "reporting",
-        f"{summary['tables']} tablas, {summary['views']} vistas y {summary['routines']} rutinas documentadas{notice}",
+        f"{summary['tables']} tablas, {summary['views']} vistas y {summary['routines']} rutinas documentadas{notice}"
+        + _frontier_text(frontier),
         100,
     )
+
+
+#: Tablas de la frontera que se nombran en el mensaje final (``progress_message`` admite 255 caracteres); todas, en la
+#: portada del Markdown.
+_FRONTIER_SHOWN = 5
+
+
+def _frontier_text(frontier: list[str]) -> str:
+    """«; frontera del filtro: N tablas (A, B…)» o nada."""
+    if not frontier:
+        return ""
+    names = ", ".join(frontier[:_FRONTIER_SHOWN]) + ("…" if len(frontier) > _FRONTIER_SHOWN else "")
+    return f"; frontera del filtro: {len(frontier)} {'tabla' if len(frontier) == 1 else 'tablas'} ({names})"
 
 
 def _mermaid_record(ctx: JobContext, markdown: MarkdownInputs | None) -> dict[str, str] | None:

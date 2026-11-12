@@ -72,6 +72,19 @@ SCHEMA_DESCRIPTION = (
 #: Título del sitio Markdown: texto de una línea, sin caracteres de control.
 SITE_NAME_PATTERN = r"^[^\x00-\x1f\x7f]{1,100}$"
 
+#: Patrones del filtro de tablas (util_bbdd 5.5.0): texto de una línea, separados por comas.
+FILTER_PATTERNS_PATTERN = r"^[^\x00-\x1f\x7f]{1,2000}$"
+#: Límites de util_bbdd (``TableFilter``): se validan aquí para dar el error en el formulario.
+MAX_FILTER_PATTERNS = 100
+MAX_FILTER_PATTERN_LENGTH = 128
+
+
+def split_patterns(value: str | None) -> tuple[str, ...]:
+    """Patrones de ``table_include``/``table_exclude``: separados por comas, sin vacíos ni repetidos."""
+    if not value:
+        return ()
+    return tuple(dict.fromkeys(part.strip() for part in value.split(",") if part.strip()))
+
 
 class DocumentationParams(BaseModel):
     """Documentación de un schema con ``DatabaseDocumentation`` de util_bbdd (Word, Excel, HTML y/o Markdown)."""
@@ -97,6 +110,25 @@ class DocumentationParams(BaseModel):
     views: bool = _group("views", True, "Documentar las vistas (columnas).")
     view_ddl: bool = _group("views", False, "DDL de cada vista.")
     routines: bool = _group("routines", False, "Procedimientos y funciones.")
+    table_include: str | None = _group(
+        "filter",
+        None,
+        "Patrones de las tablas y vistas que se documentan, separados por comas (MVG_*, COB_*). * es cualquier texto, ? "
+        "un carácter; no distingue mayúsculas. Vacío = todas.",
+        pattern=FILTER_PATTERNS_PATTERN,
+    )
+    table_exclude: str | None = _group(
+        "filter",
+        None,
+        "Patrones que se quitan aunque casen con los de incluir (*_BAK, TMP_*). Vacío = ninguno.",
+        pattern=FILTER_PATTERNS_PATTERN,
+    )
+    table_frontier: bool = _group(
+        "filter",
+        True,
+        "Listar la frontera: tablas de fuera unidas por FK a las documentadas (en la portada del Markdown y en el "
+        "resumen de la ejecución). Se ven en los diagramas, sin ficha propia.",
+    )
     database_info: bool = _group("extra", True, "Versión y datos generales de la BD.")
     storage: bool = _group("extra", False, "Inventario de almacenamiento.")
     engine_conditions: bool = _group("extra", False, "Condiciones del motor (readiness).")
@@ -104,7 +136,14 @@ class DocumentationParams(BaseModel):
     graphs: bool = _group(
         "graphs", True, "Diagramas de relaciones: en Word y HTML con Graphviz; en Markdown, con Mermaid."
     )
-    graph_depth: int = _group("graphs", 1, "Niveles de relación en cada diagrama.", ge=1, le=3)
+    graph_depth: int = _group(
+        "graphs",
+        1,
+        "Niveles de relación en cada sentido. 1 = las tablas unidas directamente por una FK: con «ambas» direcciones, "
+        "el diagrama de B en A → B → C muestra las tres tablas (un nivel hacia cada lado).",
+        ge=1,
+        le=3,
+    )
     graph_direction: Literal["both", "outgoing", "incoming"] = _group(
         "graphs", "both", "Relaciones que muestra cada diagrama."
     )
@@ -145,8 +184,8 @@ class DocumentationParams(BaseModel):
     markdown_diagram_depth: int = _group(
         "markdown",
         2,
-        "Tope de niveles de relación de los diagramas Markdown: se usa el menor entre este y los niveles de los "
-        "diagramas.",
+        "Tope de niveles de los diagramas Markdown: se usa el menor entre este y «Niveles de relación» (con 1 y 2, el "
+        "Markdown usa 1). Cuenta en cada sentido, como «Niveles de relación».",
         requires="markdown",
         ge=1,
         le=3,
@@ -172,6 +211,19 @@ class DocumentationParams(BaseModel):
     )
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    @model_validator(mode="after")
+    def _filter_patterns(self) -> DocumentationParams:
+        """Patrones del filtro dentro de los límites de util_bbdd; normalizados (sin vacíos ni repetidos)."""
+        for name in ("table_include", "table_exclude"):
+            patterns = split_patterns(getattr(self, name))
+            if len(patterns) > MAX_FILTER_PATTERNS:
+                raise ValueError(f"{name}: como máximo {MAX_FILTER_PATTERNS} patrones")
+            too_long = next((p for p in patterns if len(p) > MAX_FILTER_PATTERN_LENGTH), None)
+            if too_long is not None:
+                raise ValueError(f"{name}: patrón de más de {MAX_FILTER_PATTERN_LENGTH} caracteres: {too_long[:40]}…")
+            setattr(self, name, ", ".join(patterns) or None)
+        return self
 
     @model_validator(mode="after")
     def _one_format(self) -> DocumentationParams:

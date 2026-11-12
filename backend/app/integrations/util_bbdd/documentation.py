@@ -121,6 +121,10 @@ class DocumentationOptions:
     html_items_per_page: int = 15
     markdown_site_name: str | None = None
     markdown_diagram_depth: int = 2
+    #: Filtro de tablas y vistas (util_bbdd 5.5.0): patrones separados por comas, ya validados por los parámetros
+    table_include: str | None = None
+    table_exclude: str | None = None
+    table_frontier: bool = True
 
 
 @dataclass(frozen=True)
@@ -307,6 +311,21 @@ def build_imprimir(
         "tablas_por_documento": options.tables_per_document,
         "html_items_por_pagina": options.html_items_per_page,
         **({"markdown": _markdown_block(options, markdown)} if "markdown" in options.formats else {}),
+        **({"filtro": _filter_block(options)} if options.table_include or options.table_exclude else {}),
+    }
+
+
+def _patterns(value: str | None) -> list[str]:
+    """Patrones separados por comas, sin vacíos."""
+    return [part.strip() for part in (value or "").split(",") if part.strip()]
+
+
+def _filter_block(options: DocumentationOptions) -> dict[str, Any]:
+    """``imprimir["filtro"]`` (util_bbdd 5.5.0): tablas y vistas por patrones, en todos los formatos."""
+    return {
+        "incluir": _patterns(options.table_include),
+        "excluir": _patterns(options.table_exclude),
+        "frontera": options.table_frontier,
     }
 
 
@@ -489,7 +508,14 @@ def _document(
                 _move(file, outputs_dir / fmt / file.name)
             if files:
                 produced[fmt] = (outputs_dir / fmt / files[0].name).relative_to(outputs_dir).as_posix()
-    return {"tables": result.tables, "views": result.views, "routines": result.routines, "formats": produced}
+    return {
+        "tables": result.tables,
+        "views": result.views,
+        "routines": result.routines,
+        "formats": produced,
+        # util_bbdd 5.5.0: tablas de la frontera del filtro (vacío sin filtro)
+        "frontier": list(result.frontier),
+    }
 
 
 @dataclass(frozen=True)

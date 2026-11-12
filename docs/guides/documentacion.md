@@ -14,11 +14,17 @@ Documenta un schema con `DatabaseDocumentation` de util_bbdd.
 | Tablas | Tablas, columnas, claves (PK, FK, únicas), índices y DDL |
 | Vistas | Vistas (columnas) y su DDL |
 | Rutinas | Procedimientos y funciones |
+| Filtro de tablas | Desde la 1.15.0: **Incluir** y **Excluir** (patrones), **Listar la frontera**, **Probar patrones** y la ayuda de los patrones ([Filtro de tablas](#filtro-de-tablas)) |
 | Información adicional | Datos de la BD (versión), almacenamiento, condiciones del motor, charset y collation |
-| Diagramas | Diagramas de relaciones: en Word y HTML con Graphviz y en Markdown con Mermaid; profundidad (1–3), dirección y columnas de cada tabla (ver abajo) |
+| Diagramas | Diagramas de relaciones: en Word y HTML con Graphviz y en Markdown con Mermaid; niveles de relación (1–3, ver abajo), dirección y columnas de cada tabla |
 | Presentación | Tablas por documento Word (si hay más, se generan varios) y elementos por página del índice HTML |
 | Plantillas | **Plantilla Word** y **Plantilla Excel** del proyecto o globales; vacío = formato por defecto (ver abajo) |
-| Markdown | Solo con **Markdown** marcado: título del sitio, profundidad máxima de los diagramas, mapa de trazabilidad y documentación anterior con la que comparar ([Documentación Markdown](#documentación-markdown)) |
+| Markdown | Solo con **Markdown** marcado: título del sitio, tope de niveles de los diagramas, mapa de trazabilidad y documentación anterior con la que comparar ([Documentación Markdown](#documentación-markdown)) |
+
+**Niveles de relación** (antes «Profundidad»): un nivel son las tablas unidas directamente por una FK, y se cuenta
+**en cada sentido**. Con 1 nivel y la dirección «ambas», el diagrama de `B` en `A → B → C` muestra las tres tablas: un
+nivel hacia `A` (la que referencia) y otro hacia `C` (la que la referencia). Para un solo sentido, elige «salientes» o
+«entrantes». Bajo cada diagrama, «Salientes: 1 de 2» dice cuántos niveles se ven de los que hay.
 
 **Columnas en el diagrama** (independiente de la opción *Columnas* de *Tablas*, que controla la tabla de columnas del
 documento):
@@ -34,6 +40,28 @@ Con **Columnas máximas por tabla** (1–50, 8 por defecto) se limita cada tabla
 «… N columna(s) más». **Mostrar tipos de columna** añade el tipo de cada una.
 
 Una tabla **sin relaciones** se dibuja sola, en el Word y en el sitio HTML (grupo «Sin relaciones»).
+
+### Filtro de tablas
+
+Desde la 1.15.0 (util_bbdd 5.5.0) se puede documentar solo una parte del schema, por ejemplo un módulo. El filtro vale
+para **todos los formatos** y se aplica a tablas y vistas (no a rutinas).
+
+| Campo | Qué hace |
+|---|---|
+| Incluir (patrones) | Solo las tablas y vistas que casan con alguno, separados por comas: `MVG_*, COB_*`. Vacío = todas |
+| Excluir (patrones) | Quita las que casan, aunque casen con *Incluir*: `*_BAK, TMP_*` |
+| Listar la frontera | Lista las tablas de fuera unidas por una FK a las documentadas (activado por defecto) |
+
+- **Patrones**: `*` es cualquier texto, `?` un carácter, `[ABC]` uno de esos caracteres y `[!ABC]` cualquiera menos
+  esos. No distinguen mayúsculas: `mvg_*` casa con `MVG_PEDIDO`. Como mucho 100 patrones de 128 caracteres.
+- **Probar patrones**: con la conexión elegida, aplica los patrones a las tablas y vistas del schema (el catálogo del
+  explorador, en caché) y dice cuántas se documentan y cuáles quedan fuera, antes de lanzar. Sigue a los patrones
+  mientras se escriben. **Cómo escribir los patrones** despliega la ayuda con ejemplos.
+- **Frontera**: sale en el mensaje final de la ejecución (las 5 primeras) y, en Markdown, en la sección «Alcance» de
+  la portada. Las tablas de la frontera se ven en los diagramas, sin ficha propia. En las relaciones de cada ficha
+  Markdown aparecen marcadas «frontera, sin ficha» o «excluida por el filtro».
+- **Comparar con una documentación anterior** hecha con otro filtro: solo se comparan las tablas y vistas que entran
+  en los dos; lo que uno dejó fuera no aparece como eliminado.
 
 **Schema por motor**: en PostgreSQL, SQL Server y HSQLDB es el schema; en MySQL y MariaDB, la base de datos; en
 SQLite no aplica. En **Oracle**, el owner: vacío usa el usuario de la conexión, y se puede poner otro owner si el
@@ -92,7 +120,7 @@ contexto a una IA:
 | Opción | Efecto |
 |---|---|
 | Título del sitio | `site_name` del `mkdocs.yml`; vacío = «Documentación de <base de datos>» |
-| Profundidad máxima de los diagramas | 1–3 (2 por defecto). Se usa el menor entre este valor y la *Profundidad* de *Diagramas*; si recorta, la página lo avisa |
+| Tope de niveles en Markdown | 1–3 (2 por defecto). Se usa el menor entre este valor y los *Niveles de relación* de *Diagramas* (con 1 y 2 se usa 1); si recorta, la página lo avisa |
 | Mapa de trazabilidad | Un mapa del proyecto o global (ver abajo); vacío = sin trazabilidad |
 | Comparar con la documentación | Una documentación anterior **del mismo proyecto, conexión y schema, con Markdown**: añade `docs/changes.md` y `docs/changes.json` con los cambios de esquema |
 
@@ -141,7 +169,7 @@ que no son de un formato siguen en la cabecera. Si un formato pedido no llegó a
 | Word | Un botón por documento (varios si se pidió un número de tablas por documento) | No: descárgalo |
 | Excel | El libro | No: descárgalo |
 | HTML | El sitio navegable en la página y **Abrir en pestaña nueva** | Sí (ADR-007) |
-| Markdown | Visor con árbol, buscador y navegación entre páginas; **Ficheros auxiliares** (`catalog.json`, `llms.txt`, `llms-full.txt`, `mkdocs.yml`, `manifest.json`) para descargar | Solo las páginas `.md` |
+| Markdown | Visor con árbol, buscador y navegación entre páginas; aviso **Cómo ver la documentación fuera de la web** con el `README.md` (desde la 1.15.0); **Ficheros auxiliares** (`catalog.json`, `llms.txt`, `llms-full.txt`, `mkdocs.yml`, `manifest.json`) para descargar | Solo las páginas `.md` de `docs/` |
 
 **ZIP HTML sin conexión**: descomprímelo y abre `outputs/html/documentacion/index.html`; el índice, el buscador, el
 resaltado SQL y la navegación funcionan desde el disco (comprobado en Chromium).

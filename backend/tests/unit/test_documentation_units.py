@@ -137,7 +137,7 @@ def test_schema_reaches_util_bbdd_as_an_argument(monkeypatch: pytest.MonkeyPatch
             seen["schema"] = kwargs.get("schema")
 
         def generate(self) -> object:
-            return type("R", (), {"tables": 0, "views": 0, "routines": 0})()
+            return type("R", (), {"tables": 0, "views": 0, "routines": 0, "frontier": ()})()
 
     monkeypatch.setattr(util_bbdd, "SyncDatabaseManager", _Manager)
     monkeypatch.setattr(util_bbdd.doc, "DatabaseDocumentation", _Documentation)

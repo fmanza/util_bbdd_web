@@ -222,17 +222,17 @@ describe('opciones ocultas del Markdown', () => {
     const toggle = within(dialog).getByRole('switch', { name: /^Markdown/ });
 
     await user.click(toggle);
-    const depth = await within(dialog).findByRole('textbox', { name: 'Profundidad máxima de los diagramas' });
+    const depth = await within(dialog).findByRole('textbox', { name: 'Tope de niveles en Markdown' });
     await user.clear(depth);
     await user.type(depth, '9');
     await user.click(toggle);
     // Oculta, la opción vuelve a su valor por defecto (y al activarlo de nuevo se ve así).
     await user.click(toggle);
     expect(
-      await within(dialog).findByRole('textbox', { name: 'Profundidad máxima de los diagramas' }),
+      await within(dialog).findByRole('textbox', { name: 'Tope de niveles en Markdown' }),
     ).toHaveValue('2');
     await user.type(
-      within(dialog).getByRole('textbox', { name: 'Profundidad máxima de los diagramas' }),
+      within(dialog).getByRole('textbox', { name: 'Tope de niveles en Markdown' }),
       '9',
     );
     await user.click(toggle);
