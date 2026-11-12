@@ -228,13 +228,10 @@ describe('opciones ocultas del Markdown', () => {
     await user.click(toggle);
     // Oculta, la opción vuelve a su valor por defecto (y al activarlo de nuevo se ve así).
     await user.click(toggle);
-    expect(
-      await within(dialog).findByRole('textbox', { name: 'Tope de niveles en Markdown' }),
-    ).toHaveValue('2');
-    await user.type(
-      within(dialog).getByRole('textbox', { name: 'Tope de niveles en Markdown' }),
-      '9',
+    expect(await within(dialog).findByRole('textbox', { name: 'Tope de niveles en Markdown' })).toHaveValue(
+      '2',
     );
+    await user.type(within(dialog).getByRole('textbox', { name: 'Tope de niveles en Markdown' }), '9');
     await user.click(toggle);
     await user.click(within(dialog).getByRole('button', { name: 'Lanzar' }));
 
