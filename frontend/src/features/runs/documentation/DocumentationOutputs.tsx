@@ -142,7 +142,12 @@ function HtmlCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
           src={run.site_url}
           sandbox="allow-scripts allow-popups allow-downloads"
           referrerPolicy="no-referrer"
-          style={{ width: '100%', height: 640, border: '1px solid var(--mantine-color-default-border)' }}
+          style={{
+            width: '100%',
+            // 1.15.0: casi toda la ventana, nunca menos de 640 px
+            height: 'max(640px, calc(100vh - 220px))',
+            border: '1px solid var(--mantine-color-default-border)',
+          }}
         />
       )}
     </FormatCard>

@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Artifact } from '../useRuns';
-import { buildFrameDocument, frameCsp, navHref, sanitizeMarkdownHtml } from './markdownFrame';
+import {
+  BRIDGE_SCRIPT,
+  BRIDGE_SHA256,
+  buildFrameDocument,
+  frameCsp,
+  navHref,
+  sanitizeMarkdownHtml,
+} from './markdownFrame';
 import {
   DOCS_ROOT,
+  MAX_HREF,
   buildPages,
   initialOf,
   objectName,
@@ -220,20 +228,23 @@ describe('documento del iframe', () => {
     expect(html).not.toMatch(/onerror|<script|<iframe|<form|javascript:/i);
   });
 
-  it('el script del puente lleva el nonce de la CSP, escapa el ancla y solo habla con el origen de la SPA', () => {
-    const page = buildFrameDocument(
-      '<p>x</p>',
-      'abc123',
-      '</script><script>alert(1)//',
-      'https://ubw.example',
-    );
-    expect(page).toContain(`content="${frameCsp('abc123')}"`);
-    expect(frameCsp('abc123')).toContain("script-src 'nonce-abc123'");
-    expect(frameCsp('abc123')).toContain("connect-src 'none'");
+  it('el puente es constante y su hash es el de la CSP del iframe (los enlaces fuera de vite dev)', async () => {
+    // Un srcdoc hereda la CSP de la SPA: el mismo hash va en SPA_CSP (lo comprueba test_hardening.py del backend)
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(BRIDGE_SCRIPT));
+    expect(btoa(String.fromCharCode(...new Uint8Array(digest)))).toBe(BRIDGE_SHA256);
+    expect(frameCsp()).toContain(`script-src 'sha256-${BRIDGE_SHA256}'`);
+    expect(BRIDGE_SCRIPT).toContain(`MAX=${MAX_HREF};`);
+  });
+
+  it('el documento lleva un solo script, sin nonce, y escapa el ancla y el origen en atributos', () => {
+    const page = buildFrameDocument('<p>x</p>', '"><script>alert(1)//', 'https://ubw.example');
+    expect(page).toContain(`content="${frameCsp()}"`);
+    expect(frameCsp()).toContain("connect-src 'none'");
     expect(page.match(/<script/g)).toHaveLength(1);
-    expect(page).toContain('<script nonce="abc123">');
-    expect(page).not.toContain('</script><script>alert');
-    expect(page).toContain('"https://ubw.example"');
+    expect(page).toContain(`<script>${BRIDGE_SCRIPT}</script>`);
+    expect(page).not.toContain('nonce');
+    expect(page).toContain('data-ubw-hash="&quot;&gt;&lt;script&gt;alert(1)//"');
+    expect(page).toContain('data-ubw-parent="https://ubw.example"');
   });
 
   it('acepta solo mensajes del puente con el formato esperado (T5)', () => {

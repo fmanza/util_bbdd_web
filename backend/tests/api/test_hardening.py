@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import logging
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from starlette.datastructures import MutableHeaders
 
 from app.core.config import Settings, get_settings
-from app.core.middleware import API_CSP, SPA_CSP, HttpMetrics, HttpMiddleware
+from app.core.middleware import API_CSP, MARKDOWN_BRIDGE_SHA256, SPA_CSP, HttpMetrics, HttpMiddleware
 from app.core.ratelimit import SlidingWindowLimiter
 from app.core.ulid import ULID_PATTERN
 from app.db.models import User
@@ -94,7 +97,34 @@ def test_spa_gets_its_csp(migrated: Settings) -> None:
     assert response.status_code == 200
     assert response.headers["Content-Security-Policy"] == SPA_CSP
     assert "Cache-Control" not in response.headers
-    assert "script-src 'self';" in SPA_CSP and "unsafe-eval" not in SPA_CSP
+    # Solo 'self' y el hash del puente del visor Markdown: ni 'unsafe-inline' ni 'unsafe-eval' en scripts
+    assert f"script-src 'self' 'sha256-{MARKDOWN_BRIDGE_SHA256}';" in SPA_CSP
+    assert "unsafe-eval" not in SPA_CSP and "script-src 'self' 'unsafe-inline'" not in SPA_CSP
+
+
+MARKDOWN_FRAME = (
+    Path(__file__).resolve().parents[3]
+    / "frontend"
+    / "src"
+    / "features"
+    / "runs"
+    / "documentation"
+    / "markdownFrame.ts"
+)
+
+
+@pytest.mark.skipif(
+    not MARKDOWN_FRAME.exists(), reason="Necesita el frontend (en la imagen backend-dev solo se monta backend/)"
+)
+def test_spa_csp_allows_the_markdown_bridge_by_its_hash() -> None:
+    # Un iframe srcdoc hereda la CSP de la SPA: si el hash no es el del BRIDGE_SCRIPT del frontend, el navegador bloquea
+    # el puente del visor Markdown y sus enlaces no hacen nada (1.15.0).
+    source = MARKDOWN_FRAME.read_text(encoding="utf-8").replace("\r\n", "\n")
+    script = source.split("export const BRIDGE_SCRIPT = `", 1)[1].split("`;", 1)[0]
+    assert "${" not in script and "\\" not in script  # literal sin interpolaciones ni escapes: el texto es el script
+    digest = base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii")
+    assert digest == MARKDOWN_BRIDGE_SHA256
+    assert f"export const BRIDGE_SHA256 = '{MARKDOWN_BRIDGE_SHA256}';" in source
 
 
 def test_route_specific_csp_is_kept(migrated: Settings) -> None:

@@ -5,13 +5,13 @@ import {
   Box,
   Button,
   Code,
+  Grid,
   Group,
   Loader,
   Modal,
   NativeSelect,
   NavLink,
   ScrollArea,
-  SimpleGrid,
   Stack,
   Text,
   TextInput,
@@ -25,7 +25,7 @@ import { ErrorAlert } from '../../../components/ErrorAlert';
 import { stripFrontMatter } from '../markdown';
 import { renderMermaidBlocks } from '../mermaid';
 import { type Artifact, downloadUrl, useArtifactText } from '../useRuns';
-import { buildFrameDocument, navHref, newNonce, sanitizeMarkdownHtml } from './markdownFrame';
+import { buildFrameDocument, navHref, sanitizeMarkdownHtml } from './markdownFrame';
 import {
   type Page,
   SECTIONS,
@@ -42,7 +42,9 @@ const PARAM = 'md';
 /** Con más páginas de objeto que esto, la sección se pagina por letra (sin virtualización ni dependencias nuevas). */
 const LETTER_THRESHOLD = 40;
 const MAX_RESULTS = 100;
-const FRAME_HEIGHT = 640;
+/** Alto del iframe y del árbol (1.15.0): casi toda la ventana, nunca menos de 640 px. */
+const FRAME_HEIGHT = 'max(640px, calc(100vh - 220px))';
+const TREE_HEIGHT = 'max(520px, calc(100vh - 340px))';
 
 type Notice = { kind: 'missing'; href: string } | { kind: 'download'; artifact: Artifact } | null;
 
@@ -53,7 +55,7 @@ interface FrameProps {
   onLink: (href: string) => void;
 }
 
-/** Página en el iframe aislado (`sandbox="allow-scripts"`, origen opaco, CSP con nonce; ver `markdownFrame.ts`). */
+/** Página en el iframe aislado (`sandbox="allow-scripts"`, origen opaco, puente por hash; ver `markdownFrame.ts`). */
 function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
   const { t } = useTranslation();
   const text = useArtifactText(runId, page.artifact);
@@ -86,7 +88,7 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
 
   const ready = safeHtml !== null && safeHtml.source === text.data;
   const srcDoc = useMemo(
-    () => (ready ? buildFrameDocument(safeHtml.html, newNonce(), hash, window.location.origin) : null),
+    () => (ready ? buildFrameDocument(safeHtml.html, hash, window.location.origin) : null),
     [ready, safeHtml, hash],
   );
 
@@ -199,7 +201,7 @@ function PageTree({ pages, current, onOpen }: TreeProps) {
             : t('runs.markdownViewer.results', { count: results.length })}
         </Text>
       )}
-      <ScrollArea h={FRAME_HEIGHT - 120} type="auto">
+      <ScrollArea h={TREE_HEIGHT} type="auto">
         <Box role="list" aria-label={t('runs.markdownViewer.pages')}>
           {listed.map((page) => (
             <div role="listitem" key={page.path}>
@@ -296,62 +298,67 @@ export function MarkdownViewer({
   if (!current) return null;
   return (
     <>
-      <SimpleGrid cols={{ base: 1, md: 3 }}>
-        <PageTree pages={pages} current={current} onOpen={(page) => open(page.path, '')} />
-        <Stack gap="xs" style={{ gridColumn: 'span 2' }}>
-          <Group justify="space-between" wrap="nowrap">
-            <Group gap={4} wrap="nowrap">
-              <ActionIcon
-                variant="default"
-                aria-label={t('runs.markdownViewer.back')}
-                disabled={history.at === 0}
-                onClick={() => move(-1)}
+      {/* El árbol, estrecho; la página, el resto del ancho (1.15.0: antes, un tercio y dos tercios). */}
+      <Grid>
+        <Grid.Col span={{ base: 12, md: 3, xl: 2 }}>
+          <PageTree pages={pages} current={current} onOpen={(page) => open(page.path, '')} />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 9, xl: 10 }}>
+          <Stack gap="xs">
+            <Group justify="space-between" wrap="nowrap">
+              <Group gap={4} wrap="nowrap">
+                <ActionIcon
+                  variant="default"
+                  aria-label={t('runs.markdownViewer.back')}
+                  disabled={history.at === 0}
+                  onClick={() => move(-1)}
+                >
+                  ‹
+                </ActionIcon>
+                <ActionIcon
+                  variant="default"
+                  aria-label={t('runs.markdownViewer.forward')}
+                  disabled={history.at >= history.stack.length - 1}
+                  onClick={() => move(1)}
+                >
+                  ›
+                </ActionIcon>
+                <Code>{here}</Code>
+              </Group>
+              <Anchor
+                href={downloadUrl(runId, current.artifact.id)}
+                size="sm"
+                aria-label={t('runs.markdownViewer.downloadPage', { path: current.path })}
               >
-                ‹
-              </ActionIcon>
-              <ActionIcon
-                variant="default"
-                aria-label={t('runs.markdownViewer.forward')}
-                disabled={history.at >= history.stack.length - 1}
-                onClick={() => move(1)}
-              >
-                ›
-              </ActionIcon>
-              <Code>{here}</Code>
-            </Group>
-            <Anchor
-              href={downloadUrl(runId, current.artifact.id)}
-              size="sm"
-              aria-label={t('runs.markdownViewer.downloadPage', { path: current.path })}
-            >
-              {t('runs.markdownViewer.download')}
-            </Anchor>
-          </Group>
-          {notice?.kind === 'missing' && (
-            <Alert
-              color="yellow"
-              withCloseButton
-              onClose={() => setNotice(null)}
-              title={t('runs.markdownViewer.missing')}
-            >
-              <Code>{notice.href}</Code>
-            </Alert>
-          )}
-          {notice?.kind === 'download' && (
-            <Alert
-              color="blue"
-              withCloseButton
-              onClose={() => setNotice(null)}
-              title={t('runs.markdownViewer.notAPage')}
-            >
-              <Anchor href={downloadUrl(runId, notice.artifact.id)}>
-                {t('runs.outputs.downloadLabel', { name: notice.artifact.path.split('/').at(-1) })}
+                {t('runs.markdownViewer.download')}
               </Anchor>
-            </Alert>
-          )}
-          <MarkdownFrame runId={runId} page={current} hash={hash} onLink={onLink} />
-        </Stack>
-      </SimpleGrid>
+            </Group>
+            {notice?.kind === 'missing' && (
+              <Alert
+                color="yellow"
+                withCloseButton
+                onClose={() => setNotice(null)}
+                title={t('runs.markdownViewer.missing')}
+              >
+                <Code>{notice.href}</Code>
+              </Alert>
+            )}
+            {notice?.kind === 'download' && (
+              <Alert
+                color="blue"
+                withCloseButton
+                onClose={() => setNotice(null)}
+                title={t('runs.markdownViewer.notAPage')}
+              >
+                <Anchor href={downloadUrl(runId, notice.artifact.id)}>
+                  {t('runs.outputs.downloadLabel', { name: notice.artifact.path.split('/').at(-1) })}
+                </Anchor>
+              </Alert>
+            )}
+            <MarkdownFrame runId={runId} page={current} hash={hash} onLink={onLink} />
+          </Stack>
+        </Grid.Col>
+      </Grid>
       <Modal
         opened={external !== null}
         onClose={() => setExternal(null)}

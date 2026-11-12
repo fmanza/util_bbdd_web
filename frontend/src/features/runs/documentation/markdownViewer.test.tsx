@@ -7,6 +7,7 @@ import { stubEventSource } from '../../../test/eventSource';
 import { DOC_RUN, RUN_ID } from '../../../test/fixtures_runs';
 import { renderRoute } from '../../../test/render';
 import type { Artifact, RunDetail } from '../useRuns';
+import { BRIDGE_SCRIPT, BRIDGE_SHA256 } from './markdownFrame';
 import { DOCS_ROOT } from './markdownNav';
 
 const md = (id: number, path: string, previewable = path.endsWith('.md')): Artifact => ({
@@ -77,16 +78,16 @@ async function openViewer() {
 afterEach(() => vi.restoreAllMocks());
 
 describe('visor de la documentación Markdown', () => {
-  it('abre la portada en un iframe con scripts, origen opaco y CSP con nonce', async () => {
+  it('abre la portada en un iframe con scripts, origen opaco y el puente autorizado por su hash', async () => {
     const { index } = await openViewer();
 
     expect(index).toHaveAttribute('sandbox', 'allow-scripts');
     expect(index.getAttribute('sandbox')).not.toContain('allow-same-origin');
     const srcdoc = index.getAttribute('srcdoc') ?? '';
     expect(srcdoc).toContain('<h1>Portada</h1>');
-    const nonce = /script-src 'nonce-([0-9a-f]{32})'/.exec(srcdoc)?.[1];
-    expect(nonce).toBeDefined();
-    expect(srcdoc).toContain(`<script nonce="${nonce}">`);
+    expect(srcdoc).toContain(`script-src 'sha256-${BRIDGE_SHA256}'`);
+    expect(srcdoc).toContain(`<script>${BRIDGE_SCRIPT}</script>`);
+    expect(srcdoc).toContain(`data-ubw-parent="${window.location.origin}"`);
   });
 
   it('navega por los enlaces del puente, con anclas, atrás y adelante, y lo refleja en ?md=', async () => {

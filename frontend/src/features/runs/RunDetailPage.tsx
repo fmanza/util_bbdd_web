@@ -98,9 +98,11 @@ export function RunDetailPage() {
   // Los avisos de un formato de la documentación salen en su tarjeta; aquí, el resto (y todos en ejecuciones antiguas).
   const byFormat = new Set(Object.values(run.warnings_by_format ?? {}).flat());
   const generalWarnings = (run.warnings ?? []).filter((warning) => !byFormat.has(warning));
+  // La documentación muestra el sitio HTML y el visor Markdown: a todo el ancho (1.15.0); el resto, hasta 1100 px.
+  const wide = run.operation === 'documentation';
 
   return (
-    <Stack maw={1100}>
+    <Stack maw={wide ? undefined : 1100}>
       <Group justify="space-between">
         <Stack gap={2}>
           <Title order={2}>{t('runs.detailTitle', { operation: run.operation })}</Title>

@@ -1,9 +1,12 @@
 // Documento del iframe del visor Markdown (M2, ADR-007 enmendado en la 1.12.0).
 //
 // El iframe es `sandbox="allow-scripts"` **sin** `allow-same-origin`: origen opaco, sin cookie, sin acceso a la SPA ni a
-// la API. Dentro solo se ejecuta el script del puente, autorizado por un nonce aleatorio por render en la CSP; el HTML de
-// `marked` (y los SVG de Mermaid) pasa antes por DOMPurify, de modo que un `<script>` o un `on*` llegado de la BD
-// documentada se elimina y nunca hereda el nonce. El puente intercepta los clics en enlaces: las anclas (`#col-…`) se
+// la API. Dentro solo se ejecuta el script del puente, que es **constante** y se autoriza por su hash (1.15.0): un
+// `srcdoc` hereda la CSP de la SPA (`script-src 'self'`), que bloqueaba el script con nonce y dejaba los enlaces sin
+// funcionar fuera de `vite dev` (comprobado en Chromium); la SPA autoriza el mismo hash (`BRIDGE_SHA256`, también en
+// `SPA_CSP` de `backend/app/core/middleware.py`). El HTML de `marked` (y los SVG de Mermaid) pasa antes por DOMPurify,
+// de modo que un `<script>` o un `on*` llegado de la BD documentada se elimina. El puente intercepta los clics en
+// enlaces: las anclas (`#col-…`) se
 // resuelven dentro; el resto se manda al padre con `postMessage({type: 'ubw-md-nav', href})`, que valida el origen del
 // mensaje (`event.source`) y resuelve el destino entre los artefactos registrados (`resolveLink`).
 
@@ -36,60 +39,56 @@ export function sanitizeMarkdownHtml(html: string): string {
   });
 }
 
-/** Nonce aleatorio (128 bits, hexadecimal) para la CSP de cada render. */
-export function newNonce(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** JSON seguro dentro de `<script>` (sin `<`, `>` ni `&` literales; U+2028/9 son válidos en JS desde ES2019). */
-function scriptJson(value: unknown): string {
-  return JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
-}
-
-/** Script del puente: anclas dentro del iframe, el resto de enlaces al padre (solo a `parentOrigin`). */
-function bridge(hash: string, parentOrigin: string): string {
-  return `(function(){
-var HASH=${scriptJson(hash)},PARENT=${scriptJson(parentOrigin)},MAX=${MAX_HREF};
+/**
+ * Script del puente, **constante** (su hash va en las dos CSP): anclas dentro del iframe y el resto de enlaces al padre.
+ * El ancla inicial y el origen de la SPA los lee de `data-ubw-hash` y `data-ubw-parent` del `<body>`, que escribe
+ * `buildFrameDocument` (el contenido de la página no puede cambiarlos: no se ejecuta ningún otro script). `2048` es
+ * `MAX_HREF`; un test vigila que coincidan y que el hash sea el de `BRIDGE_SHA256`.
+ */
+export const BRIDGE_SCRIPT = `(function(){
+var b=document.body,HASH=b.getAttribute('data-ubw-hash')||'',PARENT=b.getAttribute('data-ubw-parent')||'',MAX=2048;
 function go(id){if(!id)return;var el=document.getElementById(id);if(el)el.scrollIntoView();}
 function dec(t){try{return decodeURIComponent(t);}catch(e){return t;}}
 document.addEventListener('click',function(ev){
 var t=ev.target,a=t&&t.closest?t.closest('a[href]'):null;if(!a)return;ev.preventDefault();
 var h=a.getAttribute('href')||'';
 if(h.charAt(0)==='#'){go(dec(h.slice(1)));return;}
-if(h.length>MAX)return;
-parent.postMessage({type:${scriptJson(NAV_MESSAGE)},href:h},PARENT);
+if(h.length>MAX||!PARENT)return;
+parent.postMessage({type:'ubw-md-nav',href:h},PARENT);
 });
 if(HASH)go(HASH);
 })();`;
+
+/** `sha256` (base64) de `BRIDGE_SCRIPT`: la fuente `'sha256-…'` de la CSP del iframe y de `SPA_CSP` del backend. */
+export const BRIDGE_SHA256 = 'D/lLjo38BcaAkRf1+2l0LeNZLAXvOTopUf2M93xRNw4=';
+
+/** Escapa un valor para un atributo HTML entre comillas dobles. */
+function attr(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-export function frameCsp(nonce: string): string {
+/** CSP del documento del iframe: solo el script del puente (por su hash), estilos en línea e imágenes `data:`. */
+export function frameCsp(): string {
   return (
-    `default-src 'none'; script-src 'nonce-${nonce}'; img-src data:; style-src 'unsafe-inline'; ` +
+    `default-src 'none'; script-src 'sha256-${BRIDGE_SHA256}'; img-src data:; style-src 'unsafe-inline'; ` +
     "connect-src 'none'; form-action 'none'; base-uri 'none'"
   );
 }
 
 /**
- * `srcdoc` del iframe: CSP con nonce, estilos, el HTML ya limpio y el script del puente.
+ * `srcdoc` del iframe: CSP, estilos, el HTML ya limpio y el script del puente.
  *
  * @param safeHtml - Salida de `sanitizeMarkdownHtml` (nunca HTML sin limpiar).
  * @param hash - Ancla que se abre al cargar (`col-id`), o vacío.
  * @param parentOrigin - Origen de la SPA: el único al que el puente envía mensajes.
  */
-export function buildFrameDocument(
-  safeHtml: string,
-  nonce: string,
-  hash: string,
-  parentOrigin: string,
-): string {
+export function buildFrameDocument(safeHtml: string, hash: string, parentOrigin: string): string {
   return (
     `<!doctype html><html lang="es"><head><meta charset="utf-8">` +
-    `<meta http-equiv="Content-Security-Policy" content="${frameCsp(nonce)}">` +
-    `<style>${STYLE}</style></head><body>${safeHtml}` +
-    `<script nonce="${nonce}">${bridge(hash, parentOrigin)}</script></body></html>`
+    `<meta http-equiv="Content-Security-Policy" content="${frameCsp()}">` +
+    `<style>${STYLE}</style></head>` +
+    `<body data-ubw-hash="${attr(hash)}" data-ubw-parent="${attr(parentOrigin)}">${safeHtml}` +
+    `<script>${BRIDGE_SCRIPT}</script></body></html>`
   );
 }
 

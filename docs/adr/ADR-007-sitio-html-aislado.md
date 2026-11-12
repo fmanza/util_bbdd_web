@@ -97,9 +97,10 @@ genera util_bbdd (`pedidos.md`, `../views/v.md#col-id`): se resuelven contra `ab
 
 - El iframe pasa a `sandbox="allow-scripts"` **sin** `allow-same-origin`: origen opaco (sin cookie, sin API, sin
   acceso al DOM del padre).
-- CSP en el `srcdoc`: `default-src 'none'; script-src 'nonce-<aleatorio por render>'; img-src data:;
+- CSP en el `srcdoc`: `default-src 'none'; script-src 'sha256-<hash del puente>'; img-src data:;
   style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'`. Solo se ejecuta el script del
-  puente; un `<script>` o un `on*` que se colara no tiene el nonce y el navegador lo bloquea (comprobado en Chromium).
+  puente; un `<script>` o un `on*` que se colara no tiene ese hash y el navegador lo bloquea. (En 1.12.0 era un nonce
+  por render; ver la enmienda de 1.15.0.)
 - El HTML de `marked`, con los SVG de Mermaid ya dibujados en la SPA (`securityLevel: 'strict'`), pasa por
   **DOMPurify** antes de añadir el script: sin `script`, `iframe`, `object`, `embed`, `form`, `base`, `meta`, `link`,
   `on*` ni `javascript:`. `foreignObject` se admite como punto de integración HTML porque Mermaid 12 dibuja ahí las
@@ -113,6 +114,22 @@ genera util_bbdd (`pedidos.md`, `../views/v.md#col-id`): se resuelven contra `ab
   `noopener,noreferrer`.
 - Sin cambios en `SITE_CSP`, en la URL firmada del sitio HTML ni en las vistas previas de los demás artefactos
   (`sandbox=""`).
+
+### Enmienda 2026-11-12 (1.15.0): el puente se autoriza por su hash, también en la CSP de la SPA
+
+Los enlaces del visor no funcionaban fuera de `vite dev`. Un `iframe srcdoc` **hereda la CSP de la SPA**
+(`script-src 'self'`), que se aplica además de la suya, y bloqueaba el script con nonce (en Chromium: «violates
+`script-src 'self'`»). Con `vite dev` no hay esa cabecera, y los tests con jsdom no aplican CSP.
+
+- El script del puente es **constante** (`BRIDGE_SCRIPT` en `markdownFrame.ts`). El ancla inicial y el origen de la
+  SPA van en `data-ubw-hash` y `data-ubw-parent` del `<body>`, escapados.
+- Su `sha256` va en la CSP del `srcdoc` y en `SPA_CSP` (`MARKDOWN_BRIDGE_SHA256` en `backend/app/core/middleware.py`).
+  `test_spa_csp_allows_the_markdown_bridge_by_its_hash` recalcula el hash desde el fichero del frontend y falla si no
+  coinciden.
+- `SPA_CSP` sigue sin `'unsafe-inline'` en scripts: el hash solo autoriza ese texto exacto, que se limita a hablar con
+  la SPA por `postMessage`.
+- Comprobado en Chromium (Playwright) con el puente y la `SPA_CSP` reales: el clic en un enlace llega al padre y el
+  ancla se resuelve dentro.
 
 ## Enmienda 2026-11-06 (1.13.0): Mermaid de la documentación Markdown fuera de cada ejecución
 
