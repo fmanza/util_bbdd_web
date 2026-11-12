@@ -3,6 +3,37 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [1.15.0] - 2026-11-12
+
+### Added
+
+- **Filtro de tablas** en la documentación (util_bbdd 5.5.0, G52): grupo «Filtro de tablas» con **Incluir** y
+  **Excluir** (patrones *glob* separados por comas, sin distinguir mayúsculas) y **Listar la frontera**; vale para
+  todos los formatos. **Probar patrones** los aplica a las tablas y vistas del schema (catálogo del explorador) y
+  dice cuáles se documentan antes de lanzar, con la misma semántica que util_bbdd (comprobada con 260 casos de
+  `fnmatch`); **Cómo escribir los patrones** despliega la ayuda con ejemplos. La frontera sale en el mensaje final de
+  la ejecución. API: `table_include`, `table_exclude` y `table_frontier` en los parámetros de `documentation`.
+- **README de la documentación Markdown** (util_bbdd 5.5.0, G53): la tarjeta Markdown avisa de cómo verla fuera de
+  la web y enlaza el `README.md`, que va en el ZIP.
+
+### Changed
+
+- **util_bbdd 5.5.0** (wheel de su release): «Referenciada por» en las fichas Markdown (G54) y resumen de los
+  diagramas «Niveles por sentido».
+- **Documentación a todo el ancho**: la página de una documentación ya no se limita a 1100 px; el visor Markdown da
+  al árbol una columna estrecha y el resto a la página, y el visor y el sitio HTML ocupan casi todo el alto de la
+  ventana.
+- **Niveles de relación**: los campos «Profundidad» pasan a «Niveles de relación (por sentido)» y «Tope de niveles
+  en Markdown», con una descripción de qué es un nivel (con 1 nivel y las dos direcciones, el diagrama de `B` en
+  `A → B → C` muestra las tres tablas).
+
+### Fixed
+
+- **Enlaces del visor Markdown**: no hacían nada fuera de `vite dev`. El iframe `srcdoc` hereda la CSP de la SPA
+  (`script-src 'self'`), que bloqueaba el script del puente con nonce. Ahora el puente es constante y se autoriza
+  por su hash en la CSP del iframe y en la de la SPA (ADR-007 enmendado); un test vigila que los dos hashes
+  coincidan. Comprobado en Chromium con la CSP real.
+
 ## [1.14.0] - 2026-11-07
 
 ### Added
