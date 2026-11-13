@@ -93,7 +93,10 @@ describe('ExplorerPage', () => {
     await user.click(screen.getByRole('tab', { name: 'Relaciones (1)' }));
     expect(await screen.findByRole('button', { name: 'clientes' })).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'DDL' }));
-    expect(await screen.findByText('CREATE TABLE pedidos (…)')).toBeInTheDocument();
+    // DDL resaltado: según cuándo cargue highlight.js, el texto está entero o repartido en <span class="hljs-…">.
+    const ddl = await screen.findByLabelText('DDL', { selector: '.mantine-ScrollArea-root' });
+    await waitFor(() => expect(ddl.querySelector('.hljs-keyword')).not.toBeNull());
+    expect(ddl.textContent).toContain('CREATE TABLE pedidos (…)');
 
     await user.click(screen.getByRole('checkbox', { name: 'Mostrar schemas del sistema' }));
     expect(within(schema).getByText('information_schema (sistema)')).toBeInTheDocument();
