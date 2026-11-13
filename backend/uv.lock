@@ -8,13 +8,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-10-05T00:00:00Z"
-
-[options.exclude-newer-package]
-asyncpg = "2026-10-19T00:00:00Z"
-opentelemetry-api = "2026-10-09T00:00:00Z"
-zensical = "2026-11-11T00:00:00Z"
-zensical-ui = "2026-11-11T00:00:00Z"
+exclude-newer = "2026-11-11T00:00:00Z"
 
 [[package]]
 name = "aiomysql"

@@ -48,8 +48,10 @@ Después `/version-closure 1.16.0` y despliegue según `publicar_version.md`.
 - **[backend/integración]**: desde util_bbdd 5.6.0 la configuración del sitio Markdown es `zensical.toml`; la web no
   pasa `markdown.mkdocs_yml` (en desuso, se retira en 6.0.0). Ningún código depende del nombre del fichero: el ZIP
   añade el Mermaid por `MARKDOWN_MERMAID_ARTIFACT` y `run.json` → `markdown_mermaid`.
-- **[backend/dependencias]**: `exclude-newer-package` lleva `zensical` y `zensical-ui` (2026-11-11) solo por el grupo
-  `docs`; sobran cuando `exclude-newer` pase del 2026-11-24. Al subir zensical, `zensical-ui` va con versión exacta.
+- **[backend/dependencias]**: el 2026-11-13 se adelantó `exclude-newer` a `2026-11-11T00:00:00Z` (decisión explícita
+  del usuario, excepción a la regla de 2 semanas) y se retiró `exclude-newer-package` entero (asyncpg,
+  opentelemetry-api, zensical, zensical-ui). Hasta el 2026-11-25 no ejecutes `uv lock --upgrade` sin revisar lo que
+  entra. Al subir zensical, `zensical-ui` va con versión exacta.
 - **[pruebas/Markdown]**: el tema de Zensical dibuja Mermaid dentro de un shadow DOM: `.mermaid svg` no lo encuentra
   un selector normal; para comprobar los diagramas usa una captura o el contenido del shadow root.
 - **[pruebas/manual]**: para una prueba real sin tocar la instancia Docker en uso, levanta API y worker con

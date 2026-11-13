@@ -3,6 +3,14 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Changed
+
+- **backend**: `exclude-newer` pasa a `2026-11-11` y se retiran todas las excepciones (`asyncpg`,
+  `opentelemetry-api`, `zensical`, `zensical-ui`); el lock no cambia ninguna versión. El corte no cumple las 2
+  semanas hasta el 2026-11-25 (decisión explícita): hasta entonces, nada de `uv lock --upgrade` sin revisión.
+
 ## [1.16.0] - 2026-11-13
 
 ### Changed
