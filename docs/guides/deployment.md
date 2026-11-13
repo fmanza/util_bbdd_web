@@ -258,6 +258,8 @@ API, cada uno lleva su cuenta.
 
 Verificado en la 1.0.0 contra el bench: HSQLDB 2.7.4 por JDBC (el JAR del driver va en `UBW_FILES_DIR`, parámetro
 `jdbc_jar`) y SQL Server 2022 con `sql_server_driver = pyodbc` y `driver_name = ODBC Driver 18 for SQL Server`.
+Desde la 1.18.0 (util_bbdd 5.7.0) `driver_name` es opcional: sin él se usa el «ODBC Driver NN for SQL Server» más
+reciente instalado (en la imagen con `WITH_ODBC`, el 18). Un `driver_name` explícito manda siempre.
 
 ## Copias de seguridad
 

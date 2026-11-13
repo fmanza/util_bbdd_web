@@ -140,8 +140,9 @@ completo, publica el ZIP con Zensical fuera de la web.
 **Mapa de trazabilidad**: un `.toml` (recomendado: admite comentarios) o `.json` de hasta 1 MB que enlaza tablas,
 vistas, rutinas y columnas con código, documentos funcionales y técnicos y requisitos. Se gestiona como una plantilla
 más (pestaña **Plantillas** del proyecto o *Administración → Plantillas*), con su **ejemplo** descargable. Al subirlo
-se comprueba la sintaxis; los campos los comprueba util_bbdd al generar: **si el mapa no es válido, la ejecución
-falla** (`invalid_trace_map`) con **todos** los errores en el mensaje, para corregirlos de una vez. Con mapa, la
+se comprueba entero (desde la 1.18.0, util_bbdd 5.7.0): sintaxis y campos, con **todos** los errores en el mensaje
+para corregirlos de una vez, y un mapa no válido no se guarda. Un mapa subido antes de la 1.18.0 se comprueba al
+generar: **si no es válido, la ejecución falla** (`invalid_trace_map`) con todos los errores. Con mapa, la
 documentación añade `docs/traceability.md` (cobertura, matriz y entradas del mapa que no casan con ningún objeto).
 
 ```toml

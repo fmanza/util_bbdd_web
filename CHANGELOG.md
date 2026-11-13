@@ -3,6 +3,23 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Added
+
+- **Mapa de trazabilidad validado al subirlo** (util_bbdd 5.7.0, G49): se comprueban también los campos, con todos
+  los errores en el mensaje (con el nombre del fichero y sin rutas), y un mapa no válido no se guarda. Los mapas
+  subidos antes se siguen comprobando al generar (`invalid_trace_map`).
+
+### Changed
+
+- **util_bbdd 5.8.0** (incluye 5.7.0):
+  - En los diagramas Mermaid de la documentación Markdown cada columna lleva el **nombre antes que el tipo**
+    (`cliente_id INTEGER FK`), como en los de Word y HTML. Las documentaciones anteriores no cambian.
+  - SQL Server con `pyodbc` y sin `driver_name` usa el «ODBC Driver NN for SQL Server» más reciente instalado (antes,
+    siempre el 17). En la imagen con `WITH_ODBC` es el 18, así que `driver_name` ya no hace falta. Con los dos
+    instalados y sin `driver_name`, una conexión pasa del 17 al 18; para seguir con el 17, indícalo en la conexión.
+
 ## [1.17.0] - 2026-11-13
 
 ### Added
