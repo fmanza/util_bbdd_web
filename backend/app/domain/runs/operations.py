@@ -100,7 +100,7 @@ class DocumentationParams(BaseModel):
         "formats",
         False,
         "Carpeta Markdown: una página por objeto, diagramas de Mermaid (sin Graphviz), catálogo JSON, ficheros para "
-        "IA y mkdocs.yml.",
+        "IA y zensical.toml.",
     )
     tables: bool = _group("tables", True, "Documentar las tablas.")
     table_columns: bool = _group("tables", True, "Columnas de cada tabla.")

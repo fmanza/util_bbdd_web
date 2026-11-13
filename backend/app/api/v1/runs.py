@@ -55,7 +55,7 @@ _403: dict[int | str, dict[str, Any]] = {403: {"description": "Tu rol no lo perm
 #: Tipos con vista previa: HTML y SVG en ``iframe sandbox``; el resto como texto plano.
 SANDBOXED_KINDS: Final = frozenset({"html", "graphs"})
 TEXT_KINDS: Final = frozenset({"markdown", "sql", "log", "manifest"})
-#: Bajo ``outputs/markdown/`` también hay ``mermaid.min.js``, ``catalog.json``, ``llms*.txt``, ``mkdocs.yml``…: solo
+#: Bajo ``outputs/markdown/`` también hay ``mermaid.min.js``, ``catalog.json``, ``llms*.txt``, ``zensical.toml``…: solo
 #: las páginas ``.md`` tienen vista previa (el tipo guardado no cambia; las ejecuciones antiguas también se arreglan).
 MARKDOWN_PREVIEW_SUFFIXES: Final = frozenset({".md"})
 #: Formatos de la documentación con ZIP propio (``GET /runs/{id}/archive?format=…``): el tipo de sus artefactos.

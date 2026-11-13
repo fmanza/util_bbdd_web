@@ -42,7 +42,9 @@ dev = [
     "mypy>=1.17",
 ]
 docs = [
-    "zensical>=0.0.67",  # sitio de documentación (zensical.toml en la raíz)
+    # Sitio de documentación (zensical.toml en la raíz). Con tope: Zensical está en beta (0.1.x); se sube a mano
+    # comprobando `zensical build --strict`. 0.1.1 es la que pide util_bbdd 5.6.0 para su zensical.toml (G55).
+    "zensical>=0.1.1,<0.2",
 ]
 
 [tool.uv]
@@ -50,8 +52,10 @@ package = false
 # Cadena de suministro: solo versiones publicadas antes de esta fecha (≥ 2 semanas). Se adelanta a mano al actualizar.
 exclude-newer = "2026-10-05T00:00:00Z"
 # Excepciones justificadas: util_bbdd 4.x exige asyncpg>=0.32, publicado después del corte; opentelemetry-api
-# 1.45.1 (2026-10-06) corrige CVE-2026-114603 (ReDoS en ``tracestate``; llega con FastAPI, Fase 10).
-exclude-newer-package = { asyncpg = "2026-10-19T00:00:00Z", opentelemetry-api = "2026-10-09T00:00:00Z" }
+# 1.45.1 (2026-10-06) corrige CVE-2026-114603 (ReDoS en ``tracestate``; llega con FastAPI, Fase 10); zensical 0.1.1
+# y su zensical-ui 0.0.42 (2026-11-10, solo grupo docs) son las que pide util_bbdd 5.6.0 para el zensical.toml de
+# la salida Markdown (G55); esas dos sobran cuando exclude-newer pase del 2026-11-24.
+exclude-newer-package = { asyncpg = "2026-10-19T00:00:00Z", opentelemetry-api = "2026-10-09T00:00:00Z", zensical = "2026-11-11T00:00:00Z", zensical-ui = "2026-11-11T00:00:00Z" }
 
 [tool.uv.sources]
 util_bbdd = { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.6.0/util_bbdd-5.6.0-py3-none-any.whl" }

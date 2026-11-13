@@ -50,7 +50,7 @@ GRAPH_WORKERS: Final = 2
 _FORMAT_DIRS: Final[dict[str, str]] = {"word": "WORD", "excel": "EXCEL", "html": "HTML", "markdown": "MARKDOWN"}
 #: Formatos que se recolocan como carpeta entera (``outputs/<formato>/documentacion``) y su portada.
 _SITE_FORMATS: Final[dict[str, str]] = {"html": "index.html", "markdown": "docs/index.md"}
-#: Ruta del Mermaid que referencia el ``mkdocs.yml`` (relativa a ``docs/``) y artefacto que la web añade al ZIP (G50).
+#: Ruta del Mermaid que referencia el ``zensical.toml`` (relativa a ``docs/``) y artefacto que la web añade al ZIP (G50).
 MERMAID_JS_REF: Final = "assets/javascripts/mermaid.min.js"
 MARKDOWN_MERMAID_ARTIFACT: Final = f"outputs/markdown/documentacion/docs/{MERMAID_JS_REF}"
 #: Formatos cuyos diagramas dibuja Graphviz (``dot``); los del Markdown son de Mermaid.
@@ -498,7 +498,7 @@ def _document(
         folder = base / _FORMAT_DIRS[fmt]
         if not folder.exists():
             continue
-        if fmt in _SITE_FORMATS:  # carpeta entera: el Markdown tiene docs/, mkdocs.yml y manifest.json
+        if fmt in _SITE_FORMATS:  # carpeta entera: el Markdown tiene docs/, zensical.toml y manifest.json
             target = outputs_dir / fmt / "documentacion"
             _move(folder, target)
             produced[fmt] = (target / _SITE_FORMATS[fmt]).relative_to(outputs_dir).as_posix()

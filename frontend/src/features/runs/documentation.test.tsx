@@ -48,7 +48,7 @@ const CARDS_RUN: RunDetail = {
     mdArtifact(73, 'docs/catalog.json', false, 3_600_000),
     mdArtifact(74, 'docs/llms-full.txt', false, 12_000_000),
     mdArtifact(75, 'docs/assets/javascripts/mermaid.min.js', false, 5_500_000),
-    mdArtifact(76, 'mkdocs.yml', false),
+    mdArtifact(76, 'zensical.toml', false),
     mdArtifact(77, 'README.md', true),
   ],
 };
@@ -247,7 +247,7 @@ describe('resultados de la documentación', () => {
       'href',
       `/api/v1/runs/${RUN_ID}/artifacts/73`,
     );
-    expect(within(markdown).getByRole('link', { name: 'Descargar mkdocs.yml' })).toBeInTheDocument();
+    expect(within(markdown).getByRole('link', { name: 'Descargar zensical.toml' })).toBeInTheDocument();
     // README.md (util_bbdd 5.5.0): aviso con su descarga; no es una página del visor (sigue en 2 páginas)
     expect(within(markdown).getByText('Cómo ver la documentación fuera de la web')).toBeInTheDocument();
     expect(within(markdown).getByRole('link', { name: 'Descargar README.md' })).toHaveAttribute(

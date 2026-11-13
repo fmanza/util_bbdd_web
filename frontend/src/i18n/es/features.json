@@ -662,7 +662,7 @@
         },
         "markdown": {
           "title": "Markdown",
-          "description": "Carpeta con una página por objeto, catálogo JSON, ficheros para IA y mkdocs.yml. El ZIP es publicable con Zensical o MkDocs (outputs/markdown/documentacion) e incluye Mermaid para dibujar los diagramas sin Internet."
+          "description": "Carpeta con una página por objeto, catálogo JSON, ficheros para IA y zensical.toml. El ZIP es publicable con Zensical (outputs/markdown/documentacion) e incluye Mermaid para dibujar los diagramas sin Internet."
         }
       },
       "withTemplate": "Con plantilla",
@@ -677,7 +677,7 @@
       "markdownPage": "Página Markdown {{path}}",
       "auxiliaryFiles": "Ficheros auxiliares",
       "readmeTitle": "Cómo ver la documentación fuera de la web",
-      "readmeHint": "Descarga el ZIP y abre README.md: explica cómo verla en Visual Studio Code (con los diagramas), como sitio web con zensical serve o mkdocs serve, y qué contiene cada fichero.",
+      "readmeHint": "Descarga el ZIP y abre README.md: explica cómo verla en Visual Studio Code (con los diagramas), como sitio web con zensical serve, y qué contiene cada fichero.",
       "readmeDownload": "Descargar README.md"
     },
     "cancelApplyTitle": "Cancelar la aplicación",

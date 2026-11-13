@@ -7,8 +7,8 @@ Markdown (util_bbdd 5.3.0): el mapa de trazabilidad (una plantilla ``trace``) y 
 anterior también se copian a ``inputs/``; a diferencia de las plantillas de Office, si faltan o no son válidos la
 ejecución falla (``invalid_trace_map``, ``invalid_previous``): una trazabilidad o unos cambios ausentes en silencio
 serían peores que un error. ``mermaid.min.js`` es el de ``UBW_MERMAID_JS``: la web no sale a Internet (ADR-007).
-Desde util_bbdd 5.4.0 (G50) no se copia en cada ejecución: ``mkdocs.yml`` lo referencia (``mermaid_js_ref``) y el ZIP
-lo añade al descargar; ``run.json`` lo anota en ``markdown_mermaid``.
+Desde util_bbdd 5.4.0 (G50) no se copia en cada ejecución: ``zensical.toml`` (``mkdocs.yml`` antes de 5.6.0) lo
+referencia (``mermaid_js_ref``) y el ZIP lo añade al descargar; ``run.json`` lo anota en ``markdown_mermaid``.
 """
 
 from __future__ import annotations
@@ -153,7 +153,7 @@ def _record(
 
 
 def _mermaid_js(ctx: JobContext, warnings: Warnings) -> Path | None:
-    """``UBW_MERMAID_JS`` si existe (se referencia, no se copia: G50); si no, el ``mkdocs.yml`` carga Mermaid de
+    """``UBW_MERMAID_JS`` si existe (se referencia, no se copia: G50); si no, el ``zensical.toml`` carga Mermaid de
     Internet y se avisa."""
     path = ctx.settings.mermaid_js
     if path is not None and path.is_file():
