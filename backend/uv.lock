@@ -1140,8 +1140,8 @@ wheels = [
 
 [[package]]
 name = "util-bbdd"
-version = "5.5.0"
-source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.5.0/util_bbdd-5.5.0-py3-none-any.whl" }
+version = "5.6.0"
+source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.6.0/util_bbdd-5.6.0-py3-none-any.whl" }
 dependencies = [
     { name = "jinja2" },
     { name = "openpyxl" },
@@ -1150,7 +1150,7 @@ dependencies = [
     { name = "sqlalchemy" },
 ]
 wheels = [
-    { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.5.0/util_bbdd-5.5.0-py3-none-any.whl", hash = "sha256:c70c42477d9fd8e0896d8b48d9b95d8fca8648abc60cd151501d89346ff478cf" },
+    { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.6.0/util_bbdd-5.6.0-py3-none-any.whl", hash = "sha256:6a42e09ec44febc43634e23ca1a79d30f14c658823a40ee6fc9da064e97f81d5" },
 ]
 
 [package.optional-dependencies]
@@ -1195,13 +1195,13 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=26.10" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.6" },
     { name = "cairosvg", marker = "extra == 'doc-svg'", specifier = ">=2.9" },
+    { name = "certifi", marker = "extra == 'dev'" },
     { name = "graphviz", marker = "extra == 'analysis'", specifier = ">=0.21" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=9.0" },
     { name = "jaydebeapi", marker = "extra == 'hsqldb'", specifier = ">=1.2" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "mariadb", marker = "extra == 'mariadb'", specifier = ">=1.1" },
     { name = "matplotlib", marker = "extra == 'analysis-matplotlib'", specifier = ">=3.11" },
-    { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.7" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.4" },
     { name = "networkx", marker = "extra == 'analysis-matplotlib'", specifier = ">=3.7" },
@@ -1231,7 +1231,7 @@ requires-dist = [
     { name = "types-openpyxl", marker = "extra == 'dev'" },
     { name = "types-pymysql", marker = "extra == 'dev'" },
     { name = "util-bbdd", extras = ["analysis", "analysis-matplotlib", "dev", "docs", "mariadb", "migrate", "mysql", "oracle", "postgresql", "test-drivers"], marker = "extra == 'dev-full'" },
-    { name = "zensical", marker = "extra == 'docs'", specifier = ">=0.0.71" },
+    { name = "zensical", marker = "extra == 'docs'", specifier = ">=0.1.1,<0.2" },
 ]
 provides-extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlserver-odbc", "hsqldb", "sqlite-async", "migrate", "analysis", "analysis-matplotlib", "doc-svg", "test-drivers", "dev-full", "dev", "docs"]
 
@@ -1294,7 +1294,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "sqlalchemy", specifier = ">=2.1" },
     { name = "sqlglot", specifier = ">=30" },
-    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlite-async", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v5.5.0/util_bbdd-5.5.0-py3-none-any.whl" },
+    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlite-async", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v5.6.0/util_bbdd-5.6.0-py3-none-any.whl" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]
 provides-extras = ["hsqldb", "odbc"]

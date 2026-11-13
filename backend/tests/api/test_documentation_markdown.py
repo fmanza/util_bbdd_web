@@ -82,8 +82,10 @@ def test_markdown_generates_the_whole_folder(
 
     assert run.status == "succeeded", (run.error_code, run.error_message)
     paths = _paths(user_client, run_id)
-    for name in ("docs/index.md", "docs/catalog.json", "docs/llms.txt", "mkdocs.yml", "manifest.json"):
+    for name in ("docs/index.md", "docs/catalog.json", "docs/llms.txt", "zensical.toml", "manifest.json"):
         assert ROOT + name in paths, name
+    # G55 (util_bbdd 5.6.0): zensical.toml sustituye a mkdocs.yml (en desuso, desactivado por defecto).
+    assert ROOT + "mkdocs.yml" not in paths
     assert paths[ROOT + "docs/index.md"]["kind"] == "markdown"
     assert any(p.startswith(ROOT + "docs/tables/") and p.endswith("pedidos.md") for p in paths)
     # G50 (util_bbdd 5.4.0): Mermaid referenciado, no copiado en la ejecución.
@@ -96,10 +98,11 @@ def test_markdown_generates_the_whole_folder(
         "path": ROOT + "docs/assets/javascripts/mermaid.min.js",
         "sha256": hashlib.sha256(mermaid_js.read_bytes()).hexdigest(),
     }
-    mkdocs = (directory / ROOT / "mkdocs.yml").read_text(encoding="utf-8")
-    assert "extra_javascript" in mkdocs and "assets/javascripts/mermaid.min.js" in mkdocs
-    assert "Tienda" in mkdocs
-    assert "unpkg" not in mkdocs
+    site = (directory / ROOT / "zensical.toml").read_text(encoding="utf-8")
+    assert "extra_javascript" in site and "assets/javascripts/mermaid.min.js" in site
+    assert 'site_name = "Tienda"' in site
+    # Mermaid local referenciado: sitio sin Internet, sin fuentes externas ni Mermaid de unpkg.
+    assert "font = false" in site and "unpkg" not in site
     pedidos = next(p for p in paths if p.startswith(ROOT + "docs/tables/") and p.endswith("pedidos.md"))
     assert "erDiagram" in (directory / pedidos).read_text(encoding="utf-8")
     assert not (directory / "work").exists()
@@ -117,7 +120,7 @@ def test_markdown_generates_the_whole_folder(
         # El ZIP lleva el Mermaid del servidor (una sola vez), así que la carpeta se publica sin Internet.
         assert len(bundled) == 1 and zipped.read(bundled[0]) == mermaid_js.read_bytes()
     assert any(n.endswith("markdown/documentacion/docs/index.md") for n in names)
-    assert any(n.endswith("markdown/documentacion/mkdocs.yml") for n in names)
+    assert any(n.endswith("markdown/documentacion/zensical.toml") for n in names)
 
     # Si el Mermaid del servidor desaparece, el ZIP sale sin él y lo avisa (el tema lo cargará de Internet).
     monkeypatch.setattr(settings, "mermaid_js", tmp_path / "ya-no-esta.js")
@@ -169,7 +172,7 @@ def test_documentation_archive_by_format_preview_rules_and_page_layout(
 
     # Vista previa: solo las páginas .md de la carpeta Markdown (los auxiliares se descargan).
     assert paths[ROOT + "docs/index.md"]["previewable"] is True
-    for name in ("docs/catalog.json", "docs/llms.txt", "mkdocs.yml"):
+    for name in ("docs/catalog.json", "docs/llms.txt", "zensical.toml"):
         assert paths[ROOT + name]["kind"] == "markdown" and paths[ROOT + name]["previewable"] is False, name
     catalog = paths[ROOT + "docs/catalog.json"]["id"]
     assert user_client.get(f"/api/v1/runs/{run_id}/artifacts/{catalog}/preview").status_code == 415
@@ -198,7 +201,7 @@ def test_documentation_archive_by_format_preview_rules_and_page_layout(
     status, disposition, names = archive("markdown")
     assert status == 200 and disposition.endswith('_markdown.zip"')
     assert names and all("/outputs/markdown/" in n for n in names)
-    assert any(n.endswith("markdown/documentacion/mkdocs.yml") for n in names)
+    assert any(n.endswith("markdown/documentacion/zensical.toml") for n in names)
     assert any(n.endswith("docs/assets/javascripts/mermaid.min.js") for n in names)
     status, _, names = archive("html")
     assert status == 200 and names and all("/outputs/html/" in n for n in names)

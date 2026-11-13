@@ -147,7 +147,8 @@ def test_markdown_only_does_not_need_graphviz(tmp_path: Path, monkeypatch: pytes
     )
 
     assert summary["formats"] == {"markdown": "markdown/documentacion/docs/index.md"}
-    assert (outputs / "markdown/documentacion/mkdocs.yml").is_file()
+    assert (outputs / "markdown/documentacion/zensical.toml").is_file()
+    assert not (outputs / "markdown/documentacion/mkdocs.yml").exists()
     with pytest.raises(doc.GraphvizMissingError):
         generate_documentation(
             "sqlite",
