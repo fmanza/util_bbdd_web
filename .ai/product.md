@@ -1,7 +1,7 @@
 # Producto — util_bbdd_web
 
 - **Qué es**: aplicación web multiusuario que expone la funcionalidad de la librería util_bbdd 4.3.0.
-- **Versión actual**: 1.16.0 (util_bbdd 5.6.0; la documentación Markdown trae `zensical.toml` en lugar de `mkdocs.yml`, G55). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
+- **Versión actual**: 1.17.0 (util_bbdd 5.6.0; DDL con resaltado SQL y «Copiar» en el visor Markdown, el explorador y la vista previa de los scripts SQL). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
 - **Usuarios**: equipos técnicos (DBA, desarrollo, migraciones) en una red interna; rol `admin` y rol `user`.
 
 ## Capacidades objetivo

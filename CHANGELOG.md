@@ -3,7 +3,7 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
-## [Unreleased]
+## [1.17.0] - 2026-11-13
 
 ### Added
 
@@ -19,6 +19,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **backend**: `exclude-newer` pasa a `2026-11-11` y se retiran todas las excepciones (`asyncpg`,
   `opentelemetry-api`, `zensical`, `zensical-ui`); el lock no cambia ninguna versión. El corte no cumple las 2
   semanas hasta el 2026-11-25 (decisión explícita): hasta entonces, nada de `uv lock --upgrade` sin revisión.
+- **backend**: la cabecera `Content-Security-Policy` de la SPA autoriza el nuevo hash del puente del visor Markdown
+  (`MARKDOWN_BRIDGE_SHA256`); sigue sin `'unsafe-inline'` en scripts.
+
+### Fixed
+
+- **E2E**: `security.spec` admite el hash del puente en `script-src` (sigue rechazando `'unsafe-inline'` y
+  `'unsafe-eval'`) y `storage.spec` pulsa el «Guardar» de la tarjeta «Cuota y retención».
 
 ## [1.16.0] - 2026-11-13
 
