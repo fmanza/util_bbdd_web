@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.db.models import DocumentTemplate
 from app.jobs.worker import Worker
 from app.workspace.layout import run_dir
 from tests.api.test_documentation import launch, project  # noqa: F401  (fixture)
@@ -325,6 +326,25 @@ def test_trace_map_applies_to_markdown(
     assert any(t["kind"] == "trace" and t["applied"] is True for t in templates)
 
 
+def test_invalid_trace_map_is_rejected_on_upload_with_every_error_and_no_paths(
+    user_client: TestClient,
+    project: dict[str, object],  # noqa: F811
+    db: Session,
+    settings: Settings,
+) -> None:
+    # G49 (util_bbdd 5.7.0): el esquema del mapa se valida al subirlo, sin conectar.
+    response = upload(user_client, project_url(project["id"]), "ventas.toml", TRACE_BAD)
+
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert "El mapa de trazabilidad (ventas.toml)" in detail
+    assert "requirement" in detail and "codigo" in detail  # todos los errores juntos
+    for secret in (str(settings.workspace_dir), settings.workspace_dir.as_posix(), ".tmp-"):
+        assert secret not in detail
+    assert db.query(DocumentTemplate).filter_by(project_id=project["id"]).count() == 0
+    assert not any(settings.workspace_dir.rglob("*.toml"))  # ni el temporal ni el definitivo
+
+
 def test_invalid_trace_map_fails_with_every_error_and_no_paths(
     user_client: TestClient,
     project: dict[str, object],  # noqa: F811
@@ -332,7 +352,14 @@ def test_invalid_trace_map_fails_with_every_error_and_no_paths(
     db: Session,
     settings: Settings,
 ) -> None:
-    trace_id = _trace(user_client, project["id"], TRACE_BAD, filename="ventas.toml")
+    # Un mapa guardado antes de validar al subir (hasta la 1.17.0): el job sigue fallando con todos los errores.
+    trace_id = _trace(user_client, project["id"], TRACE_OK, filename="ventas.toml")
+    stored = db.get(DocumentTemplate, trace_id)
+    assert stored is not None
+    (settings.workspace_dir / stored.path).write_bytes(TRACE_BAD)
+    stored.sha256 = hashlib.sha256(TRACE_BAD).hexdigest()
+    stored.size_bytes = len(TRACE_BAD)
+    db.commit()
 
     run_id = launch(user_client, project["id"], "documentation", **ONLY_MARKDOWN, trace_map=trace_id)
     run = wait_for(worker, db, run_id, timeout=180)

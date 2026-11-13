@@ -46,6 +46,7 @@ from app.domain.templates.files import (
     stored_suffix,
     untemplate,
 )
+from app.integrations.util_bbdd.documentation import trace_map_error
 from app.workspace.layout import safe_path
 
 logger = logging.getLogger(__name__)
@@ -186,6 +187,8 @@ def save_template(
         info = check_template(
             tmp, kind, max_uncompressed=effective_settings(db, settings).upload_max_uncompressed_mb * 1024 * 1024
         )
+        if kind == "trace" and (error := trace_map_error(tmp, shown)) is not None:
+            raise TemplateContentError(error)  # esquema del mapa (G49): todos los errores, sin conectar
         final = folder / f"{template_id}.{suffix}"
         tmp.replace(final)
     except BaseException:

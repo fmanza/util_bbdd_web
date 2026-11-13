@@ -18,8 +18,10 @@ ejecución termina con un aviso en lugar de un error.
 Markdown (util_bbdd 5.3.0): bloque ``imprimir["markdown"]`` con Mermaid local (la web no sale a Internet,
 ADR-007), mapa de trazabilidad (``trace_map``) y catálogo anterior (``previous``) opcionales. Desde util_bbdd 5.4.0
 (G50) el Mermaid se **referencia** (``mermaid_js_ref``) sin copiarlo en cada ejecución: la web lo añade al ZIP. Sus diagramas son de
-Mermaid: no necesitan Graphviz. Los errores de esos ficheros (``DocumentationConfigError``) llevan rutas del servidor:
-``markdown_input_error`` los convierte en un mensaje sin ellas.
+Mermaid: no necesitan Graphviz. Los errores de esos ficheros (``DocumentationConfigError``) nombran el fichero
+interno (``inputs/…``; hasta util_bbdd 5.6.0, la ruta completa): ``markdown_input_error`` los convierte en un mensaje
+con el nombre que ve el usuario y sin rutas. Desde util_bbdd 5.7.0 (G49) el mapa se valida también al subirlo
+(``trace_map_error``, sin conectar).
 """
 
 from __future__ import annotations
@@ -169,6 +171,26 @@ def markdown_input_error(exc: BaseException, inputs: MarkdownInputs) -> Markdown
                 return MarkdownInputError("previous", public_message(message, inputs))
         seen.add(id(current))
         current = current.__cause__ or current.__context__
+    return None
+
+
+def trace_map_error(path: Path, shown_name: str) -> str | None:
+    """Valida un mapa de trazabilidad sin conectar (``validate_trace_map``, util_bbdd 5.7.0, G49).
+
+    Args:
+        path: Fichero ya guardado (``.toml`` o ``.json``: util_bbdd elige el formato por la extensión).
+        shown_name: Nombre que subió el usuario; sustituye al del fichero en el mensaje.
+
+    Returns:
+        ``None`` si es válido; si no, el mensaje con todos los errores, con ``shown_name`` y sin rutas.
+    """
+    from util_bbdd.doc import validate_trace_map
+    from util_bbdd.exceptions import DocumentationConfigError
+
+    try:
+        validate_trace_map(path)
+    except DocumentationConfigError as exc:
+        return public_message(str(exc), MarkdownInputs(trace_map=path, trace_map_name=shown_name))
     return None
 
 

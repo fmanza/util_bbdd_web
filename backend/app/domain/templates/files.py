@@ -8,8 +8,9 @@ usa; sin ella no hay entidades). Los ``.dotx``/``.xltx`` se guardan como ``.docx
 plantillas). Word: deben estar los estilos que usa util_bbdd (GAPS G41).
 
 Mapas de trazabilidad (``trace``, documentación Markdown de util_bbdd 5.3.0): ``.toml`` o ``.json`` de 1 MB como mucho
-(el límite de util_bbdd), en UTF-8 y con un objeto en la raíz. Aquí solo se comprueba la sintaxis: el esquema (todos
-los errores juntos) lo valida util_bbdd al generar, porque su validador no es público (GAPS G49).
+(el límite de util_bbdd), en UTF-8 y con un objeto en la raíz. Aquí solo se comprueba la sintaxis (mensajes propios);
+el esquema (todos los errores juntos) lo valida al subir ``trace_map_error`` con ``validate_trace_map`` de util_bbdd
+5.7.0 (GAPS G49), desde ``service.py``.
 """
 
 from __future__ import annotations
