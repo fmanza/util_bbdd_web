@@ -158,10 +158,11 @@ cabeceras, OpenAPI oculto en producción, dependencias con CVE), rate limiting p
 E2E de miembros, seguridad y CSP en toda la suite, `scripts/load_test.py`, variantes HSQLDB/ODBC verificadas y
 wheel de util_bbdd 4.0.0 en la release `v4.0.0` con hash en `uv.lock`.
 
-## Después de la 1.0: huecos de util_bbdd
+## Después de la 1.0: huecos de util_bbdd ✅
 
 Resolver en util_bbdd los huecos de [UTIL_BBDD_GAPS.md](UTIL_BBDD_GAPS.md) y retirar los rodeos de la web, por
 tipo de ejecución y en paralelo en los dos repositorios: [UTIL_BBDD_GAPS_PLAN.md](UTIL_BBDD_GAPS_PLAN.md).
+Desde la 1.18.0 (util_bbdd 5.8.0) no queda ningún hueco abierto: solo G7 y G16, informativos, sin acción en la web.
 
 ## Después de la 1.0: documentación Markdown ✅
 
@@ -169,7 +170,7 @@ Formato **Markdown** de util_bbdd 5.3.0 en la operación `documentation` (1.11.0
 `.ai/sessions/2026-11-06-doc-markdown/`): carpeta completa en `outputs/markdown/documentacion/`, Mermaid local
 (`UBW_MERMAID_JS`), mapa de trazabilidad como plantilla `trace` (ADR-011) y cambios respecto de una documentación
 anterior en el visor de diferencias. Guía: [documentacion.md](../guides/documentacion.md#documentación-markdown). No es un
-hueco de API: es capacidad nueva (G49, validador público del mapa, queda abierto).
+hueco de API: es capacidad nueva. G49 (validador público del mapa) se resolvió en util_bbdd 5.7.0 y la web 1.18.0.
 
 ## Después de la 1.0: salida de la documentación por formato ✅
 
@@ -187,6 +188,30 @@ Ejecuciones de todos* para eliminar ejecuciones (fila y ficheros), una o todas l
 y todas las listas con orden por columna, 25 filas por página y búsqueda (1.14.0; sesión
 `.ai/sessions/2026-11-06-explorer-runs-lists/`).
 
+## Después de la 1.0: filtro de tablas y enlaces del visor Markdown ✅
+
+util_bbdd 5.5.0: filtro de tablas y vistas con patrones (*Incluir*, *Excluir*, *Listar la frontera*) y **Probar
+patrones** antes de lanzar, `README.md` de la salida Markdown con su aviso en la tarjeta, enlaces del visor Markdown
+bajo la CSP de la SPA (puente autorizado por hash, enmienda de ADR-007) y documentación a todo el ancho (1.15.0;
+sesión `.ai/sessions/2026-11-12-doc-filtro-csp/`; G52–G54).
+
+## Después de la 1.0: `zensical.toml` en la documentación Markdown ✅
+
+util_bbdd 5.6.0: la carpeta Markdown trae `zensical.toml` en lugar de `mkdocs.yml` y el grupo `docs` pide
+`zensical>=0.1.1,<0.2` (1.16.0; sesión `.ai/sessions/2026-11-13-zensical-toml/`; G55).
+
+## Después de la 1.0: DDL con resaltado SQL y «Copiar» ✅
+
+DDL con resaltado SQL en el visor Markdown (con **Copiar** en cada bloque, dentro del iframe aislado), en el
+explorador y en la vista previa de los scripts `.sql` (con **Copiar SQL**); E2E de la CSP y de Almacenamiento al día y
+`exclude-newer` adelantado (1.17.0; sesión `.ai/sessions/2026-11-13-ddl-resaltado/`; enmienda de ADR-007).
+
+## Después de la 1.0: util_bbdd 5.8.0 y mapa de trazabilidad validado al subirlo ✅
+
+El mapa de trazabilidad se valida al subirlo con `validate_trace_map` (G49); util_bbdd 5.8.0 pone el nombre antes que
+el tipo en los diagramas Mermaid y elige el driver ODBC de SQL Server más reciente (1.18.0; sesión
+`.ai/sessions/2026-11-13-util-bbdd-5-8/`).
+
 ## Mejoras opcionales (fuera de fase, decidir al planificar)
 
 - Sitio de la documentación Markdown construido con `zensical build` en el job y servido por URL firmada, como el HTML
@@ -197,3 +222,4 @@ y todas las listas con orden por columna, 25 filas por página y búsqueda (1.14
 - Tokens de API personales para lanzar ejecuciones desde CI.
 - Notificaciones al terminar una ejecución larga.
 - Migración de `config.db` a PostgreSQL si crece la concurrencia (solo URL de SQLAlchemy + Alembic).
+- Tema oscuro dentro del iframe del visor Markdown (hoy siempre claro: no ve las variables de Mantine).
