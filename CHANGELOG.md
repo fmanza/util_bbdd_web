@@ -5,6 +5,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Added
+
+- **DDL con resaltado SQL** en el visor Markdown de la documentación y en el explorador (palabras clave, tipos,
+  cadenas, números y comentarios en color; `highlight.js`, ya incluido). En el visor, cada bloque de código tiene
+  un botón **Copiar** que copia su texto sin colores (dentro del iframe aislado; ADR-007, enmienda 1.17.0).
+
 ### Changed
 
 - **backend**: `exclude-newer` pasa a `2026-11-11` y se retiran todas las excepciones (`asyncpg`,

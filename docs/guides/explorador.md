@@ -28,8 +28,9 @@ Las **vistas** y **rutinas** muestran su DDL. Si el motor no lo devuelve (permis
 
 Desde la 1.14.0, en una pantalla ancha el árbol y la ficha ocupan el **alto de la ventana**, y cada pestaña se
 desplaza **dentro** de la ficha (vertical y horizontal), con la cabecera de las tablas fija: un DDL largo o una tabla
-de cientos de columnas se ven enteros sin desplazar la página. **Copiar DDL** (el icono sobre el DDL) lo copia al
-portapapeles. En el móvil, árbol y ficha van uno debajo del otro y la ficha se desplaza dentro.
+de cientos de columnas se ven enteros sin desplazar la página. Desde la 1.17.0 el DDL se muestra con **resaltado
+SQL** (palabras clave, tipos, cadenas, números y comentarios en colores que siguen el tema claro u oscuro). **Copiar
+DDL** (el icono sobre el DDL) lo copia al portapapeles como texto, sin colores. En el móvil, árbol y ficha van uno debajo del otro y la ficha se desplaza dentro.
 
 ## Queries nombradas
 

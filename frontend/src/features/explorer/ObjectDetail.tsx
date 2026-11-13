@@ -18,6 +18,7 @@ import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { SqlCode } from '../runs/migrate/SqlBlock';
 import { type ObjectKind, type TableDetail, useDdl, useTable } from './useExplorer';
 
 export interface SelectedObject {
@@ -71,7 +72,7 @@ function DdlView({
         </CopyButton>
       </Group>
       <Pane label="DDL">
-        <Code block>{text}</Code>
+        <SqlCode code={text} />
       </Pane>
     </Stack>
   );

@@ -159,6 +159,24 @@ local, pone `font = false`.
   `zensical build --strict` (Zensical 0.1.1) y, abierto en Chromium sin acceso fuera del servidor local, dibuja los
   diagramas sin ninguna petición externa. Zensical 0.1.1 solo carga Mermaid de unpkg si `window.mermaid` no existe.
 
+## Enmienda 2026-11-13 (1.17.0): DDL resaltado y «Copiar» en el visor Markdown
+
+Los bloques ```` ```sql ```` (el DDL de util_bbdd) se resaltan **en la SPA**, antes de DOMPurify (`highlightSqlBlocks`
+con `highlight.js`, que escapa el código y solo añade `<span class="hljs-…">`): un DDL con marcado sale como texto.
+Los colores son estilos fijos del `srcdoc` (contraste AA).
+
+«Copiar» lo hace el **puente**, dentro del iframe: añade una barra con un botón encima de cada `<pre>`, copia el
+`textContent` del bloque con la API del portapapeles y, si falla, con `execCommand('copy')`, y anuncia el resultado en
+una región `aria-live`. El iframe lleva `allow="clipboard-write"`; el `sandbox` no cambia (sin `allow-same-origin`).
+
+- Por qué no copia la SPA a petición del puente: tras el clic el foco es del iframe y Chromium rechaza la escritura
+  del documento padre (`NotAllowedError`, comprobado con Playwright). Copiar dentro del iframe funciona con y sin
+  permiso concedido (el respaldo `execCommand`), también bajo la CSP real.
+- El contenido de la página no puede copiar nada: no se ejecuta ningún script suyo y un `<button>` que traiga el
+  Markdown no lleva el manejador del puente. Solo copia un clic del usuario en los botones que crea el puente.
+- El puente cambia, así que cambia su hash en las dos CSP (`BRIDGE_SHA256` y `MARKDOWN_BRIDGE_SHA256`); los tests de
+  los dos lados siguen vigilando que coincidan. No se añade ningún mensaje nuevo entre el iframe y la SPA.
+
 ## Alternativas descartadas
 
 - **`allow-same-origin` + scripts**: el sitio podría leer la cookie CSRF y llamar a la API como el usuario.

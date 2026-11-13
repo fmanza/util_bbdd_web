@@ -193,8 +193,11 @@ diagramas sin Internet: el `zensical.toml` lo carga y desactiva las fuentes exte
 - Un enlace a un fichero que no es una página (`catalog.json`…) ofrece su descarga; uno a una página que no existe,
   un aviso. Un enlace **externo** (`http`/`https`, p. ej. del mapa de trazabilidad) pide confirmación mostrando la
   dirección completa y se abre en otra pestaña; cualquier otro esquema (`javascript:`, `data:`, `file:`…) se ignora.
-- Seguridad: cada página se muestra en un iframe con origen opaco, sin red y con el HTML limpiado (ADR-007, enmienda
-  de la 1.12.0).
+- **DDL** (desde la 1.17.0): los bloques de DDL de tablas, vistas y rutinas (*DDL de tablas*, *DDL de vistas*) se
+  muestran con **resaltado SQL**, y cada bloque de código tiene un botón **Copiar** encima que copia su texto (sin
+  colores) y cambia a «Copiado». Si el navegador no deja copiar, avisa: selecciona el texto y cópialo a mano.
+- Seguridad: cada página se muestra en un iframe con origen opaco, sin red y con el HTML limpiado (ADR-007, enmiendas
+  de la 1.12.0 y la 1.17.0).
 
 **Artefactos** ya no lista los ficheros de la carpeta Markdown (son miles en un schema grande): los cuenta y remite a
 su tarjeta. `mermaid.min.js`, `catalog.json`, `llms-full.txt` y el resto de ficheros que no son páginas no tienen vista

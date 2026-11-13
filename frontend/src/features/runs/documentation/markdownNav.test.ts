@@ -245,6 +245,21 @@ describe('documento del iframe', () => {
     expect(page).not.toContain('nonce');
     expect(page).toContain('data-ubw-hash="&quot;&gt;&lt;script&gt;alert(1)//"');
     expect(page).toContain('data-ubw-parent="https://ubw.example"');
+    expect(page).not.toMatch(/<body[^>]*data-ubw-copy/); // sin textos, el puente no añade botones
+  });
+
+  it('los textos de «Copiar» van escapados en atributos del body', () => {
+    const page = buildFrameDocument('<pre><code>x</code></pre>', '', 'https://ubw.example', {
+      copy: 'Copiar "<b>"',
+      copied: 'Copiado',
+      failed: 'Error & más',
+    });
+    expect(page).toContain('data-ubw-copy="Copiar &quot;&lt;b&gt;&quot;"');
+    expect(page).toContain('data-ubw-copied="Copiado"');
+    expect(page).toContain('data-ubw-copy-failed="Error &amp; más"');
+    // El puente copia el texto del bloque (sin etiquetas) y solo al pulsar su propio botón.
+    expect(BRIDGE_SCRIPT).toContain('code.textContent');
+    expect(BRIDGE_SCRIPT).toContain("execCommand('copy')");
   });
 
   it('acepta solo mensajes del puente con el formato esperado (T5)', () => {

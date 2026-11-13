@@ -38,7 +38,10 @@ const RUN: RunDetail = {
 };
 
 const PAGES: Record<number, string> = {
-  101: '# Portada\n\n[Tablas](tables/index.md) · [Catálogo](catalog.json)',
+  // DDL como lo escribe util_bbdd (```sql), con un nombre hostil: se resalta y se escapa.
+  101:
+    '# Portada\n\n[Tablas](tables/index.md) · [Catálogo](catalog.json)\n\n' +
+    '```sql\nCREATE TABLE "</code><script>x()</script>" (id INTEGER);\n```',
   102: '# Tablas\n\n[pedidos](pedidos.md)',
   103: '---\n{"id": "t"}\n---\n# Tabla: PEDIDOS\n\n| <a id="col-id"></a>ID |\n|---|\n\n[vista](../views/v_pedidos.md#col-id)',
   104: '# Vista: V_PEDIDOS',
@@ -88,6 +91,20 @@ describe('visor de la documentación Markdown', () => {
     expect(srcdoc).toContain(`script-src 'sha256-${BRIDGE_SHA256}'`);
     expect(srcdoc).toContain(`<script>${BRIDGE_SCRIPT}</script>`);
     expect(srcdoc).toContain(`data-ubw-parent="${window.location.origin}"`);
+  });
+
+  it('resalta el DDL (```sql) sin dejar pasar marcado y da al puente los textos de «Copiar»', async () => {
+    const { index } = await openViewer();
+
+    // El puente copia dentro del iframe: necesita el permiso delegado (la SPA no puede, el foco es del iframe).
+    expect(index).toHaveAttribute('allow', 'clipboard-write');
+    await waitFor(() => expect(index.getAttribute('srcdoc')).toContain('class="hljs-keyword"'));
+    const srcdoc = index.getAttribute('srcdoc') ?? '';
+    expect(srcdoc).toContain('&lt;/code&gt;&lt;script&gt;x()&lt;/script&gt;');
+    expect(srcdoc.match(/<script/g)).toHaveLength(1); // solo el puente
+    expect(srcdoc).toContain('data-ubw-copy="Copiar"');
+    expect(srcdoc).toContain('data-ubw-copied="Copiado"');
+    expect(srcdoc).toContain('data-ubw-copy-failed="No se pudo copiar; selecciona el texto"');
   });
 
   it('navega por los enlaces del puente, con anclas, atrás y adelante, y lo refleja en ?md=', async () => {

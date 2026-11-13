@@ -25,8 +25,9 @@ SESSION_COOKIES: Final = ("__Host-ubw_session", "ubw_session")
 #: Hash (sha256, base64) del script constante del puente del visor Markdown (``BRIDGE_SCRIPT`` de
 #: ``frontend/src/features/runs/documentation/markdownFrame.ts``; un test del frontend vigila que coincidan). Un
 #: ``iframe srcdoc`` hereda esta CSP: sin el hash, el navegador bloqueaba el puente y los enlaces del visor no hacían
-#: nada (1.15.0). Solo autoriza ese script exacto, que se limita a hablar con la SPA por ``postMessage``.
-MARKDOWN_BRIDGE_SHA256: Final = "D/lLjo38BcaAkRf1+2l0LeNZLAXvOTopUf2M93xRNw4="
+#: nada (1.15.0). Solo autoriza ese script exacto, que habla con la SPA por ``postMessage`` y, desde 1.17.0, copia un
+#: bloque de código al portapapeles al pulsar su botón «Copiar».
+MARKDOWN_BRIDGE_SHA256: Final = "4eVjDELX9QTEMNrnnTp49RwdFqMku4vwY8r4Uw8MBOo="
 #: SPA: sin scripts inline ni de terceros (salvo el puente del visor Markdown, por su hash). Mantine inyecta
 #: ``<style>`` y usa ``style=``: ``'unsafe-inline'`` en estilos. Los iframes de la SPA (vistas previas y sitio HTML) son
 #: del mismo origen y traen su propia CSP.

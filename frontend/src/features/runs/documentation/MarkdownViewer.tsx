@@ -24,6 +24,7 @@ import { useSearchParams } from 'react-router';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { stripFrontMatter } from '../markdown';
 import { renderMermaidBlocks } from '../mermaid';
+import { highlightSqlBlocks } from '../sqlHighlight';
 import { type Artifact, downloadUrl, useArtifactText } from '../useRuns';
 import { buildFrameDocument, navHref, sanitizeMarkdownHtml } from './markdownFrame';
 import {
@@ -67,7 +68,9 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
     if (source === undefined) return undefined;
     let alive = true;
     void import('marked').then(async ({ marked }) => {
-      const html = await renderMermaidBlocks(await marked.parse(stripFrontMatter(source), { gfm: true }));
+      // Mermaid y el DDL (```sql, resaltado) antes de limpiar: el resultado pasa entero por DOMPurify.
+      const parsed = await marked.parse(stripFrontMatter(source), { gfm: true });
+      const html = await highlightSqlBlocks(await renderMermaidBlocks(parsed));
       if (alive) setSafeHtml({ source, html: sanitizeMarkdownHtml(html) });
     });
     return () => {
@@ -88,8 +91,15 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
 
   const ready = safeHtml !== null && safeHtml.source === text.data;
   const srcDoc = useMemo(
-    () => (ready ? buildFrameDocument(safeHtml.html, hash, window.location.origin) : null),
-    [ready, safeHtml, hash],
+    () =>
+      ready
+        ? buildFrameDocument(safeHtml.html, hash, window.location.origin, {
+            copy: t('runs.outputs.copyCode'),
+            copied: t('runs.outputs.codeCopied'),
+            failed: t('runs.outputs.copyCodeFailed'),
+          })
+        : null,
+    [ready, safeHtml, hash, t],
   );
 
   if (text.isError) return <ErrorAlert error={text.error} />;
@@ -99,6 +109,8 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
       ref={frame}
       title={t('runs.outputs.markdownPage', { path: page.path })}
       sandbox="allow-scripts"
+      // «Copiar» de los bloques de código: el puente escribe en el portapapeles desde el iframe (markdownFrame.ts).
+      allow="clipboard-write"
       referrerPolicy="no-referrer"
       srcDoc={srcDoc}
       style={{ width: '100%', height: FRAME_HEIGHT, border: '1px solid var(--mantine-color-default-border)' }}

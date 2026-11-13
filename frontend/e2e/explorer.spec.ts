@@ -55,7 +55,10 @@ test('explorar una BD SQLite, queries nombradas y SQL libre de solo lectura', as
   await page.getByRole('tab', { name: /Relaciones/ }).click();
   await expect(page.getByRole('button', { name: 'clientes' })).toBeVisible();
   await page.getByRole('tab', { name: 'DDL' }).click();
-  await expect(page.getByText(/CREATE TABLE pedidos/)).toBeVisible({ timeout: 30_000 });
+  // DDL resaltado (1.17.0): el texto queda repartido en <span class="hljs-…">.
+  const ddl = page.locator('.ubw-sql');
+  await expect(ddl).toContainText(/CREATE TABLE pedidos/, { timeout: 30_000 });
+  await expect(ddl.locator('.hljs-keyword').first()).toBeVisible();
 
   // Query nombrada (admin) y ejecución desde el explorador.
   await page.goto('/admin/queries');

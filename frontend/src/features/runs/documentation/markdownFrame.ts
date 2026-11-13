@@ -9,6 +9,11 @@
 // enlaces: las anclas (`#col-…`) se
 // resuelven dentro; el resto se manda al padre con `postMessage({type: 'ubw-md-nav', href})`, que valida el origen del
 // mensaje (`event.source`) y resuelve el destino entre los artefactos registrados (`resolveLink`).
+//
+// Copiar (1.17.0): el puente añade un botón a cada bloque de código y copia **dentro del iframe** (API del portapapeles,
+// con `allow="clipboard-write"`, y si falla `execCommand('copy')`). Copiar desde la SPA no sirve: tras el clic el foco
+// es del iframe y Chromium rechaza la escritura del padre (`NotAllowedError`, comprobado). Los textos del botón llegan
+// por `data-ubw-copy*` del `<body>`. Los bloques ```sql vienen ya resaltados (`highlightSqlBlocks`).
 
 import DOMPurify from 'dompurify';
 
@@ -20,7 +25,16 @@ const STYLE =
   'body{font-family:system-ui,sans-serif;font-size:14px;line-height:1.5;margin:12px;color:#1a1b1e}' +
   'table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}' +
   'pre,code{background:#f4f4f5;padding:2px 4px;border-radius:4px}a[href]{color:#1c7ed6;cursor:pointer}' +
-  '.mermaid-diagram{overflow:auto}';
+  '.mermaid-diagram{overflow:auto}' +
+  // Bloques de código: barra con «Copiar» encima (no tapa el código) y colores del SQL (contraste AA sobre #f4f4f5).
+  'pre{padding:8px 12px;overflow:auto}pre code{padding:0}' +
+  '.ubw-code-bar{display:flex;justify-content:flex-end;margin:8px 0 -10px}' +
+  '.ubw-copy{font:inherit;font-size:12px;cursor:pointer;' +
+  'color:#1a1b1e;background:#fff;border:1px solid #ccc;border-radius:4px;padding:2px 8px}' +
+  '.ubw-copy:focus-visible{outline:2px solid #1c7ed6;outline-offset:2px}' +
+  '.ubw-sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}' +
+  '.hljs-keyword,.hljs-built_in{color:#0b5cad;font-weight:600}.hljs-type{color:#7b2fa8}' +
+  '.hljs-string{color:#2b7a0b}.hljs-number,.hljs-literal{color:#a34e00}.hljs-comment{color:#5c5f66;font-style:italic}';
 
 /**
  * HTML sin scripts, manejadores `on*`, marcos, objetos ni formularios; admite SVG (diagramas Mermaid).
@@ -47,6 +61,7 @@ export function sanitizeMarkdownHtml(html: string): string {
  */
 export const BRIDGE_SCRIPT = `(function(){
 var b=document.body,HASH=b.getAttribute('data-ubw-hash')||'',PARENT=b.getAttribute('data-ubw-parent')||'',MAX=2048;
+var COPY=b.getAttribute('data-ubw-copy')||'',DONE=b.getAttribute('data-ubw-copied')||'',FAIL=b.getAttribute('data-ubw-copy-failed')||'';
 function go(id){if(!id)return;var el=document.getElementById(id);if(el)el.scrollIntoView();}
 function dec(t){try{return decodeURIComponent(t);}catch(e){return t;}}
 document.addEventListener('click',function(ev){
@@ -56,11 +71,24 @@ if(h.charAt(0)==='#'){go(dec(h.slice(1)));return;}
 if(h.length>MAX||!PARENT)return;
 parent.postMessage({type:'ubw-md-nav',href:h},PARENT);
 });
+if(COPY){
+var live=document.createElement('div');live.className='ubw-sr';live.setAttribute('aria-live','polite');b.appendChild(live);
+var say=function(btn,msg){btn.textContent=msg;live.textContent=msg;setTimeout(function(){btn.textContent=COPY;},2000);};
+var exec=function(text){var ta=document.createElement('textarea'),ok=false;ta.value=text;ta.setAttribute('readonly','');ta.className='ubw-sr';
+b.appendChild(ta);ta.select();try{ok=document.execCommand('copy');}catch(e){ok=false;}ta.remove();return ok;};
+var copy=function(btn,text){var c=navigator.clipboard;
+if(c&&c.writeText){c.writeText(text).then(function(){say(btn,DONE);},function(){say(btn,exec(text)?DONE:FAIL);});return;}
+say(btn,exec(text)?DONE:FAIL);};
+Array.prototype.forEach.call(document.querySelectorAll('pre'),function(pre){var code=pre.querySelector('code');if(!code)return;
+var bar=document.createElement('div'),btn=document.createElement('button');bar.className='ubw-code-bar';
+btn.type='button';btn.className='ubw-copy';btn.textContent=COPY;
+btn.addEventListener('click',function(){copy(btn,code.textContent||'');});bar.appendChild(btn);pre.parentNode.insertBefore(bar,pre);});
+}
 if(HASH)go(HASH);
 })();`;
 
 /** `sha256` (base64) de `BRIDGE_SCRIPT`: la fuente `'sha256-…'` de la CSP del iframe y de `SPA_CSP` del backend. */
-export const BRIDGE_SHA256 = 'D/lLjo38BcaAkRf1+2l0LeNZLAXvOTopUf2M93xRNw4=';
+export const BRIDGE_SHA256 = '4eVjDELX9QTEMNrnnTp49RwdFqMku4vwY8r4Uw8MBOo=';
 
 /** Escapa un valor para un atributo HTML entre comillas dobles. */
 function attr(value: string): string {
@@ -75,19 +103,36 @@ export function frameCsp(): string {
   );
 }
 
+/** Textos del botón «Copiar» de los bloques de código (i18n); sin ellos, el puente no añade botones. */
+export interface CopyLabels {
+  copy: string;
+  copied: string;
+  failed: string;
+}
+
 /**
  * `srcdoc` del iframe: CSP, estilos, el HTML ya limpio y el script del puente.
  *
  * @param safeHtml - Salida de `sanitizeMarkdownHtml` (nunca HTML sin limpiar).
  * @param hash - Ancla que se abre al cargar (`col-id`), o vacío.
  * @param parentOrigin - Origen de la SPA: el único al que el puente envía mensajes.
+ * @param copy - Textos del botón «Copiar»; sin ellos, los bloques de código no llevan botón.
  */
-export function buildFrameDocument(safeHtml: string, hash: string, parentOrigin: string): string {
+export function buildFrameDocument(
+  safeHtml: string,
+  hash: string,
+  parentOrigin: string,
+  copy?: CopyLabels,
+): string {
+  const labels = copy
+    ? ` data-ubw-copy="${attr(copy.copy)}" data-ubw-copied="${attr(copy.copied)}"` +
+      ` data-ubw-copy-failed="${attr(copy.failed)}"`
+    : '';
   return (
     `<!doctype html><html lang="es"><head><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${frameCsp()}">` +
     `<style>${STYLE}</style></head>` +
-    `<body data-ubw-hash="${attr(hash)}" data-ubw-parent="${attr(parentOrigin)}">${safeHtml}` +
+    `<body data-ubw-hash="${attr(hash)}" data-ubw-parent="${attr(parentOrigin)}"${labels}>${safeHtml}` +
     `<script>${BRIDGE_SCRIPT}</script></body></html>`
   );
 }

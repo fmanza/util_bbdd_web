@@ -98,6 +98,23 @@ test('documentar una BD SQLite y ver su grafo de relaciones', async ({ page }) =
   await detail.close();
   await collection.close();
 
+  // Markdown con DDL: resaltado SQL y «Copiar» en el visor (el puente copia dentro del iframe; 1.17.0).
+  await page.goto(projectUrl);
+  await launch(page, 'Documentación de la base de datos', async (dialog) => {
+    // El nombre accesible lleva la descripción detrás («Word Documento Word (.docx).»).
+    for (const name of [/^Word /, /^Excel /, /^Sitio HTML /, /^Markdown /, /^DDL de tablas /]) {
+      await dialog.getByRole('switch', { name }).click({ force: true });
+    }
+  });
+  await page.goto(`${page.url().split('?')[0]}?md=${encodeURIComponent('tables/pedidos.md')}`);
+  const md = page.frameLocator('iframe[title="Página Markdown tables/pedidos.md"]');
+  await expect(md.locator('.hljs-keyword').first()).toBeVisible({ timeout: 30_000 });
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await md.getByRole('button', { name: 'Copiar' }).first().click();
+  await expect(md.getByRole('button', { name: 'Copiado' }).first()).toBeVisible();
+  // En texto: los E2E no tienen los tipos del DOM.
+  expect(await page.evaluate('navigator.clipboard.readText()')).toMatch(/^\s*CREATE TABLE/i);
+
   // Grafo de una tabla.
   await page.goto(projectUrl);
   await launch(page, 'Grafo de relaciones', async (dialog) => {

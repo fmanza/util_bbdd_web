@@ -125,7 +125,9 @@ describe('ExplorerPage', () => {
     }
     await user.click(screen.getByRole('tab', { name: 'DDL' }));
     const area = await screen.findByLabelText('DDL', { selector: '.mantine-ScrollArea-root' });
-    expect(within(area).getByText(/columna_399 INTEGER/)).toBeInTheDocument();
+    // El DDL entero (resaltado: el texto queda repartido en <span class="hljs-…">) y con colores.
+    await waitFor(() => expect(area.querySelector('.hljs-type')).not.toBeNull());
+    expect(area.textContent).toContain(ddl);
     expect(area.getAttribute('style') ?? '').not.toContain('max-height');
     await user.click(screen.getByRole('button', { name: 'Copiar DDL' }));
     expect(await navigator.clipboard.readText()).toBe(ddl); // portapapeles de user-event
