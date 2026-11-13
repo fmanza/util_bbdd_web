@@ -77,7 +77,14 @@ describe('RunDetailPage', () => {
     );
 
     await user.click(screen.getByText('ejemplo.sql'));
-    expect(await screen.findByText('SELECT 1 AS ok;')).toBeInTheDocument();
+    // Script SQL resaltado (1.17.0); «Copiar SQL» copia el texto sin colores.
+    const sql = await screen.findByLabelText('Vista previa de outputs/sql/ejemplo.sql', {
+      selector: '.mantine-ScrollArea-root',
+    });
+    await waitFor(() => expect(sql.querySelector('.hljs-keyword')).not.toBeNull());
+    expect(sql.textContent).toContain('SELECT 1 AS ok;');
+    await user.click(screen.getByRole('button', { name: 'Copiar SQL' }));
+    expect(await navigator.clipboard.readText()).toBe('SELECT 1 AS ok;');
   });
 
   it('un evento run terminal recarga los artefactos aunque no llegue end', async () => {

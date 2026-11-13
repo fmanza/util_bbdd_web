@@ -575,6 +575,8 @@
       "previewOf": "Vista previa de {{path}}",
       "download": "Descargar",
       "downloadLabel": "Descargar {{path}}",
+      "copySql": "Copiar SQL",
+      "copied": "Copiado",
       "siteHidden_one": "{{count}} fichero del sitio HTML: ábrelo en la tarjeta de arriba.",
       "siteHidden_other": "{{count}} ficheros del sitio HTML: ábrelo en la tarjeta de arriba.",
       "markdownHidden_one": "{{count}} fichero de la documentación Markdown: ábrelo en su tarjeta.",

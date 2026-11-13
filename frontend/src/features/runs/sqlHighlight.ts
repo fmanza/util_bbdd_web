@@ -5,6 +5,9 @@
 
 export type Highlighter = (code: string) => string;
 
+/** Por encima de este tamaño (caracteres) no se resalta: miles de `<span>` harían lenta la vista previa (hasta 2 MB). */
+export const MAX_HIGHLIGHT_CHARS = 200_000;
+
 let highlighter: Promise<Highlighter> | null = null;
 
 /** Función que devuelve el HTML resaltado de un SQL (carga `highlight.js` la primera vez). */
@@ -30,6 +33,7 @@ export async function highlightSqlBlocks(html: string): Promise<string> {
   if (blocks.length === 0) return html;
   const highlight = await loadSqlHighlighter();
   for (const code of blocks) {
+    if (code.textContent.length > MAX_HIGHLIGHT_CHARS) continue;
     code.innerHTML = highlight(code.textContent);
     code.classList.add('hljs');
   }

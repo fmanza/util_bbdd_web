@@ -117,7 +117,7 @@ test('sube un CSV, lo inserta y borra las mismas filas con confirmación', async
 
   // Insertar: la vista previa genera el SQL sin tocar el destino.
   const insert = await previewLoad(page, projectUrl, file, 'Insertar');
-  await expect(page.getByText(/INSERT INTO/).first()).toBeVisible();
+  await expect(page.locator('.ubw-sql').first()).toContainText(/INSERT INTO/);
   await apply(page, insert, /Insertar en «destino»/, null);
   await expect(page.getByRole('heading', { name: 'Resultado de la carga' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Relanzar' })).toHaveCount(0);

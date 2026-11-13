@@ -1,7 +1,9 @@
 import {
+  ActionIcon,
   Button,
   Card,
   Code,
+  CopyButton,
   Group,
   Loader,
   NavLink,
@@ -10,6 +12,7 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes } from '../../components/format';
 import { stripFrontMatter } from './markdown';
+import { SqlCode } from './migrate/SqlBlock';
 import { renderMermaidBlocks } from './mermaid';
 import {
   type Artifact,
@@ -92,6 +96,28 @@ function Preview({ runId, artifact }: { runId: string; artifact: Artifact }) {
         title={t('runs.artifactsBrowser.previewOf', { path: artifact.path })}
         source={text.data}
       />
+    );
+  }
+  if (artifact.kind === 'sql') {
+    // Script SQL (comparación, migración, volcado…): resaltado y «Copiar SQL» como texto plano (1.17.0).
+    const label = t('runs.artifactsBrowser.copySql');
+    return (
+      <Stack gap={4}>
+        <Group justify="flex-end">
+          <CopyButton value={text.data}>
+            {({ copied, copy }) => (
+              <Tooltip label={copied ? t('runs.artifactsBrowser.copied') : label} withArrow>
+                <ActionIcon variant="subtle" onClick={copy} aria-label={label}>
+                  {copied ? '✓' : '⧉'}
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+        </Group>
+        <ScrollArea h={420} aria-label={t('runs.artifactsBrowser.previewOf', { path: artifact.path })}>
+          <SqlCode code={text.data} />
+        </ScrollArea>
+      </Stack>
     );
   }
   return (

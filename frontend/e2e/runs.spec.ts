@@ -49,7 +49,11 @@ test('crear proyecto, lanzar noop, seguir el progreso, ver artefactos, ZIP, rela
   ).toBeVisible();
 
   await page.getByText('ejemplo.sql').click();
-  await expect(page.getByText('SELECT 1 AS ok;')).toBeVisible();
+  // SQL resaltado (1.17.0): el texto queda repartido en <span class="hljs-…">.
+  const sql = page.locator('.ubw-sql');
+  await expect(sql).toContainText('SELECT 1 AS ok;');
+  await expect(sql.locator('.hljs-keyword').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copiar SQL' })).toBeVisible();
 
   const download = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Descargar ZIP' }).click();

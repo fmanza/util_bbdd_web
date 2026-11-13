@@ -10,6 +10,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **DDL con resaltado SQL** en el visor Markdown de la documentación y en el explorador (palabras clave, tipos,
   cadenas, números y comentarios en color; `highlight.js`, ya incluido). En el visor, cada bloque de código tiene
   un botón **Copiar** que copia su texto sin colores (dentro del iframe aislado; ADR-007, enmienda 1.17.0).
+- **Vista previa de los scripts SQL** de las ejecuciones (comparación, migración, volcado, carga…) con el mismo
+  resaltado y un botón **Copiar SQL**. Por encima de 200 000 caracteres se muestran sin resaltar, para no ralentizar
+  la página.
 
 ### Changed
 

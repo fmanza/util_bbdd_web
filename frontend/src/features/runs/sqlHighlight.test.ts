@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sanitizeMarkdownHtml } from './documentation/markdownFrame';
-import { highlightSqlBlocks, loadSqlHighlighter } from './sqlHighlight';
+import { highlightSqlBlocks, loadSqlHighlighter, MAX_HIGHLIGHT_CHARS } from './sqlHighlight';
 
 // highlightSqlBlocks (visor Markdown) y el cargador compartido con SqlCode/SqlBlock.
 describe('resaltado de SQL', () => {
@@ -13,6 +13,12 @@ describe('resaltado de SQL', () => {
     expect(out).toContain('<span class="hljs-keyword">CREATE TABLE</span>');
     expect(out).toContain('<span class="hljs-type">INTEGER</span>');
     expect(out).toContain('<code class="language-text">CREATE TABLE no</code>');
+  });
+
+  it('no resalta un bloque por encima del tope (lo deja como texto)', async () => {
+    const big = 'SELECT 1;\n'.repeat(MAX_HIGHLIGHT_CHARS / 10 + 1);
+    const out = await highlightSqlBlocks(`<pre><code class="language-sql">${big}</code></pre>`);
+    expect(out).not.toContain('hljs-keyword');
   });
 
   it('sin bloques SQL devuelve el HTML tal cual', async () => {

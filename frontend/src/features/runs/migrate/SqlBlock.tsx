@@ -1,7 +1,7 @@
 import { Code, ScrollArea } from '@mantine/core';
 import { useEffect, useState } from 'react';
 
-import { loadSqlHighlighter } from '../sqlHighlight';
+import { loadSqlHighlighter, MAX_HIGHLIGHT_CHARS } from '../sqlHighlight';
 
 // Colores del resaltado con variables de Mantine (siguen el tema claro/oscuro); solo dentro de `.ubw-sql`.
 const STYLE = `
@@ -19,6 +19,7 @@ const STYLE = `
 export function SqlCode({ code }: { code: string }) {
   const [html, setHtml] = useState<string | null>(null);
   useEffect(() => {
+    if (code.length > MAX_HIGHLIGHT_CHARS) return undefined;
     let alive = true;
     void loadSqlHighlighter().then((highlight) => {
       if (alive) setHtml(highlight(code));
@@ -31,7 +32,7 @@ export function SqlCode({ code }: { code: string }) {
   return (
     <div className="ubw-sql">
       <style>{STYLE}</style>
-      {html === null ? (
+      {html === null || code.length > MAX_HIGHLIGHT_CHARS ? (
         <Code block>{code}</Code>
       ) : (
         <Code block>

@@ -75,7 +75,9 @@ queda en el destino, salvo en una carga sin plan paralelo, que va en una sola tr
   de artefactos), con filtro por estado y búsqueda por id, operación o usuario. *Ejecuciones* en el menú lista las de
   todos tus proyectos.
 - En el detalle, el **navegador de artefactos** agrupa los ficheros por tipo. HTML, SVG y PNG se ven en un marco aislado
-  (sin scripts); Markdown se muestra con formato (también aislado); SQL, el log y `run.json` como texto. Los
+  (sin scripts); Markdown se muestra con formato (también aislado); el log y `run.json` como texto. Los scripts **SQL**
+  se ven con resaltado (desde la 1.17.0; hasta 200 000 caracteres, el resto en texto) y **Copiar SQL** los copia sin
+  colores. Los
   ficheros del sitio HTML de una documentación no se listan: el sitio se abre en su tarjeta. Cada fichero se puede **descargar**, y
   **Descargar ZIP** baja la ejecución completa.
 - **Relanzar** crea una ejecución nueva con los mismos parámetros (indica de cuál procede).

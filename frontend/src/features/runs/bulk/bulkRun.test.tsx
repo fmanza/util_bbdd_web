@@ -106,7 +106,9 @@ describe('vista previa de la carga', () => {
     const sample = screen.getByRole('table', { name: 'Primeras filas' });
     expect(within(sample).getAllByRole('row')).toHaveLength(3);
     expect(screen.getByText('Columnas del fichero que no se cargan: notas.')).toBeInTheDocument();
-    expect(await screen.findByText(/INSERT INTO public\.clientes/)).toBeInTheDocument();
+    // SQL resaltado: el texto queda repartido en <span class="hljs-…">.
+    await waitFor(() => expect(document.querySelector('.ubw-sql .hljs-keyword')).not.toBeNull());
+    expect(document.querySelector('.ubw-sql')?.textContent).toContain('INSERT INTO public.clientes');
   });
 
   it.each([
