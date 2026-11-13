@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Changed
+
+- **util_bbdd 5.6.0** (G55): la documentación Markdown trae `zensical.toml` en lugar de `mkdocs.yml`, con el mismo
+  sitio, el Mermaid del servidor y sin fuentes externas. La tarjeta Markdown y el aviso del `README.md` nombran solo
+  Zensical. Las ejecuciones anteriores conservan su `mkdocs.yml`.
+- **docs**: el grupo `docs` pide `zensical>=0.1.1,<0.2`, con una excepción fechada de `exclude-newer` para
+  `zensical` y `zensical-ui`.
+
 ## [1.15.0] - 2026-11-12
 
 ### Added

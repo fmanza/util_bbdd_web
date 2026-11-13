@@ -114,27 +114,28 @@ contexto a una IA:
 - diagramas ER de **Mermaid** en cada tabla: **no necesitan Graphviz** (una documentación solo Markdown funciona en
   un servidor sin `dot`). *Mostrar tipos de columna* y *Relaciones en ángulo recto* no aplican: Mermaid siempre
   muestra los tipos;
-- `docs/catalog.json` (catálogo de los objetos), `docs/llms.txt` y `docs/llms-full.txt` (para IA), `mkdocs.yml`
-  (listo para `zensical build` o `mkdocs build`) y `manifest.json`.
+- `docs/catalog.json` (catálogo de los objetos), `docs/llms.txt` y `docs/llms-full.txt` (para IA), `zensical.toml`
+  (listo para `zensical build`), `manifest.json` y `README.md`. Hasta la 1.15.0 (util_bbdd 5.5.0) la configuración
+  del sitio era un `mkdocs.yml`; las ejecuciones anteriores lo conservan y Zensical lo sigue leyendo.
 
 | Opción | Efecto |
 |---|---|
-| Título del sitio | `site_name` del `mkdocs.yml`; vacío = «Documentación de <base de datos>» |
+| Título del sitio | `site_name` del `zensical.toml`; vacío = «Documentación de <base de datos>» |
 | Tope de niveles en Markdown | 1–3 (2 por defecto). Se usa el menor entre este valor y los *Niveles de relación* de *Diagramas* (con 1 y 2 se usa 1); si recorta, la página lo avisa |
 | Mapa de trazabilidad | Un mapa del proyecto o global (ver abajo); vacío = sin trazabilidad |
 | Comparar con la documentación | Una documentación anterior **del mismo proyecto, conexión y schema, con Markdown**: añade `docs/changes.md` y `docs/changes.json` con los cambios de esquema |
 
-**Mermaid sin Internet**: el `mkdocs.yml` carga `docs/assets/javascripts/mermaid.min.js`, y el **ZIP** lleva el
+**Mermaid sin Internet**: el `zensical.toml` carga `docs/assets/javascripts/mermaid.min.js`, y el **ZIP** lleva el
 `mermaid.min.js` de la web (`UBW_MERMAID_JS`, incluido en la imagen) en esa ruta, así el sitio publicado dibuja los
 diagramas sin salir a Internet. Desde la 1.13.0 (util_bbdd 5.4.0, G50) ese fichero **no se guarda en cada
 ejecución**: se añade al ZIP al descargarlo (antes eran unos 5,5 MB por ejecución en la cuota; las ejecuciones
-anteriores conservan su copia). Sin `UBW_MERMAID_JS` en el servidor: al generar, el `mkdocs.yml` carga Mermaid de
+anteriores conservan su copia). Sin `UBW_MERMAID_JS` en el servidor: al generar, el `zensical.toml` carga Mermaid de
 unpkg y la ejecución termina con un aviso; al descargar, el ZIP sale sin el fichero, la respuesta lo avisa
 (`X-UBW-Warning`) y el sitio publicado cargará Mermaid de Internet.
 
 **Dónde verla**: en su tarjeta del detalle, con el visor Markdown (ver
 [Resultados](#resultados-una-tarjeta-por-formato)), o completa en su ZIP. Para el sitio con buscador de texto
-completo, publica el ZIP con Zensical o MkDocs fuera de la web.
+completo, publica el ZIP con Zensical fuera de la web.
 
 **Mapa de trazabilidad**: un `.toml` (recomendado: admite comentarios) o `.json` de hasta 1 MB que enlaza tablas,
 vistas, rutinas y columnas con código, documentos funcionales y técnicos y requisitos. Se gestiona como una plantilla
@@ -169,14 +170,14 @@ que no son de un formato siguen en la cabecera. Si un formato pedido no llegó a
 | Word | Un botón por documento (varios si se pidió un número de tablas por documento) | No: descárgalo |
 | Excel | El libro | No: descárgalo |
 | HTML | El sitio navegable en la página y **Abrir en pestaña nueva** | Sí (ADR-007) |
-| Markdown | Visor con árbol, buscador y navegación entre páginas; aviso **Cómo ver la documentación fuera de la web** con el `README.md` (desde la 1.15.0); **Ficheros auxiliares** (`catalog.json`, `llms.txt`, `llms-full.txt`, `mkdocs.yml`, `manifest.json`) para descargar | Solo las páginas `.md` de `docs/` |
+| Markdown | Visor con árbol, buscador y navegación entre páginas; aviso **Cómo ver la documentación fuera de la web** con el `README.md` (desde la 1.15.0); **Ficheros auxiliares** (`catalog.json`, `llms.txt`, `llms-full.txt`, `zensical.toml`, `manifest.json`) para descargar | Solo las páginas `.md` de `docs/` |
 
 **ZIP HTML sin conexión**: descomprímelo y abre `outputs/html/documentacion/index.html`; el índice, el buscador, el
 resaltado SQL y la navegación funcionan desde el disco (comprobado en Chromium).
 
-**ZIP Markdown**: la carpeta `outputs/markdown/documentacion/` es publicable tal cual (`zensical build` o
-`mkdocs build`) e incluye `mermaid.min.js` (el del servidor, añadido al descargar) para dibujar los diagramas sin
-Internet.
+**ZIP Markdown**: la carpeta `outputs/markdown/documentacion/` es publicable tal cual (`zensical build`, con
+Zensical 0.1.1 o posterior) e incluye `mermaid.min.js` (el del servidor, añadido al descargar) para dibujar los
+diagramas sin Internet: el `zensical.toml` lo carga y desactiva las fuentes externas (`font = false`).
 
 **Visor Markdown**:
 

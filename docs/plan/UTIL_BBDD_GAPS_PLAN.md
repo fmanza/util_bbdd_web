@@ -887,3 +887,11 @@ Sesión de util_bbdd: `.ai/sessions/2026-11-06-gaps-g50-g51/`. Tag `v5.4.0`, pub
 | W-11.3 | `c9c247a` | GAPS G50 y G51 resueltos; guía, ADR-007 (enmienda), ROADMAP y CHANGELOG |
 | release | este commit | util_bbdd_web **1.13.0** (D11-7). F1 comprobado: documentación Markdown con util_bbdd 5.4.0 por la integración de la web, Mermaid añadido como el ZIP y `zensical build --strict` sin avisos (11 páginas, `mermaid.min.js` local) |
 
+
+### W-12 — util_bbdd_web con util_bbdd 5.6.0 (2026-11-13, rama `develop`)
+
+| Fase | Commit | Notas |
+|---|---|---|
+| W-12.0 | `d21f80b` | Pin 5.6.0; en el lock solo cambia util_bbdd, con el hash del `.sha256` de la release (`6a42e09e…f81d5`), lock con uv 0.12.22. Sin excepción de `exclude-newer` para util_bbdd (wheel por URL). Los 3 tests que esperaban `mkdocs.yml` se adaptan en este commit (ajuste respecto del PLAN, para no dejar la suite en rojo): esperan `zensical.toml` y que no haya `mkdocs.yml` |
+| W-12.1 | `52f29cd` | Textos de la tarjeta Markdown y del aviso del README, `documentation.test.tsx`, comentarios y descripción del parámetro `markdown` (no está en OpenAPI). Grupo `docs`: `zensical>=0.1.1,<0.2`, con excepción fechada de `exclude-newer` para `zensical` y `zensical-ui` (2026-11-10; sobran desde el 2026-11-24). La web no pasa `markdown.mkdocs_yml` |
+| W-12.2 | este commit | G55 resuelto; guía, ADR-007 (enmienda) y CHANGELOG. Comprobado: documentación Markdown generada en la web (instancia local aislada), ZIP con `zensical build --strict` (Zensical 0.1.1) sin avisos y abierta en Chromium sin red externa con los diagramas dibujados y ninguna petición fuera de 127.0.0.1 |

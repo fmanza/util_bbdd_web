@@ -146,6 +146,19 @@ ejecución en la cuota).
 - El visor de la SPA no cambia: dibuja con el Mermaid de la SPA y nunca usa el del run. Tampoco cambia el informe
   HTML de la comparación, que sigue incrustando su Mermaid (enmienda 2026-10-30).
 
+## Enmienda 2026-11-13: `zensical.toml` en lugar de `mkdocs.yml` (util_bbdd 5.6.0, G55)
+
+Desde util_bbdd 5.6.0 la carpeta Markdown trae `zensical.toml`, no `mkdocs.yml` (`markdown.mkdocs_yml` queda en
+desuso, desactivado por defecto, y se retira en 6.0.0). Lo que dice la enmienda anterior del `mkdocs.yml` vale ahora
+para `zensical.toml`: referencia `assets/javascripts/mermaid.min.js` en `extra_javascript` y, al ser una ruta
+local, pone `font = false`.
+
+- La web no pasa `mkdocs_yml`: el job, `run.json` y el ZIP no cambian, porque no dependen del nombre del fichero de
+  configuración. Las ejecuciones anteriores conservan su `mkdocs.yml`, que Zensical también lee.
+- Comprobado con una documentación generada en la web con util_bbdd 5.6.0: el ZIP se publica con
+  `zensical build --strict` (Zensical 0.1.1) y, abierto en Chromium sin acceso fuera del servidor local, dibuja los
+  diagramas sin ninguna petición externa. Zensical 0.1.1 solo carga Mermaid de unpkg si `window.mermaid` no existe.
+
 ## Alternativas descartadas
 
 - **`allow-same-origin` + scripts**: el sitio podría leer la cookie CSRF y llamar a la API como el usuario.
