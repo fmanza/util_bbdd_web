@@ -902,4 +902,4 @@ Sesión de util_bbdd: `.ai/sessions/2026-11-06-gaps-g50-g51/`. Tag `v5.4.0`, pub
 |---|---|---|
 | W-13.0 | `919603b` | Pin 5.8.0 (incluye 5.7.0); en el lock solo cambian util_bbdd y los metadatos de su extra `dev-full`, con el hash del `.sha256` de la release (`fb236ab7…c75f70`), lock con uv 0.12.22. Suite 801 passed, 2 skipped |
 | W-13.1 | `9931145` | G49: `trace_map_error` (capa anticorrupción) llama a `validate_trace_map` al subir un mapa; un mapa no válido da 422 con todos los errores, el nombre del usuario y sin rutas, y no se guarda. El job conserva `invalid_trace_map` para los mapas subidos antes. `markdown_input_error` se mantiene |
-| W-13.2 | ver CHANGELOG 1.18.0 | G49 resuelto en GAPS; guía de documentación (validación al subir) y de despliegue (`driver_name` opcional con pyodbc, util_bbdd 5.7.0); CHANGELOG |
+| W-13.2 | `4ea423f` | G49 resuelto en GAPS; guía de documentación (validación al subir) y de despliegue (`driver_name` opcional con pyodbc, util_bbdd 5.7.0); CHANGELOG |
