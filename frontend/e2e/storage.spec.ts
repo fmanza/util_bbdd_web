@@ -25,11 +25,13 @@ test('el admin cambia y restablece un ajuste y da una cuota propia que el usuari
 
   // Ajuste: más días de retención de ficheros (no purga nada), con confirmación y después restablecido.
   await page.goto('/admin/storage');
+  // Cada tarjeta de Almacenamiento tiene su «Guardar»: la retención de cargas está en «Cuota y retención».
+  const settings = page.getByRole('region', { name: 'Cuota y retención' });
   const retention = page.getByRole('textbox', { name: 'Retención de ficheros de carga (días)' });
   await expect(retention).toBeVisible();
   const current = Number(await retention.inputValue());
   await retention.fill(String(current + 1));
-  await page.getByRole('button', { name: 'Guardar' }).click();
+  await settings.getByRole('button', { name: 'Guardar' }).click();
   const confirm = page.getByRole('dialog', { name: 'Confirmar los ajustes' });
   await expect(confirm.getByText('Con estos ajustes no se purgará nada ahora.')).toBeVisible();
   await confirm.getByRole('button', { name: 'Guardar' }).click();
@@ -37,7 +39,7 @@ test('el admin cambia y restablece un ajuste y da una cuota propia que el usuari
   await page.reload();
   await expect(retention).toHaveValue(String(current + 1));
   await page.getByRole('button', { name: 'Restablecer Retención de ficheros de carga (días)' }).click();
-  await page.getByRole('button', { name: 'Guardar' }).click();
+  await settings.getByRole('button', { name: 'Guardar' }).click();
   await confirm.getByRole('button', { name: 'Guardar' }).click();
   await expect(confirm).toBeHidden();
   await expect(page.getByRole('table', { name: 'Uso por usuario' })).toBeVisible();

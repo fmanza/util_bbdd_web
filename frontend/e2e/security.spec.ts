@@ -21,7 +21,14 @@ async function loginOk(page: Page, username: string, password: string) {
 test('la SPA y la API llevan cabeceras de seguridad y request_id', async ({ request }) => {
   const spa = await request.get('/projects');
   const csp = spa.headers()['content-security-policy'] ?? '';
-  expect(csp).toContain("script-src 'self';");
+  // Scripts: el propio origen y, como mucho, hashes concretos (el puente del visor Markdown, ADR-007; el backend
+  // comprueba que el hash coincide). Nunca 'unsafe-inline' ni 'unsafe-eval'.
+  const scriptSrc =
+    csp
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('script-src ')) ?? '';
+  expect(scriptSrc).toMatch(/^script-src 'self'( 'sha256-[A-Za-z0-9+/]+={0,2}')*$/);
   expect(csp).toContain("frame-ancestors 'none'");
   expect(spa.headers()['x-content-type-options']).toBe('nosniff');
   expect(spa.headers()['server']).toBeUndefined();
