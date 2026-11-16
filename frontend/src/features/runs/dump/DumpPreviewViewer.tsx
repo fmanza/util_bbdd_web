@@ -25,6 +25,7 @@ import { formatDateTime } from '../../../components/format';
 import { useMe } from '../../auth/useAuth';
 import { useProjectConnections } from '../../projects/useProjects';
 import { RunStatusBadge } from '../RunStatusBadge';
+import { TableFilterSummary } from '../TableFilterSummary';
 import { type RunDetail, useLaunchRun } from '../useRuns';
 import {
   type DumpPreview,
@@ -282,6 +283,7 @@ export function DumpPreviewViewer({ run }: { run: RunDetail }) {
               />
               <Stat label={t('dump.preview.cycles')} value={data.cycles.length} />
             </SimpleGrid>
+            <TableFilterSummary filter={data.filter} />
             <Warnings preview={data} />
             <Table striped withTableBorder aria-label={t('dump.preview.order')}>
               <Table.Thead>

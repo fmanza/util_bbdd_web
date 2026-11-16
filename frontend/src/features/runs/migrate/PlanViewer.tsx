@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorAlert } from '../../../components/ErrorAlert';
+import { TableFilterSummary } from '../TableFilterSummary';
 import type { RunDetail } from '../useRuns';
 import { ApplyPanel } from './ApplyPanel';
 import { SqlBlock } from './SqlBlock';
@@ -222,6 +223,7 @@ export function PlanViewer({ run }: { run: RunDetail }) {
                 {t('migrate.blocked')}
               </Alert>
             )}
+            <TableFilterSummary filter={plan.data.filter} frontier={plan.data.frontier} />
             <FkMismatches items={plan.data.fk_mismatches ?? []} blocking={plan.data.fk_blocking ?? false} />
             <Tabs defaultValue="warnings" keepMounted={false}>
               <Tabs.List>

@@ -44,7 +44,8 @@ Una tabla **sin relaciones** se dibuja sola, en el Word y en el sitio HTML (grup
 ### Filtro de tablas
 
 Desde la 1.15.0 (util_bbdd 5.5.0) se puede documentar solo una parte del schema, por ejemplo un módulo. El filtro vale
-para **todos los formatos** y se aplica a tablas y vistas (no a rutinas).
+para **todos los formatos** y se aplica a tablas y vistas (no a rutinas). Desde la 1.19.0 el mismo filtro está en el
+[plan de migración DDL](migracion.md) y en la [vista previa del volcado](volcado.md) (solo tablas).
 
 | Campo | Qué hace |
 |---|---|

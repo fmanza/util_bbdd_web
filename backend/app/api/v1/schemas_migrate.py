@@ -76,6 +76,13 @@ class PlanObjectOut(_Plan):
     routine_type: str | None = None
 
 
+class TableFilterOut(_Plan):
+    """Patrones del filtro de tablas con que se planificó o se preparó el volcado (util_bbdd 5.9.0)."""
+
+    include: list[str] = []
+    exclude: list[str] = []
+
+
 class MigrationPlanOut(_Plan):
     """Plan de migración guardado por ``migrate_plan``."""
 
@@ -93,6 +100,10 @@ class MigrationPlanOut(_Plan):
     routines: list[PlanObjectOut] = []
     fk_mismatches: list[FkMismatchOut] = []
     fk_blocking: bool = Field(default=False, description="El destino (MariaDB/MySQL) rechazará esas FK: no se aplica")
+    filter: TableFilterOut | None = Field(default=None, description="Filtro de tablas y vistas; null = todo el schema")
+    frontier: list[str] = Field(
+        default=[], description="Tablas de fuera del filtro unidas por FK a las del plan (deben existir en el destino)"
+    )
 
 
 class ViewValidationOut(_Plan):

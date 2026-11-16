@@ -11,14 +11,14 @@ En *Ejecuciones*, **Lanzar ejecución → Volcado de datos: vista previa** (rol 
 | Campo | Efecto |
 |---|---|
 | Conexión y schema origen / destino | De dónde se leen y dónde se escriben las filas |
-| Tablas | Separadas por comas (sin distinguir mayúsculas); vacío = todas las del origen |
+| Filtro de tablas | **Tablas (lista exacta)**, separadas por comas (sin distinguir mayúsculas; avisa si alguna no existe), **o** desde la 1.19.0 **Incluir** y **Excluir** (patrones, como en la [documentación](documentacion.md#filtro-de-tablas)), no las dos cosas; vacío = todas las del origen. **Probar patrones** aplica los patrones a las tablas del origen antes de lanzar |
 | Carga | **Vaciar el destino antes de cargar** (desactivado: las filas se **añaden**) y ajustar secuencias de PK |
 | Errores | Filas que el destino no admite: **fallar la tabla** o **apartarlas** a `rechazos.csv`, con un máximo por tabla |
 | Rendimiento | Filas por lote, tablas en paralelo (1–4) e índices secundarios |
 
 El detalle muestra el **orden de carga** por claves foráneas (las tablas en ciclos van al final), las filas en origen y
 destino y, por tabla, columnas que no se copian, columnas obligatorias del destino que el origen no tiene y FK a tablas
-fuera del volcado. Avisos:
+fuera del volcado (con patrones, también los patrones usados). Avisos:
 
 - tablas que **no existen** en el destino (no se cargan);
 - destino **con filas** sin vaciar (se añaden; pueden duplicarse claves);
@@ -89,4 +89,4 @@ las toca.
 | `dump_partial` | Alguna tabla falló o alguna constraint no se reactivó | Revisa el resultado por tabla; corrige los datos o el destino |
 | 409 «constraints sin restaurar» | Un volcado anterior sobre ese destino las dejó desactivadas | Restáuralas desde el resultado de ese volcado |
 | `restore_partial` | Alguna constraint no se pudo reactivar al restaurar | Corrige las filas que no la cumplen y vuelve a restaurar |
-| `invalid_params` | Tabla o schema inexistente en el origen | Revisa los nombres en el explorador |
+| `invalid_params` | Tabla o schema inexistente en el origen, o ninguna tabla casa con los patrones | Revisa los nombres en el explorador o usa **Probar patrones** |

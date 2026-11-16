@@ -365,6 +365,8 @@ export const MIGRATION_PLAN: MigrationPlan = {
   routines: [],
   fk_mismatches: [],
   fk_blocking: false,
+  filter: null,
+  frontier: [],
 };
 
 export const MYSQL_TARGET = {

@@ -1852,6 +1852,17 @@
             "title": "Cycles",
             "type": "array"
           },
+          "filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TableFilterOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Patrones con que se eligieron las tablas"
+          },
           "load_order": {
             "items": {
               "type": "string"
@@ -2970,6 +2981,17 @@
             "title": "Error Count",
             "type": "integer"
           },
+          "filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TableFilterOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filtro de tablas y vistas; null = todo el schema"
+          },
           "fk_blocking": {
             "default": false,
             "description": "El destino (MariaDB/MySQL) rechazará esas FK: no se aplica",
@@ -2982,6 +3004,15 @@
               "$ref": "#/components/schemas/FkMismatchOut"
             },
             "title": "Fk Mismatches",
+            "type": "array"
+          },
+          "frontier": {
+            "default": [],
+            "description": "Tablas de fuera del filtro unidas por FK a las del plan (deben existir en el destino)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Frontier",
             "type": "array"
           },
           "info_count": {
@@ -5693,6 +5724,29 @@
           "status"
         ],
         "title": "TableDiffOut",
+        "type": "object"
+      },
+      "TableFilterOut": {
+        "description": "Patrones del filtro de tablas con que se planificó o se preparó el volcado (util_bbdd 5.9.0).",
+        "properties": {
+          "exclude": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Exclude",
+            "type": "array"
+          },
+          "include": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Include",
+            "type": "array"
+          }
+        },
+        "title": "TableFilterOut",
         "type": "object"
       },
       "TableItem": {

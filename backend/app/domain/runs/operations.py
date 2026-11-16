@@ -86,6 +86,34 @@ def split_patterns(value: str | None) -> tuple[str, ...]:
     return tuple(dict.fromkeys(part.strip() for part in value.split(",") if part.strip()))
 
 
+def normalize_filter_patterns(params: Any) -> None:
+    """``table_include``/``table_exclude`` dentro de los límites de util_bbdd; normalizados (sin vacíos ni repetidos).
+
+    Lo comparten la documentación, el plan de migración y la vista previa del volcado (1.19.0).
+
+    Raises:
+        ValueError: Más de :data:`MAX_FILTER_PATTERNS` patrones o uno de más de :data:`MAX_FILTER_PATTERN_LENGTH`.
+    """
+    for name in ("table_include", "table_exclude"):
+        patterns = split_patterns(getattr(params, name))
+        if len(patterns) > MAX_FILTER_PATTERNS:
+            raise ValueError(f"{name}: como máximo {MAX_FILTER_PATTERNS} patrones")
+        too_long = next((p for p in patterns if len(p) > MAX_FILTER_PATTERN_LENGTH), None)
+        if too_long is not None:
+            raise ValueError(f"{name}: patrón de más de {MAX_FILTER_PATTERN_LENGTH} caracteres: {too_long[:40]}…")
+        setattr(params, name, ", ".join(patterns) or None)
+
+
+def _filter_field(description: str) -> Any:
+    return _group("filter", None, description, pattern=FILTER_PATTERNS_PATTERN)
+
+
+#: Ayuda común de los patrones de ``table_include``.
+_INCLUDE_HELP = "separados por comas (MVG_*, COB_*). * es cualquier texto, ? un carácter; no distingue mayúsculas."
+#: Ayuda de ``table_exclude``.
+_EXCLUDE_HELP = "Patrones que se quitan aunque casen con los de incluir (*_BAK, TMP_*). Vacío = ninguno."
+
+
 class DocumentationParams(BaseModel):
     """Documentación de un schema con ``DatabaseDocumentation`` de util_bbdd (Word, Excel, HTML y/o Markdown)."""
 
@@ -215,14 +243,7 @@ class DocumentationParams(BaseModel):
     @model_validator(mode="after")
     def _filter_patterns(self) -> DocumentationParams:
         """Patrones del filtro dentro de los límites de util_bbdd; normalizados (sin vacíos ni repetidos)."""
-        for name in ("table_include", "table_exclude"):
-            patterns = split_patterns(getattr(self, name))
-            if len(patterns) > MAX_FILTER_PATTERNS:
-                raise ValueError(f"{name}: como máximo {MAX_FILTER_PATTERNS} patrones")
-            too_long = next((p for p in patterns if len(p) > MAX_FILTER_PATTERN_LENGTH), None)
-            if too_long is not None:
-                raise ValueError(f"{name}: patrón de más de {MAX_FILTER_PATTERN_LENGTH} caracteres: {too_long[:40]}…")
-            setattr(self, name, ", ".join(patterns) or None)
+        normalize_filter_patterns(self)
         return self
 
     @model_validator(mode="after")
@@ -344,8 +365,18 @@ class MigratePlanParams(BaseModel):
     oracle_identity_mode: Literal["sequence_trigger", "identity"] = _group(
         "oracle", "sequence_trigger", "Autoincrementales en destino Oracle: secuencia + trigger o IDENTITY."
     )
+    table_include: str | None = _filter_field(
+        f"Patrones de las tablas y vistas que se migran, {_INCLUDE_HELP} Vacío = todas. Las rutinas no se filtran."
+    )
+    table_exclude: str | None = _filter_field(_EXCLUDE_HELP)
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _filter_patterns(self) -> MigratePlanParams:
+        """Patrones del filtro (util_bbdd 5.9.0) dentro de sus límites y normalizados."""
+        normalize_filter_patterns(self)
+        return self
 
 
 class MigrateApplyParams(BaseModel):
@@ -383,12 +414,16 @@ class DumpPreviewParams(BaseModel):
     target_schema: str | None = Field(
         default=None, pattern=OBJECT_NAME_PATTERN, description="Schema destino; vacío = el de la conexión."
     )
-    tables: str | None = Field(
-        default=None,
+    tables: str | None = _group(
+        "filter",
+        None,
+        "Lista exacta de tablas a volcar separadas por comas (avisa si alguna no existe); vacío = todas las del origen. "
+        "No se combina con los patrones.",
         max_length=4000,
         pattern=TABLES_PATTERN,
-        description="Tablas a volcar separadas por comas; vacío = todas las del origen.",
     )
+    table_include: str | None = _filter_field(f"Patrones de las tablas que se vuelcan, {_INCLUDE_HELP} Vacío = todas.")
+    table_exclude: str | None = _filter_field(_EXCLUDE_HELP)
     truncate_target: bool = _group(
         "load", False, "Vaciar las tablas destino antes de cargar (si no, las filas se añaden)."
     )
@@ -406,6 +441,14 @@ class DumpPreviewParams(BaseModel):
     )
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _filter_patterns(self) -> DumpPreviewParams:
+        """Lista exacta o patrones (util_bbdd 5.9.0), no los dos; patrones dentro de sus límites y normalizados."""
+        normalize_filter_patterns(self)
+        if (self.tables or "").strip() and (self.table_include or self.table_exclude):
+            raise ValueError("Indica la lista exacta de tablas o los patrones de incluir/excluir, no los dos.")
+        return self
 
 
 class DumpApplyParams(BaseModel):

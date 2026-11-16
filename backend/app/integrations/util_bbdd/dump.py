@@ -33,6 +33,7 @@ from typing import Any, Final, Literal
 from app.integrations.util_bbdd.compare import resolve_schema
 from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.integrations.util_bbdd.sql import MAX_ENGINE_MESSAGE
+from app.integrations.util_bbdd.table_filter import build_table_filter, filter_summary
 
 #: Diario de constraints de util_bbdd en ``DumpConfig.output_dir`` (4.4.0, G31; solo SQL Server, PostgreSQL y Oracle).
 JOURNAL_FILE: Final = "constraints_journal.json"
@@ -48,6 +49,10 @@ class UnknownTablesError(LookupError):
     def __init__(self, tables: list[str]) -> None:
         super().__init__(", ".join(tables))
         self.tables = tables
+
+
+class NoMatchingTablesError(LookupError):
+    """Ninguna tabla del origen casa con los patrones del filtro (util_bbdd 5.9.0)."""
 
 
 class PreviewChangedError(RuntimeError):
@@ -68,6 +73,9 @@ class DumpOptions:
     """Opciones del volcado que expone el formulario (el resto, valores por defecto de util_bbdd)."""
 
     tables: tuple[str, ...] = ()
+    #: Filtro por patrones (util_bbdd 5.9.0), separados por comas; incompatible con ``tables`` (lo valida el formulario).
+    table_include: str | None = None
+    table_exclude: str | None = None
     truncate_target: bool = False
     on_error: Literal["raise", "isolate"] = "raise"
     max_rejects: int | None = None
@@ -107,6 +115,7 @@ def _config(
         source_schema=source_schema,
         target_schema=target_schema,
         tables=tables if options.tables else None,
+        table_filter=None if options.tables else build_table_filter(options.table_include, options.table_exclude),
         chunk_size=options.chunk_size,
         truncate_target=options.truncate_target,
         max_parallel_tables=options.max_parallel_tables,
@@ -144,6 +153,7 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
 
     Raises:
         UnknownTablesError: Alguna tabla pedida no existe en el origen.
+        NoMatchingTablesError: Ninguna tabla del origen casa con los patrones del filtro.
         SchemaNotFoundError: El schema no existe en un lado.
     """
     from sqlalchemy import inspect
@@ -161,6 +171,9 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
         dst_schema = _resolve(inspect(target_engine), "target", target.schema)
         tables = _source_tables(src_inspector, src_schema, options.tables)
         config = _config(source_engine, target_engine, src_schema, dst_schema, tables, options, Path(REJECTS_FILE))
+        table_filter = config.table_filter
+        if table_filter is not None and not any(table_filter.matches(name) for name in tables):
+            raise NoMatchingTablesError()
         plan = DumpOrchestrator(config).plan()
         in_cycle = {t for component in plan.cycles for t in component}
         rows: list[dict[str, Any]] = []
@@ -186,6 +199,8 @@ def build_preview(source: Endpoint, target: Endpoint, options: DumpOptions) -> d
         "source_schema": src_schema,
         "target_schema": dst_schema,
         "truncate_target": options.truncate_target,
+        # util_bbdd 5.9.0: patrones con que se eligieron las tablas (las tablas ya van en ``structure_hash``)
+        "filter": filter_summary(table_filter),
         "constraints_managed": plan.constraints_managed,
         "tables": rows,
         "cycles": [list(c) for c in plan.cycles],

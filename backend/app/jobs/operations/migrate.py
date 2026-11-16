@@ -29,6 +29,9 @@ from app.integrations.util_bbdd.progress import RunProgress
 from app.jobs.context import JobContext, JobError
 from app.jobs.operations.documentation import _MESSAGES
 
+#: Comienzo del ``ValueError`` de ``MigrationPlanner.plan`` cuando el filtro no deja nada (util_bbdd 5.9.0).
+NO_MATCH_PREFIX = "Ninguna tabla ni vista del schema"
+
 
 def _options(params: MigratePlanParams) -> PlannerOptions:
     return PlannerOptions(
@@ -41,6 +44,9 @@ def _job_error(exc: Exception) -> JobError:
         return exc
     if isinstance(exc, ValueError) and "no soportado" in str(exc).lower():
         return JobError("invalid_params", "Combinación de motores no soportada por util_bbdd.")
+    if isinstance(exc, ValueError) and str(exc).startswith(NO_MATCH_PREFIX):
+        # util_bbdd 5.9.0: ``plan(table_filter=...)`` sin ninguna tabla ni vista que case
+        return JobError("invalid_params", "Ninguna tabla ni vista del schema casa con el filtro de tablas.")
     code = classify(exc)
     return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
 

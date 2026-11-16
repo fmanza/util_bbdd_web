@@ -21,6 +21,7 @@ from app.integrations.util_bbdd.dump import (
     DumpOptions,
     DumpProgress,
     Endpoint,
+    NoMatchingTablesError,
     PreviewChangedError,
     UnknownTablesError,
     build_preview,
@@ -38,6 +39,8 @@ RESTORE_PATH: Final = "outputs/dump/restore.json"
 def _options(params: DumpPreviewParams) -> DumpOptions:
     return DumpOptions(
         tables=parse_tables(params.tables),
+        table_include=params.table_include,
+        table_exclude=params.table_exclude,
         truncate_target=params.truncate_target,
         on_error=params.on_error,
         max_rejects=params.max_rejects,
@@ -57,6 +60,8 @@ def _endpoints(ctx: JobContext, params: DumpPreviewParams) -> tuple[Endpoint, En
 def _job_error(exc: Exception) -> JobError:
     if isinstance(exc, JobError):
         return exc
+    if isinstance(exc, NoMatchingTablesError):
+        return JobError("invalid_params", "Ninguna tabla del origen casa con el filtro de tablas.")
     if isinstance(exc, SchemaNotFoundError | UnknownTablesError):
         prefix = "Tablas que no existen en el origen: " if isinstance(exc, UnknownTablesError) else ""
         return JobError("invalid_params", f"{prefix}{exc}")

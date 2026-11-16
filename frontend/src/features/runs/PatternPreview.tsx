@@ -11,6 +11,10 @@ import { buildFilter, matches } from './tablePatterns';
 const SHOWN = 30;
 
 interface Props {
+  /** Operación del formulario: los textos que cambian (qué se hace con lo que casa) usan su contexto de i18next. */
+  operation: string;
+  /** El filtro se aplica también a las vistas (documentación y migración; no el volcado). */
+  views: boolean;
   connections: ProjectConnection[];
   connectionAlias: string | undefined;
   schema: string | undefined;
@@ -30,11 +34,19 @@ function Names({ names }: { names: string[] }) {
 }
 
 /**
- * Ayuda del filtro de tablas y «Probar patrones» (1.15.0): aplica los patrones, con la semántica de util_bbdd, a las
- * tablas y vistas del schema (el árbol del explorador, en caché) antes de lanzar la documentación. La frontera necesita
- * las FK y se calcula al generar.
+ * Ayuda del filtro de tablas y «Probar patrones» (1.15.0; 1.19.0 también en el plan de migración y en la vista previa
+ * del volcado): aplica los patrones, con la semántica de util_bbdd, a las tablas (y vistas, si `views`) del schema (el
+ * árbol del explorador, en caché) antes de lanzar. La frontera necesita las FK y se calcula al ejecutar.
  */
-export function PatternPreview({ connections, connectionAlias, schema, include, exclude }: Props) {
+export function PatternPreview({
+  operation,
+  views: withViews,
+  connections,
+  connectionAlias,
+  schema,
+  include,
+  exclude,
+}: Props) {
   const { t } = useTranslation();
   const [helpOpen, setHelpOpen] = useState(false);
   const [requested, setRequested] = useState(false);
@@ -47,7 +59,11 @@ export function PatternPreview({ connections, connectionAlias, schema, include, 
 
   const filter = buildFilter(include, exclude);
   const tables = tree.data?.tables.map((item) => item.name) ?? [];
-  const views = tree.data?.views.filter((item) => !item.materialized).map((item) => item.name) ?? [];
+  const views = withViews
+    ? (tree.data?.views.filter((item) => !item.materialized).map((item) => item.name) ?? [])
+    : [];
+  // `result_dump_preview`, `nothing_migrate_plan`…; sin la clave de la operación, la de la documentación.
+  const context = { context: operation };
   const keptTables = tables.filter((name) => matches(filter, name));
   const keptViews = views.filter((name) => matches(filter, name));
   const leftOut = [...tables, ...views].filter((name) => !matches(filter, name));
@@ -82,7 +98,7 @@ export function PatternPreview({ connections, connectionAlias, schema, include, 
               <Code>*</Code> {t('runs.patterns.star')}; <Code>?</Code> {t('runs.patterns.question')};{' '}
               <Code>[ABC]</Code> {t('runs.patterns.set')}; <Code>[!ABC]</Code> {t('runs.patterns.notSet')}.
             </List.Item>
-            <List.Item>{t('runs.patterns.caseAndCommas')}</List.Item>
+            <List.Item>{t('runs.patterns.caseAndCommas', context)}</List.Item>
             <List.Item>
               <Code>MVG_*</Code> {t('runs.patterns.exampleModule')}
             </List.Item>
@@ -92,7 +108,7 @@ export function PatternPreview({ connections, connectionAlias, schema, include, 
             <List.Item>
               <Code>*_BAK, TMP_*</Code> {t('runs.patterns.exampleExclude')}
             </List.Item>
-            <List.Item>{t('runs.patterns.frontier')}</List.Item>
+            <List.Item>{t('runs.patterns.frontier', context)}</List.Item>
           </List>
         </Alert>
       </Collapse>
@@ -102,6 +118,7 @@ export function PatternPreview({ connections, connectionAlias, schema, include, 
           <Stack gap={4} aria-live="polite">
             <Text size="sm">
               {t('runs.patterns.result', {
+                ...context,
                 tables: keptTables.length,
                 totalTables: tables.length,
                 views: keptViews.length,
@@ -110,13 +127,13 @@ export function PatternPreview({ connections, connectionAlias, schema, include, 
             </Text>
             {keptTables.length + keptViews.length === 0 && (
               <Text size="sm" c="orange">
-                {t('runs.patterns.nothing')}
+                {t('runs.patterns.nothing', context)}
               </Text>
             )}
             {keptTables.length + keptViews.length > 0 && (
               <>
                 <Text size="xs" fw={500}>
-                  {t('runs.patterns.documented')}
+                  {t('runs.patterns.documented', context)}
                 </Text>
                 <Names names={[...keptTables, ...keptViews]} />
               </>

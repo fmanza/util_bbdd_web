@@ -17,6 +17,7 @@ En la pestaña *Ejecuciones* del proyecto (rol editor), **Lanzar ejecución → 
 | Motor destino | Motor para el que se genera el DDL |
 | Conversión | Vistas (reescribirlas al dialecto destino o copiarlas) y tipo para `NUMBER` de Oracle sin precisión |
 | Destino MariaDB/MySQL, SQL Server, PostgreSQL u Oracle | Opciones de ese destino (charset, collation, schema destino, autoincrementales…); solo se ven las del motor elegido |
+| Filtro de tablas | Desde la 1.19.0: **Incluir** y **Excluir** (patrones) y **Probar patrones**, como en la [documentación](documentacion.md#filtro-de-tablas); se aplica a tablas y vistas, no a rutinas |
 
 El plan **no escribe en ninguna base de datos**. Su detalle muestra:
 
@@ -25,6 +26,12 @@ El plan **no escribe en ninguna base de datos**. Su detalle muestra:
   acortados, autoincrementales…);
 - **Tablas** con el tipo de cada columna en origen y destino;
 - **Sentencias** con resaltado; el script completo se descarga desde *Artefactos*.
+
+**Filtro de tablas** (1.19.0, util_bbdd 5.9.0): el plan lleva solo las tablas y vistas que casan con los patrones.
+Una FK de una tabla del plan hacia una tabla que queda fuera se añade al final del script (aviso `FK_OUTSIDE_FILTER`):
+esa tabla **debe existir ya en el destino**. El detalle del plan muestra los patrones y la **frontera**, las tablas de
+fuera unidas por FK a las del plan. Una vista del plan que lea una tabla de fuera falla en el modo seco si esa tabla no
+existe en el destino. Si no casa ninguna tabla ni vista, el plan termina con `invalid_params`.
 
 **Claves foráneas**: cada columna FK recibe el tipo destino de la columna que referencia (aviso `INFO`
 `FK_TYPE_ALIGNED`; p. ej. Oracle `INT` en PK y FK pasa a `INT(11)` en las dos). Si no se puede (columna referenciada
@@ -81,3 +88,4 @@ tablas.
 | `fk_type_mismatch` | FK entre tipos distintos con destino MariaDB/MySQL (planes anteriores a la 1.3.0) | Planifica de nuevo |
 | `view_invalid` | Una vista no se puede crear en el destino | Revisa su SQL (o usa *Copiar sin cambios*) |
 | `apply_partial` | Falló una sentencia al aplicar | Lee el informe; deshaz lo aplicado o corrige y aplica lo que falta a mano |
+| `invalid_params` «Ninguna tabla ni vista … casa con el filtro» | Los patrones no dejan nada del schema | Usa **Probar patrones** antes de lanzar |

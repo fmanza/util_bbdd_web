@@ -2311,6 +2311,8 @@ export interface components {
             constraints_managed: boolean;
             /** Cycles */
             cycles: string[][];
+            /** @description Patrones con que se eligieron las tablas */
+            filter?: components["schemas"]["TableFilterOut"] | null;
             /** Load Order */
             load_order: string[];
             /** Source Engine */
@@ -2825,6 +2827,8 @@ export interface components {
         MigrationPlanOut: {
             /** Error Count */
             error_count: number;
+            /** @description Filtro de tablas y vistas; null = todo el schema */
+            filter?: components["schemas"]["TableFilterOut"] | null;
             /**
              * Fk Blocking
              * @description El destino (MariaDB/MySQL) rechazará esas FK: no se aplica
@@ -2836,6 +2840,12 @@ export interface components {
              * @default []
              */
             fk_mismatches: components["schemas"]["FkMismatchOut"][];
+            /**
+             * Frontier
+             * @description Tablas de fuera del filtro unidas por FK a las del plan (deben existir en el destino)
+             * @default []
+             */
+            frontier: string[];
             /** Info Count */
             info_count: number;
             /**
@@ -3883,6 +3893,22 @@ export interface components {
             status: "added" | "removed" | "modified";
             /** Table Name */
             table_name: string;
+        };
+        /**
+         * TableFilterOut
+         * @description Patrones del filtro de tablas con que se planificó o se preparó el volcado (util_bbdd 5.9.0).
+         */
+        TableFilterOut: {
+            /**
+             * Exclude
+             * @default []
+             */
+            exclude: string[];
+            /**
+             * Include
+             * @default []
+             */
+            include: string[];
         };
         /** TableItem */
         TableItem: {

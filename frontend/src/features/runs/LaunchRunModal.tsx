@@ -89,6 +89,16 @@ const ENGINE_GROUPS: Record<string, readonly string[]> = {
 /** Parámetros de `migrate_plan` que util_bbdd solo usa con origen Oracle (`NUMBER` sin precisión, ancho de INT). */
 const ORACLE_SOURCE_PARAMS: ReadonlySet<string> = new Set(['number_fallback', 'int_display_width']);
 
+/**
+ * Operaciones con «Probar patrones» en su grupo `filter` (1.15.0 documentación; 1.19.0 migración y volcado): campos
+ * de la conexión y del schema del formulario y si el filtro se aplica también a las vistas.
+ */
+const PATTERN_PREVIEW: Record<string, { connection: string; schema: string; views: boolean }> = {
+  documentation: { connection: 'connection', schema: 'schema', views: true },
+  migrate_plan: { connection: 'source_connection', schema: 'source_schema', views: true },
+  dump_preview: { connection: 'source_connection', schema: 'source_schema', views: false },
+};
+
 /** Opciones de un parámetro de plantilla: «sin plantilla» y las del tipo pedido, las del proyecto primero. */
 function templateOptions(templates: DocumentTemplate[], kind: string | null | undefined, t: TFunction) {
   const items = (scope: DocumentTemplate['scope']) =>
@@ -176,6 +186,7 @@ function LaunchForm({
   const runParam = operation.params.find((p) => p.type === 'run');
   const previousRuns = useSucceededRuns(projectId, runParam?.run_operation ?? null, runParam !== undefined);
   const values = useWatch({ control: form.control });
+  const patternPreview = PATTERN_PREVIEW[operation.name];
   const sourceType = connections.find((c) => c.alias === values['source_connection'])?.db_type;
   // Un parámetro con `requires` solo se ofrece si ese interruptor está activado (las opciones del Markdown); una
   // plantilla sin él, si su formato (`word`, `excel`) se va a generar.
@@ -344,11 +355,13 @@ function LaunchForm({
               <Fieldset key={group} legend={t(`runs.groups.${group}`, { defaultValue: group })}>
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
                   {fields}
-                  {group === 'filter' && operation.name === 'documentation' && (
+                  {group === 'filter' && patternPreview && (
                     <PatternPreview
+                      operation={operation.name}
+                      views={patternPreview.views}
                       connections={connections}
-                      connectionAlias={text(values['connection'])}
-                      schema={text(values['schema'])}
+                      connectionAlias={text(values[patternPreview.connection])}
+                      schema={text(values[patternPreview.schema])}
                       include={text(values['table_include'])}
                       exclude={text(values['table_exclude'])}
                     />

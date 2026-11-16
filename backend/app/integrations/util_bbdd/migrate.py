@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Final, Literal
 
 from app.integrations.util_bbdd.sql import _engine_message
+from app.integrations.util_bbdd.table_filter import build_table_filter, filter_summary
 
 PLAN_FORMAT: Final = 1
 #: Destinos que rechazan siempre una FK entre tipos distintos (InnoDB).
@@ -77,6 +78,9 @@ class PlannerOptions:
     pg_schema: str | None = None
     oracle_identity_mode: Literal["sequence_trigger", "identity"] = "sequence_trigger"
     view_strategy: Literal["auto", "transpile", "passthrough"] = "auto"
+    #: Filtro de tablas y vistas (util_bbdd 5.9.0): patrones separados por comas; no son argumentos del planner.
+    table_include: str | None = None
+    table_exclude: str | None = None
 
     def kwargs(self) -> dict[str, Any]:
         """Argumentos de ``MigrationPlanner`` (sin los ``None``: util_bbdd pone sus valores por defecto)."""
@@ -187,6 +191,9 @@ def plan_to_dict(plan: Any, statements: list[str]) -> dict[str, Any]:
         ],
         "views": [{"name": v.name, "original_name": v.original_name} for v in plan.views],
         "routines": [{"name": r.name, "routine_type": r.routine_type} for r in plan.routines],
+        # util_bbdd 5.9.0: filtro con que se planificó y tablas de fuera unidas por FK (planes anteriores: sin filtro)
+        "filter": filter_summary(getattr(plan, "table_filter", None)),
+        "frontier": list(getattr(plan, "frontier", None) or []),
     }
     data["fk_mismatches"] = fk_mismatches(data["tables"])
     data["fk_blocking"] = bool(data["fk_mismatches"]) and plan.target_engine in FK_STRICT_TARGETS
@@ -197,7 +204,7 @@ def _plan(source_engine: str, target_engine: str, manager: Any, schema: str, opt
     from util_bbdd.migrate import MigrationPlanner
 
     planner = MigrationPlanner(source_engine=source_engine, target_engine=target_engine, **options.kwargs())
-    return planner.plan(manager, schema)
+    return planner.plan(manager, schema, table_filter=build_table_filter(options.table_include, options.table_exclude))
 
 
 def default_schema(db_type: str, conn_params: dict[str, Any], manager: Any) -> str:

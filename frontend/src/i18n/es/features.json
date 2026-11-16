@@ -511,14 +511,18 @@
         "int_display_width": "Ancho de INT",
         "sql_server_collation": "Collation",
         "pg_schema": "Schema destino",
-        "oracle_identity_mode": "Autoincrementales"
+        "oracle_identity_mode": "Autoincrementales",
+        "table_include": "Incluir (patrones)",
+        "table_exclude": "Excluir (patrones)"
       },
       "dump_preview": {
         "source_connection": "Conexión origen",
         "source_schema": "Schema origen",
         "target_connection": "Conexión destino",
         "target_schema": "Schema destino",
-        "tables": "Tablas",
+        "tables": "Tablas (lista exacta)",
+        "table_include": "Incluir (patrones)",
+        "table_exclude": "Excluir (patrones)",
         "truncate_target": "Vaciar el destino antes de cargar",
         "sync_pk_sequences": "Ajustar secuencias de PK",
         "on_error": "Filas que el destino no admite",
@@ -527,6 +531,13 @@
         "max_parallel_tables": "Tablas en paralelo",
         "manage_indexes": "Índices secundarios"
       }
+    },
+    "filterSummary": {
+      "title": "Filtro de tablas",
+      "include": "Incluir:",
+      "exclude": "Excluir:",
+      "frontier_one": "Frontera ({{count}} tabla de fuera unida por FK; debe existir ya en el destino):",
+      "frontier_other": "Frontera ({{count}} tablas de fuera unidas por FK; deben existir ya en el destino):"
     },
     "patterns": {
       "try": "Probar patrones",
@@ -543,9 +554,18 @@
       "exampleTwo": "los módulos MVG y COB.",
       "exampleExclude": "en «Excluir»: sin copias ni temporales.",
       "frontier": "Frontera: las tablas de fuera unidas por una FK a las documentadas. Se listan en la portada del Markdown y en el resumen de la ejecución, y se ven en los diagramas, sin ficha propia. Se calcula al generar.",
+      "caseAndCommas_dump_preview": "No distinguen mayúsculas. Varios patrones, separados por comas. Sin «Incluir» entran todas; «Excluir» gana a «Incluir». Se aplican a las tablas y no se combinan con la lista exacta.",
+      "frontier_migrate_plan": "Las FK hacia tablas de fuera del filtro se añaden al final del script: esas tablas deben existir ya en el destino. El plan las lista como frontera.",
+      "frontier_dump_preview": "Las FK hacia tablas de fuera del filtro se avisan en la vista previa: sus filas deben existir ya en el destino.",
       "resultTitle": "Resultado en el schema {{schema}}",
       "result": "Se documentan {{tables}} de {{totalTables}} tablas y {{views}} de {{totalViews}} vistas.",
       "nothing": "Ningún objeto casa con los patrones: la documentación saldría vacía.",
+      "result_migrate_plan": "Se migran {{tables}} de {{totalTables}} tablas y {{views}} de {{totalViews}} vistas.",
+      "result_dump_preview": "Se vuelcan {{tables}} de {{totalTables}} tablas.",
+      "nothing_migrate_plan": "Ningún objeto casa con los patrones: el plan fallaría.",
+      "nothing_dump_preview": "Ninguna tabla casa con los patrones: la vista previa fallaría.",
+      "documented_migrate_plan": "Se migran",
+      "documented_dump_preview": "Se vuelcan",
       "documented": "Se documentan",
       "leftOut_one": "Fuera del filtro ({{count}})",
       "leftOut_other": "Fuera del filtro ({{count}})",

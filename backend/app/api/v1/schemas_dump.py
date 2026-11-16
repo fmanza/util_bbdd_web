@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api.v1.schemas_migrate import TableFilterOut
+
 
 class _Dump(BaseModel):
     # Documentos guardados por el job: se ignoran campos de versiones posteriores.
@@ -34,6 +36,7 @@ class DumpPreviewOut(_Dump):
     source_schema: str | None
     target_schema: str | None
     truncate_target: bool
+    filter: TableFilterOut | None = Field(default=None, description="Patrones con que se eligieron las tablas")
     constraints_managed: bool = Field(description="util_bbdd desactiva y reactiva las constraints de este destino")
     tables: list[DumpPreviewTableOut]
     cycles: list[list[str]]

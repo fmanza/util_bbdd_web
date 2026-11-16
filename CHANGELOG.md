@@ -3,6 +3,20 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Added
+
+- **Filtro de tablas en el plan de migración DDL y en la vista previa del volcado** (util_bbdd 5.9.0, G56 y G57): el
+  grupo «Filtro de tablas» de la documentación, con **Incluir**, **Excluir** y **Probar patrones**.
+  - Plan de migración: filtra tablas y vistas (las rutinas no). Las FK hacia tablas de fuera van al final del script
+    (aviso `FK_OUTSIDE_FILTER`). El detalle del plan muestra los patrones y la frontera.
+  - Vista previa del volcado: filtra tablas. La **lista exacta** se mantiene, pasa al mismo grupo y no se combina con
+    los patrones. El detalle muestra los patrones usados.
+  - Si no casa nada, la ejecución termina con `invalid_params` y un mensaje claro.
+- API: `MigrationPlanOut.filter`/`frontier` y `DumpPreviewOut.filter` (opcionales: los planes y vistas previas
+  guardados antes se siguen leyendo).
+
 ## [1.18.0] - 2026-11-13
 
 ### Added
