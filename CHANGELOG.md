@@ -3,7 +3,11 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
-## [Unreleased]
+## [1.19.0] - 2026-11-16
+
+### Changed
+
+- util_bbdd 5.9.0.
 
 ### Added
 

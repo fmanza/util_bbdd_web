@@ -1,7 +1,7 @@
 # Producto — util_bbdd_web
 
 - **Qué es**: aplicación web multiusuario que expone la funcionalidad de la librería util_bbdd 4.3.0.
-- **Versión actual**: 1.18.0 (util_bbdd 5.8.0; mapa de trazabilidad validado al subirlo, G49; DDL con resaltado SQL y «Copiar» desde la 1.17.0). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
+- **Versión actual**: 1.19.0 (util_bbdd 5.9.0; filtro de tablas por patrones en el plan de migración DDL y en la vista previa del volcado, G56/G57; mapa de trazabilidad validado al subirlo desde la 1.18.0). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
 - **Usuarios**: equipos técnicos (DBA, desarrollo, migraciones) en una red interna; rol `admin` y rol `user`.
 
 ## Capacidades objetivo
