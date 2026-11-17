@@ -11,10 +11,10 @@ En *Ejecuciones*, **Lanzar ejecución → Volcado de datos: vista previa** (rol 
 | Campo | Efecto |
 |---|---|
 | Conexión y schema origen / destino | De dónde se leen y dónde se escriben las filas |
-| Filtro de tablas | **Tablas (lista exacta)**, separadas por comas (sin distinguir mayúsculas; avisa si alguna no existe), **o** desde la 1.19.0 **Incluir** y **Excluir** (patrones, como en la [documentación](documentacion.md#filtro-de-tablas)), no las dos cosas; vacío = todas las del origen. **Probar patrones** aplica los patrones a las tablas del origen antes de lanzar |
-| Carga | **Vaciar el destino antes de cargar** (desactivado: las filas se **añaden**) y ajustar secuencias de PK |
-| Errores | Filas que el destino no admite: **fallar la tabla** o **apartarlas** a `rechazos.csv`, con un máximo por tabla |
-| Rendimiento | Filas por lote, tablas en paralelo (1–4) e índices secundarios |
+| Filtro de tablas | Elige **Todas**, **Lista exacta** o **Patrones** (al cambiar de modo se vacían los campos del otro). **Tablas (lista exacta)**, separadas por comas (sin distinguir mayúsculas; avisa si alguna no existe), **o** desde la 1.19.0 **Incluir** y **Excluir** (patrones, como en la [documentación](documentacion.md#filtro-de-tablas)), no las dos cosas; vacío = todas las del origen. **Probar patrones** aplica los patrones a las tablas del origen antes de lanzar |
+| Carga y errores: carga | **Vaciar el destino antes de cargar** (desactivado: las filas se **añaden**) y ajustar secuencias de PK |
+| Carga y errores: errores | Filas que el destino no admite: **fallar la tabla** o **apartarlas** a `rechazos.csv`, con un máximo por tabla (solo con «apartar») |
+| Rendimiento (en *Opciones avanzadas*) | Filas por lote, tablas en paralelo (1–4) e índices secundarios |
 
 El detalle muestra el **orden de carga** por claves foráneas (las tablas en ciclos van al final), las filas en origen y
 destino y, por tabla, columnas que no se copian, columnas obligatorias del destino que el origen no tiene y FK a tablas

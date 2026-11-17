@@ -68,9 +68,7 @@ async function preview(page: Page, projectUrl: string, truncate: boolean): Promi
   await page.getByRole('tab', { name: 'Ejecuciones' }).click();
   await page.getByRole('button', { name: 'Lanzar ejecución' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog
-    .getByRole('combobox', { name: 'Operación' })
-    .selectOption({ label: 'Volcado de datos: vista previa' });
+  await dialog.getByRole('radio', { name: 'Volcado de datos: vista previa', exact: true }).click();
   await dialog.getByRole('combobox', { name: 'Conexión origen' }).selectOption('origen');
   await dialog.getByRole('combobox', { name: 'Conexión destino' }).selectOption('destino');
   if (truncate) {

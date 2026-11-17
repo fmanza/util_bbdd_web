@@ -1,388 +1,19 @@
-import {
-  Button,
-  Fieldset,
-  Group,
-  Modal,
-  NativeSelect,
-  SimpleGrid,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-} from '@mantine/core';
-import type { TFunction } from 'i18next';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Box, Flex, Loader, Modal } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
-import { z } from 'zod';
 
-import { isApiError } from '../../api/client';
 import { ErrorAlert } from '../../components/ErrorAlert';
-import { formatDateTime } from '../../components/format';
-import { zodResolver } from '../../components/zodResolver';
 import type { ProjectConnection } from '../projects/useProjects';
-import { type DocumentTemplate, useTemplates } from '../templates/useTemplates';
-import { PatternPreview } from './PatternPreview';
-import {
-  type Operation,
-  type OperationParam,
-  type Run,
-  useLaunchRun,
-  useOperations,
-  useSucceededRuns,
-} from './useRuns';
-
-type Values = Record<string, string | boolean>;
-
-function paramSchema(param: OperationParam, t: TFunction) {
-  if (param.type === 'boolean') {
-    return z.boolean();
-  }
-  return z.string().transform((raw, ctx): unknown => {
-    const value = raw.trim();
-    if (value === '') {
-      if (param.required) {
-        ctx.addIssue({ code: 'custom', message: t('auth.required') });
-        return z.NEVER;
-      }
-      return param.type === 'connection' || param.type === 'template' || param.type === 'run'
-        ? null
-        : undefined;
-    }
-    if (param.type === 'integer' || param.type === 'float') {
-      const number = Number(value);
-      const integerOk = param.type === 'float' || /^-?\d+$/.test(value);
-      if (Number.isNaN(number) || !integerOk) {
-        ctx.addIssue({ code: 'custom', message: t('runs.launch.number') });
-        return z.NEVER;
-      }
-      if (
-        (param.minimum !== null && number < param.minimum) ||
-        (param.maximum !== null && number > param.maximum)
-      ) {
-        ctx.addIssue({
-          code: 'custom',
-          message: t('runs.launch.range', { min: param.minimum ?? '−∞', max: param.maximum ?? '∞' }),
-        });
-        return z.NEVER;
-      }
-      return number;
-    }
-    return value;
-  });
-}
-
-function defaultValue(param: OperationParam): string | boolean {
-  if (param.type === 'boolean') return param.default === true;
-  return param.default === null || param.default === undefined ? '' : String(param.default);
-}
-
-/** Grupos de `migrate_plan` que solo aplican a un motor destino: se ocultan para los demás. */
-const ENGINE_GROUPS: Record<string, readonly string[]> = {
-  mysql: ['mariadb', 'mysql'],
-  sqlserver: ['sqlserver'],
-  postgresql: ['postgresql'],
-  oracle: ['oracle'],
-};
-
-/** Parámetros de `migrate_plan` que util_bbdd solo usa con origen Oracle (`NUMBER` sin precisión, ancho de INT). */
-const ORACLE_SOURCE_PARAMS: ReadonlySet<string> = new Set(['number_fallback', 'int_display_width']);
+import { categorize } from './launch/launchLayout';
+import { LaunchForm } from './launch/LaunchForm';
+import { OperationRail } from './launch/OperationRail';
+import { useOperations } from './useRuns';
 
 /**
- * Operaciones con «Probar patrones» en su grupo `filter` (1.15.0 documentación; 1.19.0 migración y volcado): campos
- * de la conexión y del schema del formulario y si el filtro se aplica también a las vistas.
+ * «Lanzar ejecución»: modal ancho (pantalla completa en móvil) con la lista de operaciones a la izquierda y el
+ * formulario de la elegida a la derecha. Al abrir se elige la primera de la lista (Documentación si está).
  */
-const PATTERN_PREVIEW: Record<string, { connection: string; schema: string; views: boolean }> = {
-  documentation: { connection: 'connection', schema: 'schema', views: true },
-  migrate_plan: { connection: 'source_connection', schema: 'source_schema', views: true },
-  dump_preview: { connection: 'source_connection', schema: 'source_schema', views: false },
-};
-
-/** Opciones de un parámetro de plantilla: «sin plantilla» y las del tipo pedido, las del proyecto primero. */
-function templateOptions(templates: DocumentTemplate[], kind: string | null | undefined, t: TFunction) {
-  const items = (scope: DocumentTemplate['scope']) =>
-    templates
-      .filter((template) => template.kind === kind && template.scope === scope)
-      .map((template) => ({ value: template.id, label: template.name }));
-  return [
-    { value: '', label: t('runs.launch.noTemplate') },
-    ...[
-      { group: t('runs.launch.projectTemplates'), items: items('project') },
-      { group: t('runs.launch.globalTemplates'), items: items('global') },
-    ].filter((group) => group.items.length > 0),
-  ];
-}
-
-/** Parámetros que, ocultos, se envían como `null` (la plantilla o la ejecución elegida no se usa); el resto se omite. */
-const NULL_WHEN_HIDDEN: ReadonlySet<OperationParam['type']> = new Set(['template', 'run']);
-
-/** Si `run` es de la misma conexión y schema que el formulario (y, en documentación, con Markdown). */
-function comparable(run: Run, values: Partial<Values>): boolean {
-  const schema = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
-  return (
-    run.params['connection'] === values['connection'] &&
-    schema(run.params['schema']) === schema(values['schema']) &&
-    (run.operation !== 'documentation' || run.params['markdown'] === true)
-  );
-}
-
-/** Opciones de un parámetro de ejecución anterior: «ninguna» y las comparables, la más reciente primero. */
-function runOptions(runs: Run[], values: Partial<Values>, t: TFunction) {
-  return [
-    { value: '', label: t('runs.launch.noRun') },
-    ...runs
-      .filter((run) => comparable(run, values))
-      .map((run) => ({
-        value: run.id,
-        label: t('runs.launch.runOption', {
-          date: formatDateTime(run.finished_at ?? run.created_at),
-          user: run.username ?? '—',
-        }),
-      })),
-  ];
-}
-
-/** Valor de texto de un campo del formulario (los interruptores no lo son). */
-function text(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
-}
-
-/** Parámetros sin grupo primero; después cada grupo en el orden en que aparece. */
-function sections(params: OperationParam[]): [string | null, OperationParam[]][] {
-  const result = new Map<string | null, OperationParam[]>([[null, []]]);
-  for (const param of params) {
-    const key = param.group ?? null;
-    result.set(key, [...(result.get(key) ?? []), param]);
-  }
-  return [...result.entries()].filter(([, items]) => items.length > 0);
-}
-
-function LaunchForm({
-  projectId,
-  operation,
-  connections,
-  onClose,
-}: {
-  projectId: number;
-  operation: Operation;
-  connections: ProjectConnection[];
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const launch = useLaunchRun(projectId);
-  const schema = useMemo(
-    () => z.object(Object.fromEntries(operation.params.map((p) => [p.name, paramSchema(p, t)]))),
-    [operation, t],
-  );
-  const form = useForm<Values, unknown, Record<string, unknown>>({
-    resolver: zodResolver(schema as unknown as z.ZodType<Record<string, unknown>, Values>),
-    defaultValues: Object.fromEntries(operation.params.map((p) => [p.name, defaultValue(p)])),
-  });
-
-  const templateParams = operation.params.filter((p) => p.type === 'template');
-  const templates = useTemplates({ kind: 'project', projectId }, templateParams.length > 0);
-  const runParam = operation.params.find((p) => p.type === 'run');
-  const previousRuns = useSucceededRuns(projectId, runParam?.run_operation ?? null, runParam !== undefined);
-  const values = useWatch({ control: form.control });
-  const patternPreview = PATTERN_PREVIEW[operation.name];
-  const sourceType = connections.find((c) => c.alias === values['source_connection'])?.db_type;
-  // Un parámetro con `requires` solo se ofrece si ese interruptor está activado (las opciones del Markdown); una
-  // plantilla sin él, si su formato (`word`, `excel`) se va a generar.
-  const paramVisible = (param: OperationParam) =>
-    (param.requires
-      ? values[param.requires] === true
-      : param.type !== 'template' || !param.template_kind || values[param.template_kind] === true) &&
-    (!ORACLE_SOURCE_PARAMS.has(param.name) || sourceType === 'oracle');
-  // Al desactivar un interruptor, sus opciones vuelven al valor por defecto: un valor no válido en un campo oculto
-  // bloquearía el envío con un error que no se ve.
-  useEffect(() => {
-    for (const param of operation.params) {
-      if (param.requires && values[param.requires] !== true && values[param.name] !== defaultValue(param)) {
-        form.resetField(param.name);
-      }
-    }
-  }, [operation, values, form]);
-  // Una ejecución anterior elegida que deja de ser comparable (otra conexión o schema) se quita.
-  const selectedRun = runParam ? values[runParam.name] : undefined;
-  useEffect(() => {
-    if (!runParam || typeof selectedRun !== 'string' || selectedRun === '' || !previousRuns.data) return;
-    const still = previousRuns.data.items.some((run) => run.id === selectedRun && comparable(run, values));
-    if (!still) form.setValue(runParam.name, '');
-  }, [runParam, selectedRun, previousRuns.data, values, form]);
-  const targetEngine = values['target_engine'];
-  const groupVisible = (group: string | null) =>
-    group === null ||
-    !ENGINE_GROUPS[group] ||
-    (typeof targetEngine === 'string' && ENGINE_GROUPS[group].includes(targetEngine));
-
-  const onSubmit = form.handleSubmit((values) => {
-    const hiddenParams = operation.params.filter((p) => !paramVisible(p));
-    const nulled = new Set(hiddenParams.filter((p) => NULL_WHEN_HIDDEN.has(p.type)).map((p) => p.name));
-    const omitted = new Set(hiddenParams.filter((p) => p.requires && !nulled.has(p.name)).map((p) => p.name));
-    const params = Object.fromEntries(
-      Object.entries(values)
-        .filter(([name, value]) => value !== undefined && !omitted.has(name))
-        .map(([name, value]) => [name, nulled.has(name) ? null : value]),
-    );
-    launch.mutate(
-      { operation: operation.name, params },
-      {
-        onSuccess: (run) => void navigate(`/runs/${run.id}`),
-        onError: (error) => {
-          if (!isApiError(error)) return;
-          for (const fieldError of error.problem.errors ?? []) {
-            const name = fieldError.loc[2];
-            if (typeof name === 'string') form.setError(name, { message: fieldError.msg });
-          }
-        },
-      },
-    );
-  });
-
-  const renderField = (param: OperationParam): ReactNode => (
-    <Controller
-      control={form.control}
-      name={param.name}
-      render={({ field }) => {
-        const error = form.formState.errors[param.name]?.message;
-        const label = t(`runs.params.${operation.name}.${param.name}`, { defaultValue: param.name });
-        if (param.type === 'boolean') {
-          return (
-            <Switch
-              label={label}
-              description={param.description}
-              checked={field.value === true}
-              onChange={(event) => field.onChange(event.currentTarget.checked)}
-            />
-          );
-        }
-        if (param.type === 'connection') {
-          return (
-            <NativeSelect
-              label={label}
-              description={param.description}
-              data={[
-                { value: '', label: t('runs.launch.noConnection') },
-                ...connections.map((c) => ({ value: c.alias, label: `${c.alias} · ${c.connection_name}` })),
-              ]}
-              value={typeof field.value === 'string' ? field.value : ''}
-              onChange={(event) => field.onChange(event.currentTarget.value)}
-              error={error}
-            />
-          );
-        }
-        if (param.type === 'template') {
-          return (
-            <NativeSelect
-              label={label}
-              description={param.description}
-              data={templateOptions(templates.data ?? [], param.template_kind, t)}
-              value={typeof field.value === 'string' ? field.value : ''}
-              onChange={(event) => field.onChange(event.currentTarget.value)}
-              error={error ?? (templates.isError ? t('runs.launch.templatesError') : undefined)}
-            />
-          );
-        }
-        if (param.type === 'run') {
-          return (
-            <NativeSelect
-              label={label}
-              description={param.description}
-              data={runOptions(previousRuns.data?.items ?? [], values, t)}
-              value={typeof field.value === 'string' ? field.value : ''}
-              onChange={(event) => field.onChange(event.currentTarget.value)}
-              error={error ?? (previousRuns.isError ? t('runs.launch.runsError') : undefined)}
-            />
-          );
-        }
-        if (param.options) {
-          // Sin valor por defecto, el navegador mostraría la primera opción sin elegirla (y elegirla no cambiaría nada).
-          const placeholder =
-            param.default === null || param.default === undefined
-              ? [{ value: '', label: t('runs.launch.choose'), disabled: true }]
-              : [];
-          return (
-            <NativeSelect
-              label={label}
-              description={param.description}
-              data={[
-                ...placeholder,
-                ...param.options.map((option) => ({
-                  value: option,
-                  label: t(`runs.options.${option}`, { defaultValue: option }),
-                })),
-              ]}
-              value={typeof field.value === 'string' ? field.value : ''}
-              onChange={(event) => field.onChange(event.currentTarget.value)}
-              error={error}
-            />
-          );
-        }
-        const numeric = param.type === 'integer' || param.type === 'float';
-        return (
-          <TextInput
-            label={label}
-            description={param.description}
-            inputMode={numeric ? 'numeric' : undefined}
-            required={param.required}
-            value={typeof field.value === 'string' ? field.value : ''}
-            onChange={field.onChange}
-            onBlur={field.onBlur}
-            error={error}
-          />
-        );
-      }}
-    />
-  );
-
-  return (
-    <form onSubmit={onSubmit} noValidate>
-      <Stack>
-        <Text size="sm" c="dimmed">
-          {operation.description}
-        </Text>
-        {launch.isError && <ErrorAlert error={launch.error} />}
-        {sections(operation.params)
-          .filter(([group]) => groupVisible(group))
-          .map(([group, params]) => {
-            const shown = params.filter(paramVisible);
-            if (shown.length === 0) return null;
-            const fields = shown.map((param) => <div key={param.name}>{renderField(param)}</div>);
-            if (group === null) return <Stack key="__main__">{fields}</Stack>;
-            return (
-              <Fieldset key={group} legend={t(`runs.groups.${group}`, { defaultValue: group })}>
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                  {fields}
-                  {group === 'filter' && patternPreview && (
-                    <PatternPreview
-                      operation={operation.name}
-                      views={patternPreview.views}
-                      connections={connections}
-                      connectionAlias={text(values[patternPreview.connection])}
-                      schema={text(values[patternPreview.schema])}
-                      include={text(values['table_include'])}
-                      exclude={text(values['table_exclude'])}
-                    />
-                  )}
-                </SimpleGrid>
-              </Fieldset>
-            );
-          })}
-        <Group justify="flex-end">
-          <Button variant="default" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" loading={launch.isPending}>
-            {t('runs.launch.submit')}
-          </Button>
-        </Group>
-      </Stack>
-    </form>
-  );
-}
-
 export function LaunchRunModal({
   projectId,
   connections,
@@ -396,31 +27,41 @@ export function LaunchRunModal({
 }) {
   const { t } = useTranslation();
   const operations = useOperations();
+  const mobile = useMediaQuery('(max-width: 48em)');
   const [name, setName] = useState<string | null>(null);
   // `form=false` (p. ej. `migrate_apply`) se lanza desde otra pantalla.
   const launchable = (operations.data ?? []).filter((op) => op.form !== false);
-  const selected = launchable.find((op) => op.name === (name ?? launchable[0]?.name));
+  const first = categorize(launchable)[0]?.operations[0];
+  const selected = launchable.find((op) => op.name === (name ?? first?.name));
 
   return (
-    <Modal opened={opened} onClose={onClose} title={t('runs.launch.title')} size="lg">
-      <Stack>
-        {operations.isError && <ErrorAlert error={operations.error} />}
-        <NativeSelect
-          label={t('runs.operation')}
-          data={launchable.map((op) => ({ value: op.name, label: op.title }))}
-          value={selected?.name ?? ''}
-          onChange={(event) => setName(event.currentTarget.value)}
-        />
-        {selected && (
-          <LaunchForm
-            key={selected.name}
-            projectId={projectId}
-            operation={selected}
-            connections={connections}
-            onClose={onClose}
-          />
-        )}
-      </Stack>
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={t('runs.launch.title')}
+      // `calc(...)` pasa tal cual por el conversor de unidades de Mantine.
+      size="calc(min(1400px, 96vw))"
+      fullScreen={mobile === true}
+      styles={{ title: { fontWeight: 700, fontSize: 'var(--mantine-font-size-lg)' } }}
+    >
+      {operations.isError && <ErrorAlert error={operations.error} />}
+      {operations.isPending && <Loader aria-label={t('common.loading')} />}
+      {selected && (
+        <Flex direction={{ base: 'column', md: 'row' }} gap="lg" align="flex-start">
+          <Box w={{ base: '100%', md: 260 }} style={{ flexShrink: 0 }}>
+            <OperationRail operations={launchable} value={selected.name} onChange={setName} />
+          </Box>
+          <Box style={{ flex: 1, minWidth: 0 }} w="100%">
+            <LaunchForm
+              key={selected.name}
+              projectId={projectId}
+              operation={selected}
+              connections={connections}
+              onClose={onClose}
+            />
+          </Box>
+        </Flex>
+      )}
     </Modal>
   );
 }

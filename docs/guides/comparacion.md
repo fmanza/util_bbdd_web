@@ -7,11 +7,11 @@ Guía de uso de la comparación de esquemas (desde la 0.7.0, Fase 6; vigente en 
 
 **Comparación de esquemas** compara el **destino** con el **origen** usando `SchemaComparator` de util_bbdd.
 
-| Sección | Opciones |
+| Tarjeta | Opciones |
 |---|---|
-| (general) | Conexión y schema de **origen** (la referencia) y de **destino**; schema vacío = el de la conexión |
-| Qué comparar | Tablas y columnas, índices, claves foráneas, comentarios, vistas y rutinas (las rutinas no se comparan en HSQLDB ni SQLite) |
-| Informes | HTML, Excel, Word, Markdown y script SQL, y el dialecto del script (*Automático* = el del motor destino) |
+| Origen (referencia) y Destino (se compara) | Conexión y schema de cada lado, una tarjeta junto a otra; schema vacío = el de la conexión |
+| Qué comparar | Tablas y columnas (con ellas, índices, claves foráneas y comentarios, que solo aparecen con *Tablas* marcado), vistas y rutinas (las rutinas no se comparan en HSQLDB ni SQLite) |
+| Informes | HTML, Excel, Word, Markdown y script SQL; con el script, su dialecto (*Automático* = el del motor destino) |
 
 **Schema**: se escribe como aparece en el explorador (en MySQL y MariaDB es la base de datos; en Oracle, el usuario
 dueño de las tablas). No distingue mayúsculas si solo hay un schema con ese nombre. Si no existe, la ejecución falla

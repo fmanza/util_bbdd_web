@@ -37,7 +37,20 @@
     "queries": "Queries nombradas",
     "templates": "Plantillas",
     "storage": "Almacenamiento",
-    "adminRuns": "Ejecuciones de todos"
+    "adminRuns": "Todas las ejecuciones",
+    "myStorage": "Mi espacio",
+    "openMenu": "Abrir el menú",
+    "closeMenu": "Cerrar el menú",
+    "sections": {
+      "work": "Trabajo",
+      "data": "Datos",
+      "account": "Mi cuenta"
+    },
+    "adminSections": {
+      "access": "Acceso y seguridad",
+      "shared": "Contenido compartido",
+      "operation": "Operación"
+    }
   },
   "auth": {
     "loginIntro": "Inicia sesión con tu usuario.",

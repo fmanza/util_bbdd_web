@@ -157,3 +157,30 @@ def test_noop_params_defaults_and_validation() -> None:
     assert ("body", "params", "extra") in locs
     with pytest.raises(UnknownOperationError):
         get_operation("rm -rf")
+
+
+@pytest.mark.parametrize(
+    ("operation", "param", "switch"),
+    [
+        ("documentation", "tables_per_document", "word"),
+        ("documentation", "html_items_per_page", "html"),
+        ("compare", "indexes", "tables"),
+        ("compare", "foreign_keys", "tables"),
+        ("compare", "comments", "tables"),
+        ("compare", "sql_dialect", "sql"),
+    ],
+)
+def test_dependent_options_require_their_switch(operation: str, param: str, switch: str) -> None:
+    """Opciones que solo aplican con otro interruptor: el formulario las oculta (y no las envía) sin él."""
+    params = {p.name: p for p in get_operation(operation).params}
+    assert params[param].requires == switch
+    assert params[switch].type == "boolean"
+
+
+def test_dependent_options_fall_back_to_defaults_when_omitted() -> None:
+    """Sin las opciones ocultas, el servidor aplica sus valores por defecto."""
+    params = validate_params(
+        get_operation("compare"),
+        {"source_connection": "a", "target_connection": "b", "tables": False, "views": True, "sql": False},
+    )
+    assert (params["indexes"], params["sql_dialect"]) == (True, "auto")

@@ -32,6 +32,8 @@ test('crear proyecto, lanzar noop, seguir el progreso, ver artefactos, ZIP, rela
 
   await page.getByRole('button', { name: 'Lanzar ejecución' }).click();
   const dialog = page.getByRole('dialog');
+  // La lista se abre en Documentación; la prueba del motor va al final, en «Diagnóstico».
+  await dialog.getByRole('radio', { name: 'Prueba del motor de ejecuciones' }).click();
   await dialog.getByRole('textbox', { name: 'Pasos' }).fill('4');
   await dialog.getByRole('textbox', { name: 'Segundos por paso' }).fill('1');
   await dialog.getByRole('button', { name: 'Lanzar' }).click();
@@ -85,6 +87,7 @@ test('cancelar una ejecución en curso', async ({ page }) => {
   await page.getByRole('dialog').getByRole('button', { name: 'Crear proyecto' }).click();
 
   await page.getByRole('button', { name: 'Lanzar ejecución' }).click();
+  await page.getByRole('dialog').getByRole('radio', { name: 'Prueba del motor de ejecuciones' }).click();
   await page.getByRole('dialog').getByRole('textbox', { name: 'Pasos' }).fill('20');
   await page.getByRole('dialog').getByRole('textbox', { name: 'Segundos por paso' }).fill('3');
   await page.getByRole('dialog').getByRole('button', { name: 'Lanzar' }).click();

@@ -127,6 +127,6 @@ describe('Administración → Ejecuciones', () => {
     renderRoute('/projects');
 
     await screen.findByRole('link', { name: 'Proyectos' });
-    expect(screen.queryByRole('link', { name: 'Ejecuciones de todos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Todas las ejecuciones' })).not.toBeInTheDocument();
   });
 });

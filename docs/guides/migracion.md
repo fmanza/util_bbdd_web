@@ -13,10 +13,9 @@ En la pestaña *Ejecuciones* del proyecto (rol editor), **Lanzar ejecución → 
 
 | Campo | Efecto |
 |---|---|
-| Conexión y schema origen | Lo que se migra; schema vacío = el de la conexión (Oracle: el usuario) |
-| Motor destino | Motor para el que se genera el DDL |
+| Origen: conexión y schema | Lo que se migra; schema vacío = el de la conexión (Oracle: el usuario) |
+| Destino: motor | Motor para el que se genera el DDL; en la misma tarjeta, las opciones de ese motor (charset, collation, schema destino, autoincrementales…), solo las del motor elegido |
 | Conversión | Vistas (reescribirlas al dialecto destino o copiarlas) y tipo para `NUMBER` de Oracle sin precisión |
-| Destino MariaDB/MySQL, SQL Server, PostgreSQL u Oracle | Opciones de ese destino (charset, collation, schema destino, autoincrementales…); solo se ven las del motor elegido |
 | Filtro de tablas | Desde la 1.19.0: **Incluir** y **Excluir** (patrones) y **Probar patrones**, como en la [documentación](documentacion.md#filtro-de-tablas); se aplica a tablas y vistas, no a rutinas |
 
 El plan **no escribe en ninguna base de datos**. Su detalle muestra:

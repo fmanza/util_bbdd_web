@@ -586,7 +586,48 @@
       "templatesError": "No se pudieron cargar las plantillas",
       "noRun": "Ninguna",
       "runOption": "{{date}} · {{user}}",
-      "runsError": "No se pudieron cargar las ejecuciones anteriores"
+      "runsError": "No se pudieron cargar las ejecuciones anteriores",
+      "advanced": "Opciones avanzadas",
+      "cardErrors_one": "{{count}} error",
+      "cardErrors_other": "{{count}} errores",
+      "truncateWarning": "Se vaciarán las tablas destino antes de cargar.",
+      "categories": {
+        "document": "Documentar",
+        "compare": "Comparar",
+        "move": "Mover a otra base de datos",
+        "other": "Otras",
+        "diagnostics": "Diagnóstico"
+      },
+      "summary": {
+        "noop": "Ejecución simulada: valida el worker; no escribe en ninguna base de datos.",
+        "documentation": "Solo lee la conexión.",
+        "relationship_graph": "Solo lee la conexión.",
+        "compare": "Solo lee las dos conexiones; el script SQL se genera, no se ejecuta.",
+        "migrate_plan": "No escribe en ninguna base de datos; el plan se aplica desde su detalle.",
+        "dump_preview": "Modo seco: no escribe; el volcado se lanza desde el detalle de la vista previa."
+      },
+      "dumpMode": {
+        "label": "Tablas que se vuelcan",
+        "all": "Todas",
+        "list": "Lista exacta",
+        "patterns": "Patrones",
+        "allHint": "Se vuelcan todas las tablas del schema origen."
+      }
+    },
+    "cards": {
+      "source": "Origen",
+      "target": "Destino",
+      "compareSource": "Origen (referencia)",
+      "compareTarget": "Destino (se compara)",
+      "content": "Contenido",
+      "reach": "Alcance",
+      "appearance": "Aspecto",
+      "word": "Word",
+      "excel": "Excel",
+      "html": "Sitio HTML",
+      "loadErrors": "Carga y errores",
+      "params": "Parámetros",
+      "other": "Otros"
     },
     "artifactsBrowser": {
       "empty": "Esta ejecución no ha generado artefactos.",

@@ -15,6 +15,7 @@ import {
   PROJECT,
   RUN,
 } from '../../../test/fixtures_runs';
+import { chooseOperation } from '../../../test/launch';
 import { renderRoute } from '../../../test/render';
 
 const DRY_ID = '01JDRYDRYDRYDRYDRYDRYDRYDR';
@@ -381,11 +382,8 @@ describe('formulario de lanzamiento', () => {
     renderRoute('/projects/5');
     await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
     const dialog = await screen.findByRole('dialog');
-    const operation = await within(dialog).findByRole('combobox', { name: 'Operación' });
-    expect(
-      within(operation).queryByRole('option', { name: 'Aplicar migración DDL' }),
-    ).not.toBeInTheDocument();
-    await user.selectOptions(operation, 'migrate_plan');
+    await chooseOperation(user, dialog, 'Plan de migración DDL');
+    expect(within(dialog).queryByRole('radio', { name: 'Aplicar migración DDL' })).not.toBeInTheDocument();
 
     expect(within(dialog).queryByRole('group', { name: 'Destino MariaDB/MySQL' })).not.toBeInTheDocument();
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Motor destino' }), 'mysql');
@@ -443,10 +441,7 @@ describe('formulario de lanzamiento', () => {
     renderRoute('/projects/5');
     await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
     const dialog = await screen.findByRole('dialog');
-    await user.selectOptions(
-      await within(dialog).findByRole('combobox', { name: 'Operación' }),
-      'migrate_plan',
-    );
+    await chooseOperation(user, dialog, 'Plan de migración DDL');
 
     const engine = within(dialog).getByRole('combobox', { name: 'Motor destino' });
     expect(engine).toHaveValue('');

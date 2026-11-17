@@ -13,6 +13,7 @@ import {
   RUN_ID,
   SCHEMA_DIFF,
 } from '../../test/fixtures_runs';
+import { chooseOperation } from '../../test/launch';
 import { renderRoute } from '../../test/render';
 import { stripFrontMatter } from './markdown';
 import type { Operation, RunDetail } from './useRuns';
@@ -84,10 +85,7 @@ async function openForm() {
   renderRoute('/projects/5');
   await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
   const dialog = await screen.findByRole('dialog');
-  await user.selectOptions(
-    await within(dialog).findByRole('combobox', { name: 'Operación' }),
-    'documentation',
-  );
+  await chooseOperation(user, dialog, 'Documentación de la base de datos');
   await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Conexión' }), 'ventas');
   return { user, dialog };
 }

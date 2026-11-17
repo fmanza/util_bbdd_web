@@ -15,6 +15,7 @@ import {
   RUN_ID,
   SITE_URL,
 } from '../../test/fixtures_runs';
+import { chooseOperation } from '../../test/launch';
 import { renderRoute } from '../../test/render';
 import type { Artifact, RunDetail } from './useRuns';
 
@@ -70,10 +71,7 @@ describe('formulario de documentación', () => {
     renderRoute('/projects/5');
     await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
     const dialog = await screen.findByRole('dialog');
-    await user.selectOptions(
-      await within(dialog).findByRole('combobox', { name: 'Operación' }),
-      'documentation',
-    );
+    await chooseOperation(user, dialog, 'Documentación de la base de datos');
 
     expect(await within(dialog).findByRole('group', { name: 'Formatos' })).toBeInTheDocument();
     expect(within(dialog).getByRole('group', { name: 'Diagramas' })).toBeInTheDocument();
@@ -140,10 +138,7 @@ describe('filtro de tablas del formulario (util_bbdd 5.5.0)', () => {
     renderRoute('/projects/5');
     await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
     const dialog = await screen.findByRole('dialog');
-    await user.selectOptions(
-      await within(dialog).findByRole('combobox', { name: 'Operación' }),
-      'documentation',
-    );
+    await chooseOperation(user, dialog, 'Documentación de la base de datos');
     const filter = await within(dialog).findByRole('group', { name: 'Filtro de tablas' });
     // Sin conexión no se puede probar; la ayuda, sí
     expect(within(filter).getByRole('button', { name: 'Probar patrones' })).toBeDisabled();

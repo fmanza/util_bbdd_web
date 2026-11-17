@@ -25,8 +25,19 @@ miembro; los administradores de la aplicación tampoco ven los ajenos.
 
 ## Lanzar una ejecución
 
-En la pestaña *Ejecuciones*, **Lanzar ejecución** (editores) abre el formulario de la operación elegida, generado a
-partir de sus parámetros. Operaciones disponibles:
+En la pestaña *Ejecuciones*, **Lanzar ejecución** (editores) abre una ventana ancha (pantalla completa en el móvil):
+
+- A la izquierda, la **lista de operaciones** agrupada por intención: *Documentar*, *Comparar*, *Mover a otra base de
+  datos* y, al final, *Diagnóstico*. Al abrir se elige la documentación.
+- A la derecha, el formulario de la operación en **tarjetas**: primero *Origen* (y *Destino*), después qué se genera
+  y cómo. Las opciones que dependen de un interruptor solo aparecen con él activado (por ejemplo, el dialecto con el
+  *Script SQL* o las opciones de cada formato de la documentación con ese formato marcado), y las que casi nunca se
+  tocan van plegadas en **Opciones avanzadas**. Una tarjeta con errores se marca en rojo; si el error está en una
+  opción plegada, la sección se abre sola.
+- Abajo, siempre visible, un resumen de lo que hace la operación (por ejemplo, «Solo lee la conexión») con
+  **Cancelar** y **Lanzar**.
+
+Operaciones disponibles:
 
 - **Documentación de la base de datos** y **Grafo de relaciones**: ver [Documentación y grafos](documentacion.md).
 - **Comparación de esquemas**: ver [Comparación de esquemas](comparacion.md).
@@ -82,7 +93,7 @@ queda en el destino, salvo en una carga sin plan paralelo, que va en una sola tr
   **Descargar ZIP** baja la ejecución completa.
 - **Relanzar** crea una ejecución nueva con los mismos parámetros (indica de cuál procede).
 - **Purgar** borra los ficheros de una ejecución terminada para liberar cuota; el resumen queda en el historial.
-- **Eliminar** (solo administradores, desde *Administración → Ejecuciones de todos*) borra la ejecución por completo:
+- **Eliminar** (solo administradores, desde *Administración → Todas las ejecuciones*) borra la ejecución por completo:
   ficheros y fila, que desaparece del historial. Si una ejecución se relanzó desde otra que ya no existe, «Relanzada
   de» muestra su id sin enlace y «(eliminada)».
 

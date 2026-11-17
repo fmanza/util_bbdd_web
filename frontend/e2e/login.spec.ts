@@ -70,3 +70,19 @@ test('el admin crea un usuario que puede entrar pero no ve la administración', 
   await expect(other.getByText('Sin permiso')).toBeVisible();
   await other.close();
 });
+
+test.describe('menú en móvil', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('el menú se pliega tras la hamburguesa y se cierra al navegar', async ({ page }) => {
+    await login(page, ADMIN_USER ?? '', ADMIN_PASSWORD ?? '');
+    await expect(page.getByText('Servicio operativo')).toBeVisible();
+
+    const nav = page.getByRole('navigation', { name: 'Navegación principal' });
+    await expect(nav.getByRole('link', { name: 'Proyectos' })).not.toBeInViewport();
+    await page.getByRole('button', { name: 'Abrir el menú' }).click();
+    await nav.getByRole('link', { name: 'Proyectos' }).click();
+    await expect(page.getByRole('heading', { name: 'Proyectos' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Proyectos' })).not.toBeInViewport();
+  });
+});

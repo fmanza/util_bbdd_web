@@ -5,7 +5,7 @@ Cada operación declara un modelo Pydantic (``extra="forbid"``) que valida los p
 de documento (``ubw_template_kind``: ``word``, ``excel`` o ``trace``, ADR-011); los ``ubw_kind="run"``, el id de una
 ejecución anterior del proyecto (``ubw_run_operation``). La implementación vive en ``app/jobs/operations``.
 Los campos con ``ubw_group`` se agrupan en el formulario; los ``Literal`` se ofrecen como opciones; los que tienen
-``ubw_requires`` solo se muestran si ese booleano está activado.
+``ubw_requires`` solo se muestran (y se envían) si ese booleano está activado; si no, se usa su valor por defecto.
 Fase 3: ``noop``. Fase 5: ``documentation`` y ``relationship_graph``. Fase 6: ``compare``.
 Fase 7: ``migrate_plan`` y ``migrate_apply`` (este no sale en el formulario genérico: se lanza desde el plan).
 Fase 8: ``dump_preview`` (modo seco) y ``dump_apply`` (se lanza desde la vista previa); desde la 1.4.0,
@@ -191,8 +191,10 @@ class DocumentationParams(BaseModel):
         "Relaciones en ángulo recto; desactívalo (curvas) si Graphviz no puede dibujar algún diagrama (GAPS G39). No "
         "aplica al Markdown.",
     )
-    tables_per_document: int = _group("layout", 50, "Tablas por documento Word.", ge=1, le=500)
-    html_items_per_page: int = _group("layout", 15, "Elementos por página del índice HTML.", ge=5, le=100)
+    tables_per_document: int = _group("layout", 50, "Tablas por documento Word.", requires="word", ge=1, le=500)
+    html_items_per_page: int = _group(
+        "layout", 15, "Elementos por página del índice HTML.", requires="html", ge=5, le=100
+    )
     word_template: str | None = _template(
         "word",
         "Plantilla Word del proyecto o global; vacío = formato por defecto. Con plantilla se respeta su "
@@ -308,9 +310,9 @@ class CompareParams(BaseModel):
     target_connection: str = _connection("Conexión destino (la que se compara con el origen).")
     target_schema: str | None = Field(default=None, pattern=OBJECT_NAME_PATTERN, description=COMPARE_SCHEMA_DESCRIPTION)
     tables: bool = _group("scope", True, "Tablas y columnas.")
-    indexes: bool = _group("scope", True, "Índices (con tablas).")
-    foreign_keys: bool = _group("scope", True, "Claves foráneas (con tablas).")
-    comments: bool = _group("scope", True, "Comentarios de tablas y columnas (con tablas).")
+    indexes: bool = _group("scope", True, "Índices (con tablas).", requires="tables")
+    foreign_keys: bool = _group("scope", True, "Claves foráneas (con tablas).", requires="tables")
+    comments: bool = _group("scope", True, "Comentarios de tablas y columnas (con tablas).", requires="tables")
     views: bool = _group("scope", True, "Vistas.")
     routines: bool = _group("scope", False, "Procedimientos y funciones (no en HSQLDB ni SQLite).")
     html: bool = _group("reports", True, "Informe HTML.")
@@ -319,7 +321,7 @@ class CompareParams(BaseModel):
     markdown: bool = _group("reports", True, "Markdown.")
     sql: bool = _group("reports", True, "Script SQL de nivelación (solo se genera; no se ejecuta).")
     sql_dialect: Literal["auto", "generic", "mariadb", "mysql", "postgresql", "sqlserver", "oracle", "sqlite"] = _group(
-        "reports", "auto", "Dialecto del script SQL; auto = el del motor destino."
+        "reports", "auto", "Dialecto del script SQL; auto = el del motor destino.", requires="sql"
     )
 
     model_config = ConfigDict(extra="forbid")

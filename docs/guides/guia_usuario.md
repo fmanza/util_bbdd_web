@@ -68,6 +68,10 @@ Ninguna operación escribe en una conexión marcada como «Solo lectura».
    **Probar conexión** para comprobarla. Si el destino no está en la lista de *Destinos permitidos*, pídeselo a un
    administrador ([Motores y conexiones](conexiones.md)).
 3. **Explora** la conexión (*Conexiones → Explorar*) para ver schemas, tablas y su DDL.
+
+El **menú de la izquierda** agrupa las secciones por uso: *Inicio*; *Trabajo* (Proyectos y Ejecuciones); *Datos*
+(Conexiones y Motores) y *Mi cuenta* (Mi espacio). Los administradores ven además *Administración*, plegable. En el
+móvil, el menú se abre con el botón de la cabecera y se cierra al elegir una sección.
 4. **Crea un proyecto** en *Proyectos → Nuevo proyecto*. En su pestaña *Conexiones*, asocia las conexiones con un
    alias (`origen`, `destino`…) y, en *Miembros*, añade compañeros con su rol.
 5. **Lanza una ejecución** en *Ejecuciones → Lanzar ejecución*. Elige la operación, rellena el formulario y sigue
@@ -101,14 +105,17 @@ cancela, y solo puede haber una a la vez por destino.
 ## 7. Para administradores
 
 - Puesta en marcha y operación: [Puesta en marcha](puesta_en_marcha.md) y [Despliegue](deployment.md).
-- *Administración*:
-    - **Usuarios**: altas, roles, permisos especiales, desactivar y restablecer contraseña.
-    - **Sesiones**: ver y cerrar sesiones activas.
-    - **Destinos permitidos**: hosts y redes a los que se puede conectar.
-    - **Queries nombradas**: consultas reutilizables del explorador.
-    - **Plantillas**: plantillas Word y Excel globales de la documentación ([Documentación](documentacion.md#plantillas-word-y-excel)).
-    - **Almacenamiento**: cuota, retención y purga por cuota sin reiniciar ([Usuarios y sesiones](usuarios_y_sesiones.md#almacenamiento)).
-    - **Ejecuciones de todos**: eliminar ejecuciones de cualquier proyecto, una o todas las de un proyecto ([Usuarios y sesiones](usuarios_y_sesiones.md#ejecuciones-de-todos-los-proyectos)).
-    - **Auditoría**: inicios de sesión, cambios y escrituras.
+- *Administración* (en el menú, plegable y agrupada):
+    - *Acceso y seguridad*:
+        - **Usuarios**: altas, roles, permisos especiales, desactivar y restablecer contraseña.
+        - **Sesiones**: ver y cerrar sesiones activas.
+        - **Destinos permitidos**: hosts y redes a los que se puede conectar.
+        - **Auditoría**: inicios de sesión, cambios y escrituras.
+    - *Contenido compartido*:
+        - **Plantillas**: plantillas Word y Excel globales de la documentación ([Documentación](documentacion.md#plantillas-word-y-excel)).
+        - **Queries nombradas**: consultas reutilizables del explorador.
+    - *Operación*:
+        - **Todas las ejecuciones**: eliminar ejecuciones de cualquier proyecto, una o todas las de un proyecto ([Usuarios y sesiones](usuarios_y_sesiones.md#ejecuciones-de-todos-los-proyectos)).
+        - **Almacenamiento**: cuota, retención y purga por cuota sin reiniciar ([Usuarios y sesiones](usuarios_y_sesiones.md#almacenamiento)).
 
     Detalle en [Usuarios y sesiones](usuarios_y_sesiones.md) y [Explorador y SQL](explorador.md).

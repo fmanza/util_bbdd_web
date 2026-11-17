@@ -97,9 +97,7 @@ test('documentar con una plantilla Word del proyecto y una Excel global', async 
   await page.getByRole('tab', { name: 'Ejecuciones' }).click();
   await page.getByRole('button', { name: 'Lanzar ejecución' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog
-    .getByRole('combobox', { name: 'Operación' })
-    .selectOption({ label: 'Documentación de la base de datos' });
+  await dialog.getByRole('radio', { name: 'Documentación de la base de datos', exact: true }).click();
   await dialog.getByRole('combobox', { name: 'Conexión' }).selectOption('tienda');
   await dialog.getByRole('combobox', { name: 'Plantilla Word' }).selectOption({ label: wordName });
   await dialog.getByRole('combobox', { name: 'Plantilla Excel' }).selectOption({ label: excelName });

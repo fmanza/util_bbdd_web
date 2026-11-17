@@ -15,6 +15,7 @@ import {
   RUN,
   RUN_ID,
 } from '../../test/fixtures_runs';
+import { chooseOperation } from '../../test/launch';
 import { renderRoute } from '../../test/render';
 import type { Operation } from './useRuns';
 
@@ -100,14 +101,17 @@ function stubForm(operation: Operation) {
   });
 }
 
-async function openFilter(operation: string) {
+async function openFilter(operation: Operation) {
   const user = userEvent.setup();
   renderRoute('/projects/5');
   await user.click(await screen.findByRole('button', { name: 'Lanzar ejecución' }));
   const dialog = await screen.findByRole('dialog');
-  await user.selectOptions(await within(dialog).findByRole('combobox', { name: 'Operación' }), operation);
+  await chooseOperation(user, dialog, operation.title);
   await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Conexión origen' }), 'ventas');
   const filter = await within(dialog).findByRole('group', { name: 'Filtro de tablas' });
+  // El volcado elige entre todas las tablas, una lista exacta o patrones (no se combinan).
+  if (operation.name === 'dump_preview')
+    await user.click(within(filter).getByRole('radio', { name: 'Patrones' }));
   await user.type(within(filter).getByRole('textbox', { name: 'Incluir (patrones)' }), 'mvg_*');
   await user.type(within(filter).getByRole('textbox', { name: 'Excluir (patrones)' }), '*_BAK');
   await user.click(within(filter).getByRole('button', { name: 'Probar patrones' }));
@@ -117,7 +121,7 @@ async function openFilter(operation: string) {
 describe('filtro de tablas del plan de migración', () => {
   it('prueba los patrones con tablas y vistas del origen y envía el filtro', async () => {
     const fetchMock = stubForm(MIGRATE_PLAN);
-    const { user, dialog, filter } = await openFilter('migrate_plan');
+    const { user, dialog, filter } = await openFilter(MIGRATE_PLAN);
 
     expect(await within(filter).findByText('Se migran 1 de 3 tablas y 1 de 1 vistas.')).toBeInTheDocument();
     expect(within(filter).getByText('Se migran')).toBeInTheDocument();
@@ -138,13 +142,20 @@ describe('filtro de tablas del plan de migración', () => {
 describe('filtro de tablas de la vista previa del volcado', () => {
   it('prueba los patrones solo con las tablas (no vistas)', async () => {
     stubForm(DUMP_PREVIEW);
-    const { filter } = await openFilter('dump_preview');
+    const { user, filter } = await openFilter(DUMP_PREVIEW);
 
     expect(await within(filter).findByText('Se vuelcan 1 de 3 tablas.')).toBeInTheDocument();
     expect(within(filter).getByText('MVG_PEDIDO')).toBeInTheDocument();
     expect(within(filter).getByText('MVG_PEDIDO_BAK, COB_LINEA')).toBeInTheDocument();
     expect(within(filter).queryByText(/MVG_V/)).not.toBeInTheDocument();
+    expect(within(filter).queryByRole('textbox', { name: 'Tablas (lista exacta)' })).not.toBeInTheDocument();
+
+    // Con la lista exacta, los patrones se vacían y desaparecen (el backend no admite las dos cosas).
+    await user.click(within(filter).getByRole('radio', { name: 'Lista exacta' }));
     expect(within(filter).getByRole('textbox', { name: 'Tablas (lista exacta)' })).toBeInTheDocument();
+    expect(within(filter).queryByRole('textbox', { name: 'Incluir (patrones)' })).not.toBeInTheDocument();
+    await user.click(within(filter).getByRole('radio', { name: 'Patrones' }));
+    expect(within(filter).getByRole('textbox', { name: 'Incluir (patrones)' })).toHaveValue('');
   });
 });
 

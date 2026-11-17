@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Changed
+
+- **Ventana «Lanzar ejecución» más ancha y reorganizada**: lista de operaciones agrupada por intención a la izquierda
+  (al abrir se elige la documentación, no la prueba del motor) y formulario en tarjetas a la derecha, con *Origen* y
+  *Destino* primero, opciones de cada formato junto a él, opciones avanzadas plegadas y pie fijo con un resumen de lo
+  que hace la operación. Pantalla completa en el móvil.
+  - Volcado: el filtro elige entre **Todas**, **Lista exacta** o **Patrones** (no se pueden combinar); los
+    rechazos máximos solo aparecen al **apartar** filas, y un aviso en el pie si se vacía el destino.
+- **Menú lateral agrupado y con iconos**: *Trabajo*, *Datos*, *Mi cuenta* y *Administración* (plegable, en
+  *Acceso y seguridad*, *Contenido compartido* y *Operación*). «Ejecuciones de todos» pasa a llamarse
+  **Todas las ejecuciones**. En el móvil, el menú se abre con un botón en la cabecera.
+- API (`GET /api/v1/operations`, sin cambios de esquema): `requires` también en `tables_per_document` (`word`),
+  `html_items_per_page` (`html`), `sql_dialect` (`sql`) e `indexes`/`foreign_keys`/`comments` (`tables`); el formulario
+  las oculta y no las envía sin su interruptor, y el servidor aplica su valor por defecto.
+- Dependencia nueva del frontend: `@tabler/icons-react` 3.50.0 (MIT).
+
 ## [1.19.0] - 2026-11-16
 
 ### Changed

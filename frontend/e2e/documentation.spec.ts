@@ -25,7 +25,7 @@ async function launch(
   await page.getByRole('tab', { name: 'Ejecuciones' }).click();
   await page.getByRole('button', { name: 'Lanzar ejecución' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByRole('combobox', { name: 'Operación' }).selectOption({ label: operation });
+  await dialog.getByRole('radio', { name: operation, exact: true }).click();
   await dialog.getByRole('combobox', { name: 'Conexión' }).selectOption('tienda');
   if (fill) await fill(dialog);
   await dialog.getByRole('button', { name: 'Lanzar' }).click();

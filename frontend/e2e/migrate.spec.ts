@@ -109,7 +109,7 @@ test('planificar, modo seco y aplicar una migración PostgreSQL → MySQL', asyn
   await page.getByRole('tab', { name: 'Ejecuciones' }).click();
   await page.getByRole('button', { name: 'Lanzar ejecución' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByRole('combobox', { name: 'Operación' }).selectOption({ label: 'Plan de migración DDL' });
+  await dialog.getByRole('radio', { name: 'Plan de migración DDL', exact: true }).click();
   await dialog.getByRole('combobox', { name: 'Conexión origen' }).selectOption('origen');
   await dialog.getByRole('textbox', { name: /^Schema origen/ }).fill('public');
   await dialog.getByRole('combobox', { name: 'Motor destino' }).selectOption('mysql');

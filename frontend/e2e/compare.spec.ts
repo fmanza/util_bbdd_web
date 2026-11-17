@@ -41,9 +41,7 @@ async function launchCompare(page: Page, projectUrl: string) {
   await page.getByRole('tab', { name: 'Ejecuciones' }).click();
   await page.getByRole('button', { name: 'Lanzar ejecución' }).click();
   const dialog: Locator = page.getByRole('dialog');
-  await dialog
-    .getByRole('combobox', { name: 'Operación' })
-    .selectOption({ label: 'Comparación de esquemas' });
+  await dialog.getByRole('radio', { name: 'Comparación de esquemas', exact: true }).click();
   await dialog.getByRole('combobox', { name: 'Conexión origen' }).selectOption('v2');
   await dialog.getByRole('combobox', { name: 'Conexión destino' }).selectOption('v1');
   await dialog.getByRole('button', { name: 'Lanzar' }).click();

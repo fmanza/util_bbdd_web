@@ -73,7 +73,7 @@ Al **Guardar** *Cuota y retención*, la pantalla enseña cuántas ejecuciones y 
 
 ## Ejecuciones de todos los proyectos
 
-*Administración → Ejecuciones de todos* lista las ejecuciones de **todos** los proyectos, también de los que no eres
+*Administración → Todas las ejecuciones* lista las ejecuciones de **todos** los proyectos, también de los que no eres
 miembro, con proyecto, operación, estado, usuario, tamaño y fecha. Solo los datos de la ejecución: sus parámetros,
 mensajes y ficheros siguen sin verse si no eres miembro del proyecto.
 

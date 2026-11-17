@@ -7,18 +7,17 @@ Guía de uso de las operaciones de documentación y grafos (desde la 0.6.0, Fase
 
 Documenta un schema con `DatabaseDocumentation` de util_bbdd.
 
-| Sección del formulario | Opciones |
+| Tarjeta del formulario | Opciones |
 |---|---|
-| (general) | **Conexión** (alias del proyecto) y **Schema**: vacío = el de la conexión |
+| Origen | **Conexión** (alias del proyecto) y **Schema**: vacío = el de la conexión |
 | Formatos | **Word** (.docx), **Excel** (.xlsx), **Sitio HTML** y **Markdown** (desde la 1.11.0; desmarcado por defecto); al menos uno |
-| Tablas | Tablas, columnas, claves (PK, FK, únicas), índices y DDL |
-| Vistas | Vistas (columnas) y su DDL |
-| Rutinas | Procedimientos y funciones |
-| Filtro de tablas | Desde la 1.15.0: **Incluir** y **Excluir** (patrones), **Listar la frontera**, **Probar patrones** y la ayuda de los patrones ([Filtro de tablas](#filtro-de-tablas)) |
 | Información adicional | Datos de la BD (versión), almacenamiento, condiciones del motor, charset y collation |
+| Contenido | **Tablas** (columnas, claves PK, FK y únicas, índices y DDL), **Vistas** (columnas y DDL) y **Rutinas** (procedimientos y funciones); las opciones de tablas y vistas se desactivan sin su interruptor |
+| Filtro de tablas | Desde la 1.15.0: **Incluir** y **Excluir** (patrones), **Listar la frontera**, **Probar patrones** y la ayuda de los patrones ([Filtro de tablas](#filtro-de-tablas)) |
 | Diagramas | Diagramas de relaciones: en Word y HTML con Graphviz y en Markdown con Mermaid; niveles de relación (1–3, ver abajo), dirección y columnas de cada tabla |
-| Presentación | Tablas por documento Word (si hay más, se generan varios) y elementos por página del índice HTML |
-| Plantillas | **Plantilla Word** y **Plantilla Excel** del proyecto o globales; vacío = formato por defecto (ver abajo) |
+| Word | Solo con **Word** marcado: **Plantilla Word** del proyecto o global (vacío = formato por defecto, ver abajo) y tablas por documento (si hay más, se generan varios) |
+| Excel | Solo con **Excel** marcado: **Plantilla Excel** del proyecto o global |
+| Sitio HTML | Solo con **Sitio HTML** marcado: elementos por página del índice |
 | Markdown | Solo con **Markdown** marcado: título del sitio, tope de niveles de los diagramas, mapa de trazabilidad y documentación anterior con la que comparar ([Documentación Markdown](#documentación-markdown)) |
 
 **Niveles de relación** (antes «Profundidad»): un nivel son las tablas unidas directamente por una FK, y se cuenta
