@@ -103,3 +103,10 @@ del borrado mientras lo use una ejecución en cola o en curso.
   todos sus errores y sin rutas del servidor: una trazabilidad que falta en silencio es peor que un error, y el
   usuario corrige el mapa de una vez.
 - La plantilla base del tipo es un mapa de ejemplo en TOML.
+
+## Enmienda 2026-11-13 (1.18.0): el mapa de trazabilidad se valida al subirlo
+
+Con util_bbdd 5.7.0 (G49 resuelto) el esquema del mapa **sí** se comprueba al subirlo, con `validate_trace_map` de
+util_bbdd y sin conectar a ninguna base de datos: campos incluidos, con todos los errores en el mensaje (con el nombre
+del fichero y sin rutas). Un mapa no válido no se guarda (422). Los subidos antes se siguen comprobando al generar
+(`invalid_trace_map`).

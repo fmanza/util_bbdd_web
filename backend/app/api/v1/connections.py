@@ -37,6 +37,7 @@ _WRITE: dict[int | str, dict[str, Any]] = {
     422: {"description": "Parámetros no válidos para el motor"},
 }
 _PROBE: dict[int | str, dict[str, Any]] = {**_401, **_404, 429: {"description": "Demasiadas pruebas en curso"}}
+_CSRF: dict[int | str, dict[str, Any]] = {403: {"description": "Token CSRF ausente o no válido"}}
 
 
 def _out(connection: Connection, user: User) -> ConnectionOut:
@@ -141,7 +142,9 @@ def delete_connection(connection_id: int, user: CurrentUser, db: DbSession, ctx:
     service.delete_connection(db, user, service.get_editable(db, user, connection_id), ctx=ctx)
 
 
-@router.post("/{connection_id}/test", response_model=ConnectionTestOut, summary="Probar conexión", responses=_PROBE)
+@router.post(
+    "/{connection_id}/test", response_model=ConnectionTestOut, summary="Probar conexión", responses={**_PROBE, **_CSRF}
+)
 def test_connection(
     connection_id: int, user: CurrentUser, db: DbSession, settings: SettingsDep, ctx: Context
 ) -> ConnectionTestOut:

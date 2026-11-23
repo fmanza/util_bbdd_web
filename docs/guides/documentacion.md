@@ -1,7 +1,12 @@
 # Documentación y grafos de relaciones
 
-Guía de uso de las operaciones de documentación y grafos (desde la 0.6.0, Fase 5; Markdown desde la 1.11.0). Se lanzan desde la pestaña *Ejecuciones* de un proyecto
-(rol editor) sobre una conexión asociada al proyecto, y se ejecutan en el worker como cualquier ejecución.
+Guía de uso de las operaciones de documentación y grafos (desde la 0.6.0, Fase 5; Markdown desde la 1.11.0). Se
+lanzan desde la pestaña *Ejecuciones* de un proyecto (rol editor) sobre una conexión asociada al proyecto, y se
+ejecutan en el worker como cualquier ejecución.
+
+En la ventana **Lanzar ejecución** (desde la 1.20.0) las dos están en el grupo *Documentar* de la lista de la
+izquierda; al abrirla ya está elegida la documentación. El formulario va en tarjetas, empezando por *Origen*, y el
+pie resume lo que hace la operación («Solo lee la conexión»).
 
 ## Documentación de la base de datos
 
@@ -211,14 +216,17 @@ previa (antes daban un error genérico al abrirlos): se descargan.
 
 Dibuja con Graphviz las claves foráneas alrededor de una tabla (`GraphvizRelationshipGraphExt`).
 
+El formulario tiene las tarjetas *Origen* (conexión, schema y tabla central), *Alcance* y *Aspecto*.
+
 | Parámetro | Efecto |
 |---|---|
 | Tabla central | La tabla del grafo; **vacío = un grafo por cada tabla con relaciones** |
-| Profundidad | Niveles de relación (1–5) |
+| Profundidad | Niveles de relación (1–5, 1 por defecto) |
 | Dirección | Ambas, salientes (tablas a las que referencia) o entrantes (tablas que la referencian) |
-| Columnas | Solo las de relación (por defecto), primero las de relación y luego el resto, ninguna o todas; con un máximo por tabla |
+| Tablas por imagen | 2–50 (10 por defecto); si hay más tablas relacionadas, el grafo se reparte en varias imágenes |
+| Columnas | Solo las de relación (por defecto), primero las de relación y luego el resto, ninguna o todas; con un máximo por tabla (1–50, 8 por defecto) |
 | Mostrar tipos | Tipo de cada columna |
-| Tablas por imagen | Si hay más tablas relacionadas, el grafo se reparte en varias imágenes |
+| Relaciones en ángulo recto | Activado por defecto; desmárcalo (curvas) si Graphviz no puede dibujar el grafo |
 | Formato | SVG o PNG |
 
 El detalle muestra una **galería** con las primeras 12 imágenes; el resto están en *Artefactos*.
@@ -227,10 +235,10 @@ El detalle muestra una **galería** con las primeras 12 imágenes; el resto est�
 
 | Código | Causa | Qué hacer |
 |---|---|---|
-| `invalid_params` | Schema de Oracle distinto del usuario, o tabla que no existe en el schema | Corrige el schema o la tabla |
+| `invalid_params` | La tabla central del grafo no existe en el schema | Corrige la tabla o déjala vacía |
 | `no_relations` | El grafo no tiene relaciones que dibujar (p. ej. ninguna tabla con FK) | Elige otra tabla o schema |
 | `graphviz_missing` | El servidor no tiene Graphviz | La imagen oficial lo incluye; en otra instalación, instala `graphviz` |
-| `graphviz_failed` | Graphviz no pudo dibujar los diagramas. Desde util_bbdd 4.1.0 un diagrama que falla deja un aviso en su lugar y el documento sigue, así que es raro (GAPS G39) | Desmarca «Relaciones en ángulo recto», reduce la profundidad o desactiva los diagramas |
+| `graphviz_failed` | Graphviz no pudo dibujar los diagramas. Desde util_bbdd 4.1.0 un diagrama que falla deja un aviso en su lugar y el documento sigue, así que es raro (GAPS G39) | Desmarca «Relaciones en ángulo recto», reduce los niveles de relación (o la profundidad del grafo) o desactiva los diagramas |
 | `connection_failed` | La BD no responde o rechaza las credenciales | Prueba la conexión desde su ficha |
 | `invalid_trace_map` | El mapa de trazabilidad tiene campos o tipos que util_bbdd no admite (el mensaje los lista todos), o ya no está | Corrige el mapa y súbelo de nuevo, o lanza sin mapa |
 | `invalid_previous` | La documentación anterior se purgó antes de empezar la ejecución, o es de otro motor | Elige otra o lanza sin comparar |

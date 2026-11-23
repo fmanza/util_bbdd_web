@@ -1,7 +1,7 @@
 # Carga bulk desde fichero
 
-Guía de uso de la carga bulk (desde la 0.10.0, Fase 9; vigente en 1.0.0). **Inserta, actualiza o borra** filas de una tabla a partir de un fichero
-CSV o Excel, con `BulkCrud` de util_bbdd. La tabla destino debe existir. Diseño de seguridad:
+Guía de uso de la carga bulk (desde la 0.10.0, Fase 9). **Inserta, actualiza o borra** filas de una tabla a partir
+de un fichero CSV o Excel, con `BulkCrud` de util_bbdd. La tabla destino debe existir. Diseño de seguridad:
 [ADR-010](../adr/ADR-010-carga-bulk.md).
 
 ## 1. Subir el fichero
@@ -9,8 +9,10 @@ CSV o Excel, con `BulkCrud` de util_bbdd. La tabla destino debe existir. Diseño
 En el proyecto, pestaña **Carga** (rol editor) → *Ficheros*: elige un `.csv` o `.xlsx` y **Subir**.
 
 - Tamaño máximo por fichero: el que se ve junto al selector (50 MB por defecto; un administrador lo cambia en
-  *Administración → Almacenamiento*, hasta 2048 MB). El Excel, como mucho 300 MB descomprimido. Cuentan para la cuota
-  del propietario del proyecto. Un fichero mayor que el máximo se avisa antes de enviarlo.
+  *Administración → Almacenamiento → Carga de ficheros*, hasta 2048 MB, sin reiniciar). En el mismo apartado se
+  fijan el tamaño máximo descomprimido de un Excel (300 MB por defecto) y las filas máximas de un fichero (1 000 000
+  por defecto). Cuentan para la cuota del propietario del proyecto. Un fichero mayor que el máximo se avisa antes de
+  enviarlo.
 - La subida muestra su **progreso** y se puede **cancelar**. Al terminar de enviarse se comprueba el contenido, que en
   un fichero grande lleva unos segundos.
 - **Ficheros grandes: CSV.** Un CSV se lee y se carga por bloques, sin tenerlo entero en memoria; un Excel se lee
@@ -36,7 +38,8 @@ En *Nueva carga*:
 
 **Vista previa** lanza una ejecución que no escribe nada. Su detalle muestra las filas del fichero y de la tabla, las
 **filas afectadas** (las que ya existen por clave primaria: en insert, posibles duplicados), las primeras filas tal
-como se cargarán, las columnas ignoradas, el plan paralelo y el **SQL** que se ejecutaría (completo en Artefactos).
+como se cargarán, las columnas ignoradas, el plan paralelo y el **SQL** que se ejecutaría (completo en Artefactos,
+`carga_insert.sql`, `carga_update.sql` o `carga_delete.sql`, con vista previa resaltada y **Copiar SQL** desde la 1.17.0).
 Con más de 1 000 filas el SQL es **de muestra**: las primeras 1 000, y la cabecera del fichero lo dice. Las
 validaciones, las filas y las filas afectadas cubren el fichero entero. En un fichero grande, las filas afectadas se
 cuentan por bloques de 50 000 filas: una clave repetida en bloques distintos del fichero cuenta dos veces.

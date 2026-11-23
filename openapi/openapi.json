@@ -334,7 +334,7 @@
         "properties": {
           "file": {
             "contentMediaType": "application/octet-stream",
-            "description": "Plantilla .docx, .dotx, .xlsx o .xltx",
+            "description": "Plantilla .docx, .dotx, .xlsx o .xltx, o mapa de trazabilidad .toml o .json",
             "title": "File",
             "type": "string"
           },
@@ -362,7 +362,7 @@
         "properties": {
           "file": {
             "contentMediaType": "application/octet-stream",
-            "description": "Plantilla .docx, .dotx, .xlsx o .xltx",
+            "description": "Plantilla .docx, .dotx, .xlsx o .xltx, o mapa de trazabilidad .toml o .json",
             "title": "File",
             "type": "string"
           },
@@ -4829,7 +4829,7 @@
               },
               "type": "array"
             },
-            "description": "Avisos de la documentación por formato (``word``, ``excel``, ``markdown``), también incluidos en ``warnings``; vacío en ejecuciones anteriores a la 1.12.0",
+            "description": "Avisos de la documentación por formato (``word``, ``excel``, ``html``, ``markdown``), también en ``warnings``; vacío en ejecuciones anteriores a la 1.12.0",
             "title": "Warnings By Format",
             "type": "object"
           }
@@ -6721,7 +6721,7 @@
     },
     "/api/v1/admin/document-templates": {
       "post": {
-        "description": "Se comprueba el contenido real: tipo, macros, objetos y vínculos externos y, en Word, los estilos.",
+        "description": "Se comprueba el contenido real: tipo, macros, objetos y vínculos externos y, en Word, los estilos; un mapa de\ntrazabilidad se valida con util_bbdd (todos sus errores en el mensaje).",
         "operationId": "create_global_api_v1_admin_document_templates_post",
         "requestBody": {
           "content": {
@@ -6760,10 +6760,10 @@
             "description": "Demasiado grande"
           },
           "415": {
-            "description": "No es .docx, .dotx, .xlsx ni .xltx (o tiene macros)"
+            "description": "No es .docx, .dotx, .xlsx, .xltx, .toml ni .json (o tiene macros)"
           },
           "422": {
-            "description": "Contenido no válido, no seguro o (Word) le faltan estilos"
+            "description": "Contenido no válido o no seguro, (Word) le faltan estilos o mapa de trazabilidad no válido"
           }
         },
         "summary": "Subir una plantilla global",
@@ -6774,6 +6774,7 @@
     },
     "/api/v1/admin/document-templates/{template_id}": {
       "delete": {
+        "description": "Borra la plantilla y su fichero, salvo que la use una documentación en cola o en curso.",
         "operationId": "delete_global_api_v1_admin_document_templates__template_id__delete",
         "parameters": [
           {
@@ -6819,6 +6820,7 @@
         ]
       },
       "patch": {
+        "description": "Cambia el nombre o el estilo de tabla (uno de los de la plantilla).",
         "operationId": "update_global_api_v1_admin_document_templates__template_id__patch",
         "parameters": [
           {
@@ -6920,7 +6922,7 @@
             "description": "No existe"
           },
           "422": {
-            "description": "Confirmación incorrecta"
+            "description": "Confirmación incorrecta (no es el nombre exacto del proyecto)"
           }
         },
         "summary": "Eliminar las ejecuciones de un proyecto",
@@ -6931,6 +6933,7 @@
     },
     "/api/v1/admin/projects/{project_id}/runs/summary": {
       "get": {
+        "description": "Nombre del proyecto, número de ejecuciones y espacio, para pedir la confirmación del borrado.",
         "operationId": "project_runs_summary_api_v1_admin_projects__project_id__runs_summary_get",
         "parameters": [
           {
@@ -6982,6 +6985,7 @@
     },
     "/api/v1/admin/queries": {
       "get": {
+        "description": "Todas las queries nombradas o, con ``db_type``, las de un motor.",
         "operationId": "list_queries_api_v1_admin_queries_get",
         "parameters": [
           {
@@ -7087,6 +7091,7 @@
     },
     "/api/v1/admin/queries/{query_id}": {
       "delete": {
+        "description": "Borra la query nombrada.",
         "operationId": "delete_query_api_v1_admin_queries__query_id__delete",
         "parameters": [
           {
@@ -7129,6 +7134,7 @@
         ]
       },
       "patch": {
+        "description": "Cambia nombre, descripción o plantilla SQL; un campo que no se envía no cambia.",
         "operationId": "update_query_api_v1_admin_queries__query_id__patch",
         "parameters": [
           {
@@ -7186,6 +7192,7 @@
     },
     "/api/v1/admin/runs": {
       "get": {
+        "description": "Ejecuciones de todos los proyectos, solo metadatos (sin parámetros, mensajes ni artefactos).",
         "operationId": "list_runs_api_v1_admin_runs_get",
         "parameters": [
           {
@@ -7401,6 +7408,7 @@
     },
     "/api/v1/admin/storage": {
       "get": {
+        "description": "Cada ajuste con el valor que se aplica y el de su variable ``UBW_*`` (cuota, retención, purga por cuota y\nlímites de la carga de ficheros).",
         "operationId": "get_storage_api_v1_admin_storage_get",
         "responses": {
           "200": {
@@ -7534,6 +7542,7 @@
     },
     "/api/v1/admin/storage/usage": {
       "get": {
+        "description": "Espacio de ejecuciones y ficheros subidos de cada usuario frente a su cuota.",
         "operationId": "storage_usage_api_v1_admin_storage_usage_get",
         "parameters": [
           {
@@ -8434,6 +8443,7 @@
     },
     "/api/v1/connections/{connection_id}/metadata/schemas/{schema}": {
       "delete": {
+        "description": "Borra el snapshot cacheado del schema; la siguiente lectura vuelve a leer el catálogo.",
         "operationId": "invalidate_schema_api_v1_connections__connection_id__metadata_schemas__schema__delete",
         "parameters": [
           {
@@ -8464,6 +8474,9 @@
           },
           "401": {
             "description": "No autenticado"
+          },
+          "403": {
+            "description": "Token CSRF ausente o no válido"
           },
           "404": {
             "description": "Conexión no visible u objeto inexistente"
@@ -8662,6 +8675,7 @@
     },
     "/api/v1/connections/{connection_id}/metadata/schemas/{schema}/tables/{table}": {
       "get": {
+        "description": "Columnas, claves, índices y FK salientes y entrantes de una tabla, del snapshot del schema (cacheado o leído).",
         "operationId": "get_table_api_v1_connections__connection_id__metadata_schemas__schema__tables__table__get",
         "parameters": [
           {
@@ -8743,6 +8757,7 @@
     },
     "/api/v1/connections/{connection_id}/queries": {
       "get": {
+        "description": "Queries nombradas que un admin definió para el motor de la conexión.",
         "operationId": "list_queries_api_v1_connections__connection_id__queries_get",
         "parameters": [
           {
@@ -8840,6 +8855,9 @@
           },
           "401": {
             "description": "No autenticado"
+          },
+          "403": {
+            "description": "Token CSRF ausente o no válido"
           },
           "404": {
             "description": "Conexión no visible u objeto inexistente"
@@ -8944,6 +8962,9 @@
           "401": {
             "description": "No autenticado"
           },
+          "403": {
+            "description": "Token CSRF ausente o no válido"
+          },
           "404": {
             "description": "No existe o no es visible"
           },
@@ -8969,6 +8990,7 @@
     },
     "/api/v1/document-templates": {
       "get": {
+        "description": "Catálogo global (cualquier usuario).",
         "operationId": "list_global_api_v1_document_templates_get",
         "parameters": [
           {
@@ -9076,6 +9098,7 @@
     },
     "/api/v1/document-templates/{template_id}/file": {
       "get": {
+        "description": "Fichero de una plantilla global, como adjunto.",
         "operationId": "download_global_api_v1_document_templates__template_id__file_get",
         "parameters": [
           {
@@ -9367,6 +9390,9 @@
           "401": {
             "description": "No autenticado"
           },
+          "403": {
+            "description": "Token CSRF ausente o no válido"
+          },
           "409": {
             "description": "Conflicto (nombre, último propietario, ejecuciones activas)"
           },
@@ -9435,6 +9461,7 @@
         ]
       },
       "get": {
+        "description": "Proyecto del que eres miembro, con tu rol (``my_role``).",
         "operationId": "get_project_api_v1_projects__project_id__get",
         "parameters": [
           {
@@ -9546,6 +9573,7 @@
     },
     "/api/v1/projects/{project_id}/connections": {
       "get": {
+        "description": "Conexiones asociadas con su alias, motor y si son de solo lectura (cualquier miembro; sin secretos).",
         "operationId": "list_project_connections_api_v1_projects__project_id__connections_get",
         "parameters": [
           {
@@ -9661,6 +9689,7 @@
     },
     "/api/v1/projects/{project_id}/connections/{alias}": {
       "delete": {
+        "description": "Quita la asociación del alias (editores); la conexión no se borra.",
         "operationId": "remove_project_connection_api_v1_projects__project_id__connections__alias__delete",
         "parameters": [
           {
@@ -9790,6 +9819,7 @@
     },
     "/api/v1/projects/{project_id}/document-templates": {
       "get": {
+        "description": "Las del proyecto más las globales (cualquier miembro); ``scope`` dice de cuál es cada una.",
         "operationId": "list_project_api_v1_projects__project_id__document_templates_get",
         "parameters": [
           {
@@ -9916,10 +9946,10 @@
             "description": "Demasiado grande"
           },
           "415": {
-            "description": "No es .docx, .dotx, .xlsx ni .xltx (o tiene macros)"
+            "description": "No es .docx, .dotx, .xlsx, .xltx, .toml ni .json (o tiene macros)"
           },
           "422": {
-            "description": "Contenido no válido, no seguro o (Word) le faltan estilos"
+            "description": "Contenido no válido o no seguro, (Word) le faltan estilos o mapa de trazabilidad no válido"
           }
         },
         "summary": "Subir una plantilla al proyecto",
@@ -9930,6 +9960,7 @@
     },
     "/api/v1/projects/{project_id}/document-templates/{template_id}": {
       "delete": {
+        "description": "Editores: borra una plantilla del proyecto, salvo que la use una documentación en cola o en curso.",
         "operationId": "delete_project_template_api_v1_projects__project_id__document_templates__template_id__delete",
         "parameters": [
           {
@@ -9984,6 +10015,7 @@
         ]
       },
       "patch": {
+        "description": "Editores: cambia el nombre o el estilo de tabla de una plantilla del proyecto (no de las globales).",
         "operationId": "update_project_template_api_v1_projects__project_id__document_templates__template_id__patch",
         "parameters": [
           {
@@ -10050,6 +10082,7 @@
     },
     "/api/v1/projects/{project_id}/document-templates/{template_id}/file": {
       "get": {
+        "description": "Fichero de una plantilla del proyecto o global (cualquier miembro), como adjunto.",
         "operationId": "download_project_template_api_v1_projects__project_id__document_templates__template_id__file_get",
         "parameters": [
           {
@@ -10100,6 +10133,7 @@
     },
     "/api/v1/projects/{project_id}/members": {
       "get": {
+        "description": "Miembros del proyecto con su rol (cualquier miembro).",
         "operationId": "list_members_api_v1_projects__project_id__members_get",
         "parameters": [
           {
@@ -10270,6 +10304,7 @@
         ]
       },
       "patch": {
+        "description": "Cambia el rol de un miembro (propietarios); debe quedar al menos un propietario (409).",
         "operationId": "update_member_api_v1_projects__project_id__members__user_id__patch",
         "parameters": [
           {
@@ -10571,13 +10606,13 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Tu rol no lo permite o CSRF no válido"
+            "description": "Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido"
           },
           "404": {
             "description": "No existe o no eres miembro del proyecto"
           },
           "409": {
-            "description": "Cuota de almacenamiento superada"
+            "description": "Cuota superada, o una escritura en la BD destino no se admite ahora (vista previa o plan con errores, otra escritura en curso sobre el destino, constraints sin restaurar)"
           },
           "422": {
             "description": "Operación o parámetros no válidos"
@@ -10643,6 +10678,7 @@
     },
     "/api/v1/projects/{project_id}/uploads": {
       "get": {
+        "description": "Ficheros subidos al proyecto para la carga bulk (cualquier miembro).",
         "operationId": "list_uploads_api_v1_projects__project_id__uploads_get",
         "parameters": [
           {
@@ -10731,7 +10767,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Rol inferior a editor"
+            "description": "Rol inferior a editor o CSRF no válido"
           },
           "404": {
             "description": "No existe o no eres miembro del proyecto"
@@ -10760,6 +10796,7 @@
     },
     "/api/v1/projects/{project_id}/uploads/{upload_id}": {
       "delete": {
+        "description": "Borra el fichero (editores), salvo que lo use una carga en curso.",
         "operationId": "delete_upload_api_v1_projects__project_id__uploads__upload_id__delete",
         "parameters": [
           {
@@ -10789,13 +10826,13 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Rol inferior a editor"
+            "description": "Rol inferior a editor o CSRF no válido"
           },
           "404": {
             "description": "No existe o no eres miembro del proyecto"
           },
           "409": {
-            "description": "En uso"
+            "description": "Lo usa una carga en curso"
           },
           "422": {
             "content": {
@@ -11079,7 +11116,7 @@
     },
     "/api/v1/runs/{run_id}": {
       "delete": {
-        "description": "Borra los ficheros de una ejecución terminada; se conserva su resumen (``manifest``).",
+        "description": "Borra los ficheros de una ejecución terminada (editores); se conserva su fila con el resumen (``manifest``) y\npasa a ``purged``.",
         "operationId": "purge_run_api_v1_runs__run_id__delete",
         "parameters": [
           {
@@ -11100,13 +11137,13 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Tu rol no lo permite o CSRF no válido"
+            "description": "Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido"
           },
           "404": {
             "description": "No existe o no eres miembro del proyecto"
           },
           "409": {
-            "description": "No ha terminado"
+            "description": "No ha terminado o es un volcado con constraints sin restaurar"
           },
           "422": {
             "content": {
@@ -11125,6 +11162,7 @@
         ]
       },
       "get": {
+        "description": "Detalle con artefactos, tu rol, avisos (por formato), plantillas aplicadas, ``site_url`` y ``has_diff``.",
         "operationId": "get_run_api_v1_runs__run_id__get",
         "parameters": [
           {
@@ -11218,7 +11256,7 @@
             "description": "No autenticado"
           },
           "404": {
-            "description": "No existe o no eres miembro del proyecto"
+            "description": "No existe, no eres miembro, no tiene artefactos o no tiene ese formato"
           },
           "422": {
             "description": "Formato no válido"
@@ -11232,6 +11270,7 @@
     },
     "/api/v1/runs/{run_id}/artifacts/{artifact_id}": {
       "get": {
+        "description": "Fichero de un artefacto registrado, siempre como adjunto (``Content-Disposition: attachment``, ``nosniff``).",
         "operationId": "download_artifact_api_v1_runs__run_id__artifacts__artifact_id__get",
         "parameters": [
           {
@@ -11282,7 +11321,7 @@
     },
     "/api/v1/runs/{run_id}/artifacts/{artifact_id}/preview": {
       "get": {
-        "description": "HTML y SVG con CSP ``sandbox`` (para un ``iframe sandbox``); Markdown, SQL, log y ``run.json`` como texto.",
+        "description": "HTML y SVG con CSP ``sandbox`` (para un ``iframe sandbox``); páginas Markdown, SQL, log y ``run.json`` como\ntexto plano (la SPA los pinta).",
         "operationId": "preview_artifact_api_v1_runs__run_id__artifacts__artifact_id__preview_get",
         "parameters": [
           {
@@ -11320,10 +11359,10 @@
             "description": "No existe o no eres miembro del proyecto"
           },
           "413": {
-            "description": "Demasiado grande"
+            "description": "Más de 2 MB: hay que descargarlo"
           },
           "415": {
-            "description": "Sin vista previa"
+            "description": "Sin vista previa (en una carpeta Markdown, solo las páginas ``.md``)"
           },
           "422": {
             "content": {
@@ -11442,7 +11481,7 @@
     },
     "/api/v1/runs/{run_id}/cancel": {
       "post": {
-        "description": "En cola: se cancela al momento. En curso: el worker termina su subproceso.",
+        "description": "En cola: se cancela al momento. En curso: se pide la cancelación (``cancel_requested``).\n\nLas operaciones con progreso de util_bbdd paran entre unidades de trabajo (el worker termina el subproceso si no\nparan en 60 s); las escrituras en una BD destino (``migrate_apply``, ``dump_apply``, ``bulk_apply``) paran solo\nentre sentencias o lotes y el worker nunca las termina por una cancelación. El resto se termina al momento.",
         "operationId": "cancel_run_api_v1_runs__run_id__cancel_post",
         "parameters": [
           {
@@ -11470,7 +11509,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Tu rol no lo permite o CSRF no válido"
+            "description": "Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido"
           },
           "404": {
             "description": "No existe o no eres miembro del proyecto"
@@ -11497,7 +11536,7 @@
     },
     "/api/v1/runs/{run_id}/diff": {
       "get": {
-        "description": "Diferencias del destino respecto al origen de una ejecución ``compare`` correcta.",
+        "description": "Diferencias del destino respecto al origen de una ejecución ``compare`` correcta o, en una documentación\nMarkdown comparada con otra anterior, los cambios respecto a ella (``docs/changes.json``).",
         "operationId": "get_diff_api_v1_runs__run_id__diff_get",
         "parameters": [
           {
@@ -11525,7 +11564,7 @@
             "description": "No autenticado"
           },
           "404": {
-            "description": "No existe o no eres miembro del proyecto"
+            "description": "No existe, no eres miembro o la ejecución no tiene diff (o se purgó)"
           },
           "413": {
             "description": "Demasiado grande para el visor"
@@ -11981,7 +12020,7 @@
     },
     "/api/v1/runs/{run_id}/relaunch": {
       "post": {
-        "description": "Nueva ejecución con la misma operación y parámetros.",
+        "description": "Nueva ejecución con la misma operación y parámetros (editores), con las mismas comprobaciones que al lanzarla.\nLas operaciones que no salen en el formulario genérico (``form=false``) no se relanzan.",
         "operationId": "relaunch_run_api_v1_runs__run_id__relaunch_post",
         "parameters": [
           {
@@ -12009,13 +12048,13 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Tu rol no lo permite o CSRF no válido"
+            "description": "Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido"
           },
           "404": {
             "description": "No existe o no eres miembro del proyecto"
           },
           "409": {
-            "description": "Cuota superada"
+            "description": "No se puede relanzar (p. ej. ``migrate_apply``), cuota superada o la escritura en la BD destino no se admite ahora"
           },
           "422": {
             "content": {
@@ -12509,7 +12548,7 @@
         ]
       },
       "patch": {
-        "description": "Cambia nombre, rol, estado o contraseña. Desactivar o restablecer la contraseña cierra sus sesiones.",
+        "description": "Cambia nombre, rol, estado, permisos (SQL libre, aplicar DDL, escribir datos), cuota o contraseña. Desactivar o\nrestablecer la contraseña cierra sus sesiones.",
         "operationId": "update_user_api_v1_users__user_id__patch",
         "parameters": [
           {

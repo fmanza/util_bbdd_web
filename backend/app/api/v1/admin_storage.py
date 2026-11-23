@@ -1,4 +1,5 @@
-"""``/api/v1/admin/storage``: cuota, retención y purga por cuota administrables (solo ``admin``, ADR-012)."""
+"""``/api/v1/admin/storage``: cuota, retención, purga por cuota y límites de la carga administrables (solo ``admin``,
+ADR-012)."""
 
 from __future__ import annotations
 
@@ -30,6 +31,8 @@ def usage_out(usage: Usage) -> UsageOut:
 
 @router.get("", response_model=StorageSettingsOut, summary="Ajustes de almacenamiento", responses=_ERRORS)
 def get_storage(_: AdminUser, db: DbSession, settings: SettingsDep) -> StorageSettingsOut:
+    """Cada ajuste con el valor que se aplica y el de su variable ``UBW_*`` (cuota, retención, purga por cuota y
+    límites de la carga de ficheros)."""
     return _settings_out(service.settings_state(db, settings))
 
 
@@ -74,5 +77,6 @@ def storage_usage(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> UsagePage:
+    """Espacio de ejecuciones y ficheros subidos de cada usuario frente a su cuota."""
     items, total = service.usage_page(db, settings, q=q, limit=limit, offset=offset, sort=sort, order=order)
     return UsagePage(items=[usage_out(u) for u in items], total=total)

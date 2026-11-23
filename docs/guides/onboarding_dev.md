@@ -55,9 +55,13 @@ listas y tablas (reglas en `.github/instructions/docs.instructions.md`). El siti
 ## Cambiar la API
 
 1. Router y esquemas en `backend/app/api/v1/`.
-2. `cd backend && uv run python scripts/export_openapi.py` (o con la imagen `backend-dev`).
+2. `cd backend && uv run --frozen python scripts/export_openapi.py` (o con la imagen `backend-dev`); con `--check`
+   solo comprueba que `openapi/openapi.json` está al día (lo hace el CI).
 3. `cd frontend && npm run gen:api`.
 4. Usa los tipos de `src/api/schema.d.ts` en un hook de TanStack Query.
+
+El OpenAPI es la documentación de la API: `summary`, docstring y `responses` de cada endpoint y `Field(description=…)`
+de los esquemas. En `development` se consulta en `/api/docs`.
 
 ## Validar antes de pedir revisión
 
@@ -72,8 +76,8 @@ Los comandos de [SHARED_INSTRUCTIONS.md § «Comandos de desarrollo»](https://g
 
 Con la imagen levantada (`docker compose up -d --build`) y el admin E2E creado:
 
-- Credenciales en `UBW_E2E_ADMIN_USER`/`UBW_E2E_ADMIN_PASSWORD`; `UBW_E2E_SQLITE=1` para dump, bulk, compare y
-  documentación (BD en `/data/files`, ver la cabecera de cada spec); `UBW_E2E_MIGRATE=1` y el bench para la migración.
+- Credenciales en `UBW_E2E_ADMIN_USER`/`UBW_E2E_ADMIN_PASSWORD`; `UBW_E2E_SQLITE=1` para bulk, compare, documentación,
+  dump, explorador y plantillas (BD en `/data/files`, ver la cabecera de cada spec); `UBW_E2E_MIGRATE=1` y el bench para la migración.
 - Todos los specs importan `test` de `e2e/fixtures.ts`, que falla ante una violación de la CSP de la SPA.
 - La suite hace muchos inicios de sesión desde la misma IP: arranca el compose con límites altos,
   `UBW_RATE_LIMIT_ANONYMOUS_PER_MINUTE=2000 UBW_RATE_LIMIT_LOGIN_PER_MINUTE=300 UBW_RATE_LIMIT_LOGIN_FAILURES=100

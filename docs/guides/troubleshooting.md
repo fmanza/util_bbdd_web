@@ -8,7 +8,7 @@
 | `/api/health` → `"status": "degraded"`, `"database": "error"` | Volumen `data` no escribible o NFS/CIFS | Usar volumen con nombre local; comprobar permisos del uid 10001 |
 | `database is locked` en logs | Escritura larga en SQLite | Transacciones cortas; `busy_timeout` ya es 5 s; revisar jobs que escriben progreso fila a fila |
 | `npm install` falla con `ERESOLVE` y TypeScript | TypeScript 6/7 no soportado por openapi-typescript / typescript-eslint | Mantener `typescript` 5.9 (ADR-001) |
-| `uv lock` falla por `exclude-newer` | Una dependencia exige una versión más nueva que el corte | Excepción justificada en `exclude-newer-package` (ver asyncpg) |
+| `uv lock` falla por `exclude-newer` | Una dependencia exige una versión más nueva que el corte | Adelantar el corte o añadir una excepción justificada y fechada en `exclude-newer-package` (hoy no hay ninguna; ver el comentario de `[tool.uv]` en `backend/pyproject.toml`) |
 | Build de la imagen falla compilando `mariadb` | Falta `libmariadb-dev` en la etapa de build | Ya incluido en `backend-build`; en CI o local, instalar `libmariadb-dev` |
 | SQL Server con `pyodbc` falla al conectar | Imagen sin ODBC | `WITH_ODBC=true docker compose build` o usar `pymssql` (por defecto) |
 | HSQLDB no disponible | Imagen sin JRE | `WITH_HSQLDB=true docker compose build` |
@@ -49,6 +49,7 @@
 | `restore`: «… está dañado» | La copia no coincide con su `manifest.json` | Usar otra copia; no restaurar una incompleta |
 | Para dar soporte, ¿qué petición falló? | — | La «Referencia» del error es el `request_id`: búscalo en `docker compose logs web` |
 | Carga: 413 al subir un fichero | Supera el tamaño máximo (*Administración → Almacenamiento*) o el límite del proxy | Divide el fichero o sube ambos límites (`client_max_body_size`); ver [Ficheros grandes en la carga](deployment.md#ficheros-grandes-en-la-carga) |
+| Carga o plantilla: 411 al subir | El cliente no envía `Content-Length` (la app rechaza la subida solo con las cabeceras, desde la 1.10.1) | Desde la SPA no ocurre; en un cliente propio de la API, envía el tamaño o no uses *chunked* |
 | Carga: 415/422 al subir | Extensión distinta de `.csv`/`.xlsx`, contenido que no corresponde o Excel con macros | Guarda el fichero como CSV o `.xlsx` sin macros |
 | Carga: `invalid_file` | Codificación, separador u hoja incorrectos, o más filas que las máximas (*Administración → Almacenamiento*) | Fija separador y codificación en el formulario o divide el fichero |
 | Carga: `preview_changed` | Cambiaron la tabla, el mapeo o las filas afectadas desde la vista previa | Repite la vista previa |
@@ -56,8 +57,12 @@
 | Migración: 403 al aplicar | Sin «Puede aplicar DDL» o sin ser propietario | Un admin concede el permiso; aplica el propietario |
 | Migración: «El origen ha cambiado desde el plan» | Cambió el schema origen tras planificar | Planifica de nuevo |
 | Carga cancelada sin filas en el destino | Sin plan paralelo la carga va en una sola transacción: cancelarla la deshace entera | Es lo esperado; vuelve a lanzarla desde una vista previa nueva |
+| Plan de migración o vista previa del volcado: `invalid_params` «… casa con el filtro de tablas» | Ningún objeto del schema casa con los patrones de *Incluir*/*Excluir* | Pulsa **Probar patrones** y corrígelos |
 | Migración: `apply_partial` | Falló una sentencia; las anteriores quedaron aplicadas | Lee el informe y corrige el destino a mano |
 | Comparación: el visor da 413 | El diff supera 20 MB | Descarga los informes |
+| Documentación Markdown fallida con `invalid_trace_map` | El mapa de trazabilidad elegido no es válido, se borró o cambió entre el encolado y el inicio | Lee los errores del mensaje, corrige el mapa y súbelo de nuevo |
+| Documentación Markdown fallida con `invalid_previous` | La documentación anterior con la que comparar ya no es válida (p. ej. purgada antes de empezar) | Elige otra anterior o lanza sin comparar |
+| ZIP de una documentación Markdown con la cabecera `X-UBW-Warning` | Falta `mermaid.min.js` en el servidor (`UBW_MERMAID_JS`; la imagen oficial lo trae) | Usa la imagen oficial o apunta `UBW_MERMAID_JS` a un `mermaid.min.js`; sin él, el sitio carga Mermaid de Internet |
 | Ejecución fallida con `graphviz_missing` | Falta Graphviz en el servidor | Usa la imagen oficial o instala `graphviz` |
 | Ejecución fallida con `graphviz_failed`, o un diagrama con «No se pudo generar el diagrama» | `dot` terminó con error en un diagrama (GAPS G39). Desde util_bbdd 4.1.0 ese diagrama queda con un aviso y el documento sigue; la imagen oficial además repite sin aristas ortogonales los diagramas que abortan Graphviz | Desmarca «Relaciones en ángulo recto» en el formulario, reduce la profundidad o desactiva los diagramas; fuera de la imagen oficial, instala `docker/dot-wrapper.sh` como `dot` |
 | Explorador: el schema tarda en abrirse | Primera lectura de un schema grande | Espera (hasta `UBW_METADATA_TIMEOUT_SECONDS`); después va desde la caché |
@@ -66,6 +71,7 @@
 | SQL libre: 409 | La conexión no es «Solo lectura» | Marca la conexión como solo lectura |
 | SQL libre: 422 «Solo se admiten consultas SELECT» | La consulta escribe o tiene varias sentencias | Una única consulta de lectura |
 | Oracle: ORA-01466 en SQL libre | Tabla creada hace unos segundos (transacción de solo lectura) | Reintentar pasados unos segundos |
+| Aviso «No se ha podido guardar el tema» y vuelve el tema anterior | Falló `PATCH /api/v1/auth/me/preferences` (sesión caducada, token CSRF, 429 o red) | Recarga la página (o vuelve a iniciar sesión) y elige el tema otra vez |
 | `/api/docs` da 404 | Desactivado en producción | `UBW_ENVIRONMENT=development` (compose dev) |
 | Aviso `StarletteDeprecationWarning … httpx2` en pytest | Starlette 1.x depreca `httpx` en `TestClient` | Informativo; seguimiento en la deuda técnica |
 

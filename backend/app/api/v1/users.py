@@ -82,7 +82,8 @@ def get_user(user_id: int, _: AdminUser, db: DbSession) -> UserOut:
 def update_user(
     user_id: int, body: UserUpdate, admin: AdminUser, db: DbSession, settings: SettingsDep, ctx: Context
 ) -> UserOut:
-    """Cambia nombre, rol, estado o contraseña. Desactivar o restablecer la contraseña cierra sus sesiones."""
+    """Cambia nombre, rol, estado, permisos (SQL libre, aplicar DDL, escribir datos), cuota o contraseña. Desactivar o
+    restablecer la contraseña cierra sus sesiones."""
     user = users.get_user(db, user_id)
     changes = UserChanges(
         display_name=body.display_name,

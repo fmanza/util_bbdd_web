@@ -44,6 +44,7 @@ def list_runs(
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 25,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> AdminRunPage:
+    """Ejecuciones de todos los proyectos, solo metadatos (sin parámetros, mensajes ni artefactos)."""
     rows, total = admin.list_all_runs(
         db, q=q, project_id=project_id, status=status_filter, sort=sort, order=order, limit=limit, offset=offset
     )
@@ -65,6 +66,7 @@ def delete_run(run_id: str, user: AdminUser, db: DbSession, settings: SettingsDe
     responses={**_ERRORS, 404: {"description": "No existe"}},
 )  # fmt: skip
 def project_runs_summary(project_id: int, _: AdminUser, db: DbSession) -> ProjectRunsSummaryOut:
+    """Nombre del proyecto, número de ejecuciones y espacio, para pedir la confirmación del borrado."""
     project, count, size = admin.project_runs_summary(db, project_id)
     return ProjectRunsSummaryOut(project_id=project.id, project_name=project.name, runs=count, size_bytes=size)
 
@@ -72,7 +74,8 @@ def project_runs_summary(project_id: int, _: AdminUser, db: DbSession) -> Projec
 @router.post(
     "/projects/{project_id}/runs/delete", response_model=ProjectRunsDeleteOut,
     summary="Eliminar las ejecuciones de un proyecto",
-    responses={**_ERRORS, 404: {"description": "No existe"}, 422: {"description": "Confirmación incorrecta"}},
+    responses={**_ERRORS, 404: {"description": "No existe"},
+               422: {"description": "Confirmación incorrecta (no es el nombre exacto del proyecto)"}},
 )  # fmt: skip
 def delete_project_runs(
     project_id: int, body: ProjectRunsDelete, user: AdminUser, db: DbSession, settings: SettingsDep, ctx: Context

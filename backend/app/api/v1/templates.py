@@ -1,4 +1,4 @@
-"""Plantillas Word y Excel de la documentación (ADR-011).
+"""Plantillas Word y Excel de la documentación y mapas de trazabilidad de la documentación Markdown (ADR-011).
 
 - ``/document-templates``: catálogo global (cualquier usuario lo ve y descarga) y plantillas base.
 - ``/admin/document-templates``: alta, cambio y borrado de las globales (``admin``).
@@ -41,10 +41,10 @@ _UPLOAD: dict[int | str, dict[str, Any]] = {
     409: {"description": "Nombre repetido o límite de plantillas"},
     411: {"description": "Falta Content-Length"},
     413: {"description": "Demasiado grande"},
-    415: {"description": "No es .docx, .dotx, .xlsx ni .xltx (o tiene macros)"},
-    422: {"description": "Contenido no válido, no seguro o (Word) le faltan estilos"},
+    415: {"description": "No es .docx, .dotx, .xlsx, .xltx, .toml ni .json (o tiene macros)"},
+    422: {"description": "Contenido no válido o no seguro, (Word) le faltan estilos o mapa de trazabilidad no válido"},
 }
-_FILE_FIELD = File(description="Plantilla .docx, .dotx, .xlsx o .xltx")
+_FILE_FIELD = File(description="Plantilla .docx, .dotx, .xlsx o .xltx, o mapa de trazabilidad .toml o .json")
 _NAME_FIELD = Form(max_length=100, description="Nombre visible; vacío = el del fichero")
 KindQuery = Annotated[TemplateKind | None, Query(description="Solo plantillas de este tipo")]
 
@@ -77,6 +77,7 @@ def _file(template: DocumentTemplate, settings: Settings) -> FileResponse:
 
 @router.get("", response_model=list[TemplateOut], summary="Plantillas globales", responses=_401)
 def list_global(_: CurrentUser, db: DbSession, kind: KindQuery = None) -> list[TemplateOut]:
+    """Catálogo global (cualquier usuario)."""
     return [_out(t) for t in service.list_templates(db, None, kind=kind)]
 
 
@@ -101,6 +102,7 @@ def download_base(kind: TemplateKind, _: CurrentUser) -> Response:
     responses={**_401, **_404},
 )  # fmt: skip
 def download_global(template_id: str, _: CurrentUser, db: DbSession, settings: SettingsDep) -> FileResponse:
+    """Fichero de una plantilla global, como adjunto."""
     return _file(service.get_template(db, None, template_id), settings)
 
 
@@ -120,7 +122,8 @@ def create_global(
     ctx: Context,
     name: Annotated[str | None, _NAME_FIELD] = None,
 ) -> TemplateOut:
-    """Se comprueba el contenido real: tipo, macros, objetos y vínculos externos y, en Word, los estilos."""
+    """Se comprueba el contenido real: tipo, macros, objetos y vínculos externos y, en Word, los estilos; un mapa de
+    trazabilidad se valida con util_bbdd (todos sus errores en el mensaje)."""
     _check_length(request, settings)
     template = service.save_template(
         db, admin, None, name=name, filename=file.filename, stream=file.file, settings=settings, ctx=ctx
@@ -134,6 +137,7 @@ def create_global(
                422: {"description": "Estilo de tabla que no está en la plantilla"}},
 )  # fmt: skip
 def update_global(template_id: str, body: TemplateUpdate, admin: AdminUser, db: DbSession, ctx: Context) -> TemplateOut:
+    """Cambia el nombre o el estilo de tabla (uno de los de la plantilla)."""
     template = service.get_template(db, None, template_id)
     return _out(
         service.update_template(
@@ -148,6 +152,7 @@ def update_global(template_id: str, body: TemplateUpdate, admin: AdminUser, db: 
     responses={**_ADMIN, **_404, 409: {"description": "La usa una documentación en cola o en curso"}},
 )  # fmt: skip
 def delete_global(template_id: str, admin: AdminUser, db: DbSession, settings: SettingsDep, ctx: Context) -> None:
+    """Borra la plantilla y su fichero, salvo que la use una documentación en cola o en curso."""
     template = service.get_template(db, None, template_id)
     service.delete_template(db, admin, template, settings=settings, ctx=ctx)
 
@@ -163,6 +168,7 @@ def _project(db: DbSession, user: CurrentUser, project_id: int, *, editor: bool)
     "", response_model=list[TemplateOut], summary="Plantillas del proyecto y globales", responses={**_401, **_404}
 )
 def list_project(project_id: int, user: CurrentUser, db: DbSession, kind: KindQuery = None) -> list[TemplateOut]:
+    """Las del proyecto más las globales (cualquier miembro); ``scope`` dice de cuál es cada una."""
     project = _project(db, user, project_id, editor=False)
     return [_out(t) for t in service.list_templates(db, project, kind=kind, include_global=True)]
 
@@ -198,6 +204,7 @@ def create_project_template(
 def update_project_template(
     project_id: int, template_id: str, body: TemplateUpdate, user: CurrentUser, db: DbSession, ctx: Context
 ) -> TemplateOut:
+    """Editores: cambia el nombre o el estilo de tabla de una plantilla del proyecto (no de las globales)."""
     template = service.get_template(db, _project(db, user, project_id, editor=True), template_id)
     return _out(
         service.update_template(
@@ -214,6 +221,7 @@ def update_project_template(
 def delete_project_template(
     project_id: int, template_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep, ctx: Context
 ) -> None:
+    """Editores: borra una plantilla del proyecto, salvo que la use una documentación en cola o en curso."""
     template = service.get_template(db, _project(db, user, project_id, editor=True), template_id)
     service.delete_template(db, user, template, settings=settings, ctx=ctx)
 
@@ -225,5 +233,6 @@ def delete_project_template(
 def download_project_template(
     project_id: int, template_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep
 ) -> FileResponse:
+    """Fichero de una plantilla del proyecto o global (cualquier miembro), como adjunto."""
     project = _project(db, user, project_id, editor=False)
     return _file(service.get_template(db, project, template_id, include_global=True), settings)

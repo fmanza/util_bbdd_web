@@ -1,17 +1,18 @@
 # Comparación de esquemas
 
-Guía de uso de la comparación de esquemas (desde la 0.7.0, Fase 6; vigente en 1.0.0). Se lanza desde la pestaña *Ejecuciones* de un proyecto
-(rol editor) con dos conexiones del proyecto, o con la misma conexión y dos schemas distintos.
+Guía de uso de la comparación de esquemas (desde la 0.7.0, Fase 6). Se lanza desde la pestaña *Ejecuciones* de un
+proyecto (rol editor) con dos conexiones del proyecto, o con la misma conexión y dos schemas distintos.
 
 ## Lanzar una comparación
 
-**Comparación de esquemas** compara el **destino** con el **origen** usando `SchemaComparator` de util_bbdd.
+**Lanzar ejecución → Comparación de esquemas** (grupo *Comparar* de la lista de operaciones) compara el **destino**
+con el **origen** usando `SchemaComparator` de util_bbdd. Solo lee las dos conexiones.
 
 | Tarjeta | Opciones |
 |---|---|
 | Origen (referencia) y Destino (se compara) | Conexión y schema de cada lado, una tarjeta junto a otra; schema vacío = el de la conexión |
 | Qué comparar | Tablas y columnas (con ellas, índices, claves foráneas y comentarios, que solo aparecen con *Tablas* marcado), vistas y rutinas (las rutinas no se comparan en HSQLDB ni SQLite) |
-| Informes | HTML, Excel, Word, Markdown y script SQL; con el script, su dialecto (*Automático* = el del motor destino) |
+| Informes | HTML, Excel, Word, Markdown y script SQL; con el script (y solo con él), su dialecto (*Automático* = el del motor destino) |
 
 **Schema**: se escribe como aparece en el explorador (en MySQL y MariaDB es la base de datos; en Oracle, el usuario
 dueño de las tablas). No distingue mayúsculas si solo hay un schema con ese nombre. Si no existe, la ejecución falla
@@ -51,7 +52,11 @@ Los informes de ejecuciones anteriores a la 1.8.0 muestran el diagrama como text
 resto del informe funciona igual.
 
 > **El script SQL no se ejecuta.** Transforma el destino para igualarlo al origen e incluye `DROP` de lo que solo
-> existe en el destino. Revísalo antes de aplicarlo a mano. Aplicar cambios desde la web llegará con la migración DDL.
+> existe en el destino. Revísalo antes de aplicarlo a mano: la web no lo ejecuta (la [migración DDL](migracion.md)
+> crea un schema en otro motor, no aplica este script).
+
+Desde la 1.17.0, el script se ve en *Artefactos* con resaltado SQL y un botón **Copiar SQL** (por encima de 200 000
+caracteres, sin resaltar).
 
 Las etiquetas de origen y destino de los informes son `alias (motor) [schema]`: nunca llevan el servidor, el
 usuario ni la ruta de los ficheros.

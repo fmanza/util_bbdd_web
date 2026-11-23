@@ -24,6 +24,16 @@ tag aún no se ha subido). El build de Docker y el CI deben ser reproducibles si
    cambiar versión en `dependencies` y la URL en `[tool.uv.sources]`, `uv lock`, ejecutar la suite y los tests de
    contrato de la capa, nota en el CHANGELOG.
 
+## Enmienda 2026-11-16 (1.19.0): versión actual y extras
+
+- **Punto 2**: la URL y el SHA-256 son los de la release `v4.0.0`, la fijada en la Fase 10. Cada subida de util_bbdd
+  cambia versión, URL y hash con el procedimiento del punto 4; hoy es la `v5.9.0` (`backend/pyproject.toml`, hash en
+  `backend/uv.lock`).
+- **Punto 3**: desde util_bbdd 4.1.0 (web 1.1.0) `pymssql` y `aiosqlite` llegan con los extras `sqlserver` y
+  `sqlite-async` (GAPS G3 resuelto). Extras usados: `oracle, mariadb, mysql, postgresql, sqlserver, sqlite-async,
+  migrate, analysis`. `jaydebeapi` y `pyodbc` siguen en la web, como extras opcionales de las variantes de imagen
+  (`hsqldb`, `odbc`).
+
 ## Alternativas descartadas
 
 - `git+https://…@v4.0.0`: en 2026-10 requería credenciales; ahora el repositorio es público, pero obligaría a

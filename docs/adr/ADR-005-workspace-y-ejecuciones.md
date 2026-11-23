@@ -42,3 +42,12 @@ Salidas en el volumen `workspace`, una carpeta por ejecución:
   el valor por defecto) y hay una purga por cuota opcional.
 - `RunAuditSink` (`integrations/util_bbdd/audit_sink.py`) cumple `util_bbdd.audit.AuditSink` y escribe en `run.log`
   **sin** `AuditEvent.message` (puede llevar valores de clave). Lo usarán las fases 7–9.
+
+## Enmienda 2026-11-07 (1.14.0): eliminar ejecuciones desde administración
+
+El borrado deja de ser solo la purga (`purged`, conservando fila y `manifest`): un admin puede **eliminar** una
+ejecución terminada o todas las terminadas de un proyecto (*Administración → Todas las ejecuciones*). Se borran la
+fila, sus artefactos y su carpeta, y desaparece del historial; la auditoría (`run.delete`, `project.runs_delete`)
+guarda su resumen. Una activa o un volcado con constraints sin restaurar no se elimina (409; el borrado de un proyecto
+los omite y dice cuántos). Esa lista solo muestra metadatos (ni `params`, ni mensajes, ni artefactos), y una
+ejecución relanzada desde otra eliminada lo indica con `RunDetailOut.relaunched_from_exists`.

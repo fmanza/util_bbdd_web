@@ -45,8 +45,9 @@ comando.
 | Desarrollar sin Docker | Además: [uv](https://docs.astral.sh/uv/) 0.12.x y Node.js 24 LTS |
 | Producción | Un servidor Linux con Docker, un nombre DNS interno, un certificado TLS y un proxy inverso (nginx, Caddy o Traefik) |
 
-Espacio en disco: la imagen ocupa ≈ 770 MB (≈ 1,06 GB con las variantes HSQLDB y ODBC). El workspace crece con las
-ejecuciones; por defecto cada usuario tiene una cuota de 1 GB y las ejecuciones se purgan a los 30 días.
+Espacio en disco: la imagen ocupa ≈ 790 MB en la 1.21.0 (las variantes HSQLDB y ODBC, medidas en la 1.0.0,
+≈ 1,06 GB). El workspace crece con las ejecuciones; por defecto cada usuario tiene una cuota de 1 GB y las
+ejecuciones se purgan a los 30 días.
 
 ## 3. En local
 
@@ -174,7 +175,7 @@ Pasos para un servidor Linux interno, con el proxy TLS en el mismo equipo. Refer
 ```bash
 sudo mkdir -p /opt/util_bbdd_web && sudo chown "$USER" /opt/util_bbdd_web
 git clone <repo> /opt/util_bbdd_web && cd /opt/util_bbdd_web
-git checkout v1.0.0                       # una versión etiquetada, no una rama
+git checkout v1.21.0                      # una versión etiquetada, no una rama
 ```
 
 ### 4.2. Secretos
@@ -214,7 +215,7 @@ no se envía HSTS.
 ```bash
 docker compose up -d --build
 docker compose ps                         # web «healthy», worker «running»
-curl -s http://127.0.0.1:8080/api/health  # "status":"ok", "worker":"ok", "version":"1.0.0"
+curl -s http://127.0.0.1:8080/api/health  # "status":"ok", "worker":"ok", "version":"1.21.0"
 docker compose exec web python -m app.cli create-admin --username admin --display-name "Administración"
 ```
 
@@ -228,7 +229,7 @@ Imprescindible:
 
 - `X-Forwarded-For` y `X-Forwarded-Proto`;
 - sin búfer en las respuestas (el progreso usa SSE);
-- un límite de cuerpo de al menos 51 MB (subidas de la carga bulk);
+- límite de cuerpo de 1 MB en general y de 51 MB solo en las rutas de subida (carga bulk y plantillas);
 - `/metrics` restringido a la red de monitorización.
 
 Comprueba desde otro equipo:
@@ -288,7 +289,7 @@ Guía funcional para los usuarios: [Guía de usuario](guia_usuario.md).
 - [ ] `git checkout` de una versión etiquetada; `UBW_TAG` en `.env`
 - [ ] `secrets/*.txt` legibles por el uid 10001 y con copia fuera del servidor
 - [ ] `/api/health` → `ok` y `worker: ok`; puerto 8080 solo en `127.0.0.1`
-- [ ] Proxy TLS con `X-Forwarded-*`, sin búfer, 51 MB de cuerpo y `/metrics` restringido
+- [ ] Proxy TLS con `X-Forwarded-*`, sin búfer, 51 MB de cuerpo solo en las subidas y `/metrics` restringido
 - [ ] `UBW_FORWARDED_ALLOW_IPS` con la pasarela de la red de Docker
 - [ ] Administrador creado; destinos permitidos y usuarios configurados
 - [ ] Una ejecución `noop` termina «Correcta»

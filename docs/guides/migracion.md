@@ -1,21 +1,22 @@
 # Migración DDL
 
-Guía de uso de la migración DDL (desde la 0.8.0, Fase 7; vigente en 1.0.0). Traduce las tablas, vistas y rutinas de un schema a **otro motor** con
-`MigrationPlanner` de util_bbdd y, si se quiere, las **crea en una base de datos destino**. Diseño de seguridad:
-[ADR-008](../adr/ADR-008-aplicar-migraciones.md).
+Guía de uso de la migración DDL (desde la 0.8.0, Fase 7). Traduce las tablas, vistas y rutinas de un schema a **otro
+motor** con `MigrationPlanner` de util_bbdd y, si se quiere, las **crea en una base de datos destino**. Diseño de
+seguridad: [ADR-008](../adr/ADR-008-aplicar-migraciones.md).
 
 Motores: origen y destino Oracle, MariaDB, MySQL, SQL Server y PostgreSQL, siempre distintos. Solo migra la
 estructura (DDL), no los datos.
 
 ## 1. Planificar
 
-En la pestaña *Ejecuciones* del proyecto (rol editor), **Lanzar ejecución → Plan de migración DDL**:
+En la pestaña *Ejecuciones* del proyecto (rol editor), **Lanzar ejecución → Plan de migración DDL** (grupo *Mover a
+otra base de datos* de la lista de operaciones):
 
 | Campo | Efecto |
 |---|---|
 | Origen: conexión y schema | Lo que se migra; schema vacío = el de la conexión (Oracle: el usuario) |
-| Destino: motor | Motor para el que se genera el DDL; en la misma tarjeta, las opciones de ese motor (charset, collation, schema destino, autoincrementales…), solo las del motor elegido |
-| Conversión | Vistas (reescribirlas al dialecto destino o copiarlas) y tipo para `NUMBER` de Oracle sin precisión |
+| Destino: motor | Motor para el que se genera el DDL (empieza en «Elige…»); en la misma tarjeta, las opciones de ese motor (charset, collation, schema destino, autoincrementales…), solo las del motor elegido. «Ancho de INT» (destino MariaDB/MySQL) solo aparece con origen Oracle |
+| Conversión | Vistas (reescribirlas al dialecto destino o copiarlas) y, solo con origen Oracle, tipo para `NUMBER` sin precisión |
 | Filtro de tablas | Desde la 1.19.0: **Incluir** y **Excluir** (patrones) y **Probar patrones**, como en la [documentación](documentacion.md#filtro-de-tablas); se aplica a tablas y vistas, no a rutinas |
 
 El plan **no escribe en ninguna base de datos**. Su detalle muestra:
@@ -24,7 +25,8 @@ El plan **no escribe en ninguna base de datos**. Su detalle muestra:
 - **Avisos** (filtrables): `ERROR` impide aplicar; `WARNING` e `INFO` informan (tipos aproximados, nombres
   acortados, autoincrementales…);
 - **Tablas** con el tipo de cada columna en origen y destino;
-- **Sentencias** con resaltado; el script completo se descarga desde *Artefactos*.
+- **Sentencias** con resaltado; el script completo (`migracion_<motor>.sql`) está en *Artefactos*, con vista previa
+  resaltada y **Copiar SQL** (desde la 1.17.0), y se descarga.
 
 **Filtro de tablas** (1.19.0, util_bbdd 5.9.0): el plan lleva solo las tablas y vistas que casan con los patrones.
 Una FK de una tabla del plan hacia una tabla que queda fuera se añade al final del script (aviso `FK_OUTSIDE_FILTER`):

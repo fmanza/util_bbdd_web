@@ -1,26 +1,28 @@
 # Volcado de datos
 
-Guía de uso del volcado de datos (desde la 0.9.0, Fase 8; vigente en 1.0.0). Copia **filas** de una conexión del proyecto a otra con `DumpOrchestrator`
-de util_bbdd: mismo motor o distinto. Las **tablas destino deben existir** (créalas antes, p. ej. con la
-[migración DDL](migracion.md)). Diseño de seguridad: [ADR-009](../adr/ADR-009-volcado-de-datos.md).
+Guía de uso del volcado de datos (desde la 0.9.0, Fase 8). Copia **filas** de una conexión del proyecto a otra con
+`DumpOrchestrator` de util_bbdd: mismo motor o distinto. Las **tablas destino deben existir** (créalas antes, p. ej.
+con la [migración DDL](migracion.md)). Diseño de seguridad: [ADR-009](../adr/ADR-009-volcado-de-datos.md).
 
 ## 1. Vista previa (modo seco)
 
-En *Ejecuciones*, **Lanzar ejecución → Volcado de datos: vista previa** (rol editor). No escribe nada.
+En *Ejecuciones*, **Lanzar ejecución → Volcado de datos: vista previa** (rol editor; grupo *Mover a otra base de
+datos* de la lista de operaciones). No escribe nada.
 
 | Campo | Efecto |
 |---|---|
 | Conexión y schema origen / destino | De dónde se leen y dónde se escriben las filas |
 | Filtro de tablas | Elige **Todas**, **Lista exacta** o **Patrones** (al cambiar de modo se vacían los campos del otro). **Tablas (lista exacta)**, separadas por comas (sin distinguir mayúsculas; avisa si alguna no existe), **o** desde la 1.19.0 **Incluir** y **Excluir** (patrones, como en la [documentación](documentacion.md#filtro-de-tablas)), no las dos cosas; vacío = todas las del origen. **Probar patrones** aplica los patrones a las tablas del origen antes de lanzar |
-| Carga y errores: carga | **Vaciar el destino antes de cargar** (desactivado: las filas se **añaden**) y ajustar secuencias de PK |
-| Carga y errores: errores | Filas que el destino no admite: **fallar la tabla** o **apartarlas** a `rechazos.csv`, con un máximo por tabla (solo con «apartar») |
-| Rendimiento (en *Opciones avanzadas*) | Filas por lote, tablas en paralelo (1–4) e índices secundarios |
+| Carga y errores: carga | **Vaciar el destino antes de cargar** (desactivado: las filas se **añaden**) y ajustar secuencias de PK. Con el vaciado marcado, el pie de la ventana avisa «Se vaciarán las tablas destino antes de cargar» |
+| Carga y errores: errores | Filas que el destino no admite: **fallar la tabla** o **apartarlas** a `rechazos.csv`; los rechazos máximos por tabla solo aparecen con «apartar» (vacío = sin límite) |
+| Rendimiento (en *Opciones avanzadas*, plegadas) | Filas por lote (100–100 000, 5 000 por defecto), tablas en paralelo (1–4) y desactivar y reconstruir los índices secundarios no únicos |
 
 El detalle muestra el **orden de carga** por claves foráneas (las tablas en ciclos van al final), las filas en origen y
 destino y, por tabla, columnas que no se copian, columnas obligatorias del destino que el origen no tiene y FK a tablas
 fuera del volcado (con patrones, también los patrones usados). Avisos:
 
 - tablas que **no existen** en el destino (no se cargan);
+- tablas con columnas **obligatorias en el destino** que el origen no tiene (su carga fallará);
 - destino **con filas** sin vaciar (se añaden; pueden duplicarse claves);
 - **ciclos** de FK;
 - motor sin gestión de constraints (SQLite: se cargan con las constraints activas).
@@ -59,8 +61,9 @@ Mientras carga, el detalle muestra las tablas terminadas y las filas escritas de
 
 El detalle del volcado muestra, por tabla, estado, filas en origen y en destino antes y después, filas apartadas y el
 error (solo la primera línea del motor, sin los valores de las filas que lo provocaron). También las
-**constraints que no se reactivaron** (p. ej. filas huérfanas). Artefactos: el **informe Excel** de util_bbdd, `rechazos.csv` (si se apartaron filas: contiene
-datos de negocio) y el rastro de auditoría `volcado.jsonl`.
+**constraints que no se reactivaron** (p. ej. filas huérfanas). Artefactos: el **informe Excel** de util_bbdd
+(`volcado.xlsx`), `rechazos.csv` (si se apartaron filas: contiene datos de negocio) y el rastro de auditoría
+`volcado.jsonl`.
 
 ### Constraints sin restaurar
 

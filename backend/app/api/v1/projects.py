@@ -86,7 +86,7 @@ def list_projects(
 
 @router.post(
     "", response_model=ProjectOut, status_code=status.HTTP_201_CREATED, summary="Crear proyecto",
-    responses={**_401, **_409},
+    responses={**_401, 403: {"description": "Token CSRF ausente o no válido"}, **_409},
 )  # fmt: skip
 def create_project(body: ProjectCreate, user: CurrentUser, db: DbSession, ctx: Context) -> ProjectOut:
     """Crea un proyecto del que eres propietario."""
@@ -95,6 +95,7 @@ def create_project(body: ProjectCreate, user: CurrentUser, db: DbSession, ctx: C
 
 @router.get("/{project_id}", response_model=ProjectOut, summary="Ver proyecto", responses={**_401, **_404})
 def get_project(project_id: int, user: CurrentUser, db: DbSession) -> ProjectOut:
+    """Proyecto del que eres miembro, con tu rol (``my_role``)."""
     return _project(service.get_membership(db, user, project_id))
 
 
@@ -124,6 +125,7 @@ def delete_project(project_id: int, user: CurrentUser, db: DbSession, settings: 
     "/{project_id}/members", response_model=list[MemberOut], summary="Listar miembros", responses={**_401, **_404}
 )
 def list_members(project_id: int, user: CurrentUser, db: DbSession) -> list[MemberOut]:
+    """Miembros del proyecto con su rol (cualquier miembro)."""
     membership = service.get_membership(db, user, project_id)
     return [_member(m) for m in service.list_members(db, membership.project)]
 
@@ -146,6 +148,7 @@ def add_member(project_id: int, body: MemberCreate, user: CurrentUser, db: DbSes
 def update_member(
     project_id: int, user_id: int, body: MemberUpdate, user: CurrentUser, db: DbSession, ctx: Context
 ) -> MemberOut:
+    """Cambia el rol de un miembro (propietarios); debe quedar al menos un propietario (409)."""
     membership = service.get_membership(db, user, project_id, "owner")
     return _member(service.update_member(db, user, membership.project, user_id, role=body.role, ctx=ctx))
 
@@ -168,6 +171,7 @@ def remove_member(project_id: int, user_id: int, user: CurrentUser, db: DbSessio
     responses={**_401, **_404},
 )  # fmt: skip
 def list_project_connections(project_id: int, user: CurrentUser, db: DbSession) -> list[ProjectConnectionOut]:
+    """Conexiones asociadas con su alias, motor y si son de solo lectura (cualquier miembro; sin secretos)."""
     membership = service.get_membership(db, user, project_id)
     return [_link(link) for link in service.list_project_connections(db, membership.project)]
 
@@ -193,5 +197,6 @@ def add_project_connection(
     responses={**_401, **_403, **_404},
 )  # fmt: skip
 def remove_project_connection(project_id: int, alias: str, user: CurrentUser, db: DbSession, ctx: Context) -> None:
+    """Quita la asociación del alias (editores); la conexión no se borra."""
     membership = service.get_membership(db, user, project_id, "editor")
     service.remove_project_connection(db, user, membership.project, alias, ctx=ctx)

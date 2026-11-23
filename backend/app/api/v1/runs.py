@@ -50,7 +50,9 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 
 _401: dict[int | str, dict[str, Any]] = {401: {"description": "No autenticado"}}
 _404: dict[int | str, dict[str, Any]] = {404: {"description": "No existe o no eres miembro del proyecto"}}
-_403: dict[int | str, dict[str, Any]] = {403: {"description": "Tu rol no lo permite o CSRF no válido"}}
+_403: dict[int | str, dict[str, Any]] = {
+    403: {"description": "Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido"}
+}
 
 #: Tipos con vista previa: HTML y SVG en ``iframe sandbox``; el resto como texto plano.
 SANDBOXED_KINDS: Final = frozenset({"html", "graphs"})
@@ -238,7 +240,8 @@ def list_project_runs(
     summary="Lanzar ejecución",
     responses={
         **_401, **_403, **_404,
-        409: {"description": "Cuota de almacenamiento superada"},
+        409: {"description": "Cuota superada, o una escritura en la BD destino no se admite ahora (vista previa o plan "
+                             "con errores, otra escritura en curso sobre el destino, constraints sin restaurar)"},
         422: {"description": "Operación o parámetros no válidos"},
         429: {"description": "Demasiadas ejecuciones en cola"},
     },
@@ -278,6 +281,7 @@ def list_my_runs(
 
 @router.get("/{run_id}", response_model=RunDetailOut, summary="Ver ejecución", responses={**_401, **_404})
 def get_run(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> RunDetailOut:
+    """Detalle con artefactos, tu rol, avisos (por formato), plantillas aplicadas, ``site_url`` y ``has_diff``."""
     return _detail(service.get_access(db, user, run_id), user, settings)
 
 
@@ -328,7 +332,12 @@ async def run_events(run_id: str, _: VisibleRun) -> AsyncIterable[ServerSentEven
     responses={**_401, **_403, **_404, 409: {"description": "Ya terminó"}},
 )  # fmt: skip
 def cancel_run(run_id: str, user: CurrentUser, db: DbSession, ctx: Context) -> RunOut:
-    """En cola: se cancela al momento. En curso: el worker termina su subproceso."""
+    """En cola: se cancela al momento. En curso: se pide la cancelación (``cancel_requested``).
+
+    Las operaciones con progreso de util_bbdd paran entre unidades de trabajo (el worker termina el subproceso si no
+    paran en 60 s); las escrituras en una BD destino (``migrate_apply``, ``dump_apply``, ``bulk_apply``) paran solo
+    entre sentencias o lotes y el worker nunca las termina por una cancelación. El resto se termina al momento.
+    """
     access = service.get_access(db, user, run_id)
     run = service.cancel(db, user, access, ctx=ctx)
     return _run_out(run, len(run.artifacts))
@@ -336,20 +345,30 @@ def cancel_run(run_id: str, user: CurrentUser, db: DbSession, ctx: Context) -> R
 
 @router.post(
     "/{run_id}/relaunch", response_model=RunOut, status_code=status.HTTP_202_ACCEPTED, summary="Relanzar",
-    responses={**_401, **_403, **_404, 409: {"description": "Cuota superada"}, 429: {"description": "Cola llena"}},
+    responses={
+        **_401, **_403, **_404,
+        409: {"description": "No se puede relanzar (p. ej. ``migrate_apply``), cuota superada o la escritura en la BD "
+                             "destino no se admite ahora"},
+        429: {"description": "Cola llena"},
+    },
 )  # fmt: skip
 def relaunch_run(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep, ctx: Context) -> RunOut:
-    """Nueva ejecución con la misma operación y parámetros."""
+    """Nueva ejecución con la misma operación y parámetros (editores), con las mismas comprobaciones que al lanzarla.
+    Las operaciones que no salen en el formulario genérico (``form=false``) no se relanzan."""
     access = service.get_access(db, user, run_id)
     return _run_out(service.relaunch(db, user, access, settings=settings, ctx=ctx), 0)
 
 
 @router.delete(
     "/{run_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Purgar ejecución",
-    responses={**_401, **_403, **_404, 409: {"description": "No ha terminado"}},
+    responses={
+        **_401, **_403, **_404,
+        409: {"description": "No ha terminado o es un volcado con constraints sin restaurar"},
+    },
 )  # fmt: skip
 def purge_run(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep, ctx: Context) -> None:
-    """Borra los ficheros de una ejecución terminada; se conserva su resumen (``manifest``)."""
+    """Borra los ficheros de una ejecución terminada (editores); se conserva su fila con el resumen (``manifest``) y
+    pasa a ``purged``."""
     access = service.get_access(db, user, run_id)
     service.purge(db, user, access, settings=settings, ctx=ctx)
 
@@ -366,6 +385,7 @@ _SAFE_HEADERS: Final = {"X-Content-Type-Options": "nosniff", "Content-Security-P
 def download_artifact(
     run_id: str, artifact_id: int, user: CurrentUser, db: DbSession, settings: SettingsDep
 ) -> FileResponse:
+    """Fichero de un artefacto registrado, siempre como adjunto (``Content-Disposition: attachment``, ``nosniff``)."""
     access = service.get_access(db, user, run_id)
     artifact, path = service.get_artifact(db, access.run, artifact_id, settings)
     return FileResponse(
@@ -381,12 +401,18 @@ def download_artifact(
     "/{run_id}/artifacts/{artifact_id}/preview",
     summary="Vista previa de un artefacto",
     response_model=None,
-    responses={**_401, **_404, 413: {"description": "Demasiado grande"}, 415: {"description": "Sin vista previa"}},
+    responses={
+        **_401,
+        **_404,
+        413: {"description": "Más de 2 MB: hay que descargarlo"},
+        415: {"description": "Sin vista previa (en una carpeta Markdown, solo las páginas ``.md``)"},
+    },
 )
 def preview_artifact(
     run_id: str, artifact_id: int, user: CurrentUser, db: DbSession, settings: SettingsDep
 ) -> Response:
-    """HTML y SVG con CSP ``sandbox`` (para un ``iframe sandbox``); Markdown, SQL, log y ``run.json`` como texto."""
+    """HTML y SVG con CSP ``sandbox`` (para un ``iframe sandbox``); páginas Markdown, SQL, log y ``run.json`` como
+    texto plano (la SPA los pinta)."""
     access = service.get_access(db, user, run_id)
     artifact, path = service.get_artifact(db, access.run, artifact_id, settings)
     if not _previewable(artifact):
@@ -420,10 +446,15 @@ def _items(items: list[diff_domain.DiffItem]) -> list[DiffItemOut]:
 
 @router.get(
     "/{run_id}/diff", response_model=SchemaDiffOut, summary="Diff de una comparación de esquemas o de los cambios de una documentación",
-    responses={**_401, **_404, 413: {"description": "Demasiado grande para el visor"}},
+    responses={
+        **_401,
+        404: {"description": "No existe, no eres miembro o la ejecución no tiene diff (o se purgó)"},
+        413: {"description": "Demasiado grande para el visor"},
+    },
 )  # fmt: skip
 def get_diff(run_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep) -> SchemaDiffOut:
-    """Diferencias del destino respecto al origen de una ejecución ``compare`` correcta."""
+    """Diferencias del destino respecto al origen de una ejecución ``compare`` correcta o, en una documentación
+    Markdown comparada con otra anterior, los cambios respecto a ella (``docs/changes.json``)."""
     access = service.get_access(db, user, run_id)
     return SchemaDiffOut.model_validate(diff_domain.load_diff(db, access.run, settings))
 
@@ -579,7 +610,9 @@ def site_file(run_id: str, token: str, path: str, db: DbSession, settings: Setti
     "/{run_id}/archive", summary="Descargar ZIP de la ejecución", response_class=StreamingResponse,
     responses={
         200: {"description": "ZIP; con ``X-UBW-Warning`` si falta el Mermaid de la documentación Markdown en el servidor"},
-        **_401, **_404, 422: {"description": "Formato no válido"},
+        **_401,
+        404: {"description": "No existe, no eres miembro, no tiene artefactos o no tiene ese formato"},
+        422: {"description": "Formato no válido"},
     },
 )  # fmt: skip
 def download_archive(

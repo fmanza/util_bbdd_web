@@ -55,7 +55,8 @@ def _out(upload: Any) -> UploadOut:
 
 @router.post(
     "/{project_id}/uploads", response_model=UploadOut, status_code=status.HTTP_201_CREATED, summary="Subir un fichero",
-    responses={**_401, **_404, 403: {"description": "Rol inferior a editor"}, 409: {"description": "Cuota superada"},
+    responses={**_401, **_404, 403: {"description": "Rol inferior a editor o CSRF no válido"},
+               409: {"description": "Cuota superada"},
                411: {"description": "Falta Content-Length"}, 413: {"description": "Demasiado grande"},
                415: {"description": "No es .csv ni .xlsx"},
                422: {"description": "El contenido no es válido"}},
@@ -86,6 +87,7 @@ def create_upload(
     "/{project_id}/uploads", response_model=list[UploadOut], summary="Ficheros del proyecto", responses={**_401, **_404}
 )
 def list_uploads(project_id: int, user: CurrentUser, db: DbSession) -> list[UploadOut]:
+    """Ficheros subidos al proyecto para la carga bulk (cualquier miembro)."""
     return [_out(u) for u in uploads.list_uploads(db, get_membership(db, user, project_id))]
 
 
@@ -113,11 +115,13 @@ async def upload_info(
 
 @router.delete(
     "/{project_id}/uploads/{upload_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Borrar un fichero",
-    responses={**_401, **_404, 403: {"description": "Rol inferior a editor"}, 409: {"description": "En uso"}},
+    responses={**_401, **_404, 403: {"description": "Rol inferior a editor o CSRF no válido"},
+               409: {"description": "Lo usa una carga en curso"}},
 )  # fmt: skip
 def delete_upload(
     project_id: int, upload_id: str, user: CurrentUser, db: DbSession, settings: SettingsDep, ctx: Context
 ) -> None:
+    """Borra el fichero (editores), salvo que lo use una carga en curso."""
     membership = get_membership(db, user, project_id)
     upload = uploads.get_upload(db, membership, upload_id)
     uploads.delete_upload(db, user, membership, upload, settings=settings, ctx=ctx)

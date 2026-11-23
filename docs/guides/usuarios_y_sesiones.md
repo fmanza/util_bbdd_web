@@ -1,13 +1,13 @@
 # Usuarios, sesiones y auditoría
 
-Guía de uso de la identidad multiusuario. Disponible desde la versión 0.2.0 (Fase 1); vigente en 1.0.0 y ampliada en 1.21.0 (tema).
+Guía de uso de la identidad multiusuario. Disponible desde la versión 0.2.0 (Fase 1); vigente en 1.21.0.
 
 ## Roles
 
 | Rol | Puede |
 |---|---|
 | `user` | Iniciar y cerrar sesión, cambiar su contraseña, elegir su tema y usar las secciones de la aplicación |
-| `admin` | Lo anterior y, además, gestionar usuarios, ver y revocar sesiones y consultar la auditoría |
+| `admin` | Lo anterior y, además, gestionar usuarios, ver y revocar sesiones, consultar la auditoría y el resto de *Administración* (destinos permitidos, plantillas, queries nombradas, ejecuciones de todos los proyectos y almacenamiento) |
 
 El primer administrador se crea por línea de comandos ([despliegue](deployment.md#primer-administrador)); no existen
 credenciales por defecto.
@@ -122,13 +122,23 @@ revocas la tuya, saldrás de la aplicación.
 
 ## Auditoría
 
-*Administración → Auditoría* muestra los eventos más recientes primero, filtrables por tipo:
+*Administración → Auditoría* muestra los eventos más recientes primero, filtrables por *Tipo de acción* y con
+búsqueda por acción, actor, objetivo o IP:
 
 | Tipo | Eventos |
 |---|---|
 | Autenticación | Inicio de sesión (correcto o fallido, con el motivo), bloqueo de cuenta, cierre de sesión, cambio de contraseña |
 | Usuarios | Alta, edición (campos cambiados), desactivación, reactivación, contraseña restablecida |
 | Sesiones | Sesión revocada |
+| Conexiones | Alta, edición, borrado, prueba y readiness |
+| Destinos | Destino permitido añadido o retirado |
+| Proyectos | Alta, edición y borrado; miembros añadidos, quitados o con otro rol; conexiones asociadas o quitadas; borrado de todas sus ejecuciones (`project.runs_delete`) |
+| Ejecuciones | Lanzada, cancelada, purgada y eliminada (`run.delete`) |
+| SQL | Cada consulta de SQL libre, con su texto (recortado) |
+| Queries | Query nombrada ejecutada, creada, editada o borrada |
+
+Con *Todas* se ven también los eventos sin filtro propio: plantillas (`template.*`), ficheros de carga
+(`upload.*`) y ajustes y mantenimiento del almacenamiento (`storage.*`).
 
 *Sistema* en la columna *Quién* indica una acción sin usuario (CLI o intento de login fallido). La auditoría nunca
 guarda contraseñas ni tokens.

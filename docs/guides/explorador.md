@@ -1,6 +1,6 @@
 # Explorador de metadatos, queries nombradas y SQL
 
-Guía de uso del explorador. Disponible desde la versión 0.5.0 (Fase 4); vigente en 1.0.0.
+Guía de uso del explorador. Disponible desde la versión 0.5.0 (Fase 4); vigente en 1.21.0.
 
 ## Explorar una conexión
 
@@ -30,7 +30,8 @@ Desde la 1.14.0, en una pantalla ancha el árbol y la ficha ocupan el **alto de 
 desplaza **dentro** de la ficha (vertical y horizontal), con la cabecera de las tablas fija: un DDL largo o una tabla
 de cientos de columnas se ven enteros sin desplazar la página. Desde la 1.17.0 el DDL se muestra con **resaltado
 SQL** (palabras clave, tipos, cadenas, números y comentarios en colores que siguen el tema claro u oscuro). **Copiar
-DDL** (el icono sobre el DDL) lo copia al portapapeles como texto, sin colores. En el móvil, árbol y ficha van uno debajo del otro y la ficha se desplaza dentro.
+DDL** (el icono sobre el DDL) lo copia al portapapeles como texto, sin colores. En el móvil, árbol y ficha van uno
+debajo del otro y la ficha se desplaza dentro.
 
 ## Queries nombradas
 
@@ -74,13 +75,15 @@ Además, la consulta se ejecuta dentro de una **transacción de solo lectura** d
 terminar. Ctrl+Enter ejecuta.
 
 - Si la consulta falla, se muestra el mensaje del motor (recortado), para poder corregirla.
-- Tiempo máximo: 30 s; filas: hasta 1000 (configurable por el administrador del servidor).
+- Tiempo máximo: 30 s; filas: hasta 1000 (configurable por el administrador del servidor); *Máx. filas* pide menos.
+  Si se agota el tiempo, «La base de datos no respondió a tiempo» (en PostgreSQL el límite lo aplica también el
+  servidor).
 - Todas las ejecuciones quedan en la **auditoría** con el texto de la consulta.
 - Las cabeceras son los nombres que da el motor: en Oracle, en mayúsculas salvo que el alias vaya entre comillas
   (`SELECT nombre AS "nombre" …`).
 
 > **SQL Server** no tiene transacciones de solo lectura: la consulta va en una transacción que se deshace al
-> terminar, y la protección principal es el análisis de la consulta. La pantalla lo avisa. En cualquier motor, lo más seguro es que la conexión use un **usuario de BD con solo permisos
-> `SELECT`**.
+> terminar, y la protección principal es el análisis de la consulta. La pantalla lo avisa. En cualquier motor, lo
+> más seguro es que la conexión use un **usuario de BD con solo permisos `SELECT`**.
 
 HSQLDB no admite SQL libre.

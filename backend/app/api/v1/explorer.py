@@ -107,9 +107,10 @@ def get_schema(
     "/metadata/schemas/{schema}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Invalidar la caché del schema",
-    responses={401: _READ[401], 404: _READ[404]},
+    responses={401: _READ[401], 403: {"description": "Token CSRF ausente o no válido"}, 404: _READ[404]},
 )
 def invalidate_schema(connection_id: int, schema: SchemaName, user: CurrentUser, db: DbSession) -> None:
+    """Borra el snapshot cacheado del schema; la siguiente lectura vuelve a leer el catálogo."""
     metadata.invalidate(db, get_visible(db, user, connection_id), schema)
 
 
@@ -122,6 +123,7 @@ def invalidate_schema(connection_id: int, schema: SchemaName, user: CurrentUser,
 def get_table(
     connection_id: int, schema: SchemaName, table: SchemaName, user: CurrentUser, db: DbSession, settings: SettingsDep
 ) -> TableDetail:
+    """Columnas, claves, índices y FK salientes y entrantes de una tabla, del snapshot del schema (cacheado o leído)."""
     connection = get_visible(db, user, connection_id)
     snapshot = metadata.get_snapshot(db, connection, schema, settings)
     return TableDetail.model_validate(metadata.table_detail(snapshot, table))
@@ -150,6 +152,7 @@ def get_ddl(
     responses={401: _READ[401], 404: _READ[404]},
 )  # fmt: skip
 def list_queries(connection_id: int, user: CurrentUser, db: DbSession) -> list[NamedQueryOut]:
+    """Queries nombradas que un admin definió para el motor de la conexión."""
     connection = get_visible(db, user, connection_id)
     return [named_query_out(q) for q in sql.list_named_queries(db, db_type=connection.db_type)]
 
@@ -158,7 +161,11 @@ def list_queries(connection_id: int, user: CurrentUser, db: DbSession) -> list[N
     "/queries/{query_id}/run",
     response_model=QueryResultOut,
     summary="Ejecutar una query nombrada",
-    responses={**_READ, 422: {"description": "Parámetros no válidos o SQL no admitido"}},
+    responses={
+        **_READ,
+        403: {"description": "Token CSRF ausente o no válido"},
+        422: {"description": "Parámetros no válidos o SQL no admitido"},
+    },
 )
 def run_query(
     connection_id: int,

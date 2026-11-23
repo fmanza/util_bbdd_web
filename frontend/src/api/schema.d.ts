@@ -79,7 +79,8 @@ export interface paths {
         put?: never;
         /**
          * Subir una plantilla global
-         * @description Se comprueba el contenido real: tipo, macros, objetos y vínculos externos y, en Word, los estilos.
+         * @description Se comprueba el contenido real: tipo, macros, objetos y vínculos externos y, en Word, los estilos; un mapa de
+         *     trazabilidad se valida con util_bbdd (todos sus errores en el mensaje).
          */
         post: operations["create_global_api_v1_admin_document_templates_post"];
         delete?: never;
@@ -98,11 +99,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Borrar una plantilla global */
+        /**
+         * Borrar una plantilla global
+         * @description Borra la plantilla y su fichero, salvo que la use una documentación en cola o en curso.
+         */
         delete: operations["delete_global_api_v1_admin_document_templates__template_id__delete"];
         options?: never;
         head?: never;
-        /** Cambiar una plantilla global */
+        /**
+         * Cambiar una plantilla global
+         * @description Cambia el nombre o el estilo de tabla (uno de los de la plantilla).
+         */
         patch: operations["update_global_api_v1_admin_document_templates__template_id__patch"];
         trace?: never;
     };
@@ -133,7 +140,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ejecuciones de un proyecto (para confirmar el borrado) */
+        /**
+         * Ejecuciones de un proyecto (para confirmar el borrado)
+         * @description Nombre del proyecto, número de ejecuciones y espacio, para pedir la confirmación del borrado.
+         */
         get: operations["project_runs_summary_api_v1_admin_projects__project_id__runs_summary_get"];
         put?: never;
         post?: never;
@@ -150,7 +160,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Listar queries nombradas */
+        /**
+         * Listar queries nombradas
+         * @description Todas las queries nombradas o, con ``db_type``, las de un motor.
+         */
         get: operations["list_queries_api_v1_admin_queries_get"];
         put?: never;
         /**
@@ -174,11 +187,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Borrar query nombrada */
+        /**
+         * Borrar query nombrada
+         * @description Borra la query nombrada.
+         */
         delete: operations["delete_query_api_v1_admin_queries__query_id__delete"];
         options?: never;
         head?: never;
-        /** Editar query nombrada */
+        /**
+         * Editar query nombrada
+         * @description Cambia nombre, descripción o plantilla SQL; un campo que no se envía no cambia.
+         */
         patch: operations["update_query_api_v1_admin_queries__query_id__patch"];
         trace?: never;
     };
@@ -189,7 +208,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ejecuciones de todos los proyectos */
+        /**
+         * Ejecuciones de todos los proyectos
+         * @description Ejecuciones de todos los proyectos, solo metadatos (sin parámetros, mensajes ni artefactos).
+         */
         get: operations["list_runs_api_v1_admin_runs_get"];
         put?: never;
         post?: never;
@@ -226,7 +248,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ajustes de almacenamiento */
+        /**
+         * Ajustes de almacenamiento
+         * @description Cada ajuste con el valor que se aplica y el de su variable ``UBW_*`` (cuota, retención, purga por cuota y
+         *     límites de la carga de ficheros).
+         */
         get: operations["get_storage_api_v1_admin_storage_get"];
         put?: never;
         post?: never;
@@ -288,7 +314,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Espacio por usuario */
+        /**
+         * Espacio por usuario
+         * @description Espacio de ejecuciones y ficheros subidos de cada usuario frente a su cuota.
+         */
         get: operations["storage_usage_api_v1_admin_storage_usage_get"];
         put?: never;
         post?: never;
@@ -554,7 +583,10 @@ export interface paths {
         get: operations["get_schema_api_v1_connections__connection_id__metadata_schemas__schema__get"];
         put?: never;
         post?: never;
-        /** Invalidar la caché del schema */
+        /**
+         * Invalidar la caché del schema
+         * @description Borra el snapshot cacheado del schema; la siguiente lectura vuelve a leer el catálogo.
+         */
         delete: operations["invalidate_schema_api_v1_connections__connection_id__metadata_schemas__schema__delete"];
         options?: never;
         head?: never;
@@ -588,7 +620,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Detalle de una tabla */
+        /**
+         * Detalle de una tabla
+         * @description Columnas, claves, índices y FK salientes y entrantes de una tabla, del snapshot del schema (cacheado o leído).
+         */
         get: operations["get_table_api_v1_connections__connection_id__metadata_schemas__schema__tables__table__get"];
         put?: never;
         post?: never;
@@ -605,7 +640,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Queries nombradas del motor */
+        /**
+         * Queries nombradas del motor
+         * @description Queries nombradas que un admin definió para el motor de la conexión.
+         */
         get: operations["list_queries_api_v1_connections__connection_id__queries_get"];
         put?: never;
         post?: never;
@@ -682,7 +720,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Plantillas globales */
+        /**
+         * Plantillas globales
+         * @description Catálogo global (cualquier usuario).
+         */
         get: operations["list_global_api_v1_document_templates_get"];
         put?: never;
         post?: never;
@@ -720,7 +761,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Descargar una plantilla global */
+        /**
+         * Descargar una plantilla global
+         * @description Fichero de una plantilla global, como adjunto.
+         */
         get: operations["download_global_api_v1_document_templates__template_id__file_get"];
         put?: never;
         post?: never;
@@ -821,7 +865,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ver proyecto */
+        /**
+         * Ver proyecto
+         * @description Proyecto del que eres miembro, con tu rol (``my_role``).
+         */
         get: operations["get_project_api_v1_projects__project_id__get"];
         put?: never;
         post?: never;
@@ -846,7 +893,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Conexiones del proyecto */
+        /**
+         * Conexiones del proyecto
+         * @description Conexiones asociadas con su alias, motor y si son de solo lectura (cualquier miembro; sin secretos).
+         */
         get: operations["list_project_connections_api_v1_projects__project_id__connections_get"];
         put?: never;
         /**
@@ -871,7 +921,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Quitar conexión */
+        /**
+         * Quitar conexión
+         * @description Quita la asociación del alias (editores); la conexión no se borra.
+         */
         delete: operations["remove_project_connection_api_v1_projects__project_id__connections__alias__delete"];
         options?: never;
         head?: never;
@@ -905,7 +958,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Plantillas del proyecto y globales */
+        /**
+         * Plantillas del proyecto y globales
+         * @description Las del proyecto más las globales (cualquier miembro); ``scope`` dice de cuál es cada una.
+         */
         get: operations["list_project_api_v1_projects__project_id__document_templates_get"];
         put?: never;
         /**
@@ -929,11 +985,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Borrar una plantilla del proyecto */
+        /**
+         * Borrar una plantilla del proyecto
+         * @description Editores: borra una plantilla del proyecto, salvo que la use una documentación en cola o en curso.
+         */
         delete: operations["delete_project_template_api_v1_projects__project_id__document_templates__template_id__delete"];
         options?: never;
         head?: never;
-        /** Cambiar una plantilla del proyecto */
+        /**
+         * Cambiar una plantilla del proyecto
+         * @description Editores: cambia el nombre o el estilo de tabla de una plantilla del proyecto (no de las globales).
+         */
         patch: operations["update_project_template_api_v1_projects__project_id__document_templates__template_id__patch"];
         trace?: never;
     };
@@ -944,7 +1006,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Descargar una plantilla del proyecto o global */
+        /**
+         * Descargar una plantilla del proyecto o global
+         * @description Fichero de una plantilla del proyecto o global (cualquier miembro), como adjunto.
+         */
         get: operations["download_project_template_api_v1_projects__project_id__document_templates__template_id__file_get"];
         put?: never;
         post?: never;
@@ -961,7 +1026,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Listar miembros */
+        /**
+         * Listar miembros
+         * @description Miembros del proyecto con su rol (cualquier miembro).
+         */
         get: operations["list_members_api_v1_projects__project_id__members_get"];
         put?: never;
         /**
@@ -992,7 +1060,10 @@ export interface paths {
         delete: operations["remove_member_api_v1_projects__project_id__members__user_id__delete"];
         options?: never;
         head?: never;
-        /** Cambiar rol */
+        /**
+         * Cambiar rol
+         * @description Cambia el rol de un miembro (propietarios); debe quedar al menos un propietario (409).
+         */
         patch: operations["update_member_api_v1_projects__project_id__members__user_id__patch"];
         trace?: never;
     };
@@ -1047,7 +1118,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ficheros del proyecto */
+        /**
+         * Ficheros del proyecto
+         * @description Ficheros subidos al proyecto para la carga bulk (cualquier miembro).
+         */
         get: operations["list_uploads_api_v1_projects__project_id__uploads_get"];
         put?: never;
         /**
@@ -1071,7 +1145,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Borrar un fichero */
+        /**
+         * Borrar un fichero
+         * @description Borra el fichero (editores), salvo que lo use una carga en curso.
+         */
         delete: operations["delete_upload_api_v1_projects__project_id__uploads__upload_id__delete"];
         options?: never;
         head?: never;
@@ -1125,13 +1202,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Ver ejecución */
+        /**
+         * Ver ejecución
+         * @description Detalle con artefactos, tu rol, avisos (por formato), plantillas aplicadas, ``site_url`` y ``has_diff``.
+         */
         get: operations["get_run_api_v1_runs__run_id__get"];
         put?: never;
         post?: never;
         /**
          * Purgar ejecución
-         * @description Borra los ficheros de una ejecución terminada; se conserva su resumen (``manifest``).
+         * @description Borra los ficheros de una ejecución terminada (editores); se conserva su fila con el resumen (``manifest``) y
+         *     pasa a ``purged``.
          */
         delete: operations["purge_run_api_v1_runs__run_id__delete"];
         options?: never;
@@ -1166,7 +1247,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Descargar artefacto */
+        /**
+         * Descargar artefacto
+         * @description Fichero de un artefacto registrado, siempre como adjunto (``Content-Disposition: attachment``, ``nosniff``).
+         */
         get: operations["download_artifact_api_v1_runs__run_id__artifacts__artifact_id__get"];
         put?: never;
         post?: never;
@@ -1185,7 +1269,8 @@ export interface paths {
         };
         /**
          * Vista previa de un artefacto
-         * @description HTML y SVG con CSP ``sandbox`` (para un ``iframe sandbox``); Markdown, SQL, log y ``run.json`` como texto.
+         * @description HTML y SVG con CSP ``sandbox`` (para un ``iframe sandbox``); páginas Markdown, SQL, log y ``run.json`` como
+         *     texto plano (la SPA los pinta).
          */
         get: operations["preview_artifact_api_v1_runs__run_id__artifacts__artifact_id__preview_get"];
         put?: never;
@@ -1247,7 +1332,11 @@ export interface paths {
         put?: never;
         /**
          * Cancelar
-         * @description En cola: se cancela al momento. En curso: el worker termina su subproceso.
+         * @description En cola: se cancela al momento. En curso: se pide la cancelación (``cancel_requested``).
+         *
+         *     Las operaciones con progreso de util_bbdd paran entre unidades de trabajo (el worker termina el subproceso si no
+         *     paran en 60 s); las escrituras en una BD destino (``migrate_apply``, ``dump_apply``, ``bulk_apply``) paran solo
+         *     entre sentencias o lotes y el worker nunca las termina por una cancelación. El resto se termina al momento.
          */
         post: operations["cancel_run_api_v1_runs__run_id__cancel_post"];
         delete?: never;
@@ -1265,7 +1354,8 @@ export interface paths {
         };
         /**
          * Diff de una comparación de esquemas o de los cambios de una documentación
-         * @description Diferencias del destino respecto al origen de una ejecución ``compare`` correcta.
+         * @description Diferencias del destino respecto al origen de una ejecución ``compare`` correcta o, en una documentación
+         *     Markdown comparada con otra anterior, los cambios respecto a ella (``docs/changes.json``).
          */
         get: operations["get_diff_api_v1_runs__run_id__diff_get"];
         put?: never;
@@ -1447,7 +1537,8 @@ export interface paths {
         put?: never;
         /**
          * Relanzar
-         * @description Nueva ejecución con la misma operación y parámetros.
+         * @description Nueva ejecución con la misma operación y parámetros (editores), con las mismas comprobaciones que al lanzarla.
+         *     Las operaciones que no salen en el formulario genérico (``form=false``) no se relanzan.
          */
         post: operations["relaunch_run_api_v1_runs__run_id__relaunch_post"];
         delete?: never;
@@ -1562,7 +1653,8 @@ export interface paths {
         head?: never;
         /**
          * Editar, desactivar o reactivar usuario
-         * @description Cambia nombre, rol, estado o contraseña. Desactivar o restablecer la contraseña cierra sus sesiones.
+         * @description Cambia nombre, rol, estado, permisos (SQL libre, aplicar DDL, escribir datos), cuota o contraseña. Desactivar o
+         *     restablecer la contraseña cierra sus sesiones.
          */
         patch: operations["update_user_api_v1_users__user_id__patch"];
         trace?: never;
@@ -1707,7 +1799,7 @@ export interface components {
         Body_create_global_api_v1_admin_document_templates_post: {
             /**
              * File
-             * @description Plantilla .docx, .dotx, .xlsx o .xltx
+             * @description Plantilla .docx, .dotx, .xlsx o .xltx, o mapa de trazabilidad .toml o .json
              */
             file: string;
             /**
@@ -1720,7 +1812,7 @@ export interface components {
         Body_create_project_template_api_v1_projects__project_id__document_templates_post: {
             /**
              * File
-             * @description Plantilla .docx, .dotx, .xlsx o .xltx
+             * @description Plantilla .docx, .dotx, .xlsx o .xltx, o mapa de trazabilidad .toml o .json
              */
             file: string;
             /**
@@ -3630,7 +3722,7 @@ export interface components {
             warnings?: string[];
             /**
              * Warnings By Format
-             * @description Avisos de la documentación por formato (``word``, ``excel``, ``markdown``), también incluidos en ``warnings``; vacío en ejecuciones anteriores a la 1.12.0
+             * @description Avisos de la documentación por formato (``word``, ``excel``, ``html``, ``markdown``), también en ``warnings``; vacío en ejecuciones anteriores a la 1.12.0
              */
             warnings_by_format?: {
                 [key: string]: string[];
@@ -4473,14 +4565,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No es .docx, .dotx, .xlsx ni .xltx (o tiene macros) */
+            /** @description No es .docx, .dotx, .xlsx, .xltx, .toml ni .json (o tiene macros) */
             415: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Contenido no válido, no seguro o (Word) le faltan estilos */
+            /** @description Contenido no válido o no seguro, (Word) le faltan estilos o mapa de trazabilidad no válido */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4652,7 +4744,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Confirmación incorrecta */
+            /** @description Confirmación incorrecta (no es el nombre exacto del proyecto) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -5975,6 +6067,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Token CSRF ausente o no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Conexión no visible u objeto inexistente */
             404: {
                 headers: {
@@ -6208,6 +6307,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Token CSRF ausente o no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Conexión no visible u objeto inexistente */
             404: {
                 headers: {
@@ -6319,6 +6425,13 @@ export interface operations {
             };
             /** @description No autenticado */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token CSRF ausente o no válido */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6632,6 +6745,13 @@ export interface operations {
             };
             /** @description No autenticado */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token CSRF ausente o no válido */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7176,14 +7296,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No es .docx, .dotx, .xlsx ni .xltx (o tiene macros) */
+            /** @description No es .docx, .dotx, .xlsx, .xltx, .toml ni .json (o tiene macros) */
             415: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Contenido no válido, no seguro o (Word) le faltan estilos */
+            /** @description Contenido no válido o no seguro, (Word) le faltan estilos o mapa de trazabilidad no válido */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7672,7 +7792,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Tu rol no lo permite o CSRF no válido */
+            /** @description Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7686,7 +7806,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Cuota de almacenamiento superada */
+            /** @description Cuota superada, o una escritura en la BD destino no se admite ahora (vista previa o plan con errores, otra escritura en curso sobre el destino, constraints sin restaurar) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7830,7 +7950,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Rol inferior a editor */
+            /** @description Rol inferior a editor o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7907,7 +8027,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Rol inferior a editor */
+            /** @description Rol inferior a editor o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7921,7 +8041,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description En uso */
+            /** @description Lo usa una carga en curso */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8101,7 +8221,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Tu rol no lo permite o CSRF no válido */
+            /** @description Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8115,7 +8235,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No ha terminado */
+            /** @description No ha terminado o es un volcado con constraints sin restaurar */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8161,7 +8281,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No existe o no eres miembro del proyecto */
+            /** @description No existe, no eres miembro, no tiene artefactos o no tiene ese formato */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8256,14 +8376,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Demasiado grande */
+            /** @description Más de 2 MB: hay que descargarlo */
             413: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Sin vista previa */
+            /** @description Sin vista previa (en una carpeta Markdown, solo las páginas ``.md``) */
             415: {
                 headers: {
                     [name: string]: unknown;
@@ -8398,7 +8518,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Tu rol no lo permite o CSRF no válido */
+            /** @description Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8457,7 +8577,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No existe o no eres miembro del proyecto */
+            /** @description No existe, no eres miembro o la ejecución no tiene diff (o se purgó) */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8900,7 +9020,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Tu rol no lo permite o CSRF no válido */
+            /** @description Tu rol o tus permisos (escribir en una BD destino) no lo permiten, o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8914,7 +9034,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Cuota superada */
+            /** @description No se puede relanzar (p. ej. ``migrate_apply``), cuota superada o la escritura en la BD destino no se admite ahora */
             409: {
                 headers: {
                     [name: string]: unknown;

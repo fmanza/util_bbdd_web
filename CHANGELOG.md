@@ -21,6 +21,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   cambios en `sandbox`, CSP ni puente). `architecture.md`: el tema y `public/color-scheme.js`.
 - Guías: tema en el visor de la documentación y en el navegador de artefactos; en *Usuarios y sesiones*, el rol
   `user`, la accesibilidad del selector y la API del tema.
+- Revisión completa de la documentación frente al código de la 1.21.0:
+    - Guías de uso: ventana «Lanzar ejecución» por grupos (1.20.0), **Copiar SQL** en los scripts, rangos y valores
+      por defecto, límites de la carga administrables, auditoría con sus filtros, roles, y textos que seguían
+      diciendo «vigente en 1.0.0» o describían funciones ya implementadas como futuras.
+    - Operación: versiones de ejemplo, tabla de revisiones de Alembic por versión, CSP real, tamaño de la imagen,
+      problemas frecuentes nuevos y evidencias del ASVS revisadas (sin cambios de veredicto).
+    - Técnica: `architecture.md` (util_bbdd 5.9.0, módulos reales, variables del *entrypoint*), `onboarding_dev.md`,
+      índice con la API (OpenAPI), ROADMAP con 1.19.0–1.21.0 y enmiendas en ADR-003, 005, 006, 008 y 011.
+    - API: docstrings en los endpoints que no tenían, códigos 403/404/409/413/415 alineados con el código y 403 CSRF
+      documentado en cuatro rutas que lo omitían; solo cambian descripciones del OpenAPI.
 
 ## [1.21.0] - 2026-11-23
 

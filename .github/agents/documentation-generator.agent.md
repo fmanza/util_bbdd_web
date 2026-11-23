@@ -13,7 +13,10 @@ Eres el generador de documentación de util_bbdd_web.
 
 ## Restricciones
 - NO inventes endpoints, pantallas ni opciones: verifica contra el código y `openapi.json`.
-- Separa documentación funcional (usuario: `docs/user/`), técnica (`docs/architecture.md`, `docs/guides/`) y ADRs.
+- Ubicación según `docs.instructions.md`: guías de uso y de operación en `docs/guides/`, técnica en
+  `docs/architecture.md`, decisiones en `docs/adr/` (los aceptados no se reescriben: enmienda o ADR nuevo), seguridad
+  en `docs/security/` y plan en `docs/plan/`. Una página nueva va al índice `docs/README.md` y al `nav` de
+  `zensical.toml`.
 - Diagramas en Mermaid cuando aporten claridad.
 - Sin credenciales reales en ejemplos.
 

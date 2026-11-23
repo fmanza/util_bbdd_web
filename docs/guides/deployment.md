@@ -11,6 +11,12 @@ docker compose up -d --build
 # Arranca web (API + SPA) y worker (ejecuciones). /api/health informa "worker": "ok" cuando el worker late.
 ```
 
+De `.env` (ejemplo en `.env.example`), el compose pasa a los contenedores `UBW_LOG_LEVEL`, `UBW_ORACLE_CLIENT_DIR`,
+`UBW_FORWARDED_ALLOW_IPS` y tres de rate limiting; `UBW_TAG`, `UBW_PORT` y `WITH_*` son del propio compose y del
+build. El resto de variables `UBW_*` (worker, tiempos, cuotas, límites; lista y valores por defecto en
+[Arquitectura › Configuración](../architecture.md#configuración)) se fija añadiéndola a `environment` del bloque
+`x-app` de `docker-compose.yml`.
+
 ### Primer administrador
 
 No hay credenciales por defecto. Tras el primer arranque, crea el administrador con el CLI (pide la contraseña dos
@@ -216,9 +222,12 @@ por defecto. Para subir CSV de, por ejemplo, 1 GB:
 
 ## Cabeceras y rate limiting
 
-La aplicación pone CSP (`script-src 'self'`), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`,
-COOP/CORP y `Cache-Control: no-store` en `/api`; el proxy no necesita añadirlas (si lo hace, que no las duplique con
-otros valores). Revisión de seguridad: [ASVS L2](../security/ASVS_L2.md).
+La aplicación pone CSP (`script-src 'self'` más el hash `sha256` del puente del visor Markdown, sin
+`'unsafe-inline'`; `frame-ancestors 'none'`), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`,
+COOP/CORP, `Cache-Control: no-store` en `/api` y HSTS en producción con HTTPS; el proxy no necesita añadirlas (si lo
+hace, que no las duplique con otros valores). Una CSP añadida por el proxy se aplica **además** de la de la
+aplicación: si no autoriza ese hash, los enlaces y el botón «Copiar» del visor Markdown dejan de funcionar. Revisión
+de seguridad: [ASVS L2](../security/ASVS_L2.md).
 
 Límites en memoria del proceso `web` (429 con `Retry-After`):
 
@@ -250,10 +259,10 @@ API, cada uno lleva su cuenta.
 
 ## Variantes de imagen
 
-| Variante | Comando | Tamaño (1.0.0) |
+| Variante | Comando | Tamaño |
 |---|---|---|
-| Base | `docker compose build` | ≈ 770 MB |
-| Con HSQLDB (JRE + jaydebeapi) y/o ODBC para SQL Server (msodbcsql18 + `pyodbc`) | `WITH_HSQLDB=true WITH_ODBC=true docker compose build` | ≈ 1,06 GB con las dos |
+| Base | `docker compose build` | ≈ 790 MB (1.21.0) |
+| Con HSQLDB (JRE + jaydebeapi) y/o ODBC para SQL Server (msodbcsql18 + `pyodbc`) | `WITH_HSQLDB=true WITH_ODBC=true docker compose build` | ≈ 1,06 GB con las dos (1.0.0) |
 | Con Oracle thick (`libaio1`; el Instant Client va aparte, [ver arriba](#oracle-en-modo-thick-instant-client)) | `WITH_ORACLE_THICK=true docker compose build` | Sin medir (solo añade `libaio1`) |
 
 Verificado en la 1.0.0 contra el bench: HSQLDB 2.7.4 por JDBC (el JAR del driver va en `UBW_FILES_DIR`, parámetro
@@ -319,7 +328,20 @@ docker compose up -d        # entrypoint aplica alembic upgrade head
 Publicar la versión y desplegarla paso a paso: [Publicar una versión](publicar_version.md).
 
 Antes, haz una copia (`app.cli backup`). Rollback: volver a la imagen anterior y restaurar la copia (o, si solo hubo
-migraciones, `docker compose run --rm web alembic downgrade <rev>` antes de arrancarla).
+migraciones, `docker compose run --rm web alembic downgrade <rev>` con la imagen **nueva**, antes de arrancar la
+anterior).
+
+Última revisión de Alembic de cada versión (la `<rev>` a la que bajar para volver a ella):
+
+| Versiones | Revisión | Qué añade |
+|---|---|---|
+| 1.0.0 | `0008` | Carga bulk (`0008_uploads`) |
+| 1.1.0 – 1.6.0 | `0010` | Plantillas de documento (`0009`) y almacenamiento administrable (`0010`) |
+| 1.7.0 – 1.20.0 | `0011` | Retira `encoding_errors` de las conexiones MariaDB guardadas |
+| 1.21.0 | `0012` | `users.color_scheme` (tema de cada usuario; `auto` en las cuentas existentes) |
+
+El `downgrade` de `0012` usa `ALTER TABLE … DROP COLUMN`, que necesita SQLite 3.35 o posterior; la imagen de la
+1.21.0 trae la 3.40.1. Si cambias la imagen base, comprueba la versión con `docker compose exec web python -c "import sqlite3; print(sqlite3.sqlite_version)"`.
 
 **De 0.x a 1.0.0**: las cookies pasan a llamarse `__Host-ubw_session`/`__Host-ubw_csrf`, así que todos los usuarios
 vuelven a iniciar sesión; las contraseñas nuevas o cambiadas se comprueban contra la lista de contraseñas comunes; el

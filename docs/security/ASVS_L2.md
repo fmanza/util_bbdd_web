@@ -8,6 +8,9 @@
   (`build/logs/fase10_pip_audit.txt`).
 - **Resultado**: sin hallazgos CRITICAL ni HIGH abiertos. Los corregidos en esta fase están marcados **Corregido** y
   tienen test; los riesgos aceptados están al final.
+- **Evidencias revisadas**: 2026-11-23, contra la 1.21.0. Ningún veredicto cambia; se actualizan las evidencias
+  de la CSP (hash del puente del visor Markdown, 1.15.0), las subidas (rechazo por cabeceras, 1.10.1) y las
+  preferencias de la cuenta (`PATCH /api/v1/auth/me/preferences`, 1.21.0), y se añade 8.2.2.
 
 ## V1 Arquitectura
 
@@ -47,7 +50,7 @@
 | Control | Estado | Evidencia |
 |---|---|---|
 | 4.1.x denegar por defecto, en el servidor | Cumple | Dependencias por ruta; roles `owner`/`editor`/`viewer` y permisos especiales |
-| 4.2.1 IDOR | Cumple | Recursos de otro proyecto → 404 (tests por fase: runs, uploads, conexiones) |
+| 4.2.1 IDOR | Cumple | Recursos de otro proyecto → 404 (tests por fase: runs, uploads, conexiones); las preferencias solo de la propia cuenta, sin identificador de usuario (`test_update_preferences_only_changes_own_account`) |
 | 4.3.1 administración | Cumple | `AdminUser`; E2E de usuario sin administración y de miembros con rol |
 | Operaciones destructivas | Cumple | Regla 6 de SHARED: permiso + owner + modo seco + confirmación (ADR-008/009/010) |
 
@@ -56,7 +59,7 @@
 | Control | Estado | Evidencia |
 |---|---|---|
 | 5.1.x validación de entrada | Cumple | Pydantic con `extra="forbid"`, patrones de identificadores y límites |
-| 5.2.x HTML no confiable | Cumple | React escapa; Markdown y HTML generados en iframes `sandbox` con CSP propia (ADR-007) |
+| 5.2.x HTML no confiable | Cumple | React escapa; Markdown y HTML generados en iframes `sandbox` con CSP propia (ADR-007); el visor Markdown limpia el HTML con DOMPurify |
 | 5.2.6 SSRF | Cumple | Allowlist de destinos, bloqueo de metadatos cloud (Fase 2) |
 | 5.3.4 inyección SQL | Cumple | SQLAlchemy con parámetros; SQL libre solo de lectura con `sqlglot` y transacción de solo lectura |
 | 5.3.x rutas de fichero | Cumple | Parámetros de ruta confinados a `UBW_FILES_DIR`; workspace con rutas seguras |
@@ -66,7 +69,7 @@
 | Control | Estado | Evidencia |
 |---|---|---|
 | 7.1.1–7.1.2 sin secretos ni datos sensibles | Cumple | Mensajes de motor saneados (`_engine_message`, `redact_values`); `test_auth.py` comprueba que el token no se registra |
-| 7.1.3 eventos de seguridad | Cumple | `audit_log` (login, bloqueo, permisos, escrituras en destino) |
+| 7.1.3 eventos de seguridad | Cumple | `audit_log` (login, bloqueo, permisos, escrituras en destino); el cambio de tema no se audita por no tener efecto en la seguridad (`test_update_preferences_is_not_audited`) |
 | 7.1.4 formato común con contexto | **Corregido** | JSON con `request_id` y ruta plantilla; `X-Request-ID` en respuestas y *problem details* |
 | 7.4.1 errores genéricos | Cumple | *Problem details* sin trazas; 500 sin detalle |
 
@@ -75,6 +78,7 @@
 | Control | Estado | Evidencia |
 |---|---|---|
 | 8.2.1 caché de respuestas sensibles | **Corregido** | `Cache-Control: no-store` en `/api` salvo descargas con política propia |
+| 8.2.2 almacenamiento del navegador | Cumple | Solo el tema (`ubw-color-scheme` en `localStorage`, `public/color-scheme.js` y `app/colorScheme.ts`); la sesión va en cookie `HttpOnly` |
 | 8.3.x datos en reposo | Cumple | Secretos de conexión con Fernet (ADR-004); copias sin claves (`app.cli backup`) |
 | 8.3.4 datos sensibles en URL | Cumple con nota | Solo el sitio HTML usa URL firmada y temporal (ADR-007) |
 
@@ -96,7 +100,7 @@
 
 | Control | Estado | Evidencia |
 |---|---|---|
-| 12.1.x tamaño y bombas zip | Cumple | `UBW_UPLOAD_MAX_MB`, tamaño descomprimido de `.xlsx` (Fase 9) |
+| 12.1.x tamaño y bombas zip | Cumple | `UBW_UPLOAD_MAX_MB`, tamaño descomprimido de `.xlsx` (Fase 9; administrables, ADR-012); subida sin sesión, sin CSRF, sin `Content-Length` o demasiado grande rechazada solo con las cabeceras, sin escribir en disco (`api/upload_guard.py`, 401/403/411/413) |
 | 12.2.1 tipo real | Cumple | Contenido verificado; macros rechazadas |
 | 12.3.x nombres y rutas | Cumple | Nombre propio (`<ulid>.<ext>`), fuera de la raíz web |
 | 12.5.x | Cumple | Descargas con `nosniff`, CSP `sandbox` y `Content-Disposition` |
@@ -117,7 +121,7 @@
 | 14.1.x build reproducible | Cumple | Imagen multi-stage con versiones fijas; contenedor `read_only`, sin capacidades, usuario sin privilegios |
 | 14.2.1 componentes sin vulnerabilidades conocidas | **Corregido** | opentelemetry-api 1.45.1 (CVE-2026-114603) y Vite 8.3.4; ver riesgos para mariadb |
 | 14.3.2 sin modo depuración ni cabecera `Server` | Cumple | `--no-server-header`, `/api/docs` fuera de producción |
-| 14.4.x cabeceras | **Corregido** | CSP de la SPA (`script-src 'self'`), `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP/CORP, `frame-ancestors 'none'`; la E2E falla ante una violación de CSP |
+| 14.4.x cabeceras | **Corregido** | CSP de la SPA (`script-src 'self'` y el hash del puente del visor Markdown, `MARKDOWN_BRIDGE_SHA256` en `core/middleware.py`; sin `'unsafe-inline'`), `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP/CORP, `frame-ancestors 'none'`; la E2E falla ante una violación de CSP |
 | 14.5.x | Cumple | Sin CORS; `X-Request-ID` validado |
 
 ## Riesgos aceptados
@@ -125,7 +129,7 @@
 | Riesgo | Motivo | Mitigación |
 |---|---|---|
 | Sin MFA propio | Despliegue en red interna; el ROADMAP no lo incluye | Poner delante un proxy con SSO/MFA si se expone fuera de la red interna |
-| `style-src 'unsafe-inline'` | Mantine inyecta `<style>` y atributos `style` | `script-src 'self'` sin excepciones; sin datos de usuario como CSS |
+| `style-src 'unsafe-inline'` | Mantine inyecta `<style>` y atributos `style` | `script-src 'self'` sin `'unsafe-inline'` (solo el hash del puente del visor Markdown); sin datos de usuario como CSS |
 | Rate limiting en memoria por proceso | `web` es un solo proceso uvicorn | Con varios procesos se multiplica el límite (documentado); el bloqueo por cuenta está en la BD |
 | `mariadb` 1.1.14 (PYSEC-2026-217) | Aviso del C API con `big5` y escape manual; no hay versión corregida | La web no escapa a mano (parámetros enlazados) y usa `utf8mb4` |
 | Contenido de negocio en artefactos | Es el propósito de la aplicación (SQL generado, rechazos, ficheros subidos) | Visibles solo para los miembros del proyecto; retención configurable |

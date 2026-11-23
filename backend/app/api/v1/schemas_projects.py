@@ -174,7 +174,7 @@ class RunDetailOut(RunOut):
     )
     warnings_by_format: dict[str, list[str]] = Field(
         default_factory=dict,
-        description="Avisos de la documentación por formato (``word``, ``excel``, ``markdown``), también incluidos en "
+        description="Avisos de la documentación por formato (``word``, ``excel``, ``html``, ``markdown``), también en "
         "``warnings``; vacío en ejecuciones anteriores a la 1.12.0",
     )
     templates_applied: dict[str, bool] = Field(

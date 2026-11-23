@@ -36,3 +36,10 @@ cerrar la sesión de otro).
 - Cambiar la contraseña cierra las demás sesiones del usuario; desactivar o restablecer la contraseña cierra todas.
 - Debe quedar siempre un admin activo (`409`); un admin no puede desactivarse ni quitarse el rol.
 - Pendiente para la Fase 10: prefijo `__Host-` en las cookies y *rate limiting* por IP del login.
+
+## Enmienda 2026-10-23 (1.0.0): prefijo `__Host-` y rate limiting del login
+
+Lo «pendiente para la Fase 10» está hecho. Con `Secure` (todo entorno salvo `development`) las cookies son
+`__Host-ubw_session` y `__Host-ubw_csrf` (ASVS 3.4.4); en `development`, sin prefijo. El login limita por IP los
+intentos por minuto y los fallidos en 15 minutos (`UBW_RATE_LIMIT_LOGIN_PER_MINUTE`, `UBW_RATE_LIMIT_LOGIN_FAILURES`;
+429 con `Retry-After`), además del bloqueo por cuenta.

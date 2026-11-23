@@ -87,3 +87,9 @@ no es atómico» y escribir el alias.
   `migrate_apply` por una cancelación (`CANCEL_BETWEEN_STEPS_ONLY`), así que no se corta una sentencia a medias; el
   `job_timeout` sí, como antes. El modo seco comprueba la cancelación al terminar. El volcado y la carga siguen sin
   cancelarse en curso (ADR-009).
+
+## Enmienda (2026-10-23): una sola escritura por destino (0.9.0)
+
+Desde el volcado (Fase 8), la condición «ninguna otra `migrate_apply` activa sobre el mismo destino» se amplía a
+cualquier escritura: migración, volcado, carga o restauración de constraints (`domain/runs/targets.py`,
+`WRITE_OPERATIONS`). Con otra escritura en cola o en curso sobre el mismo alias en el proyecto, lanzar responde 409.

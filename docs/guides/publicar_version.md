@@ -37,9 +37,9 @@ Variables que usan los pasos (cámbialas en cada versión):
 
 ```bash
 cd /c/Desarrollo/<ruta>/util_bbdd_web
-OLD=1.5.0      # versión publicada anterior
-NEW=1.6.0      # versión que se publica (SemVer: MAJOR si exige intervención al actualizar o rompe la API)
-UBB=4.6.0      # versión de util_bbdd que se fija (solo para el paso 3)
+OLD=1.21.0     # versión publicada anterior
+NEW=1.22.0     # versión que se publica (SemVer: MAJOR si exige intervención al actualizar o rompe la API)
+UBB=5.9.0      # versión de util_bbdd que se fija (solo para el paso 3)
 git switch develop
 git pull --ff-only origin develop
 git status                                   # «nothing to commit, working tree clean»
@@ -193,7 +193,7 @@ Lee antes el CHANGELOG de la versión: puede pedir pasos extra (variables nuevas
 
 ```bash
 cd /opt/util_bbdd_web
-NEW=1.6.0
+NEW=1.22.0
 PREV=$(git describe --tags --exact-match 2>/dev/null)     # versión desplegada ahora (para volver atrás)
 echo "Desplegada: ${PREV}"
 
@@ -221,7 +221,7 @@ recargar sin caché (Ctrl+F5).
 | Situación | Qué hacer |
 |---|---|
 | La versión nueva falla y **no** tenía migraciones de Alembic | `git checkout "${PREV}"`, `UBW_TAG` a la versión anterior en `.env` y `docker compose up -d --build` |
-| Tenía migraciones | Antes de arrancar la imagen anterior: `docker compose run --rm web alembic downgrade <rev>` con la revisión de la versión anterior; o restaura la copia ([Despliegue › Copias de seguridad](deployment.md#copias-de-seguridad)) |
+| Tenía migraciones | Con la imagen nueva, antes de arrancar la anterior: `docker compose run --rm web alembic downgrade <rev>` con la revisión de la versión anterior ([tabla de revisiones](deployment.md#actualizar)); o restaura la copia ([Despliegue › Copias de seguridad](deployment.md#copias-de-seguridad)) |
 | El tag apunta a un commit equivocado y **no se ha desplegado** | `git push origin :refs/tags/vX.Y.Z`, `git tag -d vX.Y.Z` (y `gh release delete vX.Y.Z` si se creó) y vuelve al paso 6 |
 | Ya se desplegó | No se reutiliza una versión: corrige en `develop` y publica `X.Y.Z+1` |
 

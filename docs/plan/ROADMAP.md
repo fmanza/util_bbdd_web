@@ -212,6 +212,22 @@ El mapa de trazabilidad se valida al subirlo con `validate_trace_map` (G49); uti
 el tipo en los diagramas Mermaid y elige el driver ODBC de SQL Server más reciente (1.18.0; sesión
 `.ai/sessions/2026-11-13-util-bbdd-5-8/`).
 
+## Después de la 1.0: filtro de tablas en la migración DDL y el volcado ✅
+
+util_bbdd 5.9.0: filtro de tablas («Incluir», «Excluir», «Probar patrones») en el plan de migración DDL y en la vista
+previa del volcado (1.19.0; sesión `.ai/sessions/2026-11-16-filtro-tablas/`; G56/G57).
+
+## Después de la 1.0: ventana «Lanzar ejecución» y menú lateral agrupado ✅
+
+Ventana «Lanzar ejecución» ancha con tarjetas por operación y lista agrupada por intención, y menú lateral agrupado
+con iconos (1.20.0; sesión `.ai/sessions/2026-11-17-lanzar-menu/`).
+
+## Después de la 1.0: tema claro, oscuro o del sistema ✅
+
+Tema guardado en la cuenta (`Me.color_scheme`, `PATCH /api/v1/auth/me/preferences`, migración 0012 sin recrear
+`users`), sin destello al cargar, con el visor Markdown, las vistas previas y los diagramas Mermaid en el tema
+(1.21.0; sesión `.ai/sessions/2026-11-23-tema-color/`; enmienda de ADR-007).
+
 ## Mejoras opcionales (fuera de fase, decidir al planificar)
 
 - Sitio de la documentación Markdown construido con `zensical build` en el job y servido por URL firmada, como el HTML
@@ -222,4 +238,3 @@ el tipo en los diagramas Mermaid y elige el driver ODBC de SQL Server más recie
 - Tokens de API personales para lanzar ejecuciones desde CI.
 - Notificaciones al terminar una ejecución larga.
 - Migración de `config.db` a PostgreSQL si crece la concurrencia (solo URL de SQLAlchemy + Alembic).
-- Tema oscuro dentro del iframe del visor Markdown (hoy siempre claro: no ve las variables de Mantine).

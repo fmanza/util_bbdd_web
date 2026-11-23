@@ -1,7 +1,7 @@
 # Guía de usuario
 
-Visión de conjunto de util_bbdd_web 1.0.0: qué se puede hacer, quién puede hacerlo y en qué orden. Cada apartado
-enlaza con su guía detallada.
+Visión de conjunto de util_bbdd_web (vigente en 1.21.0): qué se puede hacer, quién puede hacerlo y en qué orden.
+Cada apartado enlaza con su guía detallada.
 
 ## 1. Para qué sirve
 
@@ -11,7 +11,7 @@ Oracle, PostgreSQL, SQLite, SQL Server y HSQLDB:
 | Quieres… | Operación | Guía |
 |---|---|---|
 | Ver tablas, columnas, índices y DDL; consultar | Explorador, queries nombradas y SQL de solo lectura | [Explorador y SQL](explorador.md) |
-| Documentar una base de datos (Word, Excel, HTML) | Documentación de la base de datos | [Documentación y grafos](documentacion.md) |
+| Documentar una base de datos (Word, Excel, HTML, Markdown) | Documentación de la base de datos | [Documentación y grafos](documentacion.md) |
 | Dibujar las relaciones entre tablas | Grafo de relaciones | [Documentación y grafos](documentacion.md) |
 | Saber qué cambió entre dos esquemas | Comparación de esquemas | [Comparación](comparacion.md) |
 | Llevar la estructura a otro motor | Plan de migración DDL (y aplicarlo) | [Migración DDL](migracion.md) |
@@ -37,15 +37,16 @@ artefactos o en un ZIP.
 **Rol en la aplicación**:
 
 - `user`: trabaja en sus proyectos.
-- `admin`: además gestiona usuarios, sesiones, destinos permitidos, queries nombradas y auditoría.
+- `admin`: además gestiona usuarios, sesiones, destinos permitidos, auditoría, plantillas globales, queries
+  nombradas, almacenamiento y las ejecuciones de todos los proyectos.
 
 **Rol en cada proyecto**:
 
 | Puede… | Lector | Editor | Propietario |
 |---|:-:|:-:|:-:|
 | Ver el proyecto, su historial y descargar artefactos | ✓ | ✓ | ✓ |
-| Lanzar, cancelar y relanzar ejecuciones; pestañas *SQL* y *Carga* | | ✓ | ✓ |
-| Asociar conexiones | | ✓ | ✓ |
+| Lanzar, cancelar, relanzar y purgar ejecuciones; pestañas *SQL* y *Carga* | | ✓ | ✓ |
+| Asociar conexiones y subir plantillas | | ✓ | ✓ |
 | Gestionar miembros, ajustes y borrar el proyecto | | | ✓ |
 | Escribir en una BD destino (aplicar migración, volcar, cargar) | | | ✓ + permiso especial |
 
@@ -61,24 +62,25 @@ Ninguna operación escribe en una conexión marcada como «Solo lectura».
 
 ## 4. Primeros pasos
 
-1. **Inicia sesión** con la cuenta que te dio el administrador y cámbiala en el menú con tu nombre → *Cambiar
-   contraseña*. Requisitos: al menos 12 caracteres, que no sea una contraseña común ni tu nombre de usuario
-   ([Usuarios y sesiones](usuarios_y_sesiones.md)).
-2. **Crea una conexión** en *Conexiones → Nueva conexión*: elige el motor y rellena sus parámetros. Pulsa
-   **Probar conexión** para comprobarla. Si el destino no está en la lista de *Destinos permitidos*, pídeselo a un
-   administrador ([Motores y conexiones](conexiones.md)).
-3. **Explora** la conexión (*Conexiones → Explorar*) para ver schemas, tablas y su DDL.
-
 El **menú de la izquierda** agrupa las secciones por uso: *Inicio*; *Trabajo* (Proyectos y Ejecuciones); *Datos*
 (Conexiones y Motores) y *Mi cuenta* (Mi espacio). Los administradores ven además *Administración*, plegable. En el
 móvil, el menú se abre con el botón de la cabecera y se cierra al elegir una sección. En el menú con tu nombre
 eliges el **tema** (claro, oscuro o el del sistema), que se guarda en tu cuenta.
+
+1. **Inicia sesión** con la cuenta que te dio el administrador y cambia la contraseña en el menú con tu nombre →
+   *Cambiar contraseña*. Requisitos: al menos 12 caracteres, que no sea una contraseña común ni tu nombre de usuario
+   ([Usuarios y sesiones](usuarios_y_sesiones.md)).
+2. **Crea una conexión** en *Conexiones → Nueva conexión*: elige el motor y rellena sus parámetros. Pulsa
+   **Probar conexión** para comprobarla. Si el destino no está en la lista de *Destinos permitidos*, pídeselo a un
+   administrador ([Motores y conexiones](conexiones.md)).
+3. **Explora** la conexión (en su detalle, **Explorar**) para ver schemas, tablas y su DDL.
 4. **Crea un proyecto** en *Proyectos → Nuevo proyecto*. En su pestaña *Conexiones*, asocia las conexiones con un
    alias (`origen`, `destino`…) y, en *Miembros*, añade compañeros con su rol.
-5. **Lanza una ejecución** en *Ejecuciones → Lanzar ejecución*. Elige la operación, rellena el formulario y sigue
-   el progreso en el detalle ([Proyectos y ejecuciones](proyectos_y_ejecuciones.md)).
+5. **Lanza una ejecución** desde el proyecto: pestaña *Ejecuciones* → **Lanzar ejecución**. Elige la operación en
+   la lista de la izquierda, rellena el formulario y sigue el progreso en el detalle
+   ([Proyectos y ejecuciones](proyectos_y_ejecuciones.md)).
 6. **Revisa los resultados** en el detalle de la ejecución. Según la operación, hay un visor (diff, plan de
-   migración, vista previa de volcado o carga, sitio HTML) y los artefactos para descargar.
+   migración, vista previa de volcado o carga, sitio HTML, documentación Markdown) y los artefactos para descargar.
 
 ## 5. Escribir en una base de datos
 
@@ -113,10 +115,13 @@ cancela, y solo puede haber una a la vez por destino.
         - **Destinos permitidos**: hosts y redes a los que se puede conectar.
         - **Auditoría**: inicios de sesión, cambios y escrituras.
     - *Contenido compartido*:
-        - **Plantillas**: plantillas Word y Excel globales de la documentación ([Documentación](documentacion.md#plantillas-word-y-excel)).
+        - **Plantillas**: plantillas Word y Excel y mapas de trazabilidad globales de la documentación
+          ([Documentación](documentacion.md#plantillas-word-y-excel)).
         - **Queries nombradas**: consultas reutilizables del explorador.
     - *Operación*:
-        - **Todas las ejecuciones**: eliminar ejecuciones de cualquier proyecto, una o todas las de un proyecto ([Usuarios y sesiones](usuarios_y_sesiones.md#ejecuciones-de-todos-los-proyectos)).
-        - **Almacenamiento**: cuota, retención y purga por cuota sin reiniciar ([Usuarios y sesiones](usuarios_y_sesiones.md#almacenamiento)).
+        - **Todas las ejecuciones**: eliminar ejecuciones de cualquier proyecto, una o todas las de un proyecto
+          ([Usuarios y sesiones](usuarios_y_sesiones.md#ejecuciones-de-todos-los-proyectos)).
+        - **Almacenamiento**: cuota, retención, purga por cuota y límites de la carga, sin reiniciar
+          ([Usuarios y sesiones](usuarios_y_sesiones.md#almacenamiento)).
 
     Detalle en [Usuarios y sesiones](usuarios_y_sesiones.md) y [Explorador y SQL](explorador.md).

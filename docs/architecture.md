@@ -36,29 +36,30 @@ flowchart TB
     jobs[jobs/ worker] --> domain
     jobs --> integ
     jobs --> ws[workspace/]
-    integ --> lib[(util_bbdd 4.3.0)]
+    integ --> lib[(util_bbdd 5.9.0)]
 ```
 
 | Paquete | Responsabilidad | Fase |
 |---|---|---|
 | `core/` | Ajustes `UBW_*` y Docker secrets, logging JSON con `request_id`, errores RFC 9457, tokens de sesión y CSRF, middleware HTTP (cabeceras, rate limiting, métricas) | 0 → 10 |
 | `db/` | Engine SQLite con PRAGMA, base declarativa, modelos (`users`, `sessions`, `audit_log`…), Alembic, copia y restauración (`backup.py`) | 0 → 10 |
-| `api/` | `/api/health`, `/metrics` (Prometheus); `api/v1/` con los routers de negocio | 0 → 10 |
-| `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py`, `isolated.py` (subproceso con timeout), `probe.py`, `metadata.py` (schemas, snapshot, DDL), `sql.py` (guardián `sqlglot`, solo lectura, queries nombradas), `audit_sink.py` | 0 → 4 |
-| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/`, `explorer/` (caché de metadatos, queries nombradas, SQL libre) `uploads/` (ficheros de carga validados), `templates/` (plantillas de documento, ADR-011) y `storage/` (ajustes administrables, purga por cuota, ADR-012) | 1 → 9 |
+| `api/` | `/api/health`, `/metrics` (Prometheus), `upload_guard.py` (rechaza una subida solo con sus cabeceras: sesión, CSRF y `Content-Length`); `api/v1/` con los routers de negocio | 0 → 10 |
+| `integrations/util_bbdd/` | Único importador de util_bbdd: `catalog.py`, `isolated.py` (subproceso con timeout), `probe.py`, `metadata.py` (schemas, snapshot, DDL), `sql.py` (guardián `sqlglot`, solo lectura, queries nombradas), `audit_sink.py`, `progress.py` (progreso y cancelación cooperativa), una por operación (`documentation.py`, `compare.py`, `migrate.py`, `dump.py`, `bulk.py`), `table_filter.py` (filtro de tablas por patrones) y `excel_template.py` | 0 → 9 |
+| `domain/` | `identity/`, `engines/`, `connections/`, `projects/`, `runs/` (cola, reglas de escritura en una BD destino, vistas previas y resultados, borrado por un admin, índice Markdown), `explorer/` (caché de metadatos, queries nombradas, SQL libre), `uploads/` (ficheros de carga validados), `templates/` (plantillas de documento y mapas de trazabilidad, ADR-011), `storage/` (ajustes administrables, purga por cuota, ADR-012) y `sorting.py` (orden de las listas por lista blanca) | 1 → 9 |
 | `cli.py` | `create-admin`, `rotate-secrets` (rotación Fernet), `backup`, `verify-backup` y `restore` | 1 → 10 |
-| `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y operaciones (`noop`) | 0 → 3 |
-| `workspace/` | Carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
+| `jobs/` | Worker (`worker.py`), cola sobre `runs` (`queue.py`), subproceso por job (`runner.py`), contexto y `operations/` (`documentation`, `compare`, `migrate`, `dump`, `bulk` y `noop`) | 3 → 9 |
+| `workspace/` | `layout.py`: carpetas por ejecución, rutas seguras, `run.json`, artefactos, ZIP en *streaming* | 3 |
 
 ## Frontend
 
 ```text
 src/
-  app/        # App, Providers (Mantine + TanStack Query), router, Layout, 404, colorScheme (tema)
+  app/        # App, Providers (Mantine + TanStack Query), router, Layout, menú lateral (navigation.ts), 404, tema
   api/        # client.ts (openapi-fetch) + schema.d.ts (generado)
-  features/   # una carpeta por funcionalidad (health, auth, connections, projects, runs…)
+  features/   # una carpeta por funcionalidad: health, auth, engines, connections, explorer, projects, runs (con
+              # documentation/, compare/, migrate/, dump/, bulk/, launch/), bulk, templates, storage, admin
   i18n/       # es/core.json (inicial) y es/features.json (con la primera ruta lazy)
-  components/ # UI compartida (ErrorAlert, NoPermission, formato de fechas)
+  components/ # UI compartida (DataTable, ResultTable, ErrorAlert, NoPermission, estado de listas, formato de fechas)
   test/       # setup de Vitest, render y stub de la API por ruta
 public/
   color-scheme.js  # script clásico del <head>: pinta el primer fotograma con el último tema (sin destello)
@@ -74,11 +75,11 @@ el tema efectivo ([ADR-007](adr/ADR-007-sitio-html-aislado.md)).
 
 | Variable | Por defecto (imagen) | Uso |
 |---|---|---|
-| `UBW_ENVIRONMENT` | `production` | `development` habilita `/api/docs` y `/api/openapi.json` y quita el prefijo `__Host-` de las cookies (HTTP local) |
+| `UBW_ENVIRONMENT` | `production` | `development`, `test` o `production`; `development` habilita `/api/docs` y `/api/openapi.json` y quita el prefijo `__Host-` de las cookies (HTTP local) |
 | `UBW_DATA_DIR` | `/data` | `config.db` |
 | `UBW_WORKSPACE_DIR` | `/workspace` | Salidas por ejecución |
 | `UBW_STATIC_DIR` | `/app/static` | Build del frontend |
-| `UBW_MERMAID_JS` | `/app/vendor/mermaid.min.js` | Mermaid que se incrusta en el informe HTML de comparación; sin él, o si no existe, los diagramas se ven como texto |
+| `UBW_MERMAID_JS` | `/app/vendor/mermaid.min.js` | Mermaid que se incrusta en el informe HTML de comparación (sin él, los diagramas se ven como texto) y que se añade al ZIP de una documentación Markdown (sin él, el ZIP avisa con `X-UBW-Warning`) |
 | `UBW_LOG_LEVEL` | `INFO` | Nivel de log |
 | `UBW_SESSION_IDLE_MINUTES` | `60` | Caducidad de la sesión por inactividad |
 | `UBW_SESSION_ABSOLUTE_HOURS` | `12` | Caducidad absoluta de la sesión |
@@ -87,6 +88,8 @@ el tema efectivo ([ADR-007](adr/ADR-007-sitio-html-aislado.md)).
 | `UBW_PASSWORD_MIN_LENGTH` | `12` | Longitud mínima de contraseña (máximo fijo: 128) |
 | Secret `ubw_app_secret_key` | — | Firma del token CSRF; **obligatorio** en producción (sin él la API no arranca) |
 | `UBW_FILES_DIR` | `/data/files` | Única carpeta a la que pueden apuntar los parámetros de ruta (SQLite, JAR, certificados) |
+| `UBW_ORACLE_CLIENT_DIR` | vacía | Carpeta del Instant Client de Oracle relativa a `UBW_FILES_DIR`; el *entrypoint* la pone en `LD_LIBRARY_PATH` (modo thick, imagen `WITH_ORACLE_THICK`) |
+| `TMPDIR` | `/workspace/.tmp` | Lo fija el *entrypoint*: las subidas se reciben en el volumen workspace, no en el `/tmp` del contenedor |
 | `UBW_CONNECTION_TEST_TIMEOUT` | `15` | Segundos máximos de una prueba o readiness (se mata el subproceso) |
 | `UBW_WORKER_CONCURRENCY` | `2` | Jobs simultáneos del worker |
 | `UBW_WORKER_POLL_SECONDS` | `1` | Sondeo de la cola y latido |

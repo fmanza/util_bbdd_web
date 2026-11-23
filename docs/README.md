@@ -1,4 +1,4 @@
-# Documentación de util_bbdd_web 1.0.0
+# Documentación de util_bbdd_web
 
 Se lee en GitHub o como sitio web con [Zensical](https://zensical.org): desde la raíz del repositorio,
 `uv run --frozen --project backend --only-group docs zensical serve` (<http://127.0.0.1:8000>) o `… build` (genera
@@ -17,11 +17,11 @@ Se lee en GitHub o como sitio web con [Zensical](https://zensical.org): desde la
 | Guía | Contenido |
 |---|---|
 | [Guía de usuario](guides/guia_usuario.md) | Qué se puede hacer, roles y permisos, primeros pasos, escritura en dos pasos |
-| [Usuarios, sesiones y auditoría](guides/usuarios_y_sesiones.md) | Inicio de sesión, contraseñas, administración de usuarios, sesiones y auditoría |
+| [Usuarios, sesiones y auditoría](guides/usuarios_y_sesiones.md) | Inicio de sesión, contraseñas, tema claro u oscuro, administración de usuarios, sesiones y auditoría |
 | [Motores y conexiones](guides/conexiones.md) | Catálogo de motores, conexiones personales y compartidas, prueba y readiness |
 | [Proyectos y ejecuciones](guides/proyectos_y_ejecuciones.md) | Proyectos, miembros, lanzar y seguir ejecuciones, artefactos, retención |
 | [Explorador y SQL](guides/explorador.md) | Metadatos, DDL, queries nombradas, SQL de solo lectura |
-| [Documentación y grafos](guides/documentacion.md) | Documentación Word/Excel/HTML y grafos de relaciones |
+| [Documentación y grafos](guides/documentacion.md) | Documentación Word/Excel/HTML/Markdown, filtro de tablas, plantillas, mapas de trazabilidad y grafos de relaciones |
 | [Comparación de esquemas](guides/comparacion.md) | Diff de esquemas, visor y evolución |
 | [Migración DDL](guides/migracion.md) | Plan de migración entre motores, modo seco y aplicación |
 | [Volcado de datos](guides/volcado.md) | Copia de filas entre conexiones con vista previa |
@@ -37,6 +37,7 @@ Se lee en GitHub o como sitio web con [Zensical](https://zensical.org): desde la
 | [Solución de problemas](guides/troubleshooting.md) | Errores frecuentes y su causa |
 | [Seguridad (ASVS L2)](security/ASVS_L2.md) | Revisión OWASP ASVS nivel 2 y riesgos aceptados |
 | [Arquitectura](architecture.md) | Componentes, capas, configuración (`UBW_*`) |
+| [API HTTP (OpenAPI)](https://github.com/fmanza/util_bbdd_web/blob/develop/openapi/openapi.json) | Contrato generado desde el código; fuera de producción, también en `/api/docs` |
 | [Guía de desarrolladores](guides/onboarding_dev.md) | Flujo de trabajo, contrato API, pruebas y E2E |
 | [ADR](adr/) | Decisiones de arquitectura (ADR-001 a ADR-012) |
 | [ROADMAP](plan/ROADMAP.md), [huecos de util_bbdd](plan/UTIL_BBDD_GAPS.md) y [su plan](plan/UTIL_BBDD_GAPS_PLAN.md) | Plan por fases, limitaciones de la librería y plan para resolverlas |

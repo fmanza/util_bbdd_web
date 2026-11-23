@@ -23,6 +23,7 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
 def list_queries(
     _: AdminUser, db: DbSession, db_type: Annotated[str | None, Query(max_length=32)] = None
 ) -> list[NamedQueryOut]:
+    """Todas las queries nombradas o, con ``db_type``, las de un motor."""
     return [named_query_out(q) for q in sql.list_named_queries(db, db_type=db_type)]
 
 
@@ -51,6 +52,7 @@ def create_query(body: NamedQueryCreate, admin: AdminUser, db: DbSession, ctx: C
                422: {"description": "Plantilla no válida"}},
 )  # fmt: skip
 def update_query(query_id: int, body: NamedQueryUpdate, admin: AdminUser, db: DbSession, ctx: Context) -> NamedQueryOut:
+    """Cambia nombre, descripción o plantilla SQL; un campo que no se envía no cambia."""
     query = sql.get_named_query(db, query_id)
     updated = sql.update_named_query(
         db, admin, query, name=body.name, description=body.description, sql_template=body.sql_template, ctx=ctx
@@ -63,4 +65,5 @@ def update_query(query_id: int, body: NamedQueryUpdate, admin: AdminUser, db: Db
     responses={**_ERRORS, 404: {"description": "No existe"}},
 )  # fmt: skip
 def delete_query(query_id: int, admin: AdminUser, db: DbSession, ctx: Context) -> None:
+    """Borra la query nombrada."""
     sql.delete_named_query(db, admin, sql.get_named_query(db, query_id), ctx=ctx)
