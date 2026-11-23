@@ -3999,9 +3999,10 @@
       },
       "PreferencesUpdate": {
         "additionalProperties": false,
-        "description": "Preferencias de la propia cuenta.",
+        "description": "Preferencias de la propia cuenta; un campo desconocido da 422.",
         "properties": {
           "color_scheme": {
+            "description": "Tema de la interfaz: claro, oscuro o el del sistema (``auto``)",
             "enum": [
               "light",
               "dark",
@@ -7934,7 +7935,7 @@
     },
     "/api/v1/auth/me/preferences": {
       "patch": {
-        "description": "Guarda las preferencias del usuario de la sesión (el tema de la interfaz). Solo actúa sobre la propia cuenta.",
+        "description": "Guarda las preferencias del usuario de la sesión y devuelve el usuario actualizado.\n\nHoy solo el tema de la interfaz (``color_scheme``: ``light``, ``dark`` o ``auto``). Solo actúa sobre la propia\ncuenta (no admite identificador de usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera\n``X-CSRF-Token``.",
         "operationId": "update_my_preferences_api_v1_auth_me_preferences_patch",
         "requestBody": {
           "content": {

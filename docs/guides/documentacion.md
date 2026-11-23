@@ -197,6 +197,9 @@ diagramas sin Internet: el `zensical.toml` lo carga y desactiva las fuentes exte
 - **DDL** (desde la 1.17.0): los bloques de DDL de tablas, vistas y rutinas (*DDL de tablas*, *DDL de vistas*) se
   muestran con **resaltado SQL**, y cada bloque de código tiene un botón **Copiar** encima que copia su texto (sin
   colores) y cambia a «Copiado». Si el navegador no deja copiar, avisa: selecciona el texto y cópialo a mano.
+- **Tema** (desde la 1.21.0): las páginas y sus diagramas Mermaid siguen el tema claro u oscuro elegido en el menú
+  con tu nombre ([Tema claro u oscuro](usuarios_y_sesiones.md#tema-claro-u-oscuro)); al cambiarlo, la página abierta
+  se vuelve a dibujar. El sitio HTML conserva su propio aspecto.
 - Seguridad: cada página se muestra en un iframe con origen opaco, sin red y con el HTML limpiado (ADR-007, enmiendas
   de la 1.12.0 y la 1.17.0).
 

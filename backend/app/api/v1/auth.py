@@ -1,4 +1,5 @@
-"""``/api/v1/auth``: inicio y cierre de sesión, usuario actual, «Mi espacio» (ADR-012) y cambio de contraseña (ADR-003)."""
+"""``/api/v1/auth``: inicio y cierre de sesión, usuario actual, preferencias (tema), «Mi espacio» (ADR-012) y cambio de
+contraseña (ADR-003)."""
 
 from __future__ import annotations
 
@@ -105,7 +106,12 @@ def me(session: CurrentSession) -> Me:
     responses={**_401, **_403, 422: {"description": "Valor no válido o campo desconocido"}},
 )
 def update_my_preferences(body: PreferencesUpdate, session: CurrentSession, db: DbSession) -> Me:
-    """Guarda las preferencias del usuario de la sesión (el tema de la interfaz). Solo actúa sobre la propia cuenta."""
+    """Guarda las preferencias del usuario de la sesión y devuelve el usuario actualizado.
+
+    Hoy solo el tema de la interfaz (``color_scheme``: ``light``, ``dark`` o ``auto``). Solo actúa sobre la propia
+    cuenta (no admite identificador de usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera
+    ``X-CSRF-Token``.
+    """
     return Me.model_validate(users.update_preferences(db, session.user, color_scheme=body.color_scheme))
 
 

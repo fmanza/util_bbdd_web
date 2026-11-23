@@ -418,7 +418,11 @@ export interface paths {
         head?: never;
         /**
          * Guardar mis preferencias
-         * @description Guarda las preferencias del usuario de la sesión (el tema de la interfaz). Solo actúa sobre la propia cuenta.
+         * @description Guarda las preferencias del usuario de la sesión y devuelve el usuario actualizado.
+         *
+         *     Hoy solo el tema de la interfaz (``color_scheme``: ``light``, ``dark`` o ``auto``). Solo actúa sobre la propia
+         *     cuenta (no admite identificador de usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera
+         *     ``X-CSRF-Token``.
          */
         patch: operations["update_my_preferences_api_v1_auth_me_preferences_patch"];
         trace?: never;
@@ -3280,11 +3284,12 @@ export interface components {
         };
         /**
          * PreferencesUpdate
-         * @description Preferencias de la propia cuenta.
+         * @description Preferencias de la propia cuenta; un campo desconocido da 422.
          */
         PreferencesUpdate: {
             /**
              * Color Scheme
+             * @description Tema de la interfaz: claro, oscuro o el del sistema (``auto``)
              * @enum {string}
              */
             color_scheme: "light" | "dark" | "auto";

@@ -85,6 +85,11 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   - m6: `useId` para el rótulo y el aviso del grupo *Tema*.
   - Frontend: format, lint, typecheck y build en verde; `auth.test.tsx` + `markdownPreview.test.tsx` 17 passed.
     Suite (`--maxWorkers=4`) 247/248: el fallo es el tiempo agotado conocido de `runs.test.tsx`, que aislado da 8/8.
+  - Commit `29f35b6`; CI de `develop` en verde (backend, frontend, docs, image).
+- Revisión de la documentación (API y web): descripciones del PATCH y de `PreferencesUpdate` en el OpenAPI
+  (`export_openapi` + `gen:api`; solo cambian descripciones), enmienda 1.21.0 de ADR-007, `architecture.md` (tema y
+  `public/color-scheme.js`), `documentacion.md`, `proyectos_y_ejecuciones.md` y `usuarios_y_sesiones.md`.
+  `export_openapi --check`, `test_auth.py` (30 passed), typecheck, format y `zensical build --strict` en verde.
 
 ## Directrices para Futuras IAs
 - **[migraciones]**: en SQLite, `batch_alter_table` que recrea una tabla referenciada (`users`) borra en cascada sus

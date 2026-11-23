@@ -54,13 +54,21 @@ flowchart TB
 
 ```text
 src/
-  app/        # App, Providers (Mantine + TanStack Query), router, Layout, 404
+  app/        # App, Providers (Mantine + TanStack Query), router, Layout, 404, colorScheme (tema)
   api/        # client.ts (openapi-fetch) + schema.d.ts (generado)
   features/   # una carpeta por funcionalidad (health, auth, connections, projects, runs…)
   i18n/       # es/core.json (inicial) y es/features.json (con la primera ruta lazy)
   components/ # UI compartida (ErrorAlert, NoPermission, formato de fechas)
   test/       # setup de Vitest, render y stub de la API por ruta
+public/
+  color-scheme.js  # script clásico del <head>: pinta el primer fotograma con el último tema (sin destello)
 ```
+
+**Tema** (1.21.0): `Me.color_scheme` (`light`, `dark` o `auto`) se guarda en la cuenta con
+`PATCH /api/v1/auth/me/preferences`. La SPA lo aplica con el gestor de Mantine sobre `localStorage['ubw-color-scheme']`,
+que solo es la copia que lee `color-scheme.js` antes de que arranque React; al cargar, la cuenta manda. El script se
+sirve desde el propio origen, así que la CSP de la SPA (`script-src 'self'`) no cambia. Los iframes de Markdown toman
+el tema efectivo ([ADR-007](adr/ADR-007-sitio-html-aislado.md)).
 
 ## Configuración
 

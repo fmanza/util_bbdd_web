@@ -59,11 +59,11 @@ class Me(_Out):
 
 
 class PreferencesUpdate(BaseModel):
-    """Preferencias de la propia cuenta."""
+    """Preferencias de la propia cuenta; un campo desconocido da 422."""
 
     model_config = ConfigDict(extra="forbid")
 
-    color_scheme: ColorScheme
+    color_scheme: ColorScheme = Field(description="Tema de la interfaz: claro, oscuro o el del sistema (``auto``)")
 
 
 # --- users ------------------------------------------------------------------------------------------------------

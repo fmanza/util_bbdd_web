@@ -177,6 +177,22 @@ una región `aria-live`. El iframe lleva `allow="clipboard-write"`; el `sandbox`
 - El puente cambia, así que cambia su hash en las dos CSP (`BRIDGE_SHA256` y `MARKDOWN_BRIDGE_SHA256`); los tests de
   los dos lados siguen vigilando que coincidan. No se añade ningún mensaje nuevo entre el iframe y la SPA.
 
+## Enmienda 2026-11-23 (1.21.0): el visor y las vistas previas siguen el tema de la interfaz
+
+Con el tema claro, oscuro o del sistema guardado en la cuenta, los colores del `srcdoc` dejan de ser fijos: los
+elige la SPA según el tema efectivo (`auto` resuelto con el del sistema) de dos paletas de `frameTheme.ts`, ambas con
+contraste AA (lo comprueba `frameTheme.test.ts`). El enlace en tema claro pasa de `#1c7ed6` (4,2:1) a `#1864ab`.
+
+- El tema entra como un argumento más de `buildFrameDocument` y en las dependencias del visor Markdown y de la vista
+  previa del navegador de artefactos: al cambiarlo se vuelve a generar el documento. La vista previa guarda el tema
+  junto al HTML con el que se dibujó, así que el iframe se recarga una sola vez.
+- Los diagramas Mermaid se dibujan con el tema `default` o `dark`. `mermaid.initialize` es global, así que los
+  dibujos van en serie por una cola del módulo (un fallo no la bloquea).
+- No cambian el `sandbox`, la CSP ni el puente: el tema solo altera el `<style>` y los SVG que la SPA ya generaba, y
+  el hash del puente sigue igual (`markdownNav.test.ts`).
+- El sitio HTML de util_bbdd (pestaña aparte o tarjeta *Sitio HTML*) no cambia: su aspecto lo deciden sus
+  plantillas.
+
 ## Alternativas descartadas
 
 - **`allow-same-origin` + scripts**: el sitio podría leer la cookie CSRF y llamar a la API como el usuario.

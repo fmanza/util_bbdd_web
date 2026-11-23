@@ -1,12 +1,12 @@
 # Usuarios, sesiones y auditoría
 
-Guía de uso de la identidad multiusuario. Disponible desde la versión 0.2.0 (Fase 1); vigente en 1.0.0.
+Guía de uso de la identidad multiusuario. Disponible desde la versión 0.2.0 (Fase 1); vigente en 1.0.0 y ampliada en 1.21.0 (tema).
 
 ## Roles
 
 | Rol | Puede |
 |---|---|
-| `user` | Iniciar y cerrar sesión, cambiar su contraseña y usar las secciones de la aplicación |
+| `user` | Iniciar y cerrar sesión, cambiar su contraseña, elegir su tema y usar las secciones de la aplicación |
 | `admin` | Lo anterior y, además, gestionar usuarios, ver y revocar sesiones y consultar la auditoría |
 
 El primer administrador se crea por línea de comandos ([despliegue](deployment.md#primer-administrador)); no existen
@@ -49,6 +49,10 @@ Menú con tu nombre → *Tema*: **Claro**, **Oscuro** o **Sistema** (el que teng
 - La pantalla de inicio de sesión usa el último tema usado en ese navegador; en un navegador nuevo, el del sistema
   hasta que entras.
 - Cambiar el tema no se registra en la auditoría.
+- Con lector de pantalla, las opciones se anuncian como botones de opción con su estado (marcada o no). Mientras se
+  guarda aparecen como no disponibles sin que el foco salga del menú, y un fallo se anuncia como alerta.
+- API: el tema llega en `color_scheme` de `GET /api/v1/auth/me` y se cambia con `PATCH /api/v1/auth/me/preferences`
+  (`{"color_scheme": "light" | "dark" | "auto"}`, con la cabecera `X-CSRF-Token`). Solo actúa sobre la propia cuenta.
 
 ## Administración de usuarios
 

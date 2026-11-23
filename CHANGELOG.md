@@ -13,6 +13,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - Vista previa de Markdown en los resultados: al cambiar de tema el iframe se recarga una sola vez, con estilos y
   diagramas Mermaid del mismo tema (antes pasaba por un paso intermedio con los diagramas del tema anterior).
 
+### Documentation
+
+- API: descripción completa de `PATCH /api/v1/auth/me/preferences` (idempotente, sin auditoría, cabecera CSRF) y de
+  `PreferencesUpdate.color_scheme` en el OpenAPI; sin cambios en el contrato.
+- ADR-007, enmienda 1.21.0: el visor Markdown y las vistas previas siguen el tema (paletas AA, Mermaid en serie, sin
+  cambios en `sandbox`, CSP ni puente). `architecture.md`: el tema y `public/color-scheme.js`.
+- Guías: tema en el visor de la documentación y en el navegador de artefactos; en *Usuarios y sesiones*, el rol
+  `user`, la accesibilidad del selector y la API del tema.
+
 ## [1.21.0] - 2026-11-23
 
 ### Added
