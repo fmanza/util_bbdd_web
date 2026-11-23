@@ -3,6 +3,24 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [1.21.0] - 2026-11-23
+
+### Added
+
+- **Tema claro, oscuro o del sistema, guardado en la cuenta**: menú con tu nombre → *Tema*. La elección acompaña al
+  usuario en cualquier navegador; la página se pinta desde el primer momento con el último tema usado en ese
+  navegador (`color-scheme.js`, sin destello). Las vistas previas de Markdown y los diagramas Mermaid siguen el tema.
+  Cambiar el tema no se audita (preferencia estética, sin efecto en la seguridad).
+- API: `Me.color_scheme` (`light` | `dark` | `auto`) en `GET /api/v1/auth/me` y `POST /api/v1/auth/login`, y
+  `PATCH /api/v1/auth/me/preferences` (solo la propia cuenta; 422 con un valor o un campo desconocido).
+- Migración **0012**: `users.color_scheme` (`auto` en las cuentas existentes) con `ALTER TABLE ... ADD COLUMN`, sin
+  recrear `users`. El `downgrade` usa `DROP COLUMN` (SQLite ≥ 3.35).
+
+### Changed
+
+- Color de los enlaces en las vistas previas de Markdown en tema claro: `#1864ab` (el anterior, `#1c7ed6`, no
+  llegaba al contraste AA sobre blanco).
+
 ## [1.20.0] - 2026-11-17
 
 ### Changed
