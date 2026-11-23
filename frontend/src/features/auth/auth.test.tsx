@@ -180,9 +180,13 @@ describe('tema de la cuenta', () => {
     expect(within(group).getAllByRole('menuitemradio', { hidden: true })).toHaveLength(3);
     await user.click(radio('Oscuro'));
 
-    expect(await screen.findByRole('alert', { hidden: true })).toHaveTextContent(
-      'No se ha podido guardar el tema',
-    );
+    // El anuncio va fuera del `menu` (solo admite opciones, grupos y separadores); dentro, el aviso describe el grupo.
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('No se ha podido guardar el tema');
+    expect(alert.closest('[role="menu"]')).toBeNull();
+    const menu = screen.getByRole('menu', { hidden: true });
+    expect(within(menu).queryByRole('alert', { hidden: true })).toBeNull();
+    expect(group).toHaveAccessibleDescription(/No se ha podido guardar el tema/);
     expect(radio('Sistema')).toHaveAttribute('aria-checked', 'true');
     expect(radio('Oscuro')).toHaveAttribute('aria-checked', 'false');
     expect(scheme()).toBe('light');

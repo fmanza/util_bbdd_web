@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Fixed
+
+- Menú de usuario: el aviso «No se ha podido guardar el tema» se anuncia desde una región `alert` fuera del menú
+  (un `menu` solo admite opciones, grupos y separadores); dentro, el texto visible describe el grupo *Tema*. El rótulo
+  del grupo usa un identificador único (`useId`).
+- Vista previa de Markdown en los resultados: al cambiar de tema el iframe se recarga una sola vez, con estilos y
+  diagramas Mermaid del mismo tema (antes pasaba por un paso intermedio con los diagramas del tema anterior).
+
 ## [1.21.0] - 2026-11-23
 
 ### Added

@@ -42,31 +42,32 @@ const SANDBOXED = new Set(['html', 'graphs']);
 const MARKDOWN_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'";
 const KIND_ORDER = ['html', 'markdown', 'sql', 'graphs', 'word', 'excel', 'log', 'manifest', 'other'];
 
-function MarkdownPreview({ title, source }: { title: string; source: string }) {
-  // Tema efectivo en las dependencias: al cambiarlo se vuelven a dibujar los diagramas y el documento (1.21.0).
+export function MarkdownPreview({ title, source }: { title: string; source: string }) {
+  // Tema efectivo en las dependencias: al cambiarlo se vuelven a dibujar los diagramas y el documento (1.21.0). El
+  // tema se guarda junto al HTML que se dibujó con él: el iframe cambia una sola vez, con estilos y diagramas a la par.
   const scheme = useResolvedColorScheme();
-  const [html, setHtml] = useState<string | null>(null);
+  const [rendered, setRendered] = useState<{ scheme: 'light' | 'dark'; html: string } | null>(null);
   useEffect(() => {
     let alive = true;
     void import('marked').then(async ({ marked }) => {
-      const body = await renderMermaidBlocks(
+      const html = await renderMermaidBlocks(
         await marked.parse(stripFrontMatter(source), { gfm: true }),
         scheme,
       );
-      if (alive) setHtml(body);
+      if (alive) setRendered({ scheme, html });
     });
     return () => {
       alive = false;
     };
   }, [source, scheme]);
 
-  if (html === null) return <Loader size="sm" />;
+  if (rendered === null) return <Loader size="sm" />;
   return (
     <iframe
       title={title}
       sandbox=""
       referrerPolicy="no-referrer"
-      srcDoc={`<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${MARKDOWN_CSP}"><style>${frameBaseStyle(scheme)}</style>${html}`}
+      srcDoc={`<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${MARKDOWN_CSP}"><style>${frameBaseStyle(rendered.scheme)}</style>${rendered.html}`}
       style={{ width: '100%', height: 420, border: '1px solid var(--mantine-color-default-border)' }}
     />
   );

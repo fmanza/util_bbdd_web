@@ -50,7 +50,7 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
     el clic se ignora en el `onClick`.
   - Tests: «desactivadas sin perder el foco y no envían nada», «cerrar y reabrir … no reactiva las opciones» y «la
     opción marcada se puede volver a elegir si otra pestaña cambió el tema»; deshaciendo cada corrección falla su test.
-  - Pendientes menores (anotados, sin corregir): m4 `role="alert"` dentro de `role="menu"` (hipótesis axe), m5
+  - Pendientes menores (corregidos después de 1.21.0, ver Evidencias): m4 `role="alert"` dentro de `role="menu"` (hipótesis axe), m5
     `ArtifactBrowser` no guarda el tema junto al HTML (doble recarga), m6 `id` fijo del rótulo (mejor `useId`), y un
     test de regeneración de la vista previa al cambiar de tema.
 
@@ -77,6 +77,14 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   (`text/javascript`), cargado antes del módulo en `index.html`, y la CSP de la SPA sin cambios
   (`script-src 'self' 'sha256-4eVjDELX…'`).
 - `zensical build --strict` sin avisos.
+- Pendientes m4–m6 (tras 1.21.0, CHANGELOG `[Unreleased]`):
+  - m4: el aviso visible del menú ya no lleva rol (describe el grupo con `aria-describedby`) y el anuncio sale de un
+    `VisuallyHidden role="alert"` fuera del `Menu`; el test comprueba que no hay `alert` dentro del `menu`.
+  - m5: `MarkdownPreview` (exportado) guarda `{ scheme, html }`; nuevo `markdownPreview.test.tsx` (Mermaid simulado
+    que marca el tema) exige un único cambio de `srcdoc`; con `frameBaseStyle(scheme)` falla (2 cambios).
+  - m6: `useId` para el rótulo y el aviso del grupo *Tema*.
+  - Frontend: format, lint, typecheck y build en verde; `auth.test.tsx` + `markdownPreview.test.tsx` 17 passed.
+    Suite (`--maxWorkers=4`) 247/248: el fallo es el tiempo agotado conocido de `runs.test.tsx`, que aislado da 8/8.
 
 ## Directrices para Futuras IAs
 - **[migraciones]**: en SQLite, `batch_alter_table` que recrea una tabla referenciada (`users`) borra en cascada sus
