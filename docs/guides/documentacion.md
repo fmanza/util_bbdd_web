@@ -243,5 +243,5 @@ El detalle muestra una **galería** con las primeras 12 imágenes; el resto est�
 | `invalid_trace_map` | El mapa de trazabilidad tiene campos o tipos que util_bbdd no admite (el mensaje los lista todos), o ya no está | Corrige el mapa y súbelo de nuevo, o lanza sin mapa |
 | `invalid_previous` | La documentación anterior se purgó antes de empezar la ejecución, o es de otro motor | Elige otra o lanza sin comparar |
 
-Documentar un schema grande lleva tiempo (cada diagrama de Word o HTML es un proceso `dot`); el límite es el de cualquier
-ejecución (`UBW_JOB_TIMEOUT_SECONDS`, 1 hora por defecto).
+Documentar un schema grande lleva tiempo (cada diagrama de Word o HTML es un proceso `dot`); el límite es el de
+cualquier ejecución (`UBW_JOB_TIMEOUT_SECONDS`, 1 hora por defecto).

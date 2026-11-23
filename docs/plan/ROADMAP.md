@@ -169,8 +169,8 @@ Desde la 1.18.0 (util_bbdd 5.8.0) no queda ningún hueco abierto: solo G7 y G16,
 Formato **Markdown** de util_bbdd 5.3.0 en la operación `documentation` (1.11.0; sesión
 `.ai/sessions/2026-11-06-doc-markdown/`): carpeta completa en `outputs/markdown/documentacion/`, Mermaid local
 (`UBW_MERMAID_JS`), mapa de trazabilidad como plantilla `trace` (ADR-011) y cambios respecto de una documentación
-anterior en el visor de diferencias. Guía: [documentacion.md](../guides/documentacion.md#documentación-markdown). No es un
-hueco de API: es capacidad nueva. G49 (validador público del mapa) se resolvió en util_bbdd 5.7.0 y la web 1.18.0.
+anterior en el visor de diferencias. Guía: [documentacion.md](../guides/documentacion.md#documentación-markdown). No es
+un hueco de API: es capacidad nueva. G49 (validador público del mapa) se resolvió en util_bbdd 5.7.0 y la web 1.18.0.
 
 ## Después de la 1.0: salida de la documentación por formato ✅
 

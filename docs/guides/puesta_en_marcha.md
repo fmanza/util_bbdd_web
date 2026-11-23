@@ -224,8 +224,8 @@ por el proxy.
 
 ### 4.5. Proxy TLS
 
-Configura nginx o Caddy como en [Despliegue › Detrás de un proxy inverso con TLS](deployment.md#detrás-de-un-proxy-inverso-con-tls).
-Imprescindible:
+Configura nginx o Caddy como en [Despliegue › Detrás de un proxy inverso con
+TLS](deployment.md#detrás-de-un-proxy-inverso-con-tls). Imprescindible:
 
 - `X-Forwarded-For` y `X-Forwarded-Proto`;
 - sin búfer en las respuestas (el progreso usa SSE);

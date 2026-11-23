@@ -35,9 +35,10 @@ encabezado y pie y sus colores corporativos, sin cambiar lo que pasa cuando no e
    hipervínculos, campos de tipo `DDE`, `DDEAUTO`, `INCLUDE`, `INCLUDETEXT`, `INCLUDEPICTURE`, `LINK` o `IMPORT` y
    cualquier DTD. El tipo es la primera palabra del código de cada campo, reconstruido a partir de sus piezas
    (`fldChar` de inicio, separador y fin y los trozos de `instrText`, con referencias de carácter resueltas); un
-   campo cuyo tipo lo calcula otro campo anidado también se rechaza. Así un `MERGEFIELD Link` es válido. Word: deben estar los cinco estilos (el error dice cuáles faltan). Excel: el tema no
-   puede referenciar imágenes (openpyxl no copia sus `.rels`). Se ofrecen **plantillas base** que pasan la
-   comprobación (`/api/v1/document-templates/base/{word|excel}`).
+   campo cuyo tipo lo calcula otro campo anidado también se rechaza. Así un `MERGEFIELD Link` es válido. Word: deben
+   estar los cinco estilos (el error dice cuáles faltan). Excel: el tema no puede referenciar imágenes (openpyxl no
+   copia sus `.rels`). Se ofrecen **plantillas base** que pasan la comprobación
+   (`/api/v1/document-templates/base/{word|excel}`).
 3. **Estilo de tabla por plantilla**, no por ejecución: en Word, uno de los estilos de tabla de la plantilla (por
    defecto `Table Grid`); en Excel, uno predefinido `TableStyle*` (por defecto `TableStyleMedium2`). El formulario de
    lanzamiento solo añade «Plantilla Word» y «Plantilla Excel» (parámetros `word_template`/`excel_template`, tipo
@@ -83,7 +84,8 @@ encabezado y pie y sus colores corporativos, sin cambiar lo que pasa cuando no e
 
 - **Copiar las hojas generadas dentro de la plantilla Excel** con openpyxl: no sabe copiar hojas entre libros; habría
   que copiar celda a celda estilos, tablas y anchos, duplicando a util_bbdd fuera de su sitio.
-- **Cambiar solo el tema del Excel**: las cabeceras de sección de util_bbdd tienen colores RGB fijos y seguirían en azul.
+- **Cambiar solo el tema del Excel**: las cabeceras de sección de util_bbdd tienen colores RGB fijos y seguirían en
+  azul.
 - **Fallar la ejecución si la plantilla no se aplica**: se perdería la documentación (que puede tardar minutos) por un
   problema de formato; se prefirió el formato por defecto con un aviso visible.
 - **Completar los estilos que faltan en la plantilla Word**: modificaría el fichero del usuario; se rechaza con un

@@ -73,7 +73,9 @@ raíz del proyecto (donde está `docker-compose.yml`; si no, `no configuration f
 
     ```bash
     docker run --rm -v util_bbdd_web_data:/data -v "$PWD:/in:ro" python:3.12.14-slim-bookworm sh -c \
-      'apt-get update -qq && apt-get install -y -qq unzip && unzip -q /in/instantclient-basic-linux.x64-19.32.0.0.0dbru.zip -d /data/files && chown -R 10001:10001 /data/files/instantclient_19_32'
+      'apt-get update -qq && apt-get install -y -qq unzip &&
+        unzip -q /in/instantclient-basic-linux.x64-19.32.0.0.0dbru.zip -d /data/files &&
+        chown -R 10001:10001 /data/files/instantclient_19_32'
     ```
 
     En PowerShell, `${PWD}` en lugar de `$PWD` y todo en una línea; en Git Bash, `MSYS_NO_PATHCONV=1` delante.
@@ -100,7 +102,10 @@ raíz del proyecto (donde está `docker-compose.yml`; si no, `no configuration f
    prueba toma `LD_LIBRARY_PATH` del proceso de la aplicación (PID 1):
 
     ```bash
-    docker compose exec web sh -c 'L=$(tr "\0" "\n" </proc/1/environ | grep ^LD_LIBRARY_PATH= | cut -d= -f2-); echo "$L"; LD_LIBRARY_PATH="$L" python -c "import oracledb; oracledb.init_oracle_client(lib_dir=\"/data/files/instantclient_19_32\"); print(oracledb.clientversion())"'
+    docker compose exec web sh -c '
+      L=$(tr "\0" "\n" </proc/1/environ | grep ^LD_LIBRARY_PATH= | cut -d= -f2-); echo "$L"
+      LD_LIBRARY_PATH="$L" python -c "import oracledb; \
+        oracledb.init_oracle_client(lib_dir=\"/data/files/instantclient_19_32\"); print(oracledb.clientversion())"'
     ```
 
     Debe imprimir `/data/files/instantclient_19_32` y `(19, 32, 0, 0, 0)`. Repite con `worker` en lugar de `web`.
@@ -341,7 +346,8 @@ anterior).
 | 1.21.0 | `0012` | `users.color_scheme` (tema de cada usuario; `auto` en las cuentas existentes) |
 
 El `downgrade` de `0012` usa `ALTER TABLE … DROP COLUMN`, que necesita SQLite 3.35 o posterior; la imagen de la
-1.21.0 trae la 3.40.1. Si cambias la imagen base, comprueba la versión con `docker compose exec web python -c "import sqlite3; print(sqlite3.sqlite_version)"`.
+1.21.0 trae la 3.40.1. Si cambias la imagen base, comprueba la versión con
+`docker compose exec web python -c "import sqlite3; print(sqlite3.sqlite_version)"`.
 
 **De 0.x a 1.0.0**: las cookies pasan a llamarse `__Host-ubw_session`/`__Host-ubw_csrf`, así que todos los usuarios
 vuelven a iniciar sesión; las contraseñas nuevas o cambiadas se comprueban contra la lista de contraseñas comunes; el

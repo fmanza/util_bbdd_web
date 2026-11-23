@@ -122,4 +122,6 @@ Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·
 [ADR-010](adr/ADR-010-carga-bulk.md) · [ADR-011](adr/ADR-011-plantillas-de-documento.md) ·
 [ADR-012](adr/ADR-012-almacenamiento-administrable.md).
 
-\* *Administrable*: la variable es el valor por defecto; un admin puede cambiarlo en *Administración → Almacenamiento* sin reiniciar, y entonces manda el de la web hasta que lo restablezca ([ADR-012](adr/ADR-012-almacenamiento-administrable.md)).
+\* *Administrable*: la variable es el valor por defecto; un admin puede cambiarlo en *Administración → Almacenamiento*
+sin reiniciar, y entonces manda el de la web hasta que lo restablezca
+([ADR-012](adr/ADR-012-almacenamiento-administrable.md)).

@@ -59,8 +59,8 @@ Mismo modelo que ADR-008, con un permiso propio:
 
 - **Vista previa con `plan()` (G29, W-V1)**: `dump_preview` toma el orden de carga, los ciclos, las columnas omitidas,
   las obligatorias sin origen y las FK hacia tablas fuera del volcado de `DumpOrchestrator.plan()`, con el mismo
-  `DumpConfig` que el volcado; ya no replica `topological_sort`. Los recuentos de filas siguen siendo de la web (`plan()`
-  no cuenta). La huella de estructura y la posición de cada tabla (su índice en el orden de carga) no cambian.
+  `DumpConfig` que el volcado; ya no replica `topological_sort`. Los recuentos de filas siguen siendo de la web
+  (`plan()` no cuenta). La huella de estructura y la posición de cada tabla (su índice en el orden de carga) no cambian.
 - **Avance por tabla y cancelación entre lotes (G1, G6, W-V2)**: `run(on_progress=, cancel_token=)` con `DumpProgress`
   (puente `RunProgress`, ADR-002): el run muestra tablas terminadas y filas escritas de la tabla en curso. El punto 4 de
   la decisión **cambia**: un volcado en curso **se puede cancelar** (con confirmación en la UI). util_bbdd para entre
@@ -75,8 +75,8 @@ Mismo modelo que ADR-008, con un permiso propio:
   `target.json` (alias e id de la conexión destino, que el job anota antes de escribir). La operación nueva
   **`dump_restore`** (`form=false`) llama a `restore_constraints` con los **mismos controles que el volcado**:
   `can_write_data` + owner, la conexión destino con el mismo id, no `read_only` y del mismo motor que el diario,
-  `confirm` = alias, ninguna otra escritura activa sobre el destino; se audita (`run.create` con `dump_restore`) y el job
-  lo vuelve a comprobar. El worker la **encola sola** al cerrar un `dump_apply` cuyo proceso murió (timeout, caída,
+  `confirm` = alias, ninguna otra escritura activa sobre el destino; se audita (`run.create` con `dump_restore`) y el
+  job lo vuelve a comprobar. El worker la **encola sola** al cerrar un `dump_apply` cuyo proceso murió (timeout, caída,
   huérfano, parada) si el diario existe, en nombre del usuario del volcado (auditada como del worker); si los controles
   ya no se cumplen, falla y queda la acción manual. Mientras quede un diario: un `dump_apply` nuevo sobre ese destino
   responde 409 y el volcado no se purga (ni a mano, ni por retención, ni por cuota). La consecuencia «hay que revisarlas

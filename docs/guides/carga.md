@@ -39,8 +39,8 @@ En *Nueva carga*:
 **Vista previa** lanza una ejecución que no escribe nada. Su detalle muestra las filas del fichero y de la tabla, las
 **filas afectadas** (las que ya existen por clave primaria: en insert, posibles duplicados), las primeras filas tal
 como se cargarán, las columnas ignoradas, el plan paralelo y el **SQL** que se ejecutaría (completo en Artefactos,
-`carga_insert.sql`, `carga_update.sql` o `carga_delete.sql`, con vista previa resaltada y **Copiar SQL** desde la 1.17.0).
-Con más de 1 000 filas el SQL es **de muestra**: las primeras 1 000, y la cabecera del fichero lo dice. Las
+`carga_insert.sql`, `carga_update.sql` o `carga_delete.sql`, con vista previa resaltada y **Copiar SQL** desde la
+1.17.0). Con más de 1 000 filas el SQL es **de muestra**: las primeras 1 000, y la cabecera del fichero lo dice. Las
 validaciones, las filas y las filas afectadas cubren el fichero entero. En un fichero grande, las filas afectadas se
 cuentan por bloques de 50 000 filas: una clave repetida en bloques distintos del fichero cuenta dos veces.
 

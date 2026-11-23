@@ -59,11 +59,11 @@ Detalle en [Puesta en marcha › En producción](docs/guides/puesta_en_marcha.md
 
 Índice completo: [docs/README.md](docs/README.md).
 
-- **Uso**: [Guía de usuario](docs/guides/guia_usuario.md) (empieza aquí) · [Usuarios y sesiones](docs/guides/usuarios_y_sesiones.md) ·
-  [Motores y conexiones](docs/guides/conexiones.md) · [Proyectos y ejecuciones](docs/guides/proyectos_y_ejecuciones.md) ·
-  [Explorador y SQL](docs/guides/explorador.md) · [Documentación y grafos](docs/guides/documentacion.md) ·
-  [Comparación](docs/guides/comparacion.md) · [Migración DDL](docs/guides/migracion.md) ·
-  [Volcado](docs/guides/volcado.md) · [Carga bulk](docs/guides/carga.md)
+- **Uso**: [Guía de usuario](docs/guides/guia_usuario.md) (empieza aquí) ·
+  [Usuarios y sesiones](docs/guides/usuarios_y_sesiones.md) · [Motores y conexiones](docs/guides/conexiones.md) ·
+  [Proyectos y ejecuciones](docs/guides/proyectos_y_ejecuciones.md) · [Explorador y SQL](docs/guides/explorador.md) ·
+  [Documentación y grafos](docs/guides/documentacion.md) · [Comparación](docs/guides/comparacion.md) ·
+  [Migración DDL](docs/guides/migracion.md) · [Volcado](docs/guides/volcado.md) · [Carga bulk](docs/guides/carga.md)
 - **Operación**: [Puesta en marcha](docs/guides/puesta_en_marcha.md) · [Despliegue](docs/guides/deployment.md) ·
   [Solución de problemas](docs/guides/troubleshooting.md) · [Seguridad (ASVS L2)](docs/security/ASVS_L2.md)
 - **Desarrollo**: [Guía de desarrolladores](docs/guides/onboarding_dev.md) · [Arquitectura](docs/architecture.md) ·

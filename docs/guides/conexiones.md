@@ -36,7 +36,8 @@ por defecto y descripción). *Nueva conexión con este motor* abre el formulario
 Notas por motor:
 
 - **SQLite**: `database` es la ruta del fichero **dentro de la carpeta de ficheros del servidor** (por ejemplo,
-  `ventas.db`). El administrador copia ahí los ficheros ([despliegue](deployment.md#destinos-y-ficheros-de-las-conexiones)).
+  `ventas.db`). El administrador copia ahí los ficheros
+  ([despliegue](deployment.md#destinos-y-ficheros-de-las-conexiones)).
 - **Oracle**: indica `dsn` (`host:puerto/servicio`) o bien `host`, `port` y `service_name` (o `sid`). Para
   Oracle 11g (modo thick), `oracle_client_path` es la carpeta del Instant Client **dentro de la carpeta de ficheros**
   (p. ej. `instantclient_19_32`, la misma que `UBW_ORACLE_CLIENT_DIR`) y se activa `oracle_thick_mode`. El

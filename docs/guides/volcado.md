@@ -32,9 +32,9 @@ como texto ISO se cargan como fechas.
 
 ## 2. Volcar
 
-Requisitos (si falta alguno, el panel *Volcar los datos* explica cuál): permiso **«Puede escribir datos»** (lo concede un
-administrador en *Usuarios*), ser **propietario** del proyecto, conexión destino **no** de solo lectura y vista previa
-de **menos de 60 minutos**.
+Requisitos (si falta alguno, el panel *Volcar los datos* explica cuál): permiso **«Puede escribir datos»** (lo concede
+un administrador en *Usuarios*), ser **propietario** del proyecto, conexión destino **no** de solo lectura y vista
+previa de **menos de 60 minutos**.
 
 **Volcar en «destino»…** abre la confirmación: marca que has revisado la vista previa y escribe el alias del destino.
 Si la vista previa **vacía el destino**, el botón es *Vaciar y volcar*, se indica cuántas filas se borrarán y hay que
@@ -55,7 +55,8 @@ Mientras carga, el detalle muestra las tablas terminadas y las filas escritas de
 > Un volcado **en curso se puede cancelar** (con confirmación): para **entre lotes**, deshace la tabla en curso,
 > reactiva las constraints y termina como *cancelado*. Las tablas ya terminadas **quedan cargadas** en el destino; el
 > resultado las lista y el detalle por tabla está en `volcado.jsonl`. Si se agota el tiempo máximo
-> (`UBW_JOB_TIMEOUT_SECONDS`), el proceso se termina a mitad: ver [Constraints sin restaurar](#constraints-sin-restaurar).
+> (`UBW_JOB_TIMEOUT_SECONDS`), el proceso se termina a mitad: ver [Constraints sin
+> restaurar](#constraints-sin-restaurar).
 
 ## 3. Resultado
 

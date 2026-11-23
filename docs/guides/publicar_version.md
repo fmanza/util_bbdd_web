@@ -56,7 +56,9 @@ uv --version
 
 # En backend/pyproject.toml: la dependencia util_bbdd[...]==A.B.C y la URL del wheel en [tool.uv.sources]
 CUR=$(grep -o 'util_bbdd-[0-9.]*-py3' backend/pyproject.toml | head -1 | sed 's/util_bbdd-//; s/-py3//')
-sed -i "s/==${CUR}\"/==${UBB}\"/; s|v${CUR}/util_bbdd-${CUR}-py3|v${UBB}/util_bbdd-${UBB}-py3|; s|release v${CUR}|release v${UBB}|" backend/pyproject.toml
+sed -i -e "s/==${CUR}\"/==${UBB}\"/" \
+  -e "s|v${CUR}/util_bbdd-${CUR}-py3|v${UBB}/util_bbdd-${UBB}-py3|" \
+  -e "s|release v${CUR}|release v${UBB}|" backend/pyproject.toml
 git diff backend/pyproject.toml                  # tres líneas: comentario, dependencia y URL
 
 cd backend

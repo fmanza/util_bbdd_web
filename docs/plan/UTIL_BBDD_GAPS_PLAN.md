@@ -12,9 +12,9 @@ tiene sus fases, y **cada fase es un commit** en un solo repositorio.
   2026-10-29 con las decisiones D8-1 a D8-8 aprobadas el mismo día (§4) y hecha en util_bbdd el mismo día (5.0.0, sin
   publicar entonces; registro en §6). Ola 8 y W-8 hechas (util_bbdd 5.0.0, web 1.7.0; registro en §6). Ola 9
   (util_bbdd 5.1.0, Grupo 9: G44) planificada el 2026-10-29 con las decisiones D9-1 a D9-4 aprobadas el mismo día
-  (§4) y hecha en util_bbdd el mismo día (5.1.0, publicada antes de W-9.0; registro en §6). Ola 9 y W-9 hechas (util_bbdd 5.1.0,
-  web 1.7.1; registro en §6). Ola 10 y W-10 hechas (util_bbdd 5.2.0, web 1.9.0). Ola 11 (G50, G51) planificada
-  el 2026-11-06 con D11-1 a D11-8 y hecha el mismo día (util_bbdd 5.4.0, web 1.13.0; registro en §6).
+  (§4) y hecha en util_bbdd el mismo día (5.1.0, publicada antes de W-9.0; registro en §6). Ola 9 y W-9 hechas
+  (util_bbdd 5.1.0, web 1.7.1; registro en §6). Ola 10 y W-10 hechas (util_bbdd 5.2.0, web 1.9.0). Ola 11 (G50, G51)
+  planificada el 2026-11-06 con D11-1 a D11-8 y hecha el mismo día (util_bbdd 5.4.0, web 1.13.0; registro en §6).
 - **Base**: util_bbdd `4.0.1` (rama de trabajo) · util_bbdd_web `1.0.0` + cambios sin publicar, que fija
   util_bbdd `4.0.0` (wheel de GitHub Releases, ADR-006).
 - **Sesión**: `.ai/sessions/2026-10-25-plan-gaps/`.
@@ -549,8 +549,8 @@ SPA (S3).
 | D11-7 | Web **1.13.0** (MINOR). Se movió a 1.14.0 por D6 de la sesión `2026-11-06-explorer-runs-lists` y vuelve a 1.13.0 el 2026-11-06: util_bbdd 5.4.0 ya publicada, la ola 11 va primero; esa sesión pasa a 1.14.0 | Aprobada (2026-11-06) |
 | D11-8 | Deducción por rutas se mantiene para 5.3.0; la copia de Mermaid se retira | Aprobada (2026-11-06) |
 
-Veredicto de la ola 11: **GO_CONDICIONAL**. Condiciones: ~~aprobar D11-5 a D11-8~~ (hecho, 2026-11-06); U-11.1 resuelve T3/T4; U-11.2
-cumple T5; las fases `U-11.x` en una sesión de util_bbdd; W-11 solo con la release 5.4.0 publicada.
+Veredicto de la ola 11: **GO_CONDICIONAL**. Condiciones: ~~aprobar D11-5 a D11-8~~ (hecho, 2026-11-06); U-11.1 resuelve
+T3/T4; U-11.2 cumple T5; las fases `U-11.x` en una sesión de util_bbdd; W-11 solo con la release 5.4.0 publicada.
 
 ---
 
