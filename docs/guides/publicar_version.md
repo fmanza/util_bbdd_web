@@ -37,7 +37,7 @@ Variables que usan los pasos (cámbialas en cada versión):
 
 ```bash
 cd /c/Desarrollo/<ruta>/util_bbdd_web
-OLD=1.21.0     # versión publicada anterior
+OLD=1.21.1     # versión publicada anterior
 NEW=1.22.0     # versión que se publica (SemVer: MAJOR si exige intervención al actualizar o rompe la API)
 UBB=5.9.0      # versión de util_bbdd que se fija (solo para el paso 3)
 git switch develop

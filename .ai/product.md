@@ -1,7 +1,7 @@
 # Producto — util_bbdd_web
 
 - **Qué es**: aplicación web multiusuario que expone la funcionalidad de la librería util_bbdd 4.3.0.
-- **Versión actual**: 1.21.0 (util_bbdd 5.9.0; tema claro, oscuro o del sistema guardado en la cuenta; ventana «Lanzar ejecución» ancha con tarjetas y menú lateral agrupado con iconos desde la 1.20.0; filtro de tablas por patrones en migración y volcado desde la 1.19.0). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
+- **Versión actual**: 1.21.1 (util_bbdd 5.9.0; migraciones 0005-0007 y 0010 sin recrear `users`; tema claro, oscuro o del sistema guardado en la cuenta; ventana «Lanzar ejecución» ancha con tarjetas y menú lateral agrupado con iconos desde la 1.20.0; filtro de tablas por patrones en migración y volcado desde la 1.19.0). Planes: `docs/plan/ROADMAP.md` y `docs/plan/UTIL_BBDD_GAPS_PLAN.md`.
 - **Usuarios**: equipos técnicos (DBA, desarrollo, migraciones) en una red interna; rol `admin` y rol `user`.
 
 ## Capacidades objetivo

@@ -175,7 +175,7 @@ Pasos para un servidor Linux interno, con el proxy TLS en el mismo equipo. Refer
 ```bash
 sudo mkdir -p /opt/util_bbdd_web && sudo chown "$USER" /opt/util_bbdd_web
 git clone <repo> /opt/util_bbdd_web && cd /opt/util_bbdd_web
-git checkout v1.21.0                      # una versión etiquetada, no una rama
+git checkout v1.21.1                      # una versión etiquetada, no una rama
 ```
 
 ### 4.2. Secretos
@@ -215,7 +215,7 @@ no se envía HSTS.
 ```bash
 docker compose up -d --build
 docker compose ps                         # web «healthy», worker «running»
-curl -s http://127.0.0.1:8080/api/health  # "status":"ok", "worker":"ok", "version":"1.21.0"
+curl -s http://127.0.0.1:8080/api/health  # "status":"ok", "worker":"ok", "version":"1.21.1"
 docker compose exec web python -m app.cli create-admin --username admin --display-name "Administración"
 ```
 

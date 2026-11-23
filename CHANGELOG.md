@@ -3,7 +3,7 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
-## [Unreleased]
+## [1.21.1] - 2026-11-24
 
 ### Fixed
 
@@ -19,6 +19,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Documentation
 
+- Despliegue: bajar por debajo de la revisión 0010 solo con una imagen 1.21.1 o posterior (aviso junto a la tabla de
+  revisiones de `deployment.md`).
 - API: descripción completa de `PATCH /api/v1/auth/me/preferences` (idempotente, sin auditoría, cabecera CSRF) y de
   `PreferencesUpdate.color_scheme` en el OpenAPI; sin cambios en el contrato.
 - ADR-007, enmienda 1.21.0: el visor Markdown y las vistas previas siguen el tema (paletas AA, Mermaid en serie, sin

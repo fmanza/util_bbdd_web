@@ -343,11 +343,14 @@ anterior).
 | 1.0.0 | `0008` | Carga bulk (`0008_uploads`) |
 | 1.1.0 – 1.6.0 | `0010` | Plantillas de documento (`0009`) y almacenamiento administrable (`0010`) |
 | 1.7.0 – 1.20.0 | `0011` | Retira `encoding_errors` de las conexiones MariaDB guardadas |
-| 1.21.0 | `0012` | `users.color_scheme` (tema de cada usuario; `auto` en las cuentas existentes) |
+| 1.21.0 – 1.21.1 | `0012` | `users.color_scheme` (tema de cada usuario; `auto` en las cuentas existentes) |
 
-El `downgrade` de `0012` usa `ALTER TABLE … DROP COLUMN`, que necesita SQLite 3.35 o posterior; la imagen de la
-1.21.0 trae la 3.40.1. Si cambias la imagen base, comprueba la versión con
-`docker compose exec web python -c "import sqlite3; print(sqlite3.sqlite_version)"`.
+Los `downgrade` de `0012` y, desde la 1.21.1, de `0010`, `0007`, `0006` y `0005` usan `ALTER TABLE … DROP COLUMN`,
+que necesita SQLite 3.35 o posterior; la imagen de la 1.21.0 trae la 3.40.1. Si cambias la imagen base, comprueba la
+versión con `docker compose exec web python -c "import sqlite3; print(sqlite3.sqlite_version)"`.
+
+> **Bajar por debajo de la `0010`**: hazlo con una imagen 1.21.1 o posterior. En las anteriores, esos `downgrade`
+> recreaban la tabla `users` y su `DROP TABLE` borraba en cascada las sesiones, conexiones y proyectos de cada usuario.
 
 **De 0.x a 1.0.0**: las cookies pasan a llamarse `__Host-ubw_session`/`__Host-ubw_csrf`, así que todos los usuarios
 vuelven a iniciar sesión; las contraseñas nuevas o cambiadas se comprueban contra la lista de contraseñas comunes; el

@@ -6574,7 +6574,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "1.21.0"
+    "version": "1.21.1"
   },
   "openapi": "3.1.0",
   "paths": {

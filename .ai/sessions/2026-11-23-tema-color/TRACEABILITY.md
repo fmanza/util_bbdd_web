@@ -6,7 +6,8 @@
 - rama: develop
 - skill: new_feature + audit_code + version_closure
 - fase: PLAN v2 (externo) → revisión (NO_GO: la 0012 en modo batch borraría datos) → PLAN v3 + AUDIT_PLAN v3
-  (GO_CONDICIONAL, aprobado) + IMPLEMENT + AUDIT_CODE (APROBADO CON CONDICIONES; M1–M3 corregidos) + VERSION → 1.21.0
+  (GO_CONDICIONAL, aprobado) + IMPLEMENT + AUDIT_CODE (APROBADO CON CONDICIONES; M1–M3 corregidos) + VERSION → 1.21.0;
+  después m4–m6, revisión completa de la documentación, migraciones 0005-0007/0010 sin recrear `users` → 1.21.1
 
 ## Prompt issued
 «Revisa el PLAN y AUDIT_PLAN» (PLAN v2 del tema claro/oscuro/sistema guardado en la cuenta) → «Aplica las
@@ -90,6 +91,24 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   (`export_openapi` + `gen:api`; solo cambian descripciones), enmienda 1.21.0 de ADR-007, `architecture.md` (tema y
   `public/color-scheme.js`), `documentacion.md`, `proyectos_y_ejecuciones.md` y `usuarios_y_sesiones.md`.
   `export_openapi --check`, `test_auth.py` (30 passed), typecheck, format y `zensical build --strict` en verde.
+  Commit `51f756d`; CI en verde.
+- Revisión completa de la documentación (cuatro agentes en paralelo, archivos disjuntos, revisados por el
+  coordinador): guías de uso y de operación, ASVS, `architecture.md`, `onboarding_dev.md`, índice, ROADMAP
+  (1.19.0–1.21.0), enmiendas de ADR-003/005/006/008/011 y textos del OpenAPI (solo descripciones y 4 respuestas 403
+  documentadas; `schema.d.ts` sin cambios de tipos). Backend `tests/api` + `tests/unit` 831 passed, 2 skipped;
+  `zensical build --strict` sin avisos. Commit `4a98f44`; CI en verde. Líneas de prosa > 120 reajustadas (quedan
+  filas de tabla y la línea de cron): commit `7024ee4`; CI en verde.
+- Migraciones 0005, 0006, 0007 y 0010: `op.add_column` y `DROP COLUMN` nativos. El test nuevo destapó que también el
+  `upgrade` de la 0005-0007 (Boolean con `server_default=sa.false()`) recreaba `users`. Esquema final de `users`
+  idéntico al anterior (`PRAGMA table_info` e índices comparados entre ambas versiones). Mutaciones: `downgrade` de
+  la 0010 o `upgrade` de la 0005 en batch → el test falla con `([], [None], [], [])`. Commits `d67fc30` y `e8217a8`
+  (test hasta la 0003); CI en verde.
+- VERSION 1.21.1 (2026-11-24): versión sincronizada (CHANGELOG, `pyproject.toml`, `app/__init__.py`,
+  `package*.json`, `uv.lock`, `openapi.json` `info.version`, `.env.example` `UBW_TAG`), `.ai/product.md`, tabla de
+  revisiones y aviso de vuelta atrás en `deployment.md`, ejemplos de `puesta_en_marcha.md` y `publicar_version.md`.
+  Backend: ruff format/check, mypy, `export_openapi --check`; `test_cli_and_migrations.py` + `test_backup.py` +
+  `test_health.py` 15 passed. Frontend: typecheck y build en verde. `zensical build --strict` sin avisos. Sin
+  `docker compose build` ni `/api/health` de la 1.21.1 (pendiente).
 
 ## Directrices para Futuras IAs
 - **[migraciones]**: en SQLite, `batch_alter_table` que recrea una tabla referenciada (`users`) borra en cascada sus
@@ -102,6 +121,11 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   expresión, y los cuatro `downgrade` recreaban `users`). `test_downgrade_to_0004_and_0003_preserves_related_rows`
   siembra filas en la cabecera, baja a la 0004 y a la 0003 y vuelve a subir cada vez. El `downgrade` de la 0004 solo
   borra sus propias tablas (sin cascadas fuera de ellas).
+- **[despliegue]**: bajar por debajo de la 0010 solo es seguro con una imagen 1.21.1 o posterior (la vuelta atrás
+  ejecuta el `downgrade` con la imagen nueva); `deployment.md` lo avisa junto a la tabla de revisiones.
+- **[docs]**: una revisión completa en paralelo funciona con un agente por grupo de archivos disjunto y el
+  coordinador revisando diffs, `schema.d.ts` (sin cambios de tipos) y `zensical build --strict`; los scripts de
+  Python en Windows escriben CRLF si no se usa `write_bytes` (comprobar con `git ls-files --eol`).
 - **[frontend]**: el tema vive en `localStorage['ubw-color-scheme']` (`COLOR_SCHEME_STORAGE_KEY`); `public/color-scheme.js`
   repite la clave y `colorScheme.test.ts` vigila que coincidan.
 - **[frontend]**: lo que se dibuja dentro de un iframe de Markdown usa `useResolvedColorScheme()` en sus dependencias
