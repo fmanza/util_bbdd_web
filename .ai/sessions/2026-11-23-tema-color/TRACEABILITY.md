@@ -97,8 +97,10 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   `CHECK` con nombre) y `DROP COLUMN` nativos; el test debe sembrar filas hijas antes de migrar.
 - **[migraciones]**: la imagen `python:3.12.14-slim-bookworm` trae SQLite 3.40.1: admite `ALTER TABLE DROP COLUMN`
   (≥ 3.35) y `ADD COLUMN` con `CHECK` con nombre.
-- **[migraciones]**: el `downgrade` de la 0010 (`batch.drop_column("storage_quota_mb")`) recrea `users` y tiene ese
-  defecto; pendiente de corregir.
+- **[migraciones]**: las 0005, 0006, 0007 y 0010 añaden y quitan sus columnas de `users` con `op.add_column` y
+  `ALTER TABLE … DROP COLUMN` nativos (antes en modo batch: el `upgrade` de la 0005-0007, con `server_default` de
+  expresión, y los cuatro `downgrade` recreaban `users`). `test_downgrade_to_0004_preserves_related_rows` siembra
+  filas en la cabecera, baja a la 0004 y vuelve a subir.
 - **[frontend]**: el tema vive en `localStorage['ubw-color-scheme']` (`COLOR_SCHEME_STORAGE_KEY`); `public/color-scheme.js`
   repite la clave y `colorScheme.test.ts` vigila que coincidan.
 - **[frontend]**: lo que se dibuja dentro de un iframe de Markdown usa `useResolvedColorScheme()` en sus dependencias

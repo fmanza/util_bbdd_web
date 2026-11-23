@@ -108,19 +108,12 @@ def test_migration_0011_drops_encoding_errors_from_mariadb(settings: Settings) -
     assert stored() == after
 
 
-def test_migration_0012_preserves_related_rows(settings: Settings) -> None:
-    """La 0012 añade ``users.color_scheme`` sin recrear ``users``: con ``foreign_keys=ON``, un ``DROP TABLE users``
-    (modo batch) borraría en cascada sesiones, conexiones y proyectos y dejaría la auditoría sin autor."""
-    from alembic import command
-    from alembic.config import Config
+def _seed_related_rows() -> None:
+    """Un usuario con una fila en cada tabla que depende de ``users`` desde la 0004 (``ON DELETE CASCADE`` o
+    ``SET NULL``). Solo usa columnas que existen desde entonces."""
     from sqlalchemy import text
-    from sqlalchemy.exc import IntegrityError
 
-    from tests.conftest import BACKEND_DIR
-
-    run_migrations("0011")
-    engine = get_engine()
-    with engine.begin() as connection:
+    with get_engine().begin() as connection:
         connection.execute(
             text(
                 "INSERT INTO users (id, username, display_name, password_hash, role, is_active, failed_attempts, "
@@ -153,18 +146,39 @@ def test_migration_0012_preserves_related_rows(settings: Settings) -> None:
             )
         )
 
-    def related() -> tuple[object, ...]:
-        with engine.connect() as connection:
-            return (
-                connection.execute(text("SELECT user_id FROM sessions")).scalars().all(),
-                connection.execute(text("SELECT actor_user_id FROM audit_log")).scalars().all(),
-                connection.execute(text("SELECT owner_id FROM connections")).scalars().all(),
-                connection.execute(text("SELECT owner_id FROM projects")).scalars().all(),
-            )
 
-    expected = ([1], [1], [1], [1])
+#: Lo que devuelve ``_related_rows()`` si nada se ha borrado ni ha perdido su usuario.
+RELATED_INTACT = ([1], [1], [1], [1])
+
+
+def _related_rows() -> tuple[object, ...]:
+    from sqlalchemy import text
+
+    with get_engine().connect() as connection:
+        return (
+            connection.execute(text("SELECT user_id FROM sessions")).scalars().all(),
+            connection.execute(text("SELECT actor_user_id FROM audit_log")).scalars().all(),
+            connection.execute(text("SELECT owner_id FROM connections")).scalars().all(),
+            connection.execute(text("SELECT owner_id FROM projects")).scalars().all(),
+        )
+
+
+def test_migration_0012_preserves_related_rows(settings: Settings) -> None:
+    """La 0012 añade ``users.color_scheme`` sin recrear ``users``: con ``foreign_keys=ON``, un ``DROP TABLE users``
+    (modo batch) borraría en cascada sesiones, conexiones y proyectos y dejaría la auditoría sin autor."""
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    from tests.conftest import BACKEND_DIR
+
+    run_migrations("0011")
+    _seed_related_rows()
+    engine = get_engine()
+
     run_migrations()
-    assert related() == expected
+    assert _related_rows() == RELATED_INTACT
     with engine.connect() as connection:
         assert connection.execute(text("SELECT color_scheme FROM users")).scalar_one() == "auto"
     with pytest.raises(IntegrityError, match="ck_users_color_scheme"), engine.begin() as connection:
@@ -172,7 +186,27 @@ def test_migration_0012_preserves_related_rows(settings: Settings) -> None:
 
     command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0011")
     assert "color_scheme" not in {column["name"] for column in inspect(engine).get_columns("users")}
-    assert related() == expected
+    assert _related_rows() == RELATED_INTACT
 
     run_migrations()
-    assert related() == expected
+    assert _related_rows() == RELATED_INTACT
+
+
+def test_downgrade_to_0004_preserves_related_rows(settings: Settings) -> None:
+    """Los ``downgrade`` de la 0005, 0006, 0007 y 0010 quitan columnas de ``users`` con ``DROP COLUMN`` nativo: el
+    modo batch recrearía la tabla y su ``DROP TABLE`` borraría en cascada las filas de cada usuario."""
+    from alembic import command
+    from alembic.config import Config
+
+    from tests.conftest import BACKEND_DIR
+
+    run_migrations()
+    _seed_related_rows()
+
+    command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0004")
+    columns = {column["name"] for column in inspect(get_engine()).get_columns("users")}
+    assert not columns & {"can_run_sql", "can_apply_ddl", "can_write_data", "storage_quota_mb", "color_scheme"}
+    assert _related_rows() == RELATED_INTACT
+
+    run_migrations()
+    assert _related_rows() == RELATED_INTACT

@@ -19,10 +19,13 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("users") as batch_op:
-        batch_op.add_column(sa.Column("can_apply_ddl", sa.Boolean(), nullable=False, server_default=sa.false()))
+    # ``ADD COLUMN`` nativo, no ``batch_alter_table``: con un ``server_default`` de expresión, el modo batch de SQLite
+    # recrea ``users`` y su ``DROP TABLE`` borraría en cascada las filas de cada usuario (ver el ``downgrade``).
+    op.add_column("users", sa.Column("can_apply_ddl", sa.Boolean(), nullable=False, server_default=sa.false()))
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("users") as batch_op:
-        batch_op.drop_column("can_apply_ddl")
+    # ``DROP COLUMN`` nativo (SQLite ≥ 3.35), no ``batch_alter_table``: en SQLite el modo batch recrea ``users`` y, con
+    # ``foreign_keys=ON`` (``alembic/env.py`` usa el engine de la app), su ``DROP TABLE`` borraría en cascada las filas
+    # que dependen de los usuarios (sesiones, conexiones, proyectos…). Ver la 0012.
+    op.execute("ALTER TABLE users DROP COLUMN can_apply_ddl")

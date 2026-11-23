@@ -12,6 +12,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   del grupo usa un identificador único (`useId`).
 - Vista previa de Markdown en los resultados: al cambiar de tema el iframe se recarga una sola vez, con estilos y
   diagramas Mermaid del mismo tema (antes pasaba por un paso intermedio con los diagramas del tema anterior).
+- Migraciones 0005, 0006, 0007 y 0010: en SQLite, el modo batch recreaba `users` y su `DROP TABLE` borraba en cascada
+  las sesiones, conexiones y proyectos de cada usuario (y dejaba la auditoría sin autor). Afectaba al `upgrade` de la
+  0005-0007 desde una base de la 0.4.x o anterior y a cualquier `downgrade` por debajo de la 0010. Ahora usan
+  `ADD COLUMN` y `DROP COLUMN` nativos (SQLite ≥ 3.35); el esquema resultante no cambia.
 
 ### Documentation
 

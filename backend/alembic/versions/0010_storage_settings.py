@@ -30,11 +30,13 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("key", name=op.f("pk_app_settings")),
     )
-    with op.batch_alter_table("users") as batch:
-        batch.add_column(sa.Column("storage_quota_mb", sa.Integer(), nullable=True))
+    # ``ADD COLUMN`` nativo, como en la 0005-0007 (sin recrear ``users``).
+    op.add_column("users", sa.Column("storage_quota_mb", sa.Integer(), nullable=True))
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("users") as batch:
-        batch.drop_column("storage_quota_mb")
+    # ``DROP COLUMN`` nativo (SQLite ≥ 3.35), no ``batch_alter_table``: en SQLite el modo batch recrea ``users`` y, con
+    # ``foreign_keys=ON`` (``alembic/env.py`` usa el engine de la app), su ``DROP TABLE`` borraría en cascada las filas
+    # que dependen de los usuarios (sesiones, conexiones, proyectos…). Ver la 0012.
+    op.execute("ALTER TABLE users DROP COLUMN storage_quota_mb")
     op.drop_table("app_settings")
