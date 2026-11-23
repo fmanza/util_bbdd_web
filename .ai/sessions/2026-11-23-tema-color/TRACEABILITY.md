@@ -69,8 +69,13 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   `openapi.json` `info.version`, `.env.example` `UBW_TAG`) y `.ai/product.md`; `export_openapi --check` en verde.
 - Docker: `UBW_TAG=1.21.0 docker compose build` correcto; la imagen trae SQLite 3.40.1 (≥ 3.35, `DROP COLUMN` del
   downgrade de la 0012), `app.__version__` 1.21.0 y `/app/static/color-scheme.js`. En la imagen `backend-dev`:
-  `test_cli_and_migrations.py`, `test_auth.py` y `test_backup.py` 42 passed. No se ha levantado el compose ni
-  comprobado `/api/health` (aplicaría la 0012 a la `config.db` local).
+  `test_cli_and_migrations.py`, `test_auth.py` y `test_backup.py` 42 passed.
+- Compose (tras los commits `919cb72` y `985857f`): entorno local limpio (sin `.env` ni volumen `data`), secretos
+  creados con `scripts/generate_secrets.py`; `UBW_TAG=1.21.0 UBW_PORT=8081 docker compose up -d` (el 8080 lo ocupa
+  otro proyecto). `web` *healthy* y `worker` en marcha; el arranque aplica `0011 -> 0012`. `GET /api/health` 200:
+  `version 1.21.0`, `util_bbdd_version 5.9.0`, `database ok`, `worker ok`. `GET /color-scheme.js` 200
+  (`text/javascript`), cargado antes del módulo en `index.html`, y la CSP de la SPA sin cambios
+  (`script-src 'self' 'sha256-4eVjDELX…'`).
 - `zensical build --strict` sin avisos.
 
 ## Directrices para Futuras IAs
