@@ -99,8 +99,9 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   (≥ 3.35) y `ADD COLUMN` con `CHECK` con nombre.
 - **[migraciones]**: las 0005, 0006, 0007 y 0010 añaden y quitan sus columnas de `users` con `op.add_column` y
   `ALTER TABLE … DROP COLUMN` nativos (antes en modo batch: el `upgrade` de la 0005-0007, con `server_default` de
-  expresión, y los cuatro `downgrade` recreaban `users`). `test_downgrade_to_0004_preserves_related_rows` siembra
-  filas en la cabecera, baja a la 0004 y vuelve a subir.
+  expresión, y los cuatro `downgrade` recreaban `users`). `test_downgrade_to_0004_and_0003_preserves_related_rows`
+  siembra filas en la cabecera, baja a la 0004 y a la 0003 y vuelve a subir cada vez. El `downgrade` de la 0004 solo
+  borra sus propias tablas (sin cascadas fuera de ellas).
 - **[frontend]**: el tema vive en `localStorage['ubw-color-scheme']` (`COLOR_SCHEME_STORAGE_KEY`); `public/color-scheme.js`
   repite la clave y `colorScheme.test.ts` vigila que coincidan.
 - **[frontend]**: lo que se dibuja dentro de un iframe de Markdown usa `useResolvedColorScheme()` en sus dependencias

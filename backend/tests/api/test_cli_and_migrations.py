@@ -192,21 +192,39 @@ def test_migration_0012_preserves_related_rows(settings: Settings) -> None:
     assert _related_rows() == RELATED_INTACT
 
 
-def test_downgrade_to_0004_preserves_related_rows(settings: Settings) -> None:
+def test_downgrade_to_0004_and_0003_preserves_related_rows(settings: Settings) -> None:
     """Los ``downgrade`` de la 0005, 0006, 0007 y 0010 quitan columnas de ``users`` con ``DROP COLUMN`` nativo: el
-    modo batch recrearía la tabla y su ``DROP TABLE`` borraría en cascada las filas de cada usuario."""
+    modo batch recrearía la tabla y su ``DROP TABLE`` borraría en cascada las filas de cada usuario. El de la 0004
+    solo borra sus propias tablas (proyectos y ejecuciones): sesiones, auditoría y conexiones siguen intactas."""
     from alembic import command
     from alembic.config import Config
+    from sqlalchemy import text
 
     from tests.conftest import BACKEND_DIR
 
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
     run_migrations()
     _seed_related_rows()
 
-    command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0004")
+    command.downgrade(config, "0004")
     columns = {column["name"] for column in inspect(get_engine()).get_columns("users")}
     assert not columns & {"can_run_sql", "can_apply_ddl", "can_write_data", "storage_quota_mb", "color_scheme"}
     assert _related_rows() == RELATED_INTACT
 
     run_migrations()
     assert _related_rows() == RELATED_INTACT
+
+    command.downgrade(config, "0003")
+    tables = set(inspect(get_engine()).get_table_names())
+    assert not tables & {"projects", "project_members", "project_connections", "runs", "artifacts", "workers"}
+    with get_engine().connect() as connection:
+        before_projects = (
+            connection.execute(text("SELECT user_id FROM sessions")).scalars().all(),
+            connection.execute(text("SELECT actor_user_id FROM audit_log")).scalars().all(),
+            connection.execute(text("SELECT owner_id FROM connections")).scalars().all(),
+        )
+    assert before_projects == RELATED_INTACT[:3]
+
+    # Al volver a subir, el proyecto (borrado con su tabla en la 0003) no vuelve; lo demás sigue intacto.
+    run_migrations()
+    assert _related_rows() == (*RELATED_INTACT[:3], [])
