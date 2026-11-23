@@ -2,6 +2,7 @@ import { MantineProvider, createTheme } from '@mantine/core';
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 
+import { colorSchemeManager } from './colorScheme';
 import { createQueryClient } from './queryClient';
 
 const theme = createTheme({
@@ -17,7 +18,7 @@ interface ProvidersProps {
 export function Providers({ children, queryClient }: ProvidersProps) {
   const [client] = useState(() => queryClient ?? createQueryClient());
   return (
-    <MantineProvider theme={theme} defaultColorScheme="auto">
+    <MantineProvider theme={theme} defaultColorScheme="auto" colorSchemeManager={colorSchemeManager}>
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     </MantineProvider>
   );

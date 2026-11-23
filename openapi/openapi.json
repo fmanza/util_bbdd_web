@@ -2859,6 +2859,16 @@
             "title": "Can Write Data",
             "type": "boolean"
           },
+          "color_scheme": {
+            "description": "Tema de la interfaz: claro, oscuro o el del sistema (``auto``)",
+            "enum": [
+              "light",
+              "dark",
+              "auto"
+            ],
+            "title": "Color Scheme",
+            "type": "string"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -2887,7 +2897,8 @@
           "role",
           "can_run_sql",
           "can_apply_ddl",
-          "can_write_data"
+          "can_write_data",
+          "color_scheme"
         ],
         "title": "Me",
         "type": "object"
@@ -3984,6 +3995,26 @@
           "severity"
         ],
         "title": "PlanWarningOut",
+        "type": "object"
+      },
+      "PreferencesUpdate": {
+        "additionalProperties": false,
+        "description": "Preferencias de la propia cuenta.",
+        "properties": {
+          "color_scheme": {
+            "enum": [
+              "light",
+              "dark",
+              "auto"
+            ],
+            "title": "Color Scheme",
+            "type": "string"
+          }
+        },
+        "required": [
+          "color_scheme"
+        ],
+        "title": "PreferencesUpdate",
         "type": "object"
       },
       "ProbeErrorOut": {
@@ -6542,7 +6573,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "1.20.0"
+    "version": "1.21.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -7896,6 +7927,47 @@
           }
         },
         "summary": "Usuario actual",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me/preferences": {
+      "patch": {
+        "description": "Guarda las preferencias del usuario de la sesión (el tema de la interfaz). Solo actúa sobre la propia cuenta.",
+        "operationId": "update_my_preferences_api_v1_auth_me_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Token CSRF ausente o no válido"
+          },
+          "422": {
+            "description": "Valor no válido o campo desconocido"
+          }
+        },
+        "summary": "Guardar mis preferencias",
         "tags": [
           "auth"
         ]

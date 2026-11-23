@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from app.domain.identity.passwords import MAX_PASSWORD_LENGTH
 
 Role = Literal["admin", "user"]
+ColorScheme = Literal["light", "dark", "auto"]
 Username = Annotated[str, Field(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9._-]+$")]
 DisplayName = Annotated[str, Field(min_length=1, max_length=128)]
 Password = Annotated[SecretStr, Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)]
@@ -54,6 +55,15 @@ class Me(_Out):
     can_run_sql: bool
     can_apply_ddl: bool
     can_write_data: bool
+    color_scheme: ColorScheme = Field(description="Tema de la interfaz: claro, oscuro o el del sistema (``auto``)")
+
+
+class PreferencesUpdate(BaseModel):
+    """Preferencias de la propia cuenta."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    color_scheme: ColorScheme
 
 
 # --- users ------------------------------------------------------------------------------------------------------

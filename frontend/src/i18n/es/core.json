@@ -72,6 +72,13 @@
     "passwordChanged": "Contraseña cambiada",
     "passwordChangedBody": "Las demás sesiones se han cerrado."
   },
+  "theme": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "auto": "Sistema",
+    "saveFailed": "No se ha podido guardar el tema. Se mantiene el anterior."
+  },
   "home": {
     "title": "Inicio",
     "intro": "Conexiones, proyectos y ejecuciones de util_bbdd para varios usuarios. Las secciones se habilitan fase a fase según el ROADMAP."

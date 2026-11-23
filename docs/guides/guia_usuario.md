@@ -71,7 +71,8 @@ Ninguna operación escribe en una conexión marcada como «Solo lectura».
 
 El **menú de la izquierda** agrupa las secciones por uso: *Inicio*; *Trabajo* (Proyectos y Ejecuciones); *Datos*
 (Conexiones y Motores) y *Mi cuenta* (Mi espacio). Los administradores ven además *Administración*, plegable. En el
-móvil, el menú se abre con el botón de la cabecera y se cierra al elegir una sección.
+móvil, el menú se abre con el botón de la cabecera y se cierra al elegir una sección. En el menú con tu nombre
+eliges el **tema** (claro, oscuro o el del sistema), que se guarda en tu cuenta.
 4. **Crea un proyecto** en *Proyectos → Nuevo proyecto*. En su pestaña *Conexiones*, asocia las conexiones con un
    alias (`origen`, `destino`…) y, en *Miembros*, añade compañeros con su rol.
 5. **Lanza una ejecución** en *Ejecuciones → Lanzar ejecución*. Elige la operación, rellena el formulario y sigue

@@ -17,8 +17,10 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useResolvedColorScheme } from '../../app/colorScheme';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatBytes } from '../../components/format';
+import { frameBaseStyle } from './documentation/frameTheme';
 import { stripFrontMatter } from './markdown';
 import { SqlCode } from './migrate/SqlBlock';
 import { renderMermaidBlocks } from './mermaid';
@@ -38,24 +40,25 @@ const SANDBOXED = new Set(['html', 'graphs']);
 // bloquea cualquier recurso externo; así el HTML incrustado en el Markdown no ejecuta nada ni hace peticiones. Los
 // bloques `mermaid` llegan ya como SVG (`renderMermaidBlocks`).
 const MARKDOWN_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'";
-const MARKDOWN_STYLE =
-  'body{font-family:system-ui,sans-serif;font-size:14px;line-height:1.5;margin:12px;color:#1a1b1e}' +
-  'table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}' +
-  'pre,code{background:#f4f4f5;padding:2px 4px;border-radius:4px}';
 const KIND_ORDER = ['html', 'markdown', 'sql', 'graphs', 'word', 'excel', 'log', 'manifest', 'other'];
 
 function MarkdownPreview({ title, source }: { title: string; source: string }) {
+  // Tema efectivo en las dependencias: al cambiarlo se vuelven a dibujar los diagramas y el documento (1.21.0).
+  const scheme = useResolvedColorScheme();
   const [html, setHtml] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     void import('marked').then(async ({ marked }) => {
-      const body = await renderMermaidBlocks(await marked.parse(stripFrontMatter(source), { gfm: true }));
+      const body = await renderMermaidBlocks(
+        await marked.parse(stripFrontMatter(source), { gfm: true }),
+        scheme,
+      );
       if (alive) setHtml(body);
     });
     return () => {
       alive = false;
     };
-  }, [source]);
+  }, [source, scheme]);
 
   if (html === null) return <Loader size="sm" />;
   return (
@@ -63,7 +66,7 @@ function MarkdownPreview({ title, source }: { title: string; source: string }) {
       title={title}
       sandbox=""
       referrerPolicy="no-referrer"
-      srcDoc={`<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${MARKDOWN_CSP}"><style>${MARKDOWN_STYLE}</style>${html}`}
+      srcDoc={`<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${MARKDOWN_CSP}"><style>${frameBaseStyle(scheme)}</style>${html}`}
       style={{ width: '100%', height: 420, border: '1px solid var(--mantine-color-default-border)' }}
     />
   );

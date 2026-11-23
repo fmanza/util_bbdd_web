@@ -106,3 +106,73 @@ def test_migration_0011_drops_encoding_errors_from_mariadb(settings: Settings) -
 
     run_migrations()
     assert stored() == after
+
+
+def test_migration_0012_preserves_related_rows(settings: Settings) -> None:
+    """La 0012 añade ``users.color_scheme`` sin recrear ``users``: con ``foreign_keys=ON``, un ``DROP TABLE users``
+    (modo batch) borraría en cascada sesiones, conexiones y proyectos y dejaría la auditoría sin autor."""
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    from tests.conftest import BACKEND_DIR
+
+    run_migrations("0011")
+    engine = get_engine()
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO users (id, username, display_name, password_hash, role, is_active, failed_attempts, "
+                "password_changed_at, created_at, updated_at) "
+                "VALUES (1, 'jefa', 'Jefa', 'x', 'admin', 1, 0, '2026-11-23', '2026-11-23', '2026-11-23')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO sessions (id, token_hash, user_id, created_at, last_seen_at, expires_at) "
+                "VALUES (1, 'h', 1, '2026-11-23', '2026-11-23', '2026-11-24')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO audit_log (id, ts, actor_user_id, action, outcome) VALUES (1, '2026-11-23', 1, 'x', 'ok')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO connections (id, owner_id, name, db_type, description, params, visibility, read_only, "
+                "created_at, updated_at) VALUES (1, 1, 'c', 'sqlite', '', '{}', 'private', 1, '2026-11-23', "
+                "'2026-11-23')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO projects (id, owner_id, name, description, created_at, updated_at) "
+                "VALUES (1, 1, 'p', '', '2026-11-23', '2026-11-23')"
+            )
+        )
+
+    def related() -> tuple[object, ...]:
+        with engine.connect() as connection:
+            return (
+                connection.execute(text("SELECT user_id FROM sessions")).scalars().all(),
+                connection.execute(text("SELECT actor_user_id FROM audit_log")).scalars().all(),
+                connection.execute(text("SELECT owner_id FROM connections")).scalars().all(),
+                connection.execute(text("SELECT owner_id FROM projects")).scalars().all(),
+            )
+
+    expected = ([1], [1], [1], [1])
+    run_migrations()
+    assert related() == expected
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT color_scheme FROM users")).scalar_one() == "auto"
+    with pytest.raises(IntegrityError, match="ck_users_color_scheme"), engine.begin() as connection:
+        connection.execute(text("UPDATE users SET color_scheme = 'sepia'"))
+
+    command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0011")
+    assert "color_scheme" not in {column["name"] for column in inspect(engine).get_columns("users")}
+    assert related() == expected
+
+    run_migrations()
+    assert related() == expected

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEntry, User, UserSession
@@ -38,6 +39,7 @@ def test_login_sets_session_and_csrf_cookies_with_flags(client: TestClient, user
         "can_run_sql": False,
         "can_apply_ddl": False,
         "can_write_data": False,
+        "color_scheme": "auto",
     }
     cookies = response.headers.get_list("set-cookie")
     session_cookie = next(c for c in cookies if c.startswith("__Host-ubw_session=")).lower()
@@ -173,6 +175,69 @@ def test_password_change_requires_session(client: TestClient) -> None:
     )
 
     assert response.status_code == 401
+
+
+def test_me_color_scheme_defaults_to_auto(user_client: TestClient) -> None:
+    assert user_client.get("/api/v1/auth/me").json()["color_scheme"] == "auto"
+
+
+def test_update_preferences_persists_color_scheme(client: TestClient, user: User, db: Session) -> None:
+    do_login(client, "ana", USER_PASSWORD)
+
+    response = client.patch("/api/v1/auth/me/preferences", json={"color_scheme": "dark"})
+
+    assert response.status_code == 200
+    assert response.json()["color_scheme"] == "dark"
+    assert response.json()["username"] == "ana"
+    assert client.get("/api/v1/auth/me").json()["color_scheme"] == "dark"
+    db.refresh(user)
+    assert user.color_scheme == "dark"
+    other = TestClient(client.app, base_url="https://testserver")
+    assert _login(other, "ana", USER_PASSWORD) == 200
+    assert other.get("/api/v1/auth/me").json()["color_scheme"] == "dark"
+
+
+@pytest.mark.parametrize(
+    "body", [{"color_scheme": "sepia"}, {"color_scheme": None}, {}, {"color_scheme": "dark", "user_id": 1}]
+)
+def test_update_preferences_rejects_invalid_body(user_client: TestClient, body: dict[str, object]) -> None:
+    response = user_client.patch("/api/v1/auth/me/preferences", json=body)
+
+    assert response.status_code == 422
+    assert response.headers["content-type"].startswith("application/problem+json")
+    assert user_client.get("/api/v1/auth/me").json()["color_scheme"] == "auto"
+
+
+def test_update_preferences_requires_csrf_and_session(client: TestClient, user: User) -> None:
+    anonymous = client.patch(
+        "/api/v1/auth/me/preferences", json={"color_scheme": "dark"}, headers={"X-CSRF-Token": _csrf(client)}
+    )
+    assert anonymous.status_code == 401
+
+    do_login(client, "ana", USER_PASSWORD)
+    del client.headers["X-CSRF-Token"]
+    assert client.patch("/api/v1/auth/me/preferences", json={"color_scheme": "dark"}).status_code == 403
+    assert client.get("/api/v1/auth/me").json()["color_scheme"] == "auto"
+
+
+def test_update_preferences_only_changes_own_account(
+    client: TestClient, user: User, make_user: Callable[..., User], db: Session
+) -> None:
+    other = make_user("berta")
+    do_login(client, "ana", USER_PASSWORD)
+
+    assert client.patch("/api/v1/auth/me/preferences", json={"color_scheme": "light"}).status_code == 200
+
+    db.refresh(other)
+    assert other.color_scheme == "auto"
+
+
+def test_update_preferences_is_not_audited(user_client: TestClient, db: Session) -> None:
+    before = db.scalar(select(func.count()).select_from(AuditEntry))
+
+    user_client.patch("/api/v1/auth/me/preferences", json={"color_scheme": "dark"})
+
+    assert db.scalar(select(func.count()).select_from(AuditEntry)) == before
 
 
 def test_login_validation_error_does_not_echo_password(client: TestClient) -> None:

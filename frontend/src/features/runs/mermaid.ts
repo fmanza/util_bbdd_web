@@ -16,15 +16,28 @@ export function stripMermaidConfig(text: string): string {
   return text.replace(FRONTMATTER, '').replace(DIRECTIVE, '');
 }
 
-/** Sustituye en `html` (salida de `marked`) cada `<pre><code class="language-mermaid">` por su SVG. Un diagrama que
- *  Mermaid no sabe dibujar se queda como código. */
-export async function renderMermaidBlocks(html: string): Promise<string> {
+// `mermaid.initialize` es global: dos vistas previas a la vez (o un cambio de tema a mitad de un dibujo) mezclarían
+// temas. Cada llamada espera a la anterior (1.21.0); un fallo no corta la cola.
+let queue: Promise<unknown> = Promise.resolve();
+
+/** Sustituye en `html` (salida de `marked`) cada `<pre><code class="language-mermaid">` por su SVG, con el tema de
+ *  `scheme`. Un diagrama que Mermaid no sabe dibujar se queda como código. */
+export function renderMermaidBlocks(html: string, scheme: 'light' | 'dark' = 'light'): Promise<string> {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const blocks = Array.from(doc.querySelectorAll('pre > code.language-mermaid'));
-  if (blocks.length === 0) return html;
+  if (blocks.length === 0) return Promise.resolve(html);
+  const run = queue.then(() => renderBlocks(doc, blocks, scheme));
+  queue = run.catch(() => undefined);
+  return run;
+}
 
+async function renderBlocks(doc: Document, blocks: Element[], scheme: 'light' | 'dark'): Promise<string> {
   const { default: mermaid } = await import('mermaid');
-  mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: scheme === 'dark' ? 'dark' : 'default',
+  });
   // `render` en serie: Mermaid no admite dibujar varios diagramas a la vez.
   for (const code of blocks) {
     try {

@@ -6,6 +6,7 @@ import { NavLink as RouterNavLink, Outlet, useLocation } from 'react-router';
 
 import { UserMenu } from '../features/auth/UserMenu';
 import { useMe } from '../features/auth/useAuth';
+import { useColorSchemeSync } from '../features/auth/useColorSchemeSync';
 import { ADMIN_NAV, MAIN_NAV, type NavItem, type NavSection } from './navigation';
 
 function SectionTitle({ children }: { children: string }) {
@@ -19,6 +20,7 @@ function SectionTitle({ children }: { children: string }) {
 export function Layout() {
   const { t } = useTranslation();
   const { data: me } = useMe();
+  useColorSchemeSync(me);
   const { pathname } = useLocation();
   // En móvil el menú se pliega tras la hamburguesa y se cierra al navegar.
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);

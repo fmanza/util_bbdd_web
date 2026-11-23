@@ -37,6 +37,19 @@ Menú con tu nombre → *Cambiar contraseña*. Indica la actual y la nueva dos v
   compleja.
 - Al cambiarla se **cierran tus demás sesiones** (otros navegadores o equipos); la actual sigue abierta.
 
+## Tema claro u oscuro
+
+Menú con tu nombre → *Tema*: **Claro**, **Oscuro** o **Sistema** (el que tenga configurado tu equipo, y cambia con
+él). La opción elegida lleva una marca.
+
+- Se guarda **en tu cuenta**: te acompaña en cualquier navegador o equipo en el que inicies sesión. Las cuentas
+  existentes empiezan en *Sistema*.
+- Afecta a toda la aplicación, incluidas las vistas previas de Markdown y los diagramas de la documentación.
+- Si no se puede guardar, el menú lo avisa y se mantiene el tema anterior.
+- La pantalla de inicio de sesión usa el último tema usado en ese navegador; en un navegador nuevo, el del sistema
+  hasta que entras.
+- Cambiar el tema no se registra en la auditoría.
+
 ## Administración de usuarios
 
 *Administración → Usuarios* (solo `admin`).

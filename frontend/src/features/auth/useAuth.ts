@@ -1,3 +1,4 @@
+import { useMantineColorScheme } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, CSRF_HEADER, ensureOk, isApiError, unwrap } from '../../api/client';
@@ -6,6 +7,7 @@ import type { components } from '../../api/schema';
 export type Me = components['schemas']['Me'];
 export type LoginRequest = components['schemas']['LoginRequest'];
 export type PasswordChange = components['schemas']['PasswordChange'];
+export type ColorScheme = Me['color_scheme'];
 
 export const meQueryKey = ['auth', 'me'] as const;
 
@@ -59,6 +61,36 @@ export function useLogout() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: async (body: PasswordChange) => ensureOk(await api.POST('/api/v1/auth/password', { body })),
+  });
+}
+
+/**
+ * Guarda el tema en la cuenta con actualización optimista: el tema y la caché de `me` cambian al instante, y si el
+ * servidor falla vuelven los dos al valor anterior. Mientras se guarda, el menú desactiva las opciones (sin carreras
+ * entre dos clics seguidos).
+ */
+export function useUpdatePreferences() {
+  const queryClient = useQueryClient();
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  return useMutation({
+    mutationFn: async (color_scheme: ColorScheme): Promise<Me> =>
+      unwrap(await api.PATCH('/api/v1/auth/me/preferences', { body: { color_scheme } })),
+    onMutate: async (next) => {
+      await queryClient.cancelQueries({ queryKey: meQueryKey });
+      const previousMe = queryClient.getQueryData<Me | null>(meQueryKey);
+      const previousScheme = colorScheme;
+      setColorScheme(next);
+      if (previousMe) queryClient.setQueryData<Me>(meQueryKey, { ...previousMe, color_scheme: next });
+      return { previousMe, previousScheme };
+    },
+    onError: (_error, _next, context) => {
+      if (!context) return;
+      setColorScheme(context.previousScheme);
+      if (context.previousMe !== undefined) queryClient.setQueryData(meQueryKey, context.previousMe);
+    },
+    onSuccess: (me) => {
+      queryClient.setQueryData(meQueryKey, me);
+    },
   });
 }
 

@@ -403,6 +403,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Guardar mis preferencias
+         * @description Guarda las preferencias del usuario de la sesión (el tema de la interfaz). Solo actúa sobre la propia cuenta.
+         */
+        patch: operations["update_my_preferences_api_v1_auth_me_preferences_patch"];
+        trace?: never;
+    };
     "/api/v1/auth/me/storage": {
         parameters: {
             query?: never;
@@ -2770,6 +2790,12 @@ export interface components {
             can_run_sql: boolean;
             /** Can Write Data */
             can_write_data: boolean;
+            /**
+             * Color Scheme
+             * @description Tema de la interfaz: claro, oscuro o el del sistema (``auto``)
+             * @enum {string}
+             */
+            color_scheme: "light" | "dark" | "auto";
             /** Display Name */
             display_name: string;
             /** Id */
@@ -3251,6 +3277,17 @@ export interface components {
              * @default
              */
             target_type: string;
+        };
+        /**
+         * PreferencesUpdate
+         * @description Preferencias de la propia cuenta.
+         */
+        PreferencesUpdate: {
+            /**
+             * Color Scheme
+             * @enum {string}
+             */
+            color_scheme: "light" | "dark" | "auto";
         };
         /**
          * ProbeErrorOut
@@ -5381,6 +5418,51 @@ export interface operations {
             };
             /** @description No autenticado */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_my_preferences_api_v1_auth_me_preferences_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token CSRF ausente o no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Valor no válido o campo desconocido */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

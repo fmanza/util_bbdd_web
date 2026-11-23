@@ -51,6 +51,58 @@ describe('renderMermaidBlocks', () => {
     expect(rendered.startsWith('graph LR')).toBe(true);
   });
 
+  it('usa el tema oscuro de Mermaid con el tema oscuro y el normal con el claro', async () => {
+    mermaid.render.mockResolvedValue({ svg: '<svg></svg>' });
+    const html = '<pre><code class="language-mermaid">graph LR</code></pre>';
+
+    await renderMermaidBlocks(html, 'dark');
+    await renderMermaidBlocks(html, 'light');
+    await renderMermaidBlocks(html);
+
+    expect(mermaid.initialize.mock.calls.map(([config]) => (config as { theme: string }).theme)).toEqual([
+      'dark',
+      'default',
+      'default',
+    ]);
+  });
+
+  it('dos dibujos a la vez van en serie: el segundo no cambia el tema a mitad del primero', async () => {
+    let finishFirst: () => void = () => undefined;
+    mermaid.render
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishFirst = () => resolve({ svg: '<svg id="a"></svg>' });
+          }),
+      )
+      .mockResolvedValue({ svg: '<svg id="b"></svg>' });
+    const html = '<pre><code class="language-mermaid">graph LR</code></pre>';
+
+    const first = renderMermaidBlocks(html, 'dark');
+    const second = renderMermaidBlocks(html, 'light');
+    await vi.waitFor(() => expect(mermaid.render).toHaveBeenCalledTimes(1));
+    expect(mermaid.initialize).toHaveBeenCalledTimes(1);
+
+    finishFirst();
+    expect(await first).toContain('id="a"');
+    expect(await second).toContain('id="b"');
+    const [initDark, initLight] = mermaid.initialize.mock.invocationCallOrder;
+    const [renderFirst] = mermaid.render.mock.invocationCallOrder;
+    expect(initDark).toBeLessThan(renderFirst as number);
+    expect(renderFirst).toBeLessThan(initLight as number);
+  });
+
+  it('un fallo no corta la cola', async () => {
+    mermaid.initialize.mockImplementationOnce(() => {
+      throw new Error('init');
+    });
+    mermaid.render.mockResolvedValue({ svg: '<svg id="ok"></svg>' });
+    const html = '<pre><code class="language-mermaid">graph LR</code></pre>';
+
+    await expect(renderMermaidBlocks(html)).rejects.toThrow('init');
+    expect(await renderMermaidBlocks(html)).toContain('id="ok"');
+  });
+
   it('stripMermaidConfig no toca un diagrama normal', () => {
     const text = 'graph LR\n  A["clientes"] --> B["pedidos"]\n  %% comentario';
     expect(stripMermaidConfig(text)).toBe(text);

@@ -44,5 +44,8 @@ configure({ asyncUtilTimeout: 3000 });
 
 afterEach(() => {
   cleanup();
+  // Tema (1.21.0): Mantine lo guarda en localStorage y en <html>; cada test empieza en `auto`.
+  localStorage.removeItem('ubw-color-scheme');
+  document.documentElement.removeAttribute('data-mantine-color-scheme');
   vi.unstubAllGlobals();
 });

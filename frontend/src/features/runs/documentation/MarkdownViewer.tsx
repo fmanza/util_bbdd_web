@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import { useResolvedColorScheme } from '../../../app/colorScheme';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { stripFrontMatter } from '../markdown';
 import { renderMermaidBlocks } from '../mermaid';
@@ -61,7 +62,13 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
   const { t } = useTranslation();
   const text = useArtifactText(runId, page.artifact);
   const frame = useRef<HTMLIFrameElement>(null);
-  const [safeHtml, setSafeHtml] = useState<{ source: string; html: string } | null>(null);
+  // Tema efectivo (1.21.0): forma parte de lo generado (diagramas y estilos), así que entra en las dependencias.
+  const scheme = useResolvedColorScheme();
+  const [safeHtml, setSafeHtml] = useState<{
+    source: string;
+    scheme: 'light' | 'dark';
+    html: string;
+  } | null>(null);
 
   useEffect(() => {
     const source = text.data;
@@ -70,13 +77,13 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
     void import('marked').then(async ({ marked }) => {
       // Mermaid y el DDL (```sql, resaltado) antes de limpiar: el resultado pasa entero por DOMPurify.
       const parsed = await marked.parse(stripFrontMatter(source), { gfm: true });
-      const html = await highlightSqlBlocks(await renderMermaidBlocks(parsed));
-      if (alive) setSafeHtml({ source, html: sanitizeMarkdownHtml(html) });
+      const html = await highlightSqlBlocks(await renderMermaidBlocks(parsed, scheme));
+      if (alive) setSafeHtml({ source, scheme, html: sanitizeMarkdownHtml(html) });
     });
     return () => {
       alive = false;
     };
-  }, [text.data]);
+  }, [text.data, scheme]);
 
   useEffect(() => {
     const listener = (event: MessageEvent) => {
@@ -89,15 +96,21 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
     return () => window.removeEventListener('message', listener);
   }, [onLink]);
 
-  const ready = safeHtml !== null && safeHtml.source === text.data;
+  const ready = safeHtml !== null && safeHtml.source === text.data && safeHtml.scheme === scheme;
   const srcDoc = useMemo(
     () =>
       ready
-        ? buildFrameDocument(safeHtml.html, hash, window.location.origin, {
-            copy: t('runs.outputs.copyCode'),
-            copied: t('runs.outputs.codeCopied'),
-            failed: t('runs.outputs.copyCodeFailed'),
-          })
+        ? buildFrameDocument(
+            safeHtml.html,
+            hash,
+            window.location.origin,
+            {
+              copy: t('runs.outputs.copyCode'),
+              copied: t('runs.outputs.codeCopied'),
+              failed: t('runs.outputs.copyCodeFailed'),
+            },
+            safeHtml.scheme,
+          )
         : null,
     [ready, safeHtml, hash, t],
   );

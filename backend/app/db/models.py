@@ -38,6 +38,7 @@ from app.db.base import Base
 
 Role = Literal["admin", "user"]
 ROLES: tuple[Role, ...] = ("admin", "user")
+ColorScheme = Literal["light", "dark", "auto"]
 Visibility = Literal["private", "shared"]
 ProjectRole = Literal["owner", "editor", "viewer"]
 PROJECT_ROLES: tuple[ProjectRole, ...] = ("owner", "editor", "viewer")
@@ -71,7 +72,10 @@ class User(Base):
     """Usuario de la aplicación. No se borra: se desactiva (la auditoría lo referencia)."""
 
     __tablename__ = "users"
-    __table_args__ = (CheckConstraint("role IN ('admin', 'user')", name="role"),)
+    __table_args__ = (
+        CheckConstraint("role IN ('admin', 'user')", name="role"),
+        CheckConstraint("color_scheme IN ('light', 'dark', 'auto')", name="color_scheme"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(64), unique=True)
@@ -84,6 +88,8 @@ class User(Base):
     can_write_data: Mapped[bool] = mapped_column(default=False)
     #: Cuota propia en MB (ADR-012): ``None`` = la global, ``0`` = sin límite.
     storage_quota_mb: Mapped[int | None] = mapped_column(default=None)
+    #: Tema de la interfaz (``light``, ``dark`` o ``auto`` = el del sistema); viaja con la cuenta.
+    color_scheme: Mapped[str] = mapped_column(String(8), default="auto", server_default="auto")
     failed_attempts: Mapped[int] = mapped_column(default=0)
     locked_until: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
     password_changed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)

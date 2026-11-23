@@ -17,24 +17,29 @@
 
 import DOMPurify from 'dompurify';
 
+import { FRAME_PALETTES, type FrameScheme, frameBaseStyle } from './frameTheme';
 import { MAX_HREF } from './markdownNav';
 
 export const NAV_MESSAGE = 'ubw-md-nav';
 
-const STYLE =
-  'body{font-family:system-ui,sans-serif;font-size:14px;line-height:1.5;margin:12px;color:#1a1b1e}' +
-  'table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}' +
-  'pre,code{background:#f4f4f5;padding:2px 4px;border-radius:4px}a[href]{color:#1c7ed6;cursor:pointer}' +
-  '.mermaid-diagram{overflow:auto}' +
-  // Bloques de código: barra con «Copiar» encima (no tapa el código) y colores del SQL (contraste AA sobre #f4f4f5).
-  'pre{padding:8px 12px;overflow:auto}pre code{padding:0}' +
-  '.ubw-code-bar{display:flex;justify-content:flex-end;margin:8px 0 -10px}' +
-  '.ubw-copy{font:inherit;font-size:12px;cursor:pointer;' +
-  'color:#1a1b1e;background:#fff;border:1px solid #ccc;border-radius:4px;padding:2px 8px}' +
-  '.ubw-copy:focus-visible{outline:2px solid #1c7ed6;outline-offset:2px}' +
-  '.ubw-sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}' +
-  '.hljs-keyword,.hljs-built_in{color:#0b5cad;font-weight:600}.hljs-type{color:#7b2fa8}' +
-  '.hljs-string{color:#2b7a0b}.hljs-number,.hljs-literal{color:#a34e00}.hljs-comment{color:#5c5f66;font-style:italic}';
+/** Estilos del documento en `scheme`: los comunes (`frameBaseStyle`), Mermaid, la barra «Copiar» y el SQL resaltado. */
+function frameStyle(scheme: FrameScheme): string {
+  const p = FRAME_PALETTES[scheme];
+  return (
+    frameBaseStyle(scheme) +
+    'a[href]{cursor:pointer}.mermaid-diagram{overflow:auto}' +
+    // Bloques de código: barra con «Copiar» encima (no tapa el código) y colores del SQL (contraste AA, frameTheme).
+    'pre{padding:8px 12px;overflow:auto}pre code{padding:0}' +
+    '.ubw-code-bar{display:flex;justify-content:flex-end;margin:8px 0 -10px}' +
+    '.ubw-copy{font:inherit;font-size:12px;cursor:pointer;' +
+    `color:${p.text};background:${p.buttonBackground};border:1px solid ${p.border};border-radius:4px;padding:2px 8px}` +
+    `.ubw-copy:focus-visible{outline:2px solid ${p.link};outline-offset:2px}` +
+    '.ubw-sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}' +
+    `.hljs-keyword,.hljs-built_in{color:${p.keyword};font-weight:600}.hljs-type{color:${p.type}}` +
+    `.hljs-string{color:${p.string}}.hljs-number,.hljs-literal{color:${p.number}}` +
+    `.hljs-comment{color:${p.comment};font-style:italic}`
+  );
+}
 
 /**
  * HTML sin scripts, manejadores `on*`, marcos, objetos ni formularios; admite SVG (diagramas Mermaid).
@@ -117,12 +122,14 @@ export interface CopyLabels {
  * @param hash - Ancla que se abre al cargar (`col-id`), o vacío.
  * @param parentOrigin - Origen de la SPA: el único al que el puente envía mensajes.
  * @param copy - Textos del botón «Copiar»; sin ellos, los bloques de código no llevan botón.
+ * @param scheme - Tema efectivo de la SPA (claro u oscuro); al cambiar, el visor vuelve a generar el documento.
  */
 export function buildFrameDocument(
   safeHtml: string,
   hash: string,
   parentOrigin: string,
   copy?: CopyLabels,
+  scheme: FrameScheme = 'light',
 ): string {
   const labels = copy
     ? ` data-ubw-copy="${attr(copy.copy)}" data-ubw-copied="${attr(copy.copied)}"` +
@@ -131,7 +138,7 @@ export function buildFrameDocument(
   return (
     `<!doctype html><html lang="es"><head><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${frameCsp()}">` +
-    `<style>${STYLE}</style></head>` +
+    `<style>${frameStyle(scheme)}</style></head>` +
     `<body data-ubw-hash="${attr(hash)}" data-ubw-parent="${attr(parentOrigin)}"${labels}>${safeHtml}` +
     `<script>${BRIDGE_SCRIPT}</script></body></html>`
   );

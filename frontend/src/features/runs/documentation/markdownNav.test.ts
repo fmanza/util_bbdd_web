@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Artifact } from '../useRuns';
+import { FRAME_PALETTES } from './frameTheme';
 import {
   BRIDGE_SCRIPT,
   BRIDGE_SHA256,
@@ -260,6 +261,22 @@ describe('documento del iframe', () => {
     // El puente copia el texto del bloque (sin etiquetas) y solo al pulsar su propio botón.
     expect(BRIDGE_SCRIPT).toContain('code.textContent');
     expect(BRIDGE_SCRIPT).toContain("execCommand('copy')");
+  });
+
+  it('el documento sigue el tema pedido sin cambiar el puente ni la CSP', () => {
+    const light = buildFrameDocument('<p>x</p>', '', 'https://ubw.example');
+    const dark = buildFrameDocument('<p>x</p>', '', 'https://ubw.example', undefined, 'dark');
+
+    expect(light).toContain('color-scheme:light');
+    expect(light).toContain(`background:${FRAME_PALETTES.light.background}`);
+    expect(dark).toContain('color-scheme:dark');
+    expect(dark).toContain(`background:${FRAME_PALETTES.dark.background}`);
+    expect(dark).toContain(`.hljs-keyword,.hljs-built_in{color:${FRAME_PALETTES.dark.keyword}`);
+    for (const page of [light, dark]) {
+      expect(page).toContain(`content="${frameCsp()}"`);
+      expect(page).toContain(`<script>${BRIDGE_SCRIPT}</script>`);
+      expect(page.match(/<script/g)).toHaveLength(1);
+    }
   });
 
   it('acepta solo mensajes del puente con el formato esperado (T5)', () => {

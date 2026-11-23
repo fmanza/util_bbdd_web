@@ -17,6 +17,7 @@ export const ADMIN = {
   can_run_sql: true,
   can_apply_ddl: false,
   can_write_data: false,
+  color_scheme: 'auto',
 } as const;
 export const USER = {
   id: 2,
@@ -26,6 +27,7 @@ export const USER = {
   can_run_sql: false,
   can_apply_ddl: false,
   can_write_data: false,
+  color_scheme: 'auto',
 } as const;
 
 /**

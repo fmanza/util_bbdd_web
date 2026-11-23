@@ -16,13 +16,13 @@ from app.api.deps import (
     set_auth_cookies,
     set_csrf_cookie,
 )
-from app.api.v1.schemas import CsrfToken, LoginRequest, Me, PasswordChange
+from app.api.v1.schemas import CsrfToken, LoginRequest, Me, PasswordChange, PreferencesUpdate
 from app.api.v1.schemas_storage import MyStorageOut
 from app.core.errors import AppError
 from app.core.middleware import client_ip
 from app.core.ratelimit import Limit, RateLimitedError, SlidingWindowLimiter
 from app.core.security import new_csrf_token, session_csrf_token
-from app.domain.identity import auth
+from app.domain.identity import auth, users
 from app.domain.storage.service import my_storage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -96,6 +96,17 @@ def logout(session: CurrentSession, response: Response, db: DbSession, settings:
 def me(session: CurrentSession) -> Me:
     """Usuario de la sesión actual."""
     return Me.model_validate(session.user)
+
+
+@router.patch(
+    "/me/preferences",
+    response_model=Me,
+    summary="Guardar mis preferencias",
+    responses={**_401, **_403, 422: {"description": "Valor no válido o campo desconocido"}},
+)
+def update_my_preferences(body: PreferencesUpdate, session: CurrentSession, db: DbSession) -> Me:
+    """Guarda las preferencias del usuario de la sesión (el tema de la interfaz). Solo actúa sobre la propia cuenta."""
+    return Me.model_validate(users.update_preferences(db, session.user, color_scheme=body.color_scheme))
 
 
 @router.get("/me/storage", response_model=MyStorageOut, summary="Mi espacio", responses=_401)

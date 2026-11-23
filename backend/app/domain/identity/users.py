@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.db.models import Role, User, utcnow
+from app.db.models import ColorScheme, Role, User, utcnow
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.identity.errors import (
@@ -230,4 +230,15 @@ def update_user(
             },
         )
     db.commit()
+    return user
+
+
+def update_preferences(db: Session, user: User, *, color_scheme: ColorScheme) -> User:
+    """Guarda las preferencias de ``user`` (su propia cuenta).
+
+    Sin auditoría: es una preferencia estética sin efecto en la seguridad (sesión 2026-11-23-tema-color).
+    """
+    if user.color_scheme != color_scheme:
+        user.color_scheme = color_scheme
+        db.commit()
     return user
