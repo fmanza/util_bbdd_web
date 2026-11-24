@@ -3,6 +3,13 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versiones según
 [SemVer](https://semver.org/lang/es/). Hasta 1.0, una MINOR por fase del ROADMAP.
 
+## [Unreleased]
+
+### Changed
+
+- Dependencia de `util_bbdd` actualizada de 5.9.0 a 5.9.1, con el wheel de la release y su hash fijados mediante
+  `backend/pyproject.toml` y `backend/uv.lock` (ADR-006).
+
 ## [1.21.1] - 2026-11-24
 
 ### Fixed

@@ -1127,8 +1127,8 @@ wheels = [
 
 [[package]]
 name = "util-bbdd"
-version = "5.9.0"
-source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.9.0/util_bbdd-5.9.0-py3-none-any.whl" }
+version = "5.9.1"
+source = { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.9.1/util_bbdd-5.9.1-py3-none-any.whl" }
 dependencies = [
     { name = "jinja2" },
     { name = "openpyxl" },
@@ -1137,7 +1137,7 @@ dependencies = [
     { name = "sqlalchemy" },
 ]
 wheels = [
-    { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.9.0/util_bbdd-5.9.0-py3-none-any.whl", hash = "sha256:a38e4e185fa04baa88dc57a768f2061f7cb378d5dbf1f75177eaf210bb9f4e27" },
+    { url = "https://github.com/fmanza/util_bbdd/releases/download/v5.9.1/util_bbdd-5.9.1-py3-none-any.whl", hash = "sha256:63392d9d818ca870b336aba4d2b50bd0fb1607eabfad17c89b2ff5c93264cec1" },
 ]
 
 [package.optional-dependencies]
@@ -1189,7 +1189,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1" },
     { name = "mariadb", marker = "extra == 'mariadb'", specifier = ">=1.1" },
     { name = "matplotlib", marker = "extra == 'analysis-matplotlib'", specifier = ">=3.11" },
-    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0.8" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=2.4" },
     { name = "networkx", marker = "extra == 'analysis-matplotlib'", specifier = ">=3.7" },
     { name = "openpyxl", specifier = ">=3.1.5" },
@@ -1281,7 +1281,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "sqlalchemy", specifier = ">=2.1" },
     { name = "sqlglot", specifier = ">=30" },
-    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlite-async", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v5.9.0/util_bbdd-5.9.0-py3-none-any.whl" },
+    { name = "util-bbdd", extras = ["oracle", "mariadb", "mysql", "postgresql", "sqlserver", "sqlite-async", "migrate", "analysis"], url = "https://github.com/fmanza/util_bbdd/releases/download/v5.9.1/util_bbdd-5.9.1-py3-none-any.whl" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]
 provides-extras = ["hsqldb", "odbc"]
