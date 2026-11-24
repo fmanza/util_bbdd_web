@@ -5,6 +5,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Changed
+
+- Detalle de una ejecución: los parámetros ya no se listan como una tabla de nombres internos. La sección
+  **Configuración** (plegada al abrir) muestra las mismas tarjetas que *Lanzar ejecución*, en solo lectura y más
+  compactas: interruptores como chips (activado/desactivado), opciones traducidas, conexiones con su nombre, plantillas
+  por nombre y ejecuciones anteriores enlazadas. Indica cuántos parámetros difieren del valor por defecto actual y
+  permite ver solo esos. Usuario, fecha, duración y tamaño pasan a una franja horizontal, y el título usa el nombre
+  legible de la operación. Sin cambios en la API.
+
 ## [1.22.0] - 2026-11-24
 
 ### Added

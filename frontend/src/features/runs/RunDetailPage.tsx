@@ -11,7 +11,6 @@ import {
   Modal,
   Progress,
   Stack,
-  Table,
   Text,
   Title,
 } from '@mantine/core';
@@ -32,7 +31,16 @@ import { MigrationReportView } from './migrate/MigrationReportView';
 import { PlanViewer } from './migrate/PlanViewer';
 import { RunOutputs } from './RunOutputs';
 import { RunStatusBadge } from './RunStatusBadge';
-import { archiveUrl, isActive, useCancelRun, usePurgeRun, useRelaunchRun, useLiveRun } from './useRuns';
+import { RunParamsSummary } from './RunParamsSummary';
+import {
+  archiveUrl,
+  isActive,
+  useCancelRun,
+  useLiveRun,
+  useOperations,
+  usePurgeRun,
+  useRelaunchRun,
+} from './useRuns';
 
 /** Operaciones que no se relanzan (la API responde 409): aplicar una migración exige un modo seco nuevo. */
 const NOT_RELAUNCHABLE = new Set(['migrate_apply', 'dump_apply', 'bulk_apply', 'dump_restore']);
@@ -74,6 +82,8 @@ export function RunDetailPage() {
   const purge = usePurgeRun(runId);
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Catálogo (en caché 1 h): título legible y tarjetas de la configuración.
+  const operations = useOperations();
 
   if (isPending) {
     return (
@@ -94,7 +104,7 @@ export function RunDetailPage() {
       ? CANCEL_BETWEEN_STEPS[run.operation]
       : undefined;
   const cancelTexts = CANCEL_TEXTS[stepKind ?? 'migrate'];
-  const params = Object.entries(run.params);
+  const operation = operations.data?.find((op) => op.name === run.operation);
   // Los avisos de un formato de la documentación salen en su tarjeta; aquí, el resto (y todos en ejecuciones antiguas).
   const byFormat = new Set(Object.values(run.warnings_by_format ?? {}).flat());
   const generalWarnings = (run.warnings ?? []).filter((warning) => !byFormat.has(warning));
@@ -105,7 +115,7 @@ export function RunDetailPage() {
     <Stack maw={wide ? undefined : 1100}>
       <Group justify="space-between">
         <Stack gap={2}>
-          <Title order={2}>{t('runs.detailTitle', { operation: run.operation })}</Title>
+          <Title order={2}>{t('runs.detailTitle', { operation: operation?.title ?? run.operation })}</Title>
           <Text size="sm" c="dimmed">
             <Anchor component={Link} to={`/projects/${run.project_id}`}>
               {run.project_name}
@@ -193,51 +203,44 @@ export function RunDetailPage() {
         </Stack>
       </Card>
 
-      <Table>
-        <Table.Tbody>
-          <Table.Tr>
-            <Table.Th w={200}>{t('runs.user')}</Table.Th>
-            <Table.Td>{run.username ?? '—'}</Table.Td>
-          </Table.Tr>
-          <Table.Tr>
-            <Table.Th>{t('runs.createdAt')}</Table.Th>
-            <Table.Td>{formatDateTime(run.created_at)}</Table.Td>
-          </Table.Tr>
-          <Table.Tr>
-            <Table.Th>{t('runs.duration')}</Table.Th>
-            <Table.Td>{formatDuration(run.duration_seconds)}</Table.Td>
-          </Table.Tr>
-          <Table.Tr>
-            <Table.Th>{t('runs.size')}</Table.Th>
-            <Table.Td>{formatBytes(run.size_bytes)}</Table.Td>
-          </Table.Tr>
-          {run.relaunched_from && (
-            <Table.Tr>
-              <Table.Th>{t('runs.relaunchedFrom')}</Table.Th>
-              <Table.Td>
-                {run.relaunched_from_exists ? (
-                  <Anchor component={Link} to={`/runs/${run.relaunched_from}`}>
-                    <Code>{run.relaunched_from}</Code>
-                  </Anchor>
-                ) : (
-                  // Un administrador la eliminó (D7): el id, sin enlace a un 404.
-                  <Text size="sm">
-                    <Code>{run.relaunched_from}</Code> {t('runs.relaunchedFromDeleted')}
-                  </Text>
-                )}
-              </Table.Td>
-            </Table.Tr>
-          )}
-          {params.map(([name, value]) => (
-            <Table.Tr key={name}>
-              <Table.Th>
-                <Code>{name}</Code>
-              </Table.Th>
-              <Table.Td>{value === null ? '—' : String(value)}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <Group component="dl" gap="xs" m={0} style={{ columnGap: 'var(--mantine-spacing-xl)' }}>
+        {[
+          { key: 'user', label: t('runs.user'), value: run.username ?? '—' },
+          { key: 'createdAt', label: t('runs.createdAt'), value: formatDateTime(run.created_at) },
+          { key: 'duration', label: t('runs.duration'), value: formatDuration(run.duration_seconds) },
+          { key: 'size', label: t('runs.size'), value: formatBytes(run.size_bytes) },
+        ].map((item) => (
+          <div key={item.key}>
+            <Text component="dt" size="xs" c="dimmed">
+              {item.label}
+            </Text>
+            <Text component="dd" size="sm" m={0}>
+              {item.value}
+            </Text>
+          </div>
+        ))}
+        {run.relaunched_from && (
+          <div>
+            <Text component="dt" size="xs" c="dimmed">
+              {t('runs.relaunchedFrom')}
+            </Text>
+            <Text component="dd" size="sm" m={0}>
+              {run.relaunched_from_exists ? (
+                <Anchor component={Link} to={`/runs/${run.relaunched_from}`}>
+                  <Code>{run.relaunched_from}</Code>
+                </Anchor>
+              ) : (
+                // Un administrador la eliminó (D7): el id, sin enlace a un 404.
+                <>
+                  <Code>{run.relaunched_from}</Code> {t('runs.relaunchedFromDeleted')}
+                </>
+              )}
+            </Text>
+          </div>
+        )}
+      </Group>
+
+      <RunParamsSummary run={run} operation={operation} operationPending={operations.isPending} />
 
       {run.operation === 'migrate_plan' && run.status === 'succeeded' && <PlanViewer run={run} />}
       {run.operation === 'migrate_apply' && <MigrationReportView run={run} />}

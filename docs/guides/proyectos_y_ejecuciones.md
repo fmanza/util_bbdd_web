@@ -71,6 +71,11 @@ El detalle de la ejecución se actualiza **en vivo**: estado, fase (*Preparando*
 *Generando informes*), mensaje y barra de progreso. Si la conexión en vivo falla (por ejemplo, tras un proxy que la
 almacena), la página se actualiza cada 2 segundos.
 
+Bajo el estado, una franja con el usuario, la fecha, la duración y el tamaño y, plegada, la sección
+**Configuración**: los parámetros con los que se lanzó, en las mismas tarjetas que *Lanzar ejecución* (solo lectura).
+Su cabecera indica cuántos difieren del valor por defecto actual; al desplegarla, **Solo distintos del valor por
+defecto actual** oculta el resto.
+
 | Estado | Significado |
 |---|---|
 | En cola | Esperando al worker |

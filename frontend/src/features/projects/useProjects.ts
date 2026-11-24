@@ -147,9 +147,10 @@ export function useRemoveMember(projectId: number) {
   });
 }
 
-export function useProjectConnections(projectId: number) {
+export function useProjectConnections(projectId: number, enabled = true) {
   return useQuery({
     queryKey: ['projects', projectId, 'connections'],
+    enabled,
     queryFn: async () =>
       unwrap(
         await api.GET('/api/v1/projects/{project_id}/connections', {

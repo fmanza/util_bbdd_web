@@ -439,6 +439,16 @@
     "progressLabel": "Progreso: {{pct}} %",
     "detailTitle": "Ejecución {{operation}}",
     "relaunchedFrom": "Relanzada de",
+    "detail": {
+      "config": "Configuración",
+      "changedCount": "{{changed}} de {{total}} distintos del valor por defecto",
+      "onlyChanged": "Solo distintos del valor por defecto actual",
+      "noneChanged": "Todos los parámetros tienen el valor por defecto actual.",
+      "noParams": "Esta ejecución no tiene parámetros.",
+      "savedParams": "Otros parámetros guardados",
+      "on": "activado",
+      "off": "desactivado"
+    },
     "cancel": "Cancelar",
     "cancelling": "Cancelando…",
     "relaunch": "Relanzar",

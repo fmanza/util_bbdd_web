@@ -39,7 +39,9 @@ test('crear proyecto, lanzar noop, seguir el progreso, ver artefactos, ZIP, rela
   await dialog.getByRole('button', { name: 'Lanzar' }).click();
 
   // Progreso en vivo por SSE: aparece algún paso intermedio y termina en «Correcta».
-  await expect(page.getByRole('heading', { name: 'Ejecución noop' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Ejecución Prueba del motor de ejecuciones' }),
+  ).toBeVisible();
   await expect(page.getByText(/Paso \d de 4/)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('Correcta')).toBeVisible({ timeout: 60_000 });
 

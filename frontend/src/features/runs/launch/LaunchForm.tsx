@@ -34,6 +34,7 @@ import { autoGrid } from './grid';
 import { LaunchCard } from './LaunchCard';
 import {
   DISABLED_WITHOUT,
+  ENGINE_GROUPS,
   itemParams,
   type ResolvedCard,
   type ResolvedItem,
@@ -85,14 +86,6 @@ function defaultValue(param: OperationParam): string | boolean {
   if (param.type === 'boolean') return param.default === true;
   return param.default === null || param.default === undefined ? '' : String(param.default);
 }
-
-/** Grupos de `migrate_plan` que solo aplican a un motor destino: se ocultan para los demás. */
-const ENGINE_GROUPS: Record<string, readonly string[]> = {
-  mysql: ['mariadb', 'mysql'],
-  sqlserver: ['sqlserver'],
-  postgresql: ['postgresql'],
-  oracle: ['oracle'],
-};
 
 /** Parámetros de `migrate_plan` que util_bbdd solo usa con origen Oracle (`NUMBER` sin precisión, ancho de INT). */
 const ORACLE_SOURCE_PARAMS: ReadonlySet<string> = new Set(['number_fallback', 'int_display_width']);

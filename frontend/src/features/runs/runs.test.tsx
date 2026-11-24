@@ -4,7 +4,17 @@ import { describe, expect, it } from 'vitest';
 
 import { ADMIN, callsTo, session, stubApi } from '../../test/api';
 import { stubEventSource } from '../../test/eventSource';
-import { FINISHED, NOOP, PROJECT, RUN, RUN_DETAIL, RUN_ID } from '../../test/fixtures_runs';
+import {
+  DOC_RUN,
+  DOCUMENTATION,
+  FINISHED,
+  NOOP,
+  ORACLE_CONNECTION,
+  PROJECT,
+  RUN,
+  RUN_DETAIL,
+  RUN_ID,
+} from '../../test/fixtures_runs';
 import { renderRoute } from '../../test/render';
 
 describe('lanzar una ejecución', () => {
@@ -35,7 +45,9 @@ describe('lanzar una ejecución', () => {
     await user.type(steps, '2');
     await user.click(within(dialog).getByRole('button', { name: 'Lanzar' }));
 
-    expect(await screen.findByRole('heading', { name: 'Ejecución noop' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Ejecución Prueba del motor de ejecuciones' }),
+    ).toBeInTheDocument();
     expect(await callsTo(fetchMock, 'POST', '/api/v1/projects/5/runs')[0]?.json()).toEqual({
       operation: 'noop',
       params: { steps: 2, step_seconds: 1, fail: false, connection: null },
@@ -142,6 +154,46 @@ describe('RunDetailPage', () => {
     expect(await screen.findByText('Correcta')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Purgar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Relanzar' })).not.toBeInTheDocument();
+  });
+});
+
+describe('configuración de la ejecución', () => {
+  it('se abre plegada y muestra las tarjetas del formulario con valores legibles', async () => {
+    stubEventSource();
+    const fetchMock = stubApi({
+      ...session(ADMIN),
+      [`GET /api/v1/runs/${RUN_ID}`]: {
+        body: { ...DOC_RUN, params: { ...DOC_RUN.params, html: false, legacy: 'x' } },
+      },
+      'GET /api/v1/operations': { body: [DOCUMENTATION] },
+      'GET /api/v1/projects/5/connections': {
+        body: [{ ...ORACLE_CONNECTION, alias: 'origen', connection_name: 'Origen PG' }],
+      },
+    });
+    const user = userEvent.setup();
+
+    renderRoute(`/runs/${RUN_ID}`);
+    expect(
+      await screen.findByRole('heading', { name: 'Ejecución Documentación de la base de datos' }),
+    ).toBeInTheDocument();
+    const toggle = await screen.findByRole('button', { name: /Configuración/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('3 de 6 distintos del valor por defecto');
+    expect(screen.queryByRole('region', { name: 'Origen' })).not.toBeInTheDocument();
+    // Plegada no pide las conexiones.
+    expect(callsTo(fetchMock, 'GET', '/api/v1/projects/5/connections')).toHaveLength(0);
+
+    await user.click(toggle);
+    const source = await screen.findByRole('region', { name: 'Origen' });
+    expect(await within(source).findByText('origen · Origen PG')).toBeInTheDocument();
+    const formats = screen.getByRole('region', { name: 'Formatos' });
+    expect(within(formats).getByText(/Word/)).toHaveTextContent('Word: activado');
+    expect(within(formats).getByText(/HTML/)).toHaveTextContent('desactivado');
+    expect(screen.getByRole('region', { name: 'Otros parámetros guardados' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('switch', { name: 'Solo distintos del valor por defecto actual' }));
+    expect(within(screen.getByRole('region', { name: 'Formatos' })).queryByText(/Word/)).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Diagramas' })).not.toBeInTheDocument();
   });
 });
 

@@ -186,6 +186,14 @@ export const SHOWN_WHEN: Readonly<
   dump_preview: { max_rejects: { param: 'on_error', value: 'isolate' } },
 };
 
+/** Grupos de `migrate_plan` que solo aplican a un motor destino: se ocultan para los demás. */
+export const ENGINE_GROUPS: Readonly<Record<string, readonly string[]>> = {
+  mysql: ['mariadb', 'mysql'],
+  sqlserver: ['sqlserver'],
+  postgresql: ['postgresql'],
+  oracle: ['oracle'],
+};
+
 /** Grupos de la lista de operaciones, en orden; la primera operación disponible es la elegida al abrir. */
 export const OPERATION_CATEGORIES: readonly { key: string; operations: readonly string[] }[] = [
   { key: 'document', operations: ['documentation', 'relationship_graph'] },
