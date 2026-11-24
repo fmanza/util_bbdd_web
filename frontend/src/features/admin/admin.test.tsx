@@ -237,6 +237,128 @@ describe('UsersPage', () => {
     expect(callsTo(fetchMock, 'GET', '/api/v1/users/2/deletion-check')).toHaveLength(1);
   });
 
+  it('transfiere desde la ventana de borrado y después deja eliminar', async () => {
+    let transferred = false;
+    const fetchMock = stubApi({
+      ...session(ADMIN),
+      'GET /api/v1/users': (request: Request) =>
+        new URL(request.url).searchParams.get('status') === 'active'
+          ? {
+              body: {
+                items: [ANA, { ...ANA, id: 3, username: 'mar', display_name: 'Mar' }],
+                total: 2,
+                active_admins: 1,
+              },
+            }
+          : { body: { items: [{ ...ANA, project_count: 1 }], total: 1, active_admins: 1 } },
+      'GET /api/v1/users/2/deletion-check': () => ({
+        body: transferred
+          ? { can_delete: true, reasons: [], projects: [], created_projects: [], connections: [] }
+          : {
+              can_delete: false,
+              reasons: ['member', 'creator'],
+              projects: [{ id: 5, name: 'Ventas', role: 'owner' }],
+              created_projects: [{ id: 5, name: 'Ventas', role: null }],
+              connections: [],
+            },
+      }),
+      'GET /api/v1/users/2/transfer-preview': (request: Request) => {
+        expect(new URL(request.url).searchParams.get('target_user_id')).toBe('3');
+        return {
+          body: {
+            can_transfer: true,
+            reasons: [],
+            created_projects: [{ id: 5, name: 'Ventas', new_name: 'Ventas (de ana)' }],
+            owned_projects: [{ id: 5, name: 'Ventas', role: 'owner' }],
+            other_memberships: [{ id: 8, name: 'Ajeno', role: 'viewer' }],
+            connections: [],
+            busy_projects: [],
+          },
+        };
+      },
+      'POST /api/v1/users/2/transfer': () => {
+        transferred = true;
+        return {
+          body: {
+            can_transfer: true,
+            reasons: [],
+            created_projects: [],
+            owned_projects: [],
+            other_memberships: [],
+            connections: [],
+            busy_projects: [],
+          },
+        };
+      },
+    });
+    const user = userEvent.setup();
+
+    renderRoute('/admin/users');
+    await user.click(await screen.findByRole('button', { name: 'Eliminar ana' }));
+    await user.click(
+      await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Transferir…' }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Transferir lo de ana' });
+    await user.click(within(dialog).getByRole('combobox', { name: /Usuario que lo recibe/ }));
+    await user.click(await screen.findByRole('option', { name: /mar/, hidden: true }));
+
+    expect(await within(dialog).findByText('Ventas → Ventas (de ana)')).toBeInTheDocument();
+    expect(within(dialog).getByText('Ajeno (Lector)')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Transferir' }));
+
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/users/2/transfer')).toHaveLength(1));
+    expect(await callsTo(fetchMock, 'POST', '/api/v1/users/2/transfer')[0]?.json()).toEqual({
+      target_user_id: 3,
+      remove_memberships: true,
+    });
+    // De vuelta en la ventana de borrado, ya se puede eliminar.
+    const back = await screen.findByRole('dialog', { name: 'Eliminar usuario ana' });
+    expect(await within(back).findByRole('button', { name: 'Eliminar' })).toBeInTheDocument();
+  });
+
+  it('explica por qué no se puede transferir', async () => {
+    stubApi({
+      ...session(ADMIN),
+      'GET /api/v1/users': {
+        body: { items: [ANA, { ...ANA, id: 3, username: 'mar' }], total: 2, active_admins: 1 },
+      },
+      'GET /api/v1/users/2/deletion-check': {
+        body: {
+          can_delete: false,
+          reasons: ['creator'],
+          projects: [],
+          created_projects: [{ id: 5, name: 'Ventas', role: null }],
+          connections: [],
+        },
+      },
+      'GET /api/v1/users/2/transfer-preview': {
+        body: {
+          can_transfer: false,
+          reasons: ['busy'],
+          created_projects: [{ id: 5, name: 'Ventas', new_name: null }],
+          owned_projects: [],
+          other_memberships: [],
+          connections: [],
+          busy_projects: [{ id: 5, name: 'Ventas' }],
+        },
+      },
+    });
+    const user = userEvent.setup();
+
+    renderRoute('/admin/users');
+    await user.click(await screen.findByRole('button', { name: 'Eliminar ana' }));
+    await user.click(
+      await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Transferir…' }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Transferir lo de ana' });
+    await user.click(within(dialog).getByRole('combobox', { name: /Usuario que lo recibe/ }));
+    await user.click(await screen.findByRole('option', { name: /mar/, hidden: true }));
+
+    expect(await within(dialog).findByText('No se puede transferir')).toBeInTheDocument();
+    expect(within(dialog).getByText(/ejecuciones en cola o en curso/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Transferir' })).toBeDisabled();
+  });
+
   it('no ofrece eliminar la propia cuenta aunque haya más administradores', async () => {
     stubApi({
       ...session(ADMIN),

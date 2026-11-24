@@ -12,6 +12,8 @@ export type SessionInfo = components['schemas']['SessionOut'];
 export type AuditEntry = components['schemas']['AuditEntryOut'];
 export type Role = User['role'];
 export type UserDeletionCheck = components['schemas']['UserDeletionCheck'];
+export type UserTransfer = components['schemas']['UserTransfer'];
+export type TransferItem = components['schemas']['TransferItem'];
 /** Filtros propios de la lista de usuarios (vacío = todos). */
 export interface UserFilters {
   role: Role | '';
@@ -65,6 +67,64 @@ export function useDeleteUser() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ['users'] }),
         queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+      ]),
+  });
+}
+
+/** Usuarios activos que contienen `q` (destino de una transferencia); `q` ya con retardo. */
+export function useActiveUserOptions(q: string) {
+  return useQuery({
+    queryKey: ['users', 'options', q],
+    queryFn: async () =>
+      unwrap(
+        await api.GET('/api/v1/users', {
+          params: { query: { q: q.trim() || null, status: 'active', limit: 20, offset: 0 } },
+        }),
+      ),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Qué movería transferir lo de `userId` a `targetId` (sin caché: cambia con cada proyecto o ejecución). */
+export function useTransferPreview(userId: number, targetId: number | null) {
+  return useQuery({
+    queryKey: ['user-transfer-preview', userId, targetId],
+    queryFn: async () =>
+      unwrap(
+        await api.GET('/api/v1/users/{user_id}/transfer-preview', {
+          params: { path: { user_id: userId }, query: { target_user_id: targetId ?? 0 } },
+        }),
+      ),
+    enabled: targetId !== null,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+export function useTransferUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      targetId,
+      removeMemberships,
+    }: {
+      id: number;
+      targetId: number;
+      removeMemberships: boolean;
+    }) =>
+      unwrap(
+        await api.POST('/api/v1/users/{user_id}/transfer', {
+          params: { path: { user_id: id } },
+          body: { target_user_id: targetId, remove_memberships: removeMemberships },
+        }),
+      ),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['users'] }),
+        queryClient.invalidateQueries({ queryKey: ['user-deletion-check'] }),
+        queryClient.invalidateQueries({ queryKey: ['projects'] }),
+        queryClient.invalidateQueries({ queryKey: ['connections'] }),
       ]),
   });
 }

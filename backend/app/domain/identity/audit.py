@@ -26,6 +26,7 @@ class AuditAction:
     USER_PASSWORD_RESET: Final = "user.password_reset"  # noqa: S105 (nombre de acción)
     USER_UNLOCK: Final = "user.unlock"
     USER_DELETE: Final = "user.delete"
+    USER_TRANSFER: Final = "user.transfer"
     SESSION_REVOKE: Final = "session.revoke"
     CONNECTION_CREATE: Final = "connection.create"
     CONNECTION_UPDATE: Final = "connection.update"

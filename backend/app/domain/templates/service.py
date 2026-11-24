@@ -28,6 +28,7 @@ from app.core.ulid import new_ulid
 from app.db.models import TERMINAL_STATUSES, DocumentTemplate, Project, Run, User
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
+from app.domain.identity.transfer import relocate_if_transferred
 from app.domain.runs.errors import RunParamsError
 from app.domain.storage.settings import effective_settings
 from app.domain.templates.errors import (
@@ -204,6 +205,11 @@ def save_template(
     try:
         db.add(template)
         db.flush()  # el INSERT toma el bloqueo de escritura de SQLite: el recuento de abajo ya no tiene carreras
+        if project is not None:  # transferido durante la subida: el fichero va a la carpeta nueva
+            moved = relocate_if_transferred(db, settings, project, final)
+            if moved != final:
+                final = moved
+                template.path = moved.relative_to(settings.workspace_dir.resolve()).as_posix()
         _check_limit(db, project_id, settings, pending=0)
         audit.record(
             db, action=AuditAction.TEMPLATE_CREATE, ctx=ctx, actor_id=user.id, target_type="template",

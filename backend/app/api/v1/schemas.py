@@ -163,6 +163,40 @@ class UserDeletionCheck(BaseModel):
     connections: list[BlockingConnection]
 
 
+class TransferItem(BaseModel):
+    """Proyecto o conexión afectados por una transferencia; ``new_name`` si choca con uno del destino."""
+
+    id: int
+    name: str
+    new_name: str | None = None
+    role: Literal["owner", "editor", "viewer"] | None = None
+    visibility: Literal["private", "shared"] | None = None
+
+
+class UserTransferRequest(BaseModel):
+    """Transferir a ``target_user_id`` lo que impide borrar al usuario."""
+
+    target_user_id: int
+    remove_memberships: bool = Field(
+        default=False, description="Quitar además al usuario de todos los proyectos (tras ceder la propiedad)"
+    )
+
+
+class UserTransfer(BaseModel):
+    """Vista previa o resultado de una transferencia (``reasons``: ``same_user``, ``target_inactive``,
+    ``target_not_admin``, ``busy``)."""
+
+    can_transfer: bool
+    reasons: list[Literal["same_user", "target_inactive", "target_not_admin", "busy"]]
+    created_projects: list[TransferItem] = Field(description="Proyectos que creó: cambian de carpeta")
+    owned_projects: list[TransferItem] = Field(description="Proyectos de los que es propietario: el destino también")
+    other_memberships: list[TransferItem] = Field(
+        description="Proyectos donde es editor o lector (se quitan con remove_memberships)"
+    )
+    connections: list[TransferItem] = Field(description="Conexiones compartidas o asociadas a proyectos")
+    busy_projects: list[TransferItem] = Field(description="Proyectos creados con ejecuciones en cola o en curso")
+
+
 # --- sessions ---------------------------------------------------------------------------------------------------
 
 

@@ -32,6 +32,7 @@ from app.core.logging import configure_logging
 from app.core.ulid import new_ulid
 from app.db.models import Run, utcnow
 from app.db.session import new_session
+from app.domain.identity import transfer
 from app.domain.identity.audit import RequestContext
 from app.domain.runs.dumps import enqueue_automatic_restore
 from app.domain.runs.service import apply_retention
@@ -84,9 +85,18 @@ class Worker:
     def start(self) -> None:
         with new_session() as db:
             queue.register_worker(db, self.id, pid=os.getpid(), hostname=socket.gethostname())
+        self.recover_transfers()
         self.recover_orphans()
         self.maintenance(force=True)
         logger.info("Worker iniciado", extra={"worker_id": self.id, "concurrency": self.settings.worker_concurrency})
+
+    def recover_transfers(self) -> int:
+        """Resuelve las transferencias de usuario interrumpidas entre mover carpetas y confirmar (ADR-013)."""
+        with new_session() as db:
+            resolved = transfer.recover_transfers(db, self.settings)
+        if resolved:
+            logger.warning("Transferencias interrumpidas resueltas", extra={"journals": resolved})
+        return resolved
 
     def recover_orphans(self) -> list[str]:
         with new_session() as db:

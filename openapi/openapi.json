@@ -6026,6 +6026,67 @@
         "title": "TemplateUpdate",
         "type": "object"
       },
+      "TransferItem": {
+        "description": "Proyecto o conexión afectados por una transferencia; ``new_name`` si choca con uno del destino.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "new_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "owner",
+                  "editor",
+                  "viewer"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "enum": [
+                  "private",
+                  "shared"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TransferItem",
+        "type": "object"
+      },
       "UploadInfoOut": {
         "description": "Lo necesario para mapear columnas: columnas, primeras filas y hojas (Excel) o separador y codificación (CSV).",
         "properties": {
@@ -6500,6 +6561,99 @@
           "active_admins"
         ],
         "title": "UserPage",
+        "type": "object"
+      },
+      "UserTransfer": {
+        "description": "Vista previa o resultado de una transferencia (``reasons``: ``same_user``, ``target_inactive``,\n``target_not_admin``, ``busy``).",
+        "properties": {
+          "busy_projects": {
+            "description": "Proyectos creados con ejecuciones en cola o en curso",
+            "items": {
+              "$ref": "#/components/schemas/TransferItem"
+            },
+            "title": "Busy Projects",
+            "type": "array"
+          },
+          "can_transfer": {
+            "title": "Can Transfer",
+            "type": "boolean"
+          },
+          "connections": {
+            "description": "Conexiones compartidas o asociadas a proyectos",
+            "items": {
+              "$ref": "#/components/schemas/TransferItem"
+            },
+            "title": "Connections",
+            "type": "array"
+          },
+          "created_projects": {
+            "description": "Proyectos que creó: cambian de carpeta",
+            "items": {
+              "$ref": "#/components/schemas/TransferItem"
+            },
+            "title": "Created Projects",
+            "type": "array"
+          },
+          "other_memberships": {
+            "description": "Proyectos donde es editor o lector (se quitan con remove_memberships)",
+            "items": {
+              "$ref": "#/components/schemas/TransferItem"
+            },
+            "title": "Other Memberships",
+            "type": "array"
+          },
+          "owned_projects": {
+            "description": "Proyectos de los que es propietario: el destino también",
+            "items": {
+              "$ref": "#/components/schemas/TransferItem"
+            },
+            "title": "Owned Projects",
+            "type": "array"
+          },
+          "reasons": {
+            "items": {
+              "enum": [
+                "same_user",
+                "target_inactive",
+                "target_not_admin",
+                "busy"
+              ],
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "can_transfer",
+          "reasons",
+          "created_projects",
+          "owned_projects",
+          "other_memberships",
+          "connections",
+          "busy_projects"
+        ],
+        "title": "UserTransfer",
+        "type": "object"
+      },
+      "UserTransferRequest": {
+        "description": "Transferir a ``target_user_id`` lo que impide borrar al usuario.",
+        "properties": {
+          "remove_memberships": {
+            "default": false,
+            "description": "Quitar además al usuario de todos los proyectos (tras ceder la propiedad)",
+            "title": "Remove Memberships",
+            "type": "boolean"
+          },
+          "target_user_id": {
+            "title": "Target User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_user_id"
+        ],
+        "title": "UserTransferRequest",
         "type": "object"
       },
       "UserUpdate": {
@@ -13019,6 +13173,134 @@
           }
         },
         "summary": "Comprobar si se puede borrar un usuario",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/transfer": {
+      "post": {
+        "description": "Cede los proyectos que creó (su carpeta se mueve), la propiedad de los suyos y sus conexiones compartidas o\nen uso; con ``remove_memberships`` lo quita además de todos los proyectos (ADR-013).",
+        "operationId": "transfer_user_api_v1_users__user_id__transfer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserTransferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserTransfer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o token CSRF no válido"
+          },
+          "404": {
+            "description": "No existe el usuario o el destino"
+          },
+          "409": {
+            "description": "Mismo usuario, destino inactivo o no admin (compartidas), o ejecuciones activas"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transferir proyectos y conexiones a otro usuario",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/transfer-preview": {
+      "get": {
+        "description": "Qué se movería a ``target_user_id`` (con los nombres que cambian) y qué lo impide.",
+        "operationId": "transfer_preview_api_v1_users__user_id__transfer_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Usuario que lo recibe",
+            "in": "query",
+            "name": "target_user_id",
+            "required": true,
+            "schema": {
+              "description": "Usuario que lo recibe",
+              "title": "Target User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserTransfer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o token CSRF no válido"
+          },
+          "404": {
+            "description": "No existe el usuario o el destino"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vista previa de transferir proyectos y conexiones",
         "tags": [
           "users"
         ]

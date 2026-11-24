@@ -88,9 +88,23 @@ Reglas:
 - creó algún proyecto, aunque ya no sea miembro (la carpeta de sus ejecuciones cuelga de su espacio);
 - tiene conexiones compartidas o asociadas a algún proyecto.
 
-En ese caso la ventana lo explica y no deja confirmar: quítalo de esos proyectos (o bórralos), o desactiva la cuenta
-en su lugar. Si se puede, al confirmar se borran sus sesiones y sus conexiones privadas sin proyectos; sus
+En ese caso la ventana lo explica y no deja confirmar: quítalo de esos proyectos (o bórralos), **transfiérelos**, o
+desactiva la cuenta en su lugar. Si se puede, al confirmar se borran sus sesiones y sus conexiones privadas sin proyectos; sus
 ejecuciones y ficheros quedan sin usuario y la auditoría conserva su nombre.
+
+### Transferir proyectos y conexiones
+
+Desde la ventana de *Eliminar*, **Transferir…** cede a otro usuario activo:
+
+- los proyectos que creó: pasan a colgar de la carpeta del destino (se mueven sus ejecuciones, ficheros y plantillas);
+- la propiedad de los proyectos de los que es propietario;
+- sus conexiones compartidas o asociadas a proyectos (las compartidas, solo a un administrador). Sus conexiones
+  privadas sin uso no se ceden y se borrarán con la cuenta.
+
+Con *Quitarlo además de todos los proyectos* (activado por defecto) también deja de ser miembro de los demás, y
+después se puede eliminar. La vista previa enseña qué se mueve y los nombres que cambian si el destino ya tiene un
+proyecto o una conexión con el mismo nombre (se añade « (de <usuario>)»). No se puede transferir si hay ejecuciones
+en cola o en curso en un proyecto que creó.
 
 ## Almacenamiento
 
@@ -153,7 +167,7 @@ búsqueda por acción, actor, objetivo o IP:
 | Tipo | Eventos |
 |---|---|
 | Autenticación | Inicio de sesión (correcto o fallido, con el motivo), bloqueo de cuenta, cierre de sesión, cambio de contraseña |
-| Usuarios | Alta (con permisos y cuota), edición (campos cambiados), desactivación, reactivación, contraseña restablecida, desbloqueo, borrado |
+| Usuarios | Alta (con permisos y cuota), edición (campos cambiados), desactivación, reactivación, contraseña restablecida, desbloqueo, borrado, transferencia |
 | Sesiones | Sesión revocada |
 | Conexiones | Alta, edición, borrado, prueba y readiness |
 | Destinos | Destino permitido añadido o retirado |

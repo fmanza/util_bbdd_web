@@ -74,3 +74,10 @@ class UserInUseError(AppError):
 
     status = 409
     title = "El usuario tiene proyectos o conexiones"
+
+
+class TransferBlockedError(AppError):
+    """La transferencia no se puede hacer; ``extra`` lleva el motivo y lo que se movería."""
+
+    status = 409
+    title = "No se puede transferir"

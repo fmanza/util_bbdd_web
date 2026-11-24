@@ -21,6 +21,7 @@ from app.core.ulid import new_ulid
 from app.db.models import TERMINAL_STATUSES, Run, Upload, User, utcnow
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
+from app.domain.identity.transfer import relocate_if_transferred
 from app.domain.projects.errors import ProjectForbiddenError
 from app.domain.projects.service import Membership
 from app.domain.storage.settings import effective_settings, quota_bytes
@@ -117,6 +118,10 @@ def save_upload(
         sha256=digest.hexdigest(),
     )  # fmt: skip
     db.add(upload)
+    db.flush()  # toma el bloqueo de escritura: si el proyecto se transfirió durante la subida, se recoloca el fichero
+    moved = relocate_if_transferred(db, settings, project, final)
+    if moved != final:
+        upload.path = moved.relative_to(settings.workspace_dir.resolve()).as_posix()
     audit.record(
         db, action=AuditAction.UPLOAD_CREATE, ctx=ctx, actor_id=user.id, target_type="upload", target_id=upload_id,
         details={"project_id": project.id, "filename": name, "kind": kind, "size_bytes": size},

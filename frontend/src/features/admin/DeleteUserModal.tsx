@@ -1,7 +1,9 @@
 import { Alert, Button, Center, Group, List, Loader, Modal, Stack, Text, Title } from '@mantine/core';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { TransferUserModal } from './TransferUserModal';
 import { type User, type UserDeletionCheck, useDeleteUser, useDeletionCheck } from './useAdmin';
 
 interface DeleteUserModalProps {
@@ -63,6 +65,23 @@ export function DeleteUserModal({ user, onClose }: DeleteUserModalProps) {
   const check = useDeletionCheck(user.id);
   const remove = useDeleteUser();
   const blocked = check.data && !check.data.can_delete;
+  const [transferring, setTransferring] = useState(false);
+  // Transferir resuelve todo salvo «es tu cuenta» y «último admin».
+  const transferable =
+    blocked && !check.data?.reasons.some((reason) => reason === 'self' || reason === 'last_admin');
+
+  if (transferring) {
+    return (
+      <TransferUserModal
+        user={user}
+        onClose={() => setTransferring(false)}
+        onDone={() => {
+          setTransferring(false);
+          void check.refetch();
+        }}
+      />
+    );
+  }
 
   return (
     <Modal opened onClose={onClose} title={t('admin.users.deleteTitle', { username: user.username })}>
@@ -87,6 +106,11 @@ export function DeleteUserModal({ user, onClose }: DeleteUserModalProps) {
           <Button variant="default" onClick={onClose}>
             {t('common.cancel')}
           </Button>
+          {transferable && (
+            <Button variant="light" onClick={() => setTransferring(true)}>
+              {t('admin.users.transfer.open')}
+            </Button>
+          )}
           {check.data?.can_delete && (
             <Button
               color="red"

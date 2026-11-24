@@ -19,6 +19,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   `user.unlock`).
 - Proyectos: **sugerencias** de usuarios al añadir miembros (`GET /api/v1/projects/{id}/member-candidates`, solo
   propietarios; mínimo 2 caracteres, máximo 10 resultados, solo usuario y nombre visible de usuarios activos).
+- Usuarios: **transferir** a otro usuario activo los proyectos que creó (su carpeta del workspace se mueve y se
+  reescriben las rutas de ejecuciones, ficheros y plantillas), la propiedad de sus proyectos y sus conexiones
+  compartidas o en uso, opcionalmente quitándolo de todos los proyectos (`GET /api/v1/users/{id}/transfer-preview`,
+  `POST /api/v1/users/{id}/transfer`, auditado como `user.transfer`; enmiendas de ADR-013 y ADR-005). Nombres
+  repetidos con « (de <usuario>)»; diario en `workspace/.transfers/` que el worker resuelve al arrancar si la
+  transferencia se interrumpe. En la ventana de *Eliminar*, botón **Transferir…**.
 - Ejecuciones: ordenar por **proyecto** (`sort=project` en `/api/v1/runs` y `/api/v1/projects/{id}/runs`).
 
 ### Changed

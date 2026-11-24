@@ -79,6 +79,11 @@ class ArtifactFile:
     sha256: str
 
 
+def project_prefix(owner_id: int, project_id: int) -> str:
+    """Carpeta de un proyecto relativa al workspace: cuelga de la de su creador (ADR-005)."""
+    return f"users/{int(owner_id)}/projects/{int(project_id)}"
+
+
 def run_relative_path(owner_id: int, project_id: int, created_at: datetime, operation: str, run_id: str) -> str:
     """Ruta del run relativa a la raíz del workspace (solo IDs y la operación validada)."""
     if not _SAFE_SEGMENT.fullmatch(operation) or not _SAFE_SEGMENT.fullmatch(run_id):

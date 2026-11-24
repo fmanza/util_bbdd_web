@@ -1704,6 +1704,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/{user_id}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transferir proyectos y conexiones a otro usuario
+         * @description Cede los proyectos que creó (su carpeta se mueve), la propiedad de los suyos y sus conexiones compartidas o
+         *     en uso; con ``remove_memberships`` lo quita además de todos los proyectos (ADR-013).
+         */
+        post: operations["transfer_user_api_v1_users__user_id__transfer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/transfer-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vista previa de transferir proyectos y conexiones
+         * @description Qué se movería a ``target_user_id`` (con los nombres que cambian) y qué lo impide.
+         */
+        get: operations["transfer_preview_api_v1_users__user_id__transfer_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}/unlock": {
         parameters: {
             query?: never;
@@ -4217,6 +4258,22 @@ export interface components {
             table_style?: string | null;
         };
         /**
+         * TransferItem
+         * @description Proyecto o conexión afectados por una transferencia; ``new_name`` si choca con uno del destino.
+         */
+        TransferItem: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** New Name */
+            new_name?: string | null;
+            /** Role */
+            role?: ("owner" | "editor" | "viewer") | null;
+            /** Visibility */
+            visibility?: ("private" | "shared") | null;
+        };
+        /**
          * UploadInfoOut
          * @description Lo necesario para mapear columnas: columnas, primeras filas y hojas (Excel) o separador y codificación (CSV).
          */
@@ -4422,6 +4479,56 @@ export interface components {
             items: components["schemas"]["UserOut"][];
             /** Total */
             total: number;
+        };
+        /**
+         * UserTransfer
+         * @description Vista previa o resultado de una transferencia (``reasons``: ``same_user``, ``target_inactive``,
+         *     ``target_not_admin``, ``busy``).
+         */
+        UserTransfer: {
+            /**
+             * Busy Projects
+             * @description Proyectos creados con ejecuciones en cola o en curso
+             */
+            busy_projects: components["schemas"]["TransferItem"][];
+            /** Can Transfer */
+            can_transfer: boolean;
+            /**
+             * Connections
+             * @description Conexiones compartidas o asociadas a proyectos
+             */
+            connections: components["schemas"]["TransferItem"][];
+            /**
+             * Created Projects
+             * @description Proyectos que creó: cambian de carpeta
+             */
+            created_projects: components["schemas"]["TransferItem"][];
+            /**
+             * Other Memberships
+             * @description Proyectos donde es editor o lector (se quitan con remove_memberships)
+             */
+            other_memberships: components["schemas"]["TransferItem"][];
+            /**
+             * Owned Projects
+             * @description Proyectos de los que es propietario: el destino también
+             */
+            owned_projects: components["schemas"]["TransferItem"][];
+            /** Reasons */
+            reasons: ("same_user" | "target_inactive" | "target_not_admin" | "busy")[];
+        };
+        /**
+         * UserTransferRequest
+         * @description Transferir a ``target_user_id`` lo que impide borrar al usuario.
+         */
+        UserTransferRequest: {
+            /**
+             * Remove Memberships
+             * @description Quitar además al usuario de todos los proyectos (tras ceder la propiedad)
+             * @default false
+             */
+            remove_memberships: boolean;
+            /** Target User Id */
+            target_user_id: number;
         };
         /**
          * UserUpdate
@@ -9744,6 +9851,124 @@ export interface operations {
                 content?: never;
             };
             /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_user_api_v1_users__user_id__transfer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserTransferRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserTransfer"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe el usuario o el destino */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mismo usuario, destino inactivo o no admin (compartidas), o ejecuciones activas */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_preview_api_v1_users__user_id__transfer_preview_get: {
+        parameters: {
+            query: {
+                /** @description Usuario que lo recibe */
+                target_user_id: number;
+            };
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserTransfer"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe el usuario o el destino */
             404: {
                 headers: {
                     [name: string]: unknown;

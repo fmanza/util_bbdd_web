@@ -51,3 +51,10 @@ fila, sus artefactos y su carpeta, y desaparece del historial; la auditoría (`r
 guarda su resumen. Una activa o un volcado con constraints sin restaurar no se elimina (409; el borrado de un proyecto
 los omite y dice cuántos). Esa lista solo muestra metadatos (ni `params`, ni mensajes, ni artefactos), y una
 ejecución relanzada desde otra eliminada lo indica con `RunDetailOut.relaunched_from_exists`.
+
+## Enmienda (2026-11-24): el creador puede cambiar
+
+La carpeta del proyecto sigue colgando de `projects.owner_id`, pero desde la transferencia de usuarios
+([ADR-013](ADR-013-borrado-de-usuarios.md), enmienda) `owner_id` puede cambiar: la carpeta se mueve y se reescriben
+las rutas guardadas (`runs.workspace_path`, `uploads.path`, `document_templates.path`). Toda ruta nueva bajo
+`users/<owner_id>/projects/<id>` que se guarde en la base de datos debe añadirse a esa reescritura.

@@ -58,7 +58,31 @@
       "createdProjects": "Proyectos que creó",
       "blockingConnections": "Conexiones en uso",
       "shared": "compartida",
-      "private": "privada"
+      "private": "privada",
+      "transfer": {
+        "open": "Transferir…",
+        "title": "Transferir lo de {{username}}",
+        "intro": "Otro usuario activo recibe los proyectos que creó (sus carpetas se mueven), la propiedad de los proyectos de los que es propietario y sus conexiones compartidas o en uso. Sus conexiones privadas sin uso no se ceden.",
+        "target": "Usuario que lo recibe",
+        "targetHint": "Escribe para buscar entre los usuarios activos. Las conexiones compartidas solo pueden ir a un administrador.",
+        "removeMemberships": "Quitarlo además de todos los proyectos",
+        "removeMembershipsHint": "Necesario para poder eliminarlo después.",
+        "checking": "Calculando qué se transfiere…",
+        "blocked": "No se puede transferir",
+        "reasons": {
+          "same_user": "El destino es el mismo usuario.",
+          "target_inactive": "El destino está desactivado.",
+          "target_not_admin": "Hay conexiones compartidas: el destino debe ser administrador.",
+          "busy": "Hay ejecuciones en cola o en curso en estos proyectos:"
+        },
+        "nothing": "No tiene proyectos ni conexiones que transferir.",
+        "created": "Proyectos que creó (cambian de carpeta)",
+        "owned": "Proyectos de los que el destino pasa a ser propietario",
+        "connections": "Conexiones",
+        "removed": "Proyectos de los que se le quita",
+        "renamed": "{{name}} → {{newName}}",
+        "submit": "Transferir"
+      }
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -118,7 +142,8 @@
           "reactivate": "Reactivación",
           "password_reset": "Contraseña restablecida",
           "unlock": "Desbloqueo",
-          "delete": "Borrado de usuario"
+          "delete": "Borrado de usuario",
+          "transfer": "Transferencia de proyectos y conexiones"
         },
         "session": {
           "revoke": "Sesión revocada"

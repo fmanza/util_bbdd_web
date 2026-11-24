@@ -12,14 +12,18 @@ from app.api.v1.schemas import (
     BlockingConnection,
     BlockingProject,
     Role,
+    TransferItem,
     UserCreate,
     UserDeletionCheck,
     UserOut,
     UserPage,
+    UserTransfer,
+    UserTransferRequest,
     UserUpdate,
 )
 from app.db.models import User
-from app.domain.identity import users
+from app.domain.identity import transfer, users
+from app.domain.identity.transfer import TransferPlan
 from app.domain.identity.users import UserChanges, UserSort, UserStatus
 from app.domain.sorting import SortOrder
 
@@ -38,6 +42,21 @@ def _out(user: User, project_count: int) -> UserOut:
 
 def _out_db(db: DbSession, user: User) -> UserOut:
     return _out(user, users.project_count(db, user.id))
+
+
+def _transfer(plan: TransferPlan) -> UserTransfer:
+    def items(values: list[transfer.Item]) -> list[TransferItem]:
+        return [TransferItem.model_validate(i, from_attributes=True) for i in values]
+
+    return UserTransfer(
+        can_transfer=plan.can_transfer,
+        reasons=plan.reasons,
+        created_projects=items(plan.created_projects),
+        owned_projects=items(plan.owned_projects),
+        other_memberships=items(plan.other_memberships),
+        connections=items(plan.connections),
+        busy_projects=items(plan.busy_projects),
+    )
 
 
 @router.get("", response_model=UserPage, summary="Listar usuarios", responses=_ERRORS)
@@ -175,3 +194,42 @@ def delete_user(user_id: int, admin: AdminUser, db: DbSession, settings: Setting
     """Borra un usuario sin proyectos ni conexiones en uso (ADR-013). Se borran sus sesiones y sus conexiones privadas
     sin proyectos; la auditoría conserva su nombre."""
     users.delete_user(db, users.get_user(db, user_id), actor=admin, settings=settings, ctx=ctx)
+
+
+@router.get(
+    "/{user_id}/transfer-preview",
+    response_model=UserTransfer,
+    summary="Vista previa de transferir proyectos y conexiones",
+    responses={**_ERRORS, 404: {"description": "No existe el usuario o el destino"}},
+)
+def transfer_preview(
+    user_id: int,
+    _: AdminUser,
+    db: DbSession,
+    target_user_id: Annotated[int, Query(description="Usuario que lo recibe")],
+) -> UserTransfer:
+    """Qué se movería a ``target_user_id`` (con los nombres que cambian) y qué lo impide."""
+    return _transfer(transfer.transfer_preview(db, users.get_user(db, user_id), users.get_user(db, target_user_id)))
+
+
+@router.post(
+    "/{user_id}/transfer",
+    response_model=UserTransfer,
+    summary="Transferir proyectos y conexiones a otro usuario",
+    responses={
+        **_ERRORS,
+        404: {"description": "No existe el usuario o el destino"},
+        409: {"description": "Mismo usuario, destino inactivo o no admin (compartidas), o ejecuciones activas"},
+    },
+)
+def transfer_user(
+    user_id: int, body: UserTransferRequest, admin: AdminUser, db: DbSession, settings: SettingsDep, ctx: Context
+) -> UserTransfer:
+    """Cede los proyectos que creó (su carpeta se mueve), la propiedad de los suyos y sus conexiones compartidas o
+    en uso; con ``remove_memberships`` lo quita además de todos los proyectos (ADR-013)."""
+    origin = users.get_user(db, user_id)
+    target = users.get_user(db, body.target_user_id)
+    plan = transfer.transfer_user(
+        db, origin, target, actor=admin, remove_memberships=body.remove_memberships, settings=settings, ctx=ctx
+    )
+    return _transfer(plan)
