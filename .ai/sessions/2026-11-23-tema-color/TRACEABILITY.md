@@ -107,8 +107,15 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
   `package*.json`, `uv.lock`, `openapi.json` `info.version`, `.env.example` `UBW_TAG`), `.ai/product.md`, tabla de
   revisiones y aviso de vuelta atrás en `deployment.md`, ejemplos de `puesta_en_marcha.md` y `publicar_version.md`.
   Backend: ruff format/check, mypy, `export_openapi --check`; `test_cli_and_migrations.py` + `test_backup.py` +
-  `test_health.py` 15 passed. Frontend: typecheck y build en verde. `zensical build --strict` sin avisos. Sin
-  `docker compose build` ni `/api/health` de la 1.21.1 (pendiente).
+  `test_health.py` 15 passed. Frontend: typecheck y build en verde. `zensical build --strict` sin avisos.
+- Publicación 1.21.1: commit `36eea3c` (CI en verde), `main` avanzado de `644baf2` a `36eea3c`, tag anotado `v1.21.1`
+  y release de GitHub con la sección 1.21.1 del CHANGELOG.
+- Contenedor 1.21.1 (2026-11-24): copia previa con la 1.21.0 (`/data/backups/ubw-backup-20261124T000341Z`, revisión
+  0012). `UBW_TAG=1.21.1 UBW_PORT=8081 docker compose build` correcto desde PowerShell (imagen 786 MB); desde Git Bash
+  falla con «failed to execute bake», también con `COMPOSE_BAKE=false`. `docker compose up -d`: `web` *healthy* y
+  `worker` en marcha; sin migraciones pendientes (`alembic current` = `0012 (head)`). `GET /api/health` 200:
+  `version 1.21.1`, `util_bbdd_version 5.9.0`, `database ok`, `worker ok`; `GET /color-scheme.js` 200
+  (`text/javascript`). Datos conservados (1 usuario, 5 entradas de auditoría, 1 proyecto).
 
 ## Directrices para Futuras IAs
 - **[migraciones]**: en SQLite, `batch_alter_table` que recrea una tabla referenciada (`users`) borra en cascada sus
@@ -126,6 +133,8 @@ correcciones al PLAN y genera la v3» → «Aprobado, guarda la sesión y pasa a
 - **[docs]**: una revisión completa en paralelo funciona con un agente por grupo de archivos disjunto y el
   coordinador revisando diffs, `schema.d.ts` (sin cambios de tipos) y `zensical build --strict`; los scripts de
   Python en Windows escriben CRLF si no se usa `write_bytes` (comprobar con `git ls-files --eol`).
+- **[docker]**: en esta máquina `docker compose build` falla desde Git Bash («failed to execute bake», también con
+  `COMPOSE_BAKE=false`); desde PowerShell funciona.
 - **[frontend]**: el tema vive en `localStorage['ubw-color-scheme']` (`COLOR_SCHEME_STORAGE_KEY`); `public/color-scheme.js`
   repite la clave y `colorScheme.test.ts` vigila que coincidan.
 - **[frontend]**: lo que se dibuja dentro de un iframe de Markdown usa `useResolvedColorScheme()` en sus dependencias
