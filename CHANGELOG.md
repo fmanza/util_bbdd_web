@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-11-24
+
 ### Added
 
 - Usuarios: **eliminar** un usuario sin dependencias (`DELETE /api/v1/users/{id}`, ADR-013). No se puede si es tu
