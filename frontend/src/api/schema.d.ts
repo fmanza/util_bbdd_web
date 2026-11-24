@@ -1019,6 +1019,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sugerir usuarios para añadir como miembros
+         * @description Usuarios activos que aún no son miembros y cuyo usuario o nombre contiene ``q`` (propietarios del proyecto).
+         */
+        get: operations["member_candidates_api_v1_projects__project_id__member_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/members": {
         parameters: {
             query?: never;
@@ -1619,13 +1639,13 @@ export interface paths {
         };
         /**
          * Listar usuarios
-         * @description Usuarios (por nombre de usuario si no se pide otro orden).
+         * @description Usuarios con su número de proyectos (por nombre de usuario si no se pide otro orden).
          */
         get: operations["list_users_api_v1_users_get"];
         put?: never;
         /**
          * Crear usuario
-         * @description Crea un usuario activo con la contraseña inicial indicada.
+         * @description Crea un usuario con la contraseña inicial, el rol, el estado, los permisos y la cuota indicados.
          */
         post: operations["create_user_api_v1_users_post"];
         delete?: never;
@@ -1648,7 +1668,12 @@ export interface paths {
         get: operations["get_user_api_v1_users__user_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Borrar usuario
+         * @description Borra un usuario sin proyectos ni conexiones en uso (ADR-013). Se borran sus sesiones y sus conexiones privadas
+         *     sin proyectos; la auditoría conserva su nombre.
+         */
+        delete: operations["delete_user_api_v1_users__user_id__delete"];
         options?: never;
         head?: never;
         /**
@@ -1657,6 +1682,46 @@ export interface paths {
          *     restablecer la contraseña cierra sus sesiones.
          */
         patch: operations["update_user_api_v1_users__user_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/deletion-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comprobar si se puede borrar un usuario
+         * @description Proyectos (como miembro o creador) y conexiones que impiden borrarlo, o si es el propio admin o el último.
+         */
+        get: operations["deletion_check_api_v1_users__user_id__deletion_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desbloquear usuario
+         * @description Quita el bloqueo por intentos fallidos de inicio de sesión (se audita).
+         */
+        post: operations["unlock_user_api_v1_users__user_id__unlock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -1794,6 +1859,33 @@ export interface components {
             items: components["schemas"]["AuditEntryOut"][];
             /** Total */
             total: number;
+        };
+        /**
+         * BlockingConnection
+         * @description Conexión que impide borrar un usuario: compartida o asociada a algún proyecto.
+         */
+        BlockingConnection: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "private" | "shared";
+        };
+        /**
+         * BlockingProject
+         * @description Proyecto que impide borrar un usuario; ``role`` es su rol de miembro (null si solo lo creó).
+         */
+        BlockingProject: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Role */
+            role?: ("owner" | "editor" | "viewer") | null;
         };
         /** Body_create_global_api_v1_admin_document_templates_post */
         Body_create_global_api_v1_admin_document_templates_post: {
@@ -2901,6 +2993,16 @@ export interface components {
              * @enum {string}
              */
             role: "admin" | "user";
+            /** Username */
+            username: string;
+        };
+        /**
+         * MemberCandidate
+         * @description Usuario activo que se puede añadir como miembro (solo lo necesario para elegirlo).
+         */
+        MemberCandidate: {
+            /** Display Name */
+            display_name: string;
             /** Username */
             username: string;
         };
@@ -4186,11 +4288,31 @@ export interface components {
         };
         /**
          * UserCreate
-         * @description Alta de usuario.
+         * @description Alta de usuario con las mismas opciones que la edición (salvo la contraseña, que es obligatoria).
          */
         UserCreate: {
+            /**
+             * Can Apply Ddl
+             * @default false
+             */
+            can_apply_ddl: boolean;
+            /**
+             * Can Run Sql
+             * @default false
+             */
+            can_run_sql: boolean;
+            /**
+             * Can Write Data
+             * @default false
+             */
+            can_write_data: boolean;
             /** Display Name */
             display_name: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
             /**
              * Password
              * Format: password
@@ -4202,8 +4324,36 @@ export interface components {
              * @enum {string}
              */
             role: "admin" | "user";
+            /**
+             * Storage Quota Mb
+             * @description Cuota propia en MB (0 = sin límite); null = la global (ADR-012)
+             */
+            storage_quota_mb?: number | null;
             /** Username */
             username: string;
+        };
+        /**
+         * UserDeletionCheck
+         * @description Si se puede borrar un usuario y, si no, por qué (``reasons``: ``self``, ``last_admin``, ``member``,
+         *     ``creator``, ``connections``).
+         */
+        UserDeletionCheck: {
+            /** Can Delete */
+            can_delete: boolean;
+            /** Connections */
+            connections: components["schemas"]["BlockingConnection"][];
+            /**
+             * Created Projects
+             * @description Proyectos que creó: su carpeta del workspace cuelga de la suya
+             */
+            created_projects: components["schemas"]["BlockingProject"][];
+            /**
+             * Projects
+             * @description Proyectos de los que es miembro
+             */
+            projects: components["schemas"]["BlockingProject"][];
+            /** Reasons */
+            reasons: ("self" | "last_admin" | "member" | "creator" | "connections")[];
         };
         /**
          * UserOut
@@ -4235,6 +4385,12 @@ export interface components {
              */
             password_changed_at: string;
             /**
+             * Project Count
+             * @description Proyectos de los que es miembro
+             * @default 0
+             */
+            project_count: number;
+            /**
              * Role
              * @enum {string}
              */
@@ -4257,6 +4413,11 @@ export interface components {
          * @description Página de usuarios.
          */
         UserPage: {
+            /**
+             * Active Admins
+             * @description Administradores activos en total (no solo los de la página)
+             */
+            active_admins: number;
             /** Items */
             items: components["schemas"]["UserOut"][];
             /** Total */
@@ -7476,6 +7637,62 @@ export interface operations {
             };
         };
     };
+    member_candidates_api_v1_projects__project_id__member_candidates_get: {
+        parameters: {
+            query: {
+                /** @description Texto tecleado */
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberCandidate"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tu rol no lo permite o CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe o no eres miembro */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_members_api_v1_projects__project_id__members_get: {
         parameters: {
             query?: never;
@@ -7714,7 +7931,7 @@ export interface operations {
                 user_id?: number | null;
                 /** @description Id, operación, usuario o mensaje */
                 q?: string | null;
-                sort?: ("created_at" | "operation" | "status" | "user" | "size") | null;
+                sort?: ("created_at" | "project" | "operation" | "status" | "user" | "size") | null;
                 order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
@@ -8113,7 +8330,7 @@ export interface operations {
                 status?: ("queued" | "running" | "succeeded" | "failed" | "cancelled" | "purged") | null;
                 operation?: string | null;
                 q?: string | null;
-                sort?: ("created_at" | "operation" | "status" | "user" | "size") | null;
+                sort?: ("created_at" | "project" | "operation" | "status" | "user" | "size") | null;
                 order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
@@ -9203,7 +9420,11 @@ export interface operations {
             query?: {
                 /** @description Texto en usuario o nombre */
                 q?: string | null;
-                sort?: ("username" | "display_name" | "role" | "created_at") | null;
+                /** @description Solo usuarios de este rol */
+                role?: ("admin" | "user") | null;
+                /** @description ``active`` (sin bloqueo), ``inactive`` o ``locked`` (por intentos) */
+                status?: ("active" | "inactive" | "locked") | null;
+                sort?: ("username" | "display_name" | "role" | "created_at" | "projects") | null;
                 order?: ("asc" | "desc") | null;
                 limit?: number;
                 offset?: number;
@@ -9361,6 +9582,63 @@ export interface operations {
             };
         };
     };
+    delete_user_api_v1_users__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Es tu cuenta, el último administrador activo, o tiene proyectos o conexiones (el *problem details* lleva ``reasons``, ``projects``, ``created_projects`` y ``connections``) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_user_api_v1_users__user_id__patch: {
         parameters: {
             query?: never;
@@ -9415,6 +9693,110 @@ export interface operations {
             };
             /** @description Último administrador o autodesactivación */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deletion_check_api_v1_users__user_id__deletion_check_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDeletionCheck"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlock_user_api_v1_users__user_id__unlock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin rol de administrador o token CSRF no válido */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

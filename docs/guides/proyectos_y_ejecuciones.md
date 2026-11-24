@@ -14,7 +14,9 @@ miembro; los administradores de la aplicación tampoco ven los ajenos.
 | Editor (`editor`) | Lo anterior y lanzar, cancelar, relanzar y purgar ejecuciones; asociar o quitar conexiones |
 | Propietario (`owner`) | Todo, además de editar o borrar el proyecto y gestionar los miembros |
 
-- **Miembros** (pestaña *Miembros*): el propietario añade usuarios por su nombre de usuario y cambia su rol. Siempre
+- **Miembros** (pestaña *Miembros*): el propietario añade usuarios por su nombre de usuario y cambia su rol. Al
+  escribir dos o más caracteres se sugieren los usuarios activos que coinciden (por usuario o nombre visible) y aún no
+  son miembros; también se puede escribir el nombre completo. Siempre
   debe quedar al menos un propietario. Cualquier miembro puede *Salir del proyecto*.
 - **Conexiones** (pestaña *Conexiones*): un editor asocia una conexión **propia o compartida** con un **alias**
   (`origen`, `destino`…). Las ejecuciones usan el alias; los demás miembros pueden usar la conexión **sin ver su
@@ -107,7 +109,7 @@ queda en el destino, salvo en una carga sin plan paralelo, que va en una sola tr
   de» muestra su id sin enlace y «(eliminada)».
 
 Las listas de ejecuciones (*Ejecuciones* y la pestaña del proyecto) se ordenan pulsando la cabecera de una columna
-(operación, usuario, estado, creada o tamaño), muestran **25 por página** y tienen búsqueda por id, operación, usuario
+(proyecto en *Ejecuciones*, operación, usuario, estado, creada o tamaño), muestran **25 por página** y tienen búsqueda por id, operación, usuario
 o mensaje. Lo mismo vale para el resto de listas de la aplicación (ver
 [Usuarios y sesiones](usuarios_y_sesiones.md#listas)).
 

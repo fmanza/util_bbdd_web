@@ -192,6 +192,29 @@ def test_migration_0012_preserves_related_rows(settings: Settings) -> None:
     assert _related_rows() == RELATED_INTACT
 
 
+def test_migration_0013_backfills_actor_name(settings: Settings) -> None:
+    """La 0013 añade ``audit_log.actor_name`` con el nombre de cada actor, sin recrear tablas, y su ``downgrade`` la
+    quita sin tocar el resto."""
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+
+    from tests.conftest import BACKEND_DIR
+
+    run_migrations("0012")
+    _seed_related_rows()
+    engine = get_engine()
+
+    run_migrations()
+    assert _related_rows() == RELATED_INTACT
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT actor_name FROM audit_log")).scalar_one() == "jefa"
+
+    command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0012")
+    assert "actor_name" not in {column["name"] for column in inspect(engine).get_columns("audit_log")}
+    assert _related_rows() == RELATED_INTACT
+
+
 def test_downgrade_to_0004_and_0003_preserves_related_rows(settings: Settings) -> None:
     """Los ``downgrade`` de la 0005, 0006, 0007 y 0010 quitan columnas de ``users`` con ``DROP COLUMN`` nativo: el
     modo batch recrearía la tabla y su ``DROP TABLE`` borraría en cascada las filas de cada usuario. El de la 0004

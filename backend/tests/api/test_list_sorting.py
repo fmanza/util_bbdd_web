@@ -78,6 +78,16 @@ def test_connections_projects_runs_and_usage_sort(user_client: TestClient, admin
     assert user_client.get(url, params={"sort": "params"}).status_code == 422
 
 
+def test_my_runs_sort_by_project(user_client: TestClient) -> None:
+    zeta = new_project(user_client, "zeta")
+    alfa = new_project(user_client, "Alfa")
+    in_zeta = launch(user_client, zeta["id"], steps=1, step_seconds=0)["id"]
+    in_alfa = launch(user_client, alfa["id"], steps=1, step_seconds=0)["id"]
+
+    assert _ids(user_client, "/api/v1/runs", sort="project") == [in_alfa, in_zeta]
+    assert _ids(user_client, "/api/v1/runs", sort="project", order="desc") == [in_zeta, in_alfa]
+
+
 def test_storage_usage_sort(admin_client: TestClient, make_user: Callable[..., User]) -> None:
     for name in ("zoe", "ana2"):
         make_user(name)

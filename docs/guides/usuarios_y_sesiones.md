@@ -60,19 +60,37 @@ Menú con tu nombre → *Tema*: **Claro**, **Oscuro** o **Sistema** (el que teng
 
 | Acción | Cómo | Efecto |
 |---|---|---|
-| Crear | *Nuevo usuario*: usuario, nombre visible, rol y contraseña inicial | Usuario activo; comunícale la contraseña por un canal seguro |
+| Crear | *Nuevo usuario*: usuario, nombre visible, rol, contraseña inicial y, desde la 1.22.0, las mismas opciones que al editar (cuenta activa, permisos especiales y cuota) | Comunícale la contraseña por un canal seguro. Si desactivas *Cuenta activa*, se da de alta sin poder iniciar sesión todavía |
 | Editar | *Editar* en la fila | Cambia nombre visible o rol |
-| Desactivar / reactivar | Interruptor *Cuenta activa* | Desactivar cierra sus sesiones al momento; los usuarios no se borran para conservar la auditoría |
+| Desactivar / reactivar | Interruptor *Cuenta activa* | Desactivar cierra sus sesiones al momento |
+| Desbloquear | *Desbloquear* en la fila (solo si está *Bloqueado*) | Quita el bloqueo temporal por intentos fallidos; se audita |
+| Eliminar | *Eliminar* en la fila | Ver [Eliminar un usuario](#eliminar-un-usuario) |
 | Restablecer contraseña | Campo *Restablecer contraseña* al editar | Cierra todas sus sesiones y quita el bloqueo por intentos |
 | Cuota de almacenamiento | Desactiva *Usar la cuota global* y pon su *Cuota propia (MB)* (`0` = sin límite) | Sustituye la cuota general de [Almacenamiento](#almacenamiento) para ese usuario |
-| Permisos especiales | *Puede ejecutar SQL libre*, *Puede aplicar DDL* y *Puede escribir datos* al editar | SQL de solo lectura ([explorador](explorador.md)); aplicar migraciones ([migración](migracion.md)) y volcar o cargar datos ([volcado](volcado.md),
+| Permisos especiales | *Puede ejecutar SQL libre*, *Puede aplicar DDL* y *Puede escribir datos* al crear o editar | SQL de solo lectura ([explorador](explorador.md)); aplicar migraciones ([migración](migracion.md)) y volcar o cargar datos ([volcado](volcado.md),
 [carga](carga.md)) en proyectos de los que sea propietario |
 
 Reglas:
 
-- Siempre debe quedar **al menos un administrador activo**.
-- Un administrador no puede desactivarse ni quitarse el rol a sí mismo (pídeselo a otro administrador).
+- Siempre debe quedar **al menos un administrador activo**. El único que queda lleva la marca *Único administrador*:
+  su rol y su *Cuenta activa* no se pueden cambiar y no tiene *Eliminar*.
+- Un administrador no puede desactivarse, quitarse el rol ni eliminarse a sí mismo (pídeselo a otro administrador).
 - El estado *Bloqueado* indica un bloqueo temporal por intentos fallidos.
+- La lista se filtra por **Rol** y por **Estado** (*Activo*, *Desactivado* o *Bloqueado*), además de la búsqueda por
+  usuario o nombre, y la columna *Proyectos* (de los que es miembro) se puede ordenar.
+
+### Eliminar un usuario
+
+*Eliminar* primero comprueba si se puede ([ADR-013](../adr/ADR-013-borrado-de-usuarios.md)). **No** se puede si:
+
+- es tu propia cuenta o el único administrador activo;
+- es miembro de algún proyecto (se listan con su rol);
+- creó algún proyecto, aunque ya no sea miembro (la carpeta de sus ejecuciones cuelga de su espacio);
+- tiene conexiones compartidas o asociadas a algún proyecto.
+
+En ese caso la ventana lo explica y no deja confirmar: quítalo de esos proyectos (o bórralos), o desactiva la cuenta
+en su lugar. Si se puede, al confirmar se borran sus sesiones y sus conexiones privadas sin proyectos; sus
+ejecuciones y ficheros quedan sin usuario y la auditoría conserva su nombre.
 
 ## Almacenamiento
 
@@ -135,7 +153,7 @@ búsqueda por acción, actor, objetivo o IP:
 | Tipo | Eventos |
 |---|---|
 | Autenticación | Inicio de sesión (correcto o fallido, con el motivo), bloqueo de cuenta, cierre de sesión, cambio de contraseña |
-| Usuarios | Alta, edición (campos cambiados), desactivación, reactivación, contraseña restablecida |
+| Usuarios | Alta (con permisos y cuota), edición (campos cambiados), desactivación, reactivación, contraseña restablecida, desbloqueo, borrado |
 | Sesiones | Sesión revocada |
 | Conexiones | Alta, edición, borrado, prueba y readiness |
 | Destinos | Destino permitido añadido o retirado |

@@ -5,8 +5,28 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Added
+
+- Usuarios: **eliminar** un usuario sin dependencias (`DELETE /api/v1/users/{id}`, ADR-013). No se puede si es tu
+  cuenta, el único administrador activo, miembro o creador de algún proyecto, o dueño de conexiones compartidas o
+  asociadas a proyectos; la ventana de confirmación lo explica con la lista de proyectos y conexiones
+  (`GET /api/v1/users/{id}/deletion-check`; el `409` lleva el mismo detalle). Se audita como `user.delete`.
+- Usuarios: el **alta** admite las mismas opciones que la edición (cuenta activa, SQL libre, aplicar DDL, escribir
+  datos y cuota propia).
+- Usuarios: filtros por **rol** y **estado** (`active`, `inactive`, `locked`), columna **Proyectos** ordenable
+  (`project_count`) y marca *Único administrador* (`UserPage.active_admins`), cuyo rol y estado no se pueden cambiar.
+- Usuarios: **desbloquear** la cuenta bloqueada por intentos fallidos (`POST /api/v1/users/{id}/unlock`, auditado como
+  `user.unlock`).
+- Proyectos: **sugerencias** de usuarios al añadir miembros (`GET /api/v1/projects/{id}/member-candidates`, solo
+  propietarios; mínimo 2 caracteres, máximo 10 resultados, solo usuario y nombre visible de usuarios activos).
+- Ejecuciones: ordenar por **proyecto** (`sort=project` en `/api/v1/runs` y `/api/v1/projects/{id}/runs`).
+
 ### Changed
 
+- Auditoría: cada evento guarda el nombre del actor (`audit_log.actor_name`, migración 0013, rellenada con los
+  existentes), que se sigue mostrando si el usuario se borra.
+- «Siempre un administrador activo»: tras escribir se vuelve a contar y, si no queda ninguno, se deshace la operación
+  (dos peticiones simultáneas ya no pueden quitar los dos últimos).
 - Dependencia de `util_bbdd` actualizada de 5.9.0 a 5.9.1, con el wheel de la release y su hash fijados mediante
   `backend/pyproject.toml` y `backend/uv.lock` (ADR-006).
 

@@ -60,3 +60,17 @@ class SelfModificationError(AppError):
 
     status = 409
     title = "No puedes desactivarte ni quitarte el rol de administrador"
+
+
+class SelfDeletionError(AppError):
+    """Un administrador no puede eliminar su propia cuenta."""
+
+    status = 409
+    title = "No puedes eliminar tu propia cuenta"
+
+
+class UserInUseError(AppError):
+    """El usuario tiene proyectos o conexiones que dependen de él; ``extra`` lleva el detalle (``blockers``)."""
+
+    status = 409
+    title = "El usuario tiene proyectos o conexiones"

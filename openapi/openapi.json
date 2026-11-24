@@ -330,6 +330,69 @@
         "title": "AuditPage",
         "type": "object"
       },
+      "BlockingConnection": {
+        "description": "Conexión que impide borrar un usuario: compartida o asociada a algún proyecto.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "visibility": {
+            "enum": [
+              "private",
+              "shared"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "visibility"
+        ],
+        "title": "BlockingConnection",
+        "type": "object"
+      },
+      "BlockingProject": {
+        "description": "Proyecto que impide borrar un usuario; ``role`` es su rol de miembro (null si solo lo creó).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "owner",
+                  "editor",
+                  "viewer"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "BlockingProject",
+        "type": "object"
+      },
       "Body_create_global_api_v1_admin_document_templates_post": {
         "properties": {
           "file": {
@@ -2901,6 +2964,25 @@
           "color_scheme"
         ],
         "title": "Me",
+        "type": "object"
+      },
+      "MemberCandidate": {
+        "description": "Usuario activo que se puede añadir como miembro (solo lo necesario para elegirlo).",
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "display_name"
+        ],
+        "title": "MemberCandidate",
         "type": "object"
       },
       "MemberCreate": {
@@ -6160,13 +6242,33 @@
         "type": "object"
       },
       "UserCreate": {
-        "description": "Alta de usuario.",
+        "description": "Alta de usuario con las mismas opciones que la edición (salvo la contraseña, que es obligatoria).",
         "properties": {
+          "can_apply_ddl": {
+            "default": false,
+            "title": "Can Apply Ddl",
+            "type": "boolean"
+          },
+          "can_run_sql": {
+            "default": false,
+            "title": "Can Run Sql",
+            "type": "boolean"
+          },
+          "can_write_data": {
+            "default": false,
+            "title": "Can Write Data",
+            "type": "boolean"
+          },
           "display_name": {
             "maxLength": 128,
             "minLength": 1,
             "title": "Display Name",
             "type": "string"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
           },
           "password": {
             "format": "password",
@@ -6185,6 +6287,20 @@
             "title": "Role",
             "type": "string"
           },
+          "storage_quota_mb": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cuota propia en MB (0 = sin límite); null = la global (ADR-012)",
+            "title": "Storage Quota Mb"
+          },
           "username": {
             "maxLength": 64,
             "minLength": 3,
@@ -6199,6 +6315,61 @@
           "password"
         ],
         "title": "UserCreate",
+        "type": "object"
+      },
+      "UserDeletionCheck": {
+        "description": "Si se puede borrar un usuario y, si no, por qué (``reasons``: ``self``, ``last_admin``, ``member``,\n``creator``, ``connections``).",
+        "properties": {
+          "can_delete": {
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "connections": {
+            "items": {
+              "$ref": "#/components/schemas/BlockingConnection"
+            },
+            "title": "Connections",
+            "type": "array"
+          },
+          "created_projects": {
+            "description": "Proyectos que creó: su carpeta del workspace cuelga de la suya",
+            "items": {
+              "$ref": "#/components/schemas/BlockingProject"
+            },
+            "title": "Created Projects",
+            "type": "array"
+          },
+          "projects": {
+            "description": "Proyectos de los que es miembro",
+            "items": {
+              "$ref": "#/components/schemas/BlockingProject"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "reasons": {
+            "items": {
+              "enum": [
+                "self",
+                "last_admin",
+                "member",
+                "creator",
+                "connections"
+              ],
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "can_delete",
+          "reasons",
+          "projects",
+          "created_projects",
+          "connections"
+        ],
+        "title": "UserDeletionCheck",
         "type": "object"
       },
       "UserOut": {
@@ -6250,6 +6421,12 @@
             "title": "Password Changed At",
             "type": "string"
           },
+          "project_count": {
+            "default": 0,
+            "description": "Proyectos de los que es miembro",
+            "title": "Project Count",
+            "type": "integer"
+          },
           "role": {
             "enum": [
               "admin",
@@ -6300,6 +6477,11 @@
       "UserPage": {
         "description": "Página de usuarios.",
         "properties": {
+          "active_admins": {
+            "description": "Administradores activos en total (no solo los de la página)",
+            "title": "Active Admins",
+            "type": "integer"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/UserOut"
@@ -6314,7 +6496,8 @@
         },
         "required": [
           "items",
-          "total"
+          "total",
+          "active_admins"
         ],
         "title": "UserPage",
         "type": "object"
@@ -10131,6 +10314,87 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/member-candidates": {
+      "get": {
+        "description": "Usuarios activos que aún no son miembros y cuyo usuario o nombre contiene ``q`` (propietarios del proyecto).",
+        "operationId": "member_candidates_api_v1_projects__project_id__member_candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Texto tecleado",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Texto tecleado",
+              "maxLength": 64,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 10,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MemberCandidate"
+                  },
+                  "title": "Response Member Candidates Api V1 Projects  Project Id  Member Candidates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Tu rol no lo permite o CSRF no válido"
+          },
+          "404": {
+            "description": "No existe o no eres miembro"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sugerir usuarios para añadir como miembros",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/members": {
       "get": {
         "description": "Miembros del proyecto con su rol (cualquier miembro).",
@@ -10476,6 +10740,7 @@
                 {
                   "enum": [
                     "created_at",
+                    "project",
                     "operation",
                     "status",
                     "user",
@@ -11025,6 +11290,7 @@
                 {
                   "enum": [
                     "created_at",
+                    "project",
                     "operation",
                     "status",
                     "user",
@@ -12322,7 +12588,7 @@
     },
     "/api/v1/users": {
       "get": {
-        "description": "Usuarios (por nombre de usuario si no se pide otro orden).",
+        "description": "Usuarios con su número de proyectos (por nombre de usuario si no se pide otro orden).",
         "operationId": "list_users_api_v1_users_get",
         "parameters": [
           {
@@ -12345,6 +12611,51 @@
             }
           },
           {
+            "description": "Solo usuarios de este rol",
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "admin",
+                    "user"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Solo usuarios de este rol",
+              "title": "Role"
+            }
+          },
+          {
+            "description": "``active`` (sin bloqueo), ``inactive`` o ``locked`` (por intentos)",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "inactive",
+                    "locked"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "``active`` (sin bloqueo), ``inactive`` o ``locked`` (por intentos)",
+              "title": "Status"
+            }
+          },
+          {
             "in": "query",
             "name": "sort",
             "required": false,
@@ -12355,7 +12666,8 @@
                     "username",
                     "display_name",
                     "role",
-                    "created_at"
+                    "created_at",
+                    "projects"
                   ],
                   "type": "string"
                 },
@@ -12444,7 +12756,7 @@
         ]
       },
       "post": {
-        "description": "Crea un usuario activo con la contraseña inicial indicada.",
+        "description": "Crea un usuario con la contraseña inicial, el rol, el estado, los permisos y la cuota indicados.",
         "operationId": "create_user_api_v1_users_post",
         "requestBody": {
           "content": {
@@ -12497,6 +12809,52 @@
       }
     },
     "/api/v1/users/{user_id}": {
+      "delete": {
+        "description": "Borra un usuario sin proyectos ni conexiones en uso (ADR-013). Se borran sus sesiones y sus conexiones privadas\nsin proyectos; la auditoría conserva su nombre.",
+        "operationId": "delete_user_api_v1_users__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o token CSRF no válido"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "409": {
+            "description": "Es tu cuenta, el último administrador activo, o tiene proyectos o conexiones (el *problem details* lleva ``reasons``, ``projects``, ``created_projects`` y ``connections``)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Borrar usuario",
+        "tags": [
+          "users"
+        ]
+      },
       "get": {
         "description": "Detalle de un usuario.",
         "operationId": "get_user_api_v1_users__user_id__get",
@@ -12609,6 +12967,110 @@
           }
         },
         "summary": "Editar, desactivar o reactivar usuario",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/deletion-check": {
+      "get": {
+        "description": "Proyectos (como miembro o creador) y conexiones que impiden borrarlo, o si es el propio admin o el último.",
+        "operationId": "deletion_check_api_v1_users__user_id__deletion_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDeletionCheck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o token CSRF no válido"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Comprobar si se puede borrar un usuario",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/unlock": {
+      "post": {
+        "description": "Quita el bloqueo por intentos fallidos de inicio de sesión (se audita).",
+        "operationId": "unlock_user_api_v1_users__user_id__unlock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin rol de administrador o token CSRF no válido"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Desbloquear usuario",
         "tags": [
           "users"
         ]

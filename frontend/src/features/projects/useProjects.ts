@@ -83,6 +83,25 @@ export function useMembers(projectId: number) {
   });
 }
 
+/** Mínimo de caracteres para pedir sugerencias (el backend rechaza menos). */
+export const CANDIDATE_MIN_CHARS = 2;
+
+/** Usuarios activos que aún no son miembros y contienen `q` (solo propietarios; `q` ya con retardo). */
+export function useMemberCandidates(projectId: number, q: string, enabled: boolean) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: ['projects', projectId, 'member-candidates', query],
+    queryFn: async () =>
+      unwrap(
+        await api.GET('/api/v1/projects/{project_id}/member-candidates', {
+          params: { path: { project_id: projectId }, query: { q: query } },
+        }),
+      ),
+    enabled: enabled && query.length >= CANDIDATE_MIN_CHARS,
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useAddMember(projectId: number) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -93,7 +112,11 @@ export function useAddMember(projectId: number) {
           body,
         }),
       ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'members'] }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'members'] }),
+        queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'member-candidates'] }),
+      ]),
   });
 }
 

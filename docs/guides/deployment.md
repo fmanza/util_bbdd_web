@@ -344,8 +344,9 @@ anterior).
 | 1.1.0 – 1.6.0 | `0010` | Plantillas de documento (`0009`) y almacenamiento administrable (`0010`) |
 | 1.7.0 – 1.20.0 | `0011` | Retira `encoding_errors` de las conexiones MariaDB guardadas |
 | 1.21.0 – 1.21.1 | `0012` | `users.color_scheme` (tema de cada usuario; `auto` en las cuentas existentes) |
+| Sin publicar (1.22.0) | `0013` | `audit_log.actor_name` (nombre del actor en la auditoría, rellenado en los eventos existentes; ADR-013) |
 
-Los `downgrade` de `0012` y, desde la 1.21.1, de `0010`, `0007`, `0006` y `0005` usan `ALTER TABLE … DROP COLUMN`,
+Los `downgrade` de `0013`, `0012` y, desde la 1.21.1, de `0010`, `0007`, `0006` y `0005` usan `ALTER TABLE … DROP COLUMN`,
 que necesita SQLite 3.35 o posterior; la imagen de la 1.21.0 trae la 3.40.1. Si cambias la imagen base, comprueba la
 versión con `docker compose exec web python -c "import sqlite3; print(sqlite3.sqlite_version)"`.
 

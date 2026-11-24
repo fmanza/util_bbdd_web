@@ -130,6 +130,10 @@ describe('ProjectDetailPage', () => {
           },
         ],
       },
+      'GET /api/v1/projects/5/member-candidates': (request: Request) => {
+        expect(new URL(request.url).searchParams.get('q')).toBe('an');
+        return { body: [{ username: 'ana', display_name: 'Ana' }] };
+      },
       'POST /api/v1/projects/5/members': {
         status: 201,
         body: {
@@ -145,7 +149,9 @@ describe('ProjectDetailPage', () => {
 
     renderRoute('/projects/5?tab=members');
     expect(await screen.findByRole('button', { name: 'Salir del proyecto' })).toBeInTheDocument();
-    await user.type(screen.getByRole('textbox', { name: 'Usuario' }), 'ana');
+    await user.type(screen.getByRole('combobox', { name: 'Usuario' }), 'an');
+    // Sugerencias del servidor (usuario y nombre visible); se elige una.
+    await user.click(await screen.findByRole('option', { name: /ana/, hidden: true }));
     await user.click(screen.getByRole('button', { name: 'Añadir miembro' }));
 
     await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/projects/5/members')).toHaveLength(1));

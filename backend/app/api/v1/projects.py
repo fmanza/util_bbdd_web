@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query, status
 from app.api.deps import Context, CurrentUser, DbSession, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE
 from app.api.v1.schemas_projects import (
+    MemberCandidate,
     MemberCreate,
     MemberOut,
     MemberUpdate,
@@ -128,6 +129,27 @@ def list_members(project_id: int, user: CurrentUser, db: DbSession) -> list[Memb
     """Miembros del proyecto con su rol (cualquier miembro)."""
     membership = service.get_membership(db, user, project_id)
     return [_member(m) for m in service.list_members(db, membership.project)]
+
+
+@router.get(
+    "/{project_id}/member-candidates",
+    response_model=list[MemberCandidate],
+    summary="Sugerir usuarios para añadir como miembros",
+    responses={**_401, **_403, **_404},
+)
+def member_candidates(
+    project_id: int,
+    user: CurrentUser,
+    db: DbSession,
+    q: Annotated[str, Query(min_length=service.CANDIDATE_MIN_CHARS, max_length=64, description="Texto tecleado")],
+    limit: Annotated[int, Query(ge=1, le=service.CANDIDATE_MAX)] = service.CANDIDATE_MAX,
+) -> list[MemberCandidate]:
+    """Usuarios activos que aún no son miembros y cuyo usuario o nombre contiene ``q`` (propietarios del proyecto)."""
+    membership = service.get_membership(db, user, project_id, "owner")
+    return [
+        MemberCandidate(username=username, display_name=display_name)
+        for username, display_name in service.member_candidates(db, membership.project, q=q, limit=limit)
+    ]
 
 
 @router.post(

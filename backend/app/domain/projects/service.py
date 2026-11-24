@@ -202,6 +202,32 @@ def list_members(db: Session, project: Project) -> list[ProjectMember]:
     )
 
 
+#: Mínimo de caracteres para sugerir usuarios: con menos, la lista revelaría demasiados nombres de golpe.
+CANDIDATE_MIN_CHARS: Final = 2
+CANDIDATE_MAX: Final = 10
+
+
+def member_candidates(db: Session, project: Project, *, q: str, limit: int = CANDIDATE_MAX) -> list[tuple[str, str]]:
+    """``(username, display_name)`` de usuarios activos que aún no son miembros y cuyo usuario o nombre visible
+    contiene ``q`` (para el autocompletado al añadir miembros; nunca ids, roles ni estado)."""
+    pattern = like_pattern(q)
+    members = select(ProjectMember.user_id).where(ProjectMember.project_id == project.id)
+    rows = db.execute(
+        select(User.username, User.display_name)
+        .where(
+            User.is_active.is_(True),
+            User.id.not_in(members),
+            or_(
+                func.lower(User.username).like(pattern, escape="\\"),
+                func.lower(User.display_name).like(pattern, escape="\\"),
+            ),
+        )
+        .order_by(User.username)
+        .limit(min(limit, CANDIDATE_MAX))
+    ).all()
+    return [(username, display_name) for username, display_name in rows]
+
+
 def _owners(db: Session, project_id: int) -> int:
     return (
         db.scalar(select(func.count()).where(ProjectMember.project_id == project_id, ProjectMember.role == "owner"))

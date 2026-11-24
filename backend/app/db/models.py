@@ -69,7 +69,8 @@ class UTCDateTime(TypeDecorator[datetime]):
 
 
 class User(Base):
-    """Usuario de la aplicación. No se borra: se desactiva (la auditoría lo referencia)."""
+    """Usuario de la aplicación. Se desactiva o, si nada depende de él, se borra (ADR-013): la auditoría conserva su
+    nombre en ``audit_log.actor_username``."""
 
     __tablename__ = "users"
     __table_args__ = (
@@ -125,6 +126,8 @@ class AuditEntry(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ts: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     actor_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    #: Nombre del actor al registrar el evento: sobrevive al borrado del usuario (ADR-013).
+    actor_name: Mapped[str | None] = mapped_column(String(64), default=None)
     action: Mapped[str] = mapped_column(String(64))
     outcome: Mapped[str] = mapped_column(String(16), default="success")
     target_type: Mapped[str | None] = mapped_column(String(32), default=None)
@@ -136,8 +139,8 @@ class AuditEntry(Base):
 
     @property
     def actor_username(self) -> str | None:
-        """Usuario que hizo la acción, si lo hay."""
-        return self.actor.username if self.actor else None
+        """Usuario que hizo la acción, si lo hay (su nombre guardado si después se borró)."""
+        return self.actor.username if self.actor else self.actor_name
 
 
 class Connection(Base):

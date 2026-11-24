@@ -67,6 +67,13 @@ class MemberOut(BaseModel):
     added_at: datetime
 
 
+class MemberCandidate(BaseModel):
+    """Usuario activo que se puede añadir como miembro (solo lo necesario para elegirlo)."""
+
+    username: str
+    display_name: str
+
+
 class ProjectConnectionCreate(BaseModel):
     connection_id: int
     alias: Alias

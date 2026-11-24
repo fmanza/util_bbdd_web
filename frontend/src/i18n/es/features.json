@@ -30,7 +30,35 @@
       "globalQuota": "Usar la cuota global",
       "globalQuotaHint": "Desactívalo para darle una cuota propia de almacenamiento.",
       "quotaMb": "Cuota propia (MB)",
-      "quotaMbHint": "Espacio de sus ejecuciones y ficheros subidos; 0 = sin límite."
+      "quotaMbHint": "Espacio de sus ejecuciones y ficheros subidos; 0 = sin límite.",
+      "activeOnCreateHint": "Desactívalo para darlo de alta sin que pueda iniciar sesión todavía.",
+      "projects": "Proyectos",
+      "lastAdmin": "Único administrador",
+      "lastAdminHint": "Es el único administrador activo: no se puede desactivar, quitarle el rol ni eliminar.",
+      "filterRole": "Rol",
+      "filterStatus": "Estado",
+      "all": "Todos",
+      "unlock": "Desbloquear",
+      "unlockLabel": "Desbloquear {{username}}",
+      "delete": "Eliminar",
+      "deleteLabel": "Eliminar {{username}}",
+      "deleteTitle": "Eliminar usuario {{username}}",
+      "deleteChecking": "Comprobando si se puede eliminar…",
+      "deleteConfirm": "Se eliminará {{username}} de forma permanente. Se cerrarán sus sesiones y se borrarán sus conexiones privadas sin proyectos. La auditoría conserva su nombre.",
+      "deleteBlocked": "No se puede eliminar {{username}}",
+      "deleteBlockedHint": "Quítalo de estos proyectos o transfiérelos, o desactiva la cuenta en su lugar.",
+      "reasons": {
+        "self": "Es tu propia cuenta.",
+        "last_admin": "Es el único administrador activo.",
+        "member": "Es miembro de proyectos.",
+        "creator": "Creó proyectos: sus carpetas de ejecuciones cuelgan de su espacio.",
+        "connections": "Tiene conexiones compartidas o asociadas a proyectos."
+      },
+      "memberOf": "Proyectos de los que es miembro",
+      "createdProjects": "Proyectos que creó",
+      "blockingConnections": "Conexiones en uso",
+      "shared": "compartida",
+      "private": "privada"
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -88,7 +116,9 @@
           "update": "Edición de usuario",
           "deactivate": "Desactivación",
           "reactivate": "Reactivación",
-          "password_reset": "Contraseña restablecida"
+          "password_reset": "Contraseña restablecida",
+          "unlock": "Desbloqueo",
+          "delete": "Borrado de usuario"
         },
         "session": {
           "revoke": "Sesión revocada"
@@ -352,6 +382,9 @@
     "readWrite": "Lectura y escritura",
     "removeConnectionLabel": "Quitar la conexión {{alias}}",
     "addMember": "Añadir miembro",
+    "candidatesHint": "Escribe al menos {{min}} caracteres para ver sugerencias.",
+    "candidatesEmpty": "No hay usuarios activos que coincidan y no sean ya miembros.",
+    "candidatesError": "No se han podido cargar las sugerencias; puedes escribir el usuario completo.",
     "leave": "Salir del proyecto",
     "removeMemberLabel": "Quitar a {{username}}",
     "delete": "Borrar proyecto",

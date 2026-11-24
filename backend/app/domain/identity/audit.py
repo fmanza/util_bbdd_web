@@ -24,6 +24,8 @@ class AuditAction:
     USER_DEACTIVATE: Final = "user.deactivate"
     USER_REACTIVATE: Final = "user.reactivate"
     USER_PASSWORD_RESET: Final = "user.password_reset"  # noqa: S105 (nombre de acción)
+    USER_UNLOCK: Final = "user.unlock"
+    USER_DELETE: Final = "user.delete"
     SESSION_REVOKE: Final = "session.revoke"
     CONNECTION_CREATE: Final = "connection.create"
     CONNECTION_UPDATE: Final = "connection.update"
@@ -90,11 +92,16 @@ def record(
     target_id: int | str | None = None,
     details: dict[str, Any] | None = None,
 ) -> AuditEntry:
-    """Añade un evento a la sesión de BD (lo confirma quien llama). ``details`` no debe contener secretos."""
+    """Añade un evento a la sesión de BD (lo confirma quien llama). ``details`` no debe contener secretos.
+
+    Guarda también el nombre del actor, que sobrevive a su borrado (ADR-013).
+    """
+    actor = db.get(User, actor_id) if actor_id is not None else None
     entry = AuditEntry(
         action=action,
         outcome=outcome,
         actor_user_id=actor_id,
+        actor_name=actor.username if actor is not None else None,
         target_type=target_type,
         target_id=None if target_id is None else str(target_id),
         ip=ctx.ip,
@@ -109,7 +116,7 @@ _AUDIT_SORT: Final[dict[str, Any]] = {
     "ts": AuditEntry.ts,
     "action": AuditEntry.action,
     "outcome": AuditEntry.outcome,
-    "actor": func.lower(func.coalesce(User.username, "")),
+    "actor": func.lower(func.coalesce(User.username, AuditEntry.actor_name, "")),
     "target": func.coalesce(AuditEntry.target_type, ""),
 }
 
@@ -137,7 +144,7 @@ def list_entries(
         query = query.where(
             or_(
                 func.lower(AuditEntry.action).like(pattern, escape="\\"),
-                func.lower(func.coalesce(User.username, "")).like(pattern, escape="\\"),
+                func.lower(func.coalesce(User.username, AuditEntry.actor_name, "")).like(pattern, escape="\\"),
                 func.lower(func.coalesce(AuditEntry.target_type, "")).like(pattern, escape="\\"),
                 func.lower(func.coalesce(AuditEntry.target_id, "")).like(pattern, escape="\\"),
                 func.lower(func.coalesce(AuditEntry.ip, "")).like(pattern, escape="\\"),

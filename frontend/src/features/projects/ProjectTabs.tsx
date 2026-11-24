@@ -1,4 +1,5 @@
 import {
+  Autocomplete,
   Button,
   Code,
   Group,
@@ -11,6 +12,7 @@ import {
   Textarea,
   TextInput,
 } from '@mantine/core';
+import { useDebouncedValue } from '@mantine/hooks';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -25,6 +27,7 @@ import { LaunchRunModal } from '../runs/LaunchRunModal';
 import { RunsTable } from '../runs/RunsTable';
 import { type RunStatus, useProjectRuns } from '../runs/useRuns';
 import {
+  CANDIDATE_MIN_CHARS,
   canRole,
   type Member,
   type Project,
@@ -33,6 +36,7 @@ import {
   useAddMember,
   useAddProjectConnection,
   useDeleteProject,
+  useMemberCandidates,
   useMembers,
   useProjectConnections,
   useRemoveMember,
@@ -235,6 +239,11 @@ export function MembersTab({ project }: { project: Project }) {
   const [username, setUsername] = useState('');
   const [role, setRole] = useState<ProjectRole>('viewer');
   const owner = canRole(project.my_role, 'owner');
+  // Sugerencias del servidor con retardo; se puede seguir escribiendo el nombre a mano.
+  const [typed] = useDebouncedValue(username, 300);
+  const candidates = useMemberCandidates(project.id, typed, owner);
+  const candidateNames = new Map((candidates.data ?? []).map((c) => [c.username, c.display_name]));
+  const tooShort = username.trim().length < CANDIDATE_MIN_CHARS;
   const roleOptions = ROLES.map((r) => ({ value: r, label: t(`projects.roles.${r}`) }));
 
   const memberColumns: Column<Member>[] = [
@@ -306,11 +315,35 @@ export function MembersTab({ project }: { project: Project }) {
     <Stack>
       {owner && (
         <Group align="flex-end">
-          <TextInput
+          <Autocomplete
             label={t('auth.username')}
+            description={
+              candidates.isError
+                ? t('projects.candidatesError')
+                : tooShort
+                  ? t('projects.candidatesHint', { min: CANDIDATE_MIN_CHARS })
+                  : candidates.data && candidates.data.length === 0
+                    ? t('projects.candidatesEmpty')
+                    : undefined
+            }
+            data={tooShort ? [] : [...candidateNames.keys()]}
+            // El servidor ya filtra (usuario o nombre visible): no volver a filtrar por el texto.
+            filter={({ options }) => options}
+            renderOption={({ option }) => (
+              <Stack gap={0}>
+                <Text size="sm">{option.value}</Text>
+                <Text size="xs" c="dimmed">
+                  {candidateNames.get(option.value)}
+                </Text>
+              </Stack>
+            )}
             value={username}
-            onChange={(event) => setUsername(event.currentTarget.value)}
-            w={240}
+            onChange={setUsername}
+            rightSection={
+              candidates.isFetching ? <Loader size="xs" aria-label={t('common.loading')} /> : null
+            }
+            autoComplete="off"
+            w={280}
           />
           <Select
             label={t('projects.role')}

@@ -21,12 +21,14 @@ const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,64}$/;
 interface UserFormModalProps {
   /** Usuario a editar; `null` para crear uno nuevo. */
   user: User | null;
+  /** Es el único administrador activo: rol y estado no se pueden cambiar (el backend respondería 409). */
+  lastAdmin?: boolean;
   opened: boolean;
   onClose: () => void;
 }
 
 /** Alta y edición de usuario. Se monta con `key` distinta por usuario para reiniciar el estado. */
-export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
+export function UserFormModal({ user, lastAdmin = false, opened, onClose }: UserFormModalProps) {
   const { t } = useTranslation();
   const create = useCreateUser();
   const update = useUpdateUser();
@@ -76,7 +78,20 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
       if (password) body.password = password;
       update.mutate({ id: user.id, body }, { onSuccess: onClose });
     } else {
-      create.mutate({ username, display_name: displayName.trim(), password, role }, { onSuccess: onClose });
+      create.mutate(
+        {
+          username,
+          display_name: displayName.trim(),
+          password,
+          role,
+          is_active: isActive,
+          can_run_sql: canRunSql,
+          can_apply_ddl: canApplyDdl,
+          can_write_data: canWriteData,
+          storage_quota_mb: globalQuota ? null : quotaMb,
+        },
+        { onSuccess: onClose },
+      );
     }
   };
 
@@ -117,48 +132,47 @@ export function UserFormModal({ user, opened, onClose }: UserFormModalProps) {
             value={role}
             onChange={(value) => setRole(value === 'admin' ? 'admin' : 'user')}
             allowDeselect={false}
+            disabled={lastAdmin}
+            description={lastAdmin ? t('admin.users.lastAdminHint') : undefined}
           />
-          {user && (
-            <Switch
-              label={t('admin.users.active')}
-              description={t('admin.users.activeHint')}
-              checked={isActive}
-              onChange={(event) => setIsActive(event.currentTarget.checked)}
-            />
-          )}
-          {user && (
-            <Switch
-              label={t('admin.users.canRunSql')}
-              description={t('admin.users.canRunSqlHint')}
-              checked={canRunSql}
-              onChange={(event) => setCanRunSql(event.currentTarget.checked)}
-            />
-          )}
-          {user && (
-            <Switch
-              label={t('admin.users.canApplyDdl')}
-              description={t('admin.users.canApplyDdlHint')}
-              checked={canApplyDdl}
-              onChange={(event) => setCanApplyDdl(event.currentTarget.checked)}
-            />
-          )}
-          {user && (
-            <Switch
-              label={t('admin.users.canWriteData')}
-              description={t('admin.users.canWriteDataHint')}
-              checked={canWriteData}
-              onChange={(event) => setCanWriteData(event.currentTarget.checked)}
-            />
-          )}
-          {user && (
-            <Switch
-              label={t('admin.users.globalQuota')}
-              description={t('admin.users.globalQuotaHint')}
-              checked={globalQuota}
-              onChange={(event) => setGlobalQuota(event.currentTarget.checked)}
-            />
-          )}
-          {user && !globalQuota && (
+          <Switch
+            label={t('admin.users.active')}
+            description={
+              lastAdmin
+                ? t('admin.users.lastAdminHint')
+                : user
+                  ? t('admin.users.activeHint')
+                  : t('admin.users.activeOnCreateHint')
+            }
+            checked={isActive}
+            disabled={lastAdmin}
+            onChange={(event) => setIsActive(event.currentTarget.checked)}
+          />
+          <Switch
+            label={t('admin.users.canRunSql')}
+            description={t('admin.users.canRunSqlHint')}
+            checked={canRunSql}
+            onChange={(event) => setCanRunSql(event.currentTarget.checked)}
+          />
+          <Switch
+            label={t('admin.users.canApplyDdl')}
+            description={t('admin.users.canApplyDdlHint')}
+            checked={canApplyDdl}
+            onChange={(event) => setCanApplyDdl(event.currentTarget.checked)}
+          />
+          <Switch
+            label={t('admin.users.canWriteData')}
+            description={t('admin.users.canWriteDataHint')}
+            checked={canWriteData}
+            onChange={(event) => setCanWriteData(event.currentTarget.checked)}
+          />
+          <Switch
+            label={t('admin.users.globalQuota')}
+            description={t('admin.users.globalQuotaHint')}
+            checked={globalQuota}
+            onChange={(event) => setGlobalQuota(event.currentTarget.checked)}
+          />
+          {!globalQuota && (
             <NumberInput
               label={t('admin.users.quotaMb')}
               description={t('admin.users.quotaMbHint')}

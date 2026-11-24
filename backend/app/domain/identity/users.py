@@ -1,26 +1,47 @@
-"""Administración de usuarios: alta, edición, desactivación y reactivación (sin borrado físico)."""
+"""Administración de usuarios: alta, edición, desactivación, reactivación, desbloqueo y borrado.
+
+El borrado solo se permite si nada depende del usuario (ADR-013): ni proyectos (como miembro o como creador, porque la
+carpeta del proyecto en el workspace es la del creador) ni conexiones compartidas o asociadas a proyectos. Siempre
+debe quedar un administrador activo.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Final, Literal
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, exists, func, not_, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.db.models import ColorScheme, Role, User, utcnow
+from app.db.models import (
+    ColorScheme,
+    Connection,
+    Project,
+    ProjectConnection,
+    ProjectMember,
+    Role,
+    User,
+    utcnow,
+)
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.identity.errors import (
     LastAdminError,
+    SelfDeletionError,
     SelfModificationError,
+    UserInUseError,
     UsernameTakenError,
     UserNotFoundError,
 )
 from app.domain.identity.passwords import check_policy, hash_password
 from app.domain.identity.sessions import revoke_user_sessions
 from app.domain.sorting import SortOrder, like_pattern, order_by
+from app.workspace.layout import remove_tree, safe_path
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_username(username: str) -> str:
@@ -61,13 +82,25 @@ def get_by_username(db: Session, username: str) -> User | None:
     return db.scalar(select(User).where(User.username == normalize_username(username)))
 
 
-UserSort = Literal["username", "display_name", "role", "created_at"]
+UserSort = Literal["username", "display_name", "role", "created_at", "projects"]
+#: ``active`` = activo y sin bloqueo por intentos; ``locked`` = activo con ``locked_until`` futuro.
+UserStatus = Literal["active", "inactive", "locked"]
+
+#: Proyectos de los que el usuario es miembro (subconsulta correlacionada con ``users``).
+_PROJECT_COUNT: Final = select(func.count()).where(ProjectMember.user_id == User.id).correlate(User).scalar_subquery()
+
 _USER_SORT: Final[dict[str, Any]] = {
     "username": User.username,
     "display_name": func.lower(User.display_name),
     "role": User.role,
     "created_at": User.created_at,
+    "projects": _PROJECT_COUNT,
 }
+
+
+def project_count(db: Session, user_id: int) -> int:
+    """Proyectos de los que ``user_id`` es miembro."""
+    return db.scalar(select(func.count()).where(ProjectMember.user_id == user_id)) or 0
 
 
 def list_users(
@@ -78,9 +111,23 @@ def list_users(
     offset: int,
     sort: UserSort | None = None,
     order: SortOrder | None = None,
-) -> tuple[list[User], int]:
-    """Usuarios (por nombre de usuario si no se pide otro orden), filtrados por texto en usuario o nombre visible."""
-    query = select(User)
+    role: Role | None = None,
+    status: UserStatus | None = None,
+    now: datetime | None = None,
+) -> tuple[list[tuple[User, int]], int]:
+    """Usuarios con su número de proyectos (por nombre de usuario si no se pide otro orden), filtrados por texto en
+    usuario o nombre visible, rol y estado."""
+    query = select(User, _PROJECT_COUNT.label("project_count"))
+    if role is not None:
+        query = query.where(User.role == role)
+    if status is not None:
+        locked = and_(User.locked_until.is_not(None), User.locked_until > (now or utcnow()))
+        if status == "inactive":
+            query = query.where(User.is_active.is_(False))
+        elif status == "locked":
+            query = query.where(User.is_active.is_(True), locked)
+        else:
+            query = query.where(User.is_active.is_(True), not_(locked))
     if q and q.strip():
         pattern = like_pattern(q)
         query = query.where(
@@ -91,11 +138,12 @@ def list_users(
         )
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     clauses = order_by(_USER_SORT, sort, order, default=[User.username], tiebreak=User.id)
-    rows = db.scalars(query.order_by(*clauses).limit(limit).offset(offset)).all()
-    return list(rows), total
+    rows = db.execute(query.order_by(*clauses).limit(limit).offset(offset)).all()
+    return [(user, count) for user, count in rows], total
 
 
-def _active_admins(db: Session) -> int:
+def count_active_admins(db: Session) -> int:
+    """Administradores activos (los bloqueados por intentos cuentan: el bloqueo es temporal)."""
     return db.scalar(select(func.count()).where(User.role == "admin", User.is_active.is_(True))) or 0
 
 
@@ -109,8 +157,13 @@ def create_user(
     settings: Settings,
     ctx: RequestContext,
     actor_id: int | None,
+    is_active: bool = True,
+    can_run_sql: bool = False,
+    can_apply_ddl: bool = False,
+    can_write_data: bool = False,
+    storage_quota_mb: int | None = None,
 ) -> User:
-    """Crea un usuario activo y lo audita.
+    """Crea un usuario (activo salvo que se pida otra cosa) con sus permisos y cuota, y lo audita.
 
     Raises:
         UsernameTakenError: El nombre ya existe.
@@ -125,7 +178,11 @@ def create_user(
         display_name=display_name.strip() or username,
         password_hash=hash_password(password),
         role=role,
-        is_active=True,
+        is_active=is_active,
+        can_run_sql=can_run_sql,
+        can_apply_ddl=can_apply_ddl,
+        can_write_data=can_write_data,
+        storage_quota_mb=storage_quota_mb,
         failed_attempts=0,
     )
     db.add(user)
@@ -137,7 +194,15 @@ def create_user(
         actor_id=actor_id,
         target_type="user",
         target_id=user.id,
-        details={"username": user.username, "role": role},
+        details={
+            "username": user.username,
+            "role": role,
+            "is_active": is_active,
+            "can_run_sql": can_run_sql,
+            "can_apply_ddl": can_apply_ddl,
+            "can_write_data": can_write_data,
+            "storage_quota_mb": storage_quota_mb,
+        },
     )
     db.commit()
     return user
@@ -159,7 +224,7 @@ def update_user(
     loses_admin = user.role == "admin" and user.is_active and (changes.role == "user" or changes.is_active is False)
     if loses_admin and user.id == actor.id:
         raise SelfModificationError()
-    if loses_admin and _active_admins(db) <= 1:
+    if loses_admin and count_active_admins(db) <= 1:
         raise LastAdminError()
 
     changed: list[str] = []
@@ -229,8 +294,176 @@ def update_user(
                 **({"storage_quota_mb": user.storage_quota_mb} if "storage_quota_mb" in changed else {}),
             },
         )
+    if loses_admin:
+        _ensure_active_admin(db)
     db.commit()
     return user
+
+
+def _ensure_active_admin(db: Session) -> None:
+    """Vuelve a contar tras escribir: dos peticiones simultáneas podían ver dos admins y quitar uno cada una.
+
+    Raises:
+        LastAdminError: Ya no queda ningún administrador activo (se deshace la operación).
+    """
+    db.flush()
+    if count_active_admins(db) == 0:
+        db.rollback()
+        raise LastAdminError()
+
+
+def unlock_user(db: Session, user: User, *, actor: User, ctx: RequestContext) -> User:
+    """Quita el bloqueo por intentos fallidos y pone el contador a cero; se audita si había algo que quitar."""
+    if user.failed_attempts or user.locked_until is not None:
+        user.failed_attempts = 0
+        user.locked_until = None
+        audit.record(
+            db, action=AuditAction.USER_UNLOCK, ctx=ctx, actor_id=actor.id, target_type="user", target_id=user.id
+        )
+        db.commit()
+    return user
+
+
+@dataclass(frozen=True)
+class ProjectRef:
+    """Proyecto que impide borrar un usuario; ``role`` es su rol de miembro (``None`` en los que solo creó)."""
+
+    id: int
+    name: str
+    role: str | None = None
+
+
+@dataclass(frozen=True)
+class ConnectionRef:
+    """Conexión que impide borrar un usuario (compartida o asociada a algún proyecto)."""
+
+    id: int
+    name: str
+    visibility: str
+
+
+#: Motivos por los que no se puede borrar un usuario.
+DeletionReason = Literal["self", "last_admin", "member", "creator", "connections"]
+
+
+@dataclass(frozen=True)
+class DeletionCheck:
+    """Lo que impide borrar un usuario (todo vacío si se puede)."""
+
+    reasons: list[DeletionReason] = field(default_factory=list)
+    projects: list[ProjectRef] = field(default_factory=list)
+    created_projects: list[ProjectRef] = field(default_factory=list)
+    connections: list[ConnectionRef] = field(default_factory=list)
+
+    @property
+    def can_delete(self) -> bool:
+        return not self.reasons
+
+    def as_extra(self) -> dict[str, object]:
+        """Campos adicionales del *problem details* del ``409``."""
+        return {
+            "reasons": list(self.reasons),
+            "projects": [{"id": p.id, "name": p.name, "role": p.role} for p in self.projects],
+            "created_projects": [{"id": p.id, "name": p.name} for p in self.created_projects],
+            "connections": [{"id": c.id, "name": c.name, "visibility": c.visibility} for c in self.connections],
+        }
+
+
+def deletion_check(db: Session, user: User, *, actor: User) -> DeletionCheck:
+    """Comprueba si ``actor`` puede borrar ``user`` y, si no, por qué."""
+    reasons: list[DeletionReason] = []
+    if user.id == actor.id:
+        reasons.append("self")
+    if user.role == "admin" and user.is_active and count_active_admins(db) <= 1:
+        reasons.append("last_admin")
+    projects = [
+        ProjectRef(id=pid, name=name, role=role)
+        for pid, name, role in db.execute(
+            select(Project.id, Project.name, ProjectMember.role)
+            .join(ProjectMember, ProjectMember.project_id == Project.id)
+            .where(ProjectMember.user_id == user.id)
+            .order_by(func.lower(Project.name), Project.id)
+        ).all()
+    ]
+    created = [
+        ProjectRef(id=pid, name=name)
+        for pid, name in db.execute(
+            select(Project.id, Project.name)
+            .where(Project.owner_id == user.id)
+            .order_by(func.lower(Project.name), Project.id)
+        ).all()
+    ]
+    linked = exists().where(ProjectConnection.connection_id == Connection.id)
+    connections = [
+        ConnectionRef(id=cid, name=name, visibility=visibility)
+        for cid, name, visibility in db.execute(
+            select(Connection.id, Connection.name, Connection.visibility)
+            .where(Connection.owner_id == user.id, or_(Connection.visibility == "shared", linked))
+            .order_by(func.lower(Connection.name), Connection.id)
+        ).all()
+    ]
+    if projects:
+        reasons.append("member")
+    if created:
+        reasons.append("creator")
+    if connections:
+        reasons.append("connections")
+    return DeletionCheck(reasons=reasons, projects=projects, created_projects=created, connections=connections)
+
+
+def delete_user(db: Session, user: User, *, actor: User, settings: Settings, ctx: RequestContext) -> None:
+    """Borra ``user`` si nada depende de él (ADR-013).
+
+    Con él se borran sus sesiones y sus conexiones privadas sin proyectos; las ejecuciones, ficheros, plantillas y
+    eventos de auditoría que lo referencian quedan sin usuario (la auditoría conserva su nombre). Su carpeta del
+    workspace se borra si no contiene ficheros.
+
+    Raises:
+        SelfDeletionError: Es la cuenta de ``actor``.
+        LastAdminError: Es el último administrador activo.
+        UserInUseError: Es miembro o creador de proyectos, o tiene conexiones compartidas o en uso.
+    """
+    # Escribir primero toma el bloqueo de escritura de SQLite: entre la comprobación y el borrado nadie puede añadirlo
+    # a un proyecto ni asociar sus conexiones (los ``ON DELETE CASCADE`` se las llevarían sin aviso).
+    user.updated_at = utcnow()
+    db.flush()
+    check = deletion_check(db, user, actor=actor)
+    if not check.can_delete:
+        db.rollback()
+        if "self" in check.reasons:
+            raise SelfDeletionError()
+        if "last_admin" in check.reasons:
+            raise LastAdminError()
+        raise UserInUseError(
+            "Es miembro o creador de proyectos, o tiene conexiones compartidas o en uso.", **check.as_extra()
+        )
+    user_id, was_admin = user.id, user.role == "admin"
+    private = db.scalar(select(func.count()).where(Connection.owner_id == user_id)) or 0
+    audit.record(
+        db,
+        action=AuditAction.USER_DELETE,
+        ctx=ctx,
+        actor_id=actor.id,
+        target_type="user",
+        target_id=user_id,
+        details={"username": user.username, "role": user.role, "connections_deleted": private},
+    )
+    db.delete(user)
+    if was_admin:
+        _ensure_active_admin(db)
+    db.commit()
+    _remove_empty_user_folder(settings, user_id)
+
+
+def _remove_empty_user_folder(settings: Settings, user_id: int) -> None:
+    """Borra ``users/<id>/`` del workspace si no queda ningún fichero (sin proyectos creados no debería haberlos)."""
+    folder = safe_path(settings.workspace_dir, f"users/{int(user_id)}")
+    if not folder.is_dir():
+        return
+    if any(path.is_file() for path in folder.rglob("*")):
+        logger.warning("Carpeta de un usuario borrado con ficheros: se conserva", extra={"user_id": user_id})
+        return
+    remove_tree(folder)
 
 
 def update_preferences(db: Session, user: User, *, color_scheme: ColorScheme) -> User:

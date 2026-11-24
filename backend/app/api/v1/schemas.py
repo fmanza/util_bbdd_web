@@ -87,15 +87,23 @@ class UserOut(_Out):
     password_changed_at: datetime
     created_at: datetime
     updated_at: datetime
+    project_count: int = Field(default=0, description="Proyectos de los que es miembro")
 
 
 class UserCreate(BaseModel):
-    """Alta de usuario."""
+    """Alta de usuario con las mismas opciones que la edición (salvo la contraseña, que es obligatoria)."""
 
     username: Username
     display_name: DisplayName
     password: Password
     role: Role = "user"
+    is_active: bool = True
+    can_run_sql: bool = False
+    can_apply_ddl: bool = False
+    can_write_data: bool = False
+    storage_quota_mb: Annotated[int | None, Field(ge=0, le=10_000_000)] = Field(
+        default=None, description="Cuota propia en MB (0 = sin límite); null = la global (ADR-012)"
+    )
 
 
 class UserUpdate(BaseModel):
@@ -123,6 +131,36 @@ class UserPage(BaseModel):
 
     items: list[UserOut]
     total: int
+    active_admins: int = Field(description="Administradores activos en total (no solo los de la página)")
+
+
+class BlockingProject(BaseModel):
+    """Proyecto que impide borrar un usuario; ``role`` es su rol de miembro (null si solo lo creó)."""
+
+    id: int
+    name: str
+    role: Literal["owner", "editor", "viewer"] | None = None
+
+
+class BlockingConnection(BaseModel):
+    """Conexión que impide borrar un usuario: compartida o asociada a algún proyecto."""
+
+    id: int
+    name: str
+    visibility: Literal["private", "shared"]
+
+
+class UserDeletionCheck(BaseModel):
+    """Si se puede borrar un usuario y, si no, por qué (``reasons``: ``self``, ``last_admin``, ``member``,
+    ``creator``, ``connections``)."""
+
+    can_delete: bool
+    reasons: list[Literal["self", "last_admin", "member", "creator", "connections"]]
+    projects: list[BlockingProject] = Field(description="Proyectos de los que es miembro")
+    created_projects: list[BlockingProject] = Field(
+        description="Proyectos que creó: su carpeta del workspace cuelga de la suya"
+    )
+    connections: list[BlockingConnection]
 
 
 # --- sessions ---------------------------------------------------------------------------------------------------

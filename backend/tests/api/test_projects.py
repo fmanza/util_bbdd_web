@@ -167,3 +167,43 @@ def test_cannot_delete_project_with_active_runs(user_client: TestClient) -> None
     user_client.post(f"/api/v1/projects/{project_id}/runs", json={"operation": "noop"})
 
     assert user_client.delete(f"/api/v1/projects/{project_id}").status_code == 409
+
+
+def test_member_candidates_for_owners_only(
+    user_client: TestClient, make_user: Callable[..., User], db: Session
+) -> None:
+    project_id = new_project(user_client)["id"]
+    for name in ("luis", "luisa", "lucia", "pedro"):
+        make_user(name)
+    db.scalars(select(User).where(User.username == "lucia")).one().is_active = False
+    db.commit()
+    user_client.post(f"/api/v1/projects/{project_id}/members", json={"username": "luisa", "role": "editor"})
+    url = f"/api/v1/projects/{project_id}/member-candidates"
+
+    found = user_client.get(url, params={"q": "lu"})
+
+    assert found.status_code == 200
+    # Ni miembros (luisa), ni inactivos (lucia), ni el propio propietario; solo usuario y nombre.
+    assert found.json() == [{"username": "luis", "display_name": "Luis"}]
+    assert user_client.get(url, params={"q": "PED"}).json() == [{"username": "pedro", "display_name": "Pedro"}]
+    assert user_client.get(url, params={"q": "l"}).status_code == 422
+    assert user_client.get(url, params={"q": "lu", "limit": 11}).status_code == 422
+    assert user_client.get(url, params={"q": "%_"}).json() == []
+    editor = TestClient(user_client.app, base_url="https://testserver")
+    do_login(editor, "luisa", USER_PASSWORD)
+    assert editor.get(url, params={"q": "lu"}).status_code == 403
+    stranger = login_as(user_client, make_user, "zoe")
+    assert stranger.get(url, params={"q": "lu"}).status_code == 404
+
+
+def test_member_candidates_limit(user_client: TestClient, make_user: Callable[..., User]) -> None:
+    project_id = new_project(user_client)["id"]
+    for i in range(12):
+        make_user(f"usu{i:02d}")
+
+    names = [
+        c["username"]
+        for c in user_client.get(f"/api/v1/projects/{project_id}/member-candidates", params={"q": "usu"}).json()
+    ]
+
+    assert names == [f"usu{i:02d}" for i in range(10)]

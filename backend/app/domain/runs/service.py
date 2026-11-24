@@ -91,9 +91,10 @@ def _filtered(query: Any, filters: RunFilters) -> Any:
     return query
 
 
-RunSort = Literal["created_at", "operation", "status", "user", "size"]
+RunSort = Literal["created_at", "project", "operation", "status", "user", "size"]
 _RUN_SORT: Final[dict[str, Any]] = {
     "created_at": Run.created_at,
+    "project": func.lower(Project.name),
     "operation": Run.operation,
     "status": Run.status,
     "user": func.lower(func.coalesce(User.username, "")),
@@ -102,8 +103,8 @@ _RUN_SORT: Final[dict[str, Any]] = {
 
 
 def _base_runs() -> Any:
-    """``select(Run)`` con el usuario unido una vez (búsqueda y orden por usuario)."""
-    return select(Run).join(User, User.id == Run.user_id, isouter=True)
+    """``select(Run)`` con el usuario y el proyecto unidos una vez (búsqueda y orden por usuario o proyecto)."""
+    return select(Run).join(User, User.id == Run.user_id, isouter=True).join(Project, Project.id == Run.project_id)
 
 
 def _page_runs(

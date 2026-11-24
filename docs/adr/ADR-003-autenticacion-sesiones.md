@@ -34,7 +34,8 @@ cerrar la sesión de otro).
   contra un hash ficticio para igualar tiempos.
 - `last_seen_at` se actualiza como mucho una vez por minuto (SQLite tiene un único escritor).
 - Cambiar la contraseña cierra las demás sesiones del usuario; desactivar o restablecer la contraseña cierra todas.
-- Debe quedar siempre un admin activo (`409`); un admin no puede desactivarse ni quitarse el rol.
+- Debe quedar siempre un admin activo (`409`); un admin no puede desactivarse ni quitarse el rol. Desde la 1.22.0 un
+  usuario sin proyectos ni conexiones en uso también se puede borrar ([ADR-013](ADR-013-borrado-de-usuarios.md)).
 - Pendiente para la Fase 10: prefijo `__Host-` en las cookies y *rate limiting* por IP del login.
 
 ## Enmienda 2026-10-23 (1.0.0): prefijo `__Host-` y rate limiting del login

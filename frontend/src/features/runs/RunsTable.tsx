@@ -52,6 +52,7 @@ export function RunsTable({
           {
             key: 'project',
             header: t('runs.project'),
+            sortable: true,
             cell: (run: Run) => (
               <Anchor component={Link} to={`/projects/${run.project_id}`}>
                 {run.project_name}
