@@ -5,6 +5,35 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-26
+
+### Added
+
+- **Roles y permisos** ([ADR-014](docs/adr/ADR-014-roles-y-permisos.md)): *Administración → Roles* para crear roles con
+  permisos de un catálogo de 13 (gestionar usuarios, roles, sesiones, plantillas globales, queries nombradas,
+  destinos permitidos, almacenamiento y ejecuciones; ver la auditoría; compartir conexiones; SQL libre; aplicar DDL;
+  escribir datos). Roles base «Administrador» (todos) y «Usuario» (ninguno). Nadie da ni quita un permiso que no
+  tiene ni cambia su propio rol; quitar permisos o cambiar el rol cierra las sesiones; todo se audita (`role.*`). API
+  `/api/v1/roles` y `/api/v1/roles/permissions`. El menú *Administración* y cada una de sus rutas siguen los permisos
+  del rol.
+- **Idioma de la interfaz** por usuario, español o inglés (británico), en el menú de usuario junto al tema: se guarda
+  en la cuenta (`Me.language`, `PATCH /auth/me/preferences`), se aplica al momento sin recargar y decide también el
+  formato de fechas y números (`en-GB`). Antes de iniciar sesión, el último idioma del navegador o su preferencia.
+  Cabecera `Accept-Language` en todas las peticiones. Traducción completa en `frontend/src/i18n/en/`; una prueba exige
+  las mismas claves y marcadores en los dos idiomas.
+
+### Changed
+
+- **API (incompatible)**: `Me` y `UserOut` sustituyen `role` (`admin`/`user`), `can_run_sql`, `can_apply_ddl` y
+  `can_write_data` por `role` (`{id, name, builtin}`) y `permissions`; `UserCreate`/`UserUpdate` reciben `role_id`;
+  `GET /users` filtra por `role_id`; el motivo de transferencia `target_not_admin` pasa a `target_cannot_share`.
+  `PreferencesUpdate` acepta `color_scheme` y/o `language`.
+- Migraciones `0014` (roles; cada usuario conserva sus permisos y los administradores ganan SQL libre, aplicar DDL y
+  escribir datos) y `0015` (`users.language`), sin recrear `users`. `users.role` y `users.can_*` quedan sin uso,
+  sincronizados con el rol para poder volver a la 1.24.0.
+- Con la interfaz en inglés, el título de los errores de la API se traduce por estado HTTP; su detalle, los mensajes
+  de las ejecuciones y los documentos generados siguen en español.
+
 ## [1.24.0] - 2026-11-25
 
 ### Added
