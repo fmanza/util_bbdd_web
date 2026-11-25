@@ -28,7 +28,6 @@
     "connections": "Conexiones",
     "projects": "Proyectos",
     "runs": "Ejecuciones",
-    "phase": "Fase {{phase}}",
     "admin": "Administración",
     "users": "Usuarios",
     "sessions": "Sesiones",

@@ -1,5 +1,6 @@
 import createClient, { type Middleware } from 'openapi-fetch';
 
+import i18n from '../i18n';
 import type { paths } from './schema';
 
 /** Con TLS la cookie lleva el prefijo `__Host-` (ASVS 3.4.4); en desarrollo (HTTP) no. */
@@ -74,7 +75,7 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response: Respons
     return result.data;
   }
   const problem = (result.error as Problem | undefined) ?? {
-    title: result.response.statusText || 'Error',
+    title: result.response.statusText || i18n.t('common.error'),
     status: result.response.status,
   };
   const requestId = problem.request_id ?? result.response.headers.get('X-Request-ID') ?? undefined;

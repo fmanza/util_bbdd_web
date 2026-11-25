@@ -1,15 +1,38 @@
-const dateTime = new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'medium' });
-const decimal = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+import i18n from '../i18n';
+
+/** Locale de `Intl` de cada idioma de la app (sin entrada, el propio código de idioma). */
+const INTL_LOCALES: Readonly<Record<string, string>> = { es: 'es-ES' };
+
+interface Formatters {
+  dateTime: Intl.DateTimeFormat;
+  decimal: Intl.NumberFormat;
+}
+const cache = new Map<string, Formatters>();
+
+/** Formateadores del idioma activo de i18next (se crean una vez por locale). */
+function formatters(): Formatters {
+  const language = i18n.resolvedLanguage ?? i18n.language;
+  const locale = INTL_LOCALES[language] ?? language;
+  let entry = cache.get(locale);
+  if (!entry) {
+    entry = {
+      dateTime: new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'medium' }),
+      decimal: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }),
+    };
+    cache.set(locale, entry);
+  }
+  return entry;
+}
 
 /** Fecha ISO 8601 de la API en hora local. */
 export function formatDateTime(iso: string | null | undefined): string {
-  return iso ? dateTime.format(new Date(iso)) : '—';
+  return iso ? formatters().dateTime.format(new Date(iso)) : '—';
 }
 
 /** Duración en segundos como «1 h 2 min», «3 min 4 s» o «5,2 s». */
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return '—';
-  if (seconds < 60) return `${decimal.format(seconds)} s`;
+  if (seconds < 60) return `${formatters().decimal.format(seconds)} s`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} min ${Math.round(seconds % 60)} s`;
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
@@ -24,5 +47,5 @@ export function formatBytes(bytes: number): string {
     value /= 1024;
     unit += 1;
   }
-  return `${decimal.format(value)} ${units[unit]}`;
+  return `${formatters().decimal.format(value)} ${units[unit]}`;
 }

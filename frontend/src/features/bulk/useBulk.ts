@@ -12,6 +12,7 @@ import {
   unwrap,
 } from '../../api/client';
 import type { components } from '../../api/schema';
+import i18n from '../../i18n';
 
 export type Upload = components['schemas']['UploadOut'];
 export type UploadInfo = components['schemas']['UploadInfoOut'];
@@ -79,13 +80,16 @@ function sendUpload(
         resolve(body as Upload);
         return;
       }
-      const problem = (body as Problem | null) ?? { title: xhr.statusText || 'Error', status: xhr.status };
+      const problem = (body as Problem | null) ?? {
+        title: xhr.statusText || i18n.t('common.error'),
+        status: xhr.status,
+      };
       const requestId = problem.request_id ?? xhr.getResponseHeader('X-Request-ID') ?? undefined;
       reject(
         new ApiError(requestId ? { ...problem, request_id: requestId } : { ...problem, status: xhr.status }),
       );
     };
-    xhr.onerror = () => reject(new ApiError({ title: 'No se pudo enviar el fichero', status: 0 }));
+    xhr.onerror = () => reject(new ApiError({ title: i18n.t('bulk.uploads.networkError'), status: 0 }));
     xhr.onabort = () => reject(new DOMException('Subida cancelada', 'AbortError'));
     signal.addEventListener('abort', () => xhr.abort());
     const form = new FormData();

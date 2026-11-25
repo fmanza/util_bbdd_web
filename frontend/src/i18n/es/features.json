@@ -1214,6 +1214,7 @@
       "choose": "Fichero",
       "send": "Subir",
       "cancel": "Cancelar la subida",
+      "networkError": "No se pudo enviar el fichero",
       "max": "Máximo {{max}} MB. Para ficheros grandes, mejor CSV: se lee por bloques.",
       "tooBig": "El fichero ocupa {{size}} y el máximo es {{max}} MB.",
       "progressLabel": "Progreso de la subida",

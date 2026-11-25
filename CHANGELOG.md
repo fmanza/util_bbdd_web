@@ -5,6 +5,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Changed
+
+- Frontend (i18n): el error de red al subir un fichero y el título por defecto de los errores sin *problem details*
+  salen de las traducciones (antes «No se pudo enviar el fichero» y «Error» fijos en el código). Las fechas y los
+  números se formatean con la locale del idioma activo de i18next (`es-ES` para español, igual que antes). Se borra la
+  clave sin uso `nav.phase`. Nueva prueba `i18n/literals.test.ts`: falla ante textos visibles escritos en el código
+  (texto JSX, atributos como `aria-label` o `title`, títulos y mensajes, fallbacks) y ante claves `t()` que no existen,
+  con una lista de términos técnicos permitidos por fichero.
+
 ## [1.23.0] - 2026-11-25
 
 ### Changed
