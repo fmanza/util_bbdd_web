@@ -36,7 +36,7 @@ flowchart TB
     jobs[jobs/ worker] --> domain
     jobs --> integ
     jobs --> ws[workspace/]
-    integ --> lib[(util_bbdd 5.9.1)]
+    integ --> lib[(util_bbdd 5.10.0)]
 ```
 
 | Paquete | Responsabilidad | Fase |
