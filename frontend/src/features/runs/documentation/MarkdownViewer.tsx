@@ -27,7 +27,7 @@ import { stripFrontMatter } from '../markdown';
 import { renderMermaidBlocks } from '../mermaid';
 import { highlightSqlBlocks } from '../sqlHighlight';
 import { type Artifact, downloadUrl, useArtifactText } from '../useRuns';
-import { buildFrameDocument, navHref, sanitizeMarkdownHtml } from './markdownFrame';
+import { buildFrameDocument, type FrameLang, navHref, sanitizeMarkdownHtml } from './markdownFrame';
 import {
   type Page,
   SECTIONS,
@@ -54,11 +54,12 @@ interface FrameProps {
   runId: string;
   page: Page;
   hash: string;
+  lang: FrameLang;
   onLink: (href: string) => void;
 }
 
 /** Página en el iframe aislado (`sandbox="allow-scripts"`, origen opaco, puente por hash; ver `markdownFrame.ts`). */
-function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
+function MarkdownFrame({ runId, page, hash, lang, onLink }: FrameProps) {
   const { t } = useTranslation();
   const text = useArtifactText(runId, page.artifact);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -110,9 +111,10 @@ function MarkdownFrame({ runId, page, hash, onLink }: FrameProps) {
               failed: t('runs.outputs.copyCodeFailed'),
             },
             safeHtml.scheme,
+            lang,
           )
         : null,
-    [ready, safeHtml, hash, t],
+    [ready, safeHtml, hash, lang, t],
   );
 
   if (text.isError) return <ErrorAlert error={text.error} />;
@@ -255,10 +257,13 @@ export function MarkdownViewer({
   runId,
   artifacts,
   pages,
+  lang = 'es',
 }: {
   runId: string;
   artifacts: Artifact[];
   pages: Page[];
+  /** Idioma de la documentación (`locale` de la ejecución): `lang` de cada página. */
+  lang?: FrameLang;
 }) {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -380,7 +385,7 @@ export function MarkdownViewer({
                 </Anchor>
               </Alert>
             )}
-            <MarkdownFrame runId={runId} page={current} hash={hash} onLink={onLink} />
+            <MarkdownFrame runId={runId} page={current} hash={hash} lang={lang} onLink={onLink} />
           </Stack>
         </Grid.Col>
       </Grid>

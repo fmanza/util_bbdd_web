@@ -329,3 +329,42 @@ def test_cancelled_documentation_stops_by_itself(
     assert process.exitcode == 0  # terminó solo: el worker no lo mató (terminate daría -15)
     log = (run_dir(settings.workspace_dir, str(run.workspace_path)) / "logs" / "run.log").read_text(encoding="utf-8")
     assert "Documentación cancelada entre tablas" in log
+
+
+# --- idioma de salida (util_bbdd 5.10.0) --------------------------------------------------------------------------
+
+
+def test_locale_is_an_output_option_of_documentation_compare_and_dump(user_client: TestClient) -> None:
+    operations = {o["name"]: o for o in user_client.get("/api/v1/operations").json()}
+    for name in ("documentation", "compare", "dump_preview"):
+        locale = {p["name"]: p for p in operations[name]["params"]}["locale"]
+        assert (locale["group"], locale["default"], locale["options"]) == ("output", "es", ["es", "en"]), name
+
+
+def test_documentation_rejects_unknown_locale(user_client: TestClient, project: dict[str, object]) -> None:
+    response = user_client.post(
+        f"/api/v1/projects/{project['id']}/runs",
+        json={"operation": "documentation", "params": {"connection": "tienda", "locale": "fr"}},
+    )
+    assert response.status_code == 422
+
+
+def test_documentation_in_english(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+) -> None:
+    run_id = launch(
+        user_client, project["id"], "documentation", connection="tienda", word=False, html=False, graphs=False,
+        locale="en",
+    )  # fmt: skip
+    run = wait_for(worker, db, run_id, timeout=180)
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+
+    paths = [a["path"] for a in user_client.get(f"/api/v1/runs/{run_id}").json()["artifacts"]]
+    excel = next(p for p in paths if p.startswith("outputs/excel/") and p.endswith(".xlsx"))
+    with zipfile.ZipFile(run_dir(settings.workspace_dir, str(run.workspace_path)) / excel) as xlsx:
+        workbook = xlsx.read("xl/workbook.xml").decode("utf-8")
+    assert 'name="Columns"' in workbook and 'name="Columnas"' not in workbook

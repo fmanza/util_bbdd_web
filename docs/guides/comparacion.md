@@ -12,7 +12,7 @@ con el **origen** usando `SchemaComparator` de util_bbdd. Solo lee las dos conex
 |---|---|
 | Origen (referencia) y Destino (se compara) | Conexión y schema de cada lado, una tarjeta junto a otra; schema vacío = el de la conexión |
 | Qué comparar | Tablas y columnas (con ellas, índices, claves foráneas y comentarios, que solo aparecen con *Tablas* marcado), vistas y rutinas (las rutinas no se comparan en HSQLDB ni SQLite) |
-| Informes | HTML, Excel, Word, Markdown y script SQL; con el script (y solo con él), su dialecto (*Automático* = el del motor destino) |
+| Informes | HTML, Excel, Word, Markdown y script SQL; con el script (y solo con él), su dialecto (*Automático* = el del motor destino). **Idioma** de los informes (desde la 1.24.0): *Español* (por defecto) o *English*; en el script, solo sus comentarios. Las diferencias que muestra la web no cambian |
 
 **Schema**: se escribe como aparece en el explorador (en MySQL y MariaDB es la base de datos; en Oracle, el usuario
 dueño de las tablas). No distingue mayúsculas si solo hay un schema con ese nombre. Si no existe, la ejecución falla

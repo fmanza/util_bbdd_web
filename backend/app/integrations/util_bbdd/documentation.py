@@ -127,6 +127,8 @@ class DocumentationOptions:
     table_include: str | None = None
     table_exclude: str | None = None
     table_frontier: bool = True
+    #: Idioma de los documentos (util_bbdd 5.10.0): ``es`` o ``en``
+    locale: Literal["es", "en"] = "es"
 
 
 @dataclass(frozen=True)
@@ -513,6 +515,7 @@ def _document(
             schema=schema,
             on_progress=progress,
             cancel_token=progress.token if progress is not None else None,
+            locale=options.locale,
         ).generate()
     produced: dict[str, str] = {}
     base = work_dir / name

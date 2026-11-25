@@ -123,6 +123,8 @@ export interface CopyLabels {
  * @param parentOrigin - Origen de la SPA: el único al que el puente envía mensajes.
  * @param copy - Textos del botón «Copiar»; sin ellos, los bloques de código no llevan botón.
  * @param scheme - Tema efectivo de la SPA (claro u oscuro); al cambiar, el visor vuelve a generar el documento.
+ * @param lang - Idioma de la documentación (`locale` de la ejecución, util_bbdd 5.10.0); solo `es` o `en`
+ *   (`frameLang`), para que nunca llegue al atributo un valor que no sea uno de ellos.
  */
 export function buildFrameDocument(
   safeHtml: string,
@@ -130,18 +132,28 @@ export function buildFrameDocument(
   parentOrigin: string,
   copy?: CopyLabels,
   scheme: FrameScheme = 'light',
+  lang: FrameLang = 'es',
 ): string {
   const labels = copy
     ? ` data-ubw-copy="${attr(copy.copy)}" data-ubw-copied="${attr(copy.copied)}"` +
       ` data-ubw-copy-failed="${attr(copy.failed)}"`
     : '';
   return (
-    `<!doctype html><html lang="es"><head><meta charset="utf-8">` +
+    `<!doctype html><html lang="${frameLang(lang)}"><head><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${frameCsp()}">` +
     `<style>${frameStyle(scheme)}</style></head>` +
     `<body data-ubw-hash="${attr(hash)}" data-ubw-parent="${attr(parentOrigin)}"${labels}>${safeHtml}` +
     `<script>${BRIDGE_SCRIPT}</script></body></html>`
   );
+}
+
+/** Idiomas de la documentación que genera util_bbdd (`locale`, 5.10.0). */
+export type FrameLang = 'es' | 'en';
+
+/** `lang` del documento: el `locale` de la ejecución si es uno conocido; si no (ejecuciones anteriores a 1.24.0
+ * o valores inesperados), `es`, el idioma por defecto de util_bbdd. */
+export function frameLang(value: unknown): FrameLang {
+  return value === 'en' ? 'en' : 'es';
 }
 
 /** Mensaje del puente válido: `{type: 'ubw-md-nav', href: string}` con `href` acotado (AUDIT_PLAN T5). */

@@ -48,6 +48,7 @@ def _options(params: DumpPreviewParams) -> DumpOptions:
         max_parallel_tables=params.max_parallel_tables,
         manage_indexes=params.manage_indexes,
         sync_pk_sequences=params.sync_pk_sequences,
+        locale=params.locale,
     )
 
 

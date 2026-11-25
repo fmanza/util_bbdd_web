@@ -534,7 +534,8 @@
         "markdown_site_name": "Título del sitio",
         "markdown_diagram_depth": "Tope de niveles en Markdown",
         "trace_map": "Mapa de trazabilidad",
-        "markdown_previous_run": "Comparar con la documentación"
+        "markdown_previous_run": "Comparar con la documentación",
+        "locale": "Idioma"
       },
       "relationship_graph": {
         "connection": "Conexión",
@@ -565,7 +566,8 @@
         "word": "Word",
         "markdown": "Markdown",
         "sql": "Script SQL",
-        "sql_dialect": "Dialecto SQL"
+        "sql_dialect": "Dialecto SQL",
+        "locale": "Idioma"
       },
       "migrate_plan": {
         "source_connection": "Conexión origen",
@@ -597,7 +599,8 @@
         "max_rejects": "Rechazos máximos por tabla",
         "chunk_size": "Filas por lote",
         "max_parallel_tables": "Tablas en paralelo",
-        "manage_indexes": "Índices secundarios"
+        "manage_indexes": "Índices secundarios",
+        "locale": "Idioma"
       }
     },
     "filterSummary": {
@@ -732,7 +735,8 @@
       "errors": "Errores",
       "performance": "Rendimiento",
       "templates": "Plantillas",
-      "markdown": "Markdown"
+      "markdown": "Markdown",
+      "output": "Idioma de salida"
     },
     "options": {
       "both": "Ambas direcciones",
@@ -762,7 +766,9 @@
       "raise": "Fallar la tabla",
       "isolate": "Apartar a rechazos.csv",
       "none": "No tocar",
-      "secondary": "Desactivar y reconstruir"
+      "secondary": "Desactivar y reconstruir",
+      "es": "Español",
+      "en": "English"
     },
     "outputs": {
       "documentation": "Documentación",

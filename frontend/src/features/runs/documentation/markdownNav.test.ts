@@ -7,6 +7,7 @@ import {
   BRIDGE_SHA256,
   buildFrameDocument,
   frameCsp,
+  frameLang,
   navHref,
   sanitizeMarkdownHtml,
 } from './markdownFrame';
@@ -277,6 +278,18 @@ describe('documento del iframe', () => {
       expect(page).toContain(`<script>${BRIDGE_SCRIPT}</script>`);
       expect(page.match(/<script/g)).toHaveLength(1);
     }
+  });
+
+  it('el documento lleva el idioma de la documentación (locale, util_bbdd 5.10.0)', () => {
+    expect(buildFrameDocument('<p>x</p>', '', 'https://ubw.example')).toContain('<html lang="es">');
+    expect(buildFrameDocument('<p>x</p>', '', 'https://ubw.example', undefined, 'light', 'en')).toContain(
+      '<html lang="en">',
+    );
+    // Ejecuciones anteriores (sin locale) y valores inesperados: es, sin llegar nunca tal cual al atributo
+    expect(frameLang(undefined)).toBe('es');
+    expect(frameLang('en')).toBe('en');
+    expect(frameLang('"><script>')).toBe('es');
+    expect(frameLang(1)).toBe('es');
   });
 
   it('acepta solo mensajes del puente con el formato esperado (T5)', () => {

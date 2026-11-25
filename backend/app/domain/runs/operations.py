@@ -25,6 +25,8 @@ from app.domain.runs.errors import RunParamsError, UnknownOperationError
 ALIAS_PATTERN = r"^[a-z0-9_-]{1,32}$"
 ParamType = Literal["string", "integer", "float", "boolean", "connection", "template", "run"]
 ULID_PATTERN = r"^[0-9A-HJKMNP-TV-Z]{26}$"
+#: Idioma de los documentos e informes que genera util_bbdd (5.10.0, ``locale``); no el de la interfaz.
+OutputLocale = Literal["es", "en"]
 
 
 class NoopParams(BaseModel):
@@ -50,6 +52,10 @@ def _connection(description: str) -> Any:
 def _group(group: str, default: Any, description: str, *, requires: str | None = None, **extra: Any) -> Any:
     schema_extra: dict[str, Any] = {"ubw_group": group, **({"ubw_requires": requires} if requires else {})}
     return Field(default=default, description=description, json_schema_extra=schema_extra, **extra)
+
+
+def _locale(description: str) -> Any:
+    return _group("output", "es", description)
 
 
 def _template(kind: str, description: str, *, group: str = "templates", requires: str | None = None) -> Any:
@@ -129,6 +135,10 @@ class DocumentationParams(BaseModel):
         False,
         "Carpeta Markdown: una página por objeto, diagramas de Mermaid (sin Graphviz), catálogo JSON, ficheros para "
         "IA y zensical.toml.",
+    )
+    locale: OutputLocale = _locale(
+        "Idioma de los documentos: títulos, secciones, cabeceras y separadores de números. Los nombres, comentarios y "
+        "DDL de la base de datos no se traducen."
     )
     tables: bool = _group("tables", True, "Documentar las tablas.")
     table_columns: bool = _group("tables", True, "Columnas de cada tabla.")
@@ -320,6 +330,7 @@ class CompareParams(BaseModel):
     word: bool = _group("reports", False, "Documento Word.")
     markdown: bool = _group("reports", True, "Markdown.")
     sql: bool = _group("reports", True, "Script SQL de nivelación (solo se genera; no se ejecuta).")
+    locale: OutputLocale = _locale("Idioma de los informes (en el script SQL, solo de los comentarios).")
     sql_dialect: Literal["auto", "generic", "mariadb", "mysql", "postgresql", "sqlserver", "oracle", "sqlite"] = _group(
         "reports", "auto", "Dialecto del script SQL; auto = el del motor destino.", requires="sql"
     )
@@ -430,6 +441,7 @@ class DumpPreviewParams(BaseModel):
         "load", False, "Vaciar las tablas destino antes de cargar (si no, las filas se añaden)."
     )
     sync_pk_sequences: bool = _group("load", True, "Ajustar secuencias/IDENTITY/AUTO_INCREMENT al máximo cargado.")
+    locale: OutputLocale = _locale("Idioma del informe Excel del volcado (nombres de hoja, cabeceras y textos).")
     on_error: Literal["raise", "isolate"] = _group(
         "errors", "raise", "Filas que el destino no admite: fallar la tabla o apartarlas a un CSV de rechazos."
     )

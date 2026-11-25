@@ -13,6 +13,7 @@ import {
   isActive,
   useMarkdownPages,
 } from '../useRuns';
+import { frameLang } from './markdownFrame';
 import { MarkdownViewer } from './MarkdownViewer';
 import { buildPages, pagesFromIndex } from './markdownNav';
 
@@ -196,7 +197,14 @@ function MarkdownCard({ run, files }: { run: RunDetail; files: Artifact[] }) {
       {hasPages && index.isPending ? (
         <Text size="sm">{t('common.loading')}</Text>
       ) : (
-        pages.length > 0 && <MarkdownViewer runId={run.id} artifacts={files} pages={pages} />
+        pages.length > 0 && (
+          <MarkdownViewer
+            runId={run.id}
+            artifacts={files}
+            pages={pages}
+            lang={frameLang(run.params.locale)}
+          />
+        )
       )}
     </FormatCard>
   );
