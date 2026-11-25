@@ -15,7 +15,7 @@ Documenta un schema con `DatabaseDocumentation` de util_bbdd.
 | Tarjeta del formulario | Opciones |
 |---|---|
 | Origen | **Conexión** (alias del proyecto) y **Schema**: vacío = el de la conexión |
-| Formatos | **Word** (.docx), **Excel** (.xlsx), **Sitio HTML** y **Markdown** (desde la 1.11.0; desmarcado por defecto); al menos uno |
+| Formatos | **Word** (.docx), **Excel** (.xlsx), **Sitio HTML** y **Markdown** (desde la 1.11.0; desmarcado por defecto); al menos uno. **Idioma** (desde la 1.24.0): *Español* (por defecto) o *English*; traduce títulos, secciones, cabeceras y separadores de números de todos los formatos, no los nombres, comentarios ni DDL de la base de datos |
 | Información adicional | Datos de la BD (versión), almacenamiento, condiciones del motor, charset y collation |
 | Contenido | **Tablas** (columnas, claves PK, FK y únicas, índices y DDL), **Vistas** (columnas y DDL) y **Rutinas** (procedimientos y funciones); las opciones de tablas y vistas se desactivan sin su interruptor |
 | Filtro de tablas | Desde la 1.15.0: **Incluir** y **Excluir** (patrones), **Listar la frontera**, **Probar patrones** y la ayuda de los patrones ([Filtro de tablas](#filtro-de-tablas)) |

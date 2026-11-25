@@ -15,6 +15,7 @@ datos* de la lista de operaciones). No escribe nada.
 | Filtro de tablas | Elige **Todas**, **Lista exacta** o **Patrones** (al cambiar de modo se vacían los campos del otro). **Tablas (lista exacta)**, separadas por comas (sin distinguir mayúsculas; avisa si alguna no existe), **o** desde la 1.19.0 **Incluir** y **Excluir** (patrones, como en la [documentación](documentacion.md#filtro-de-tablas)), no las dos cosas; vacío = todas las del origen. **Probar patrones** aplica los patrones a las tablas del origen antes de lanzar |
 | Carga y errores: carga | **Vaciar el destino antes de cargar** (desactivado: las filas se **añaden**) y ajustar secuencias de PK. Con el vaciado marcado, el pie de la ventana avisa «Se vaciarán las tablas destino antes de cargar» |
 | Carga y errores: errores | Filas que el destino no admite: **fallar la tabla** o **apartarlas** a `rechazos.csv`; los rechazos máximos por tabla solo aparecen con «apartar» (vacío = sin límite) |
+| Carga y errores: idioma | Idioma del informe Excel del volcado (desde la 1.24.0): *Español* (por defecto) o *English*; cambia los nombres de hoja y los textos. El resultado que muestra la web no cambia |
 | Rendimiento (en *Opciones avanzadas*, plegadas) | Filas por lote (100–100 000, 5 000 por defecto), tablas en paralelo (1–4) y desactivar y reconstruir los índices secundarios no únicos |
 
 El detalle muestra el **orden de carga** por claves foráneas (las tablas en ciclos van al final), las filas en origen y

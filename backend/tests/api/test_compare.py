@@ -316,3 +316,24 @@ def test_cancelled_comparison_stops_by_itself(
     directory = run_dir(settings.workspace_dir, str(run.workspace_path))
     assert "Comparación cancelada entre tablas" in (directory / "logs" / "run.log").read_text(encoding="utf-8")
     assert not (directory / "outputs/diff/schema_diff.json").exists()
+
+
+def test_compare_reports_in_english(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+) -> None:
+    run_id = compare(user_client, project["id"], locale="en")
+    run = wait_for(worker, db, run_id, timeout=120)
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+
+    directory = run_dir(settings.workspace_dir, str(run.workspace_path))
+    report = (directory / "outputs/html/comparacion/index.html").read_text(encoding="utf-8")
+    assert '<html lang="en">' in report
+    with zipfile.ZipFile(directory / "outputs/excel/comparacion.xlsx") as xlsx:
+        workbook = xlsx.read("xl/workbook.xml").decode("utf-8")
+    assert 'name="Summary"' in workbook and 'name="Resumen"' not in workbook
+    # El diff para la web (JSON) no depende del idioma
+    assert user_client.get(f"/api/v1/runs/{run_id}/diff").json()["has_differences"] is True

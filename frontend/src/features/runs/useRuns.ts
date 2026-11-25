@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ApiError, type Problem, api, ensureOk, unwrap } from '../../api/client';
 import type { components, paths } from '../../api/schema';
 import { type ListState, listQuery } from '../../components/useListState';
+import i18n from '../../i18n';
 
 export type Run = components['schemas']['RunOut'];
 export type RunDetail = components['schemas']['RunDetailOut'];
@@ -189,7 +190,9 @@ export function useArtifactText(runId: string, artifact: Artifact | null) {
         // El *problem details* de la API (p. ej. 413 «demasiado grande, descárgalo») en lugar de un error genérico.
         const problem = (await response.json().catch(() => null)) as Problem | null;
         throw new ApiError(
-          problem?.title ? problem : { title: response.statusText || 'Error', status: response.status },
+          problem?.title
+            ? problem
+            : { title: response.statusText || i18n.t('common.error'), status: response.status },
         );
       }
       return response.text();

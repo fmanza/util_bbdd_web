@@ -56,7 +56,12 @@ const FILTER = (items: readonly string[], widget: NonNullable<CardSpec['widget']
 export const LAUNCH_LAYOUTS: Readonly<Record<string, readonly CardSpec[]>> = {
   documentation: [
     SOURCE(['connection', 'schema']),
-    { id: 'formats', title: 'runs.groups.formats', items: ['word', 'excel', 'html', 'markdown'], cols: 2 },
+    {
+      id: 'formats',
+      title: 'runs.groups.formats',
+      items: ['word', 'excel', 'html', 'markdown', 'locale'],
+      cols: 2,
+    },
     {
       id: 'extra',
       title: 'runs.groups.extra',
@@ -121,7 +126,7 @@ export const LAUNCH_LAYOUTS: Readonly<Record<string, readonly CardSpec[]>> = {
     {
       id: 'reports',
       title: 'runs.groups.reports',
-      items: [{ stack: ['html', 'excel', 'word', 'markdown'] }, { stack: ['sql', 'sql_dialect'] }],
+      items: [{ stack: ['html', 'excel', 'word', 'markdown'] }, { stack: ['sql', 'sql_dialect', 'locale'] }],
       cols: 2,
     },
   ],
@@ -144,7 +149,7 @@ export const LAUNCH_LAYOUTS: Readonly<Record<string, readonly CardSpec[]>> = {
     {
       id: 'loadErrors',
       title: 'runs.cards.loadErrors',
-      items: ['truncate_target', 'sync_pk_sequences', 'on_error', 'max_rejects'],
+      items: ['truncate_target', 'sync_pk_sequences', 'on_error', 'max_rejects', 'locale'],
       cols: 2,
       span: 'full',
     },

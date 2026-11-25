@@ -8,6 +8,7 @@ confirmaciones, sin dos volcados a la vez, sin relanzar; en curso se cancela ent
 from __future__ import annotations
 
 import sqlite3
+import zipfile
 from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
@@ -598,3 +599,23 @@ def test_restore_job_and_automatic_restore(
     written = json.loads((ctx.run_dir / job.RESTORE_PATH).read_text(encoding="utf-8"))
     assert written["pending"] is False and not journal.exists()
     assert user_client.get(f"/api/v1/runs/{dump.id}/dump-constraints").json()["pending"] is False
+
+
+def test_dump_report_in_english(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+    allowed: User,
+) -> None:
+    preview_id = preview(user_client, project, worker, db, on_error="isolate", locale="en")
+    response = apply(user_client, project, preview_id)
+    assert response.status_code == 202, response.text
+    run = wait_for(worker, db, response.json()["id"], timeout=180)
+    assert run.status == "succeeded", (run.error_code, run.error_message)
+
+    report = run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs/excel/volcado.xlsx"
+    with zipfile.ZipFile(report) as xlsx:
+        workbook = xlsx.read("xl/workbook.xml").decode("utf-8")
+    assert 'name="Table Audit"' in workbook and 'name="Auditoría Tablas"' not in workbook

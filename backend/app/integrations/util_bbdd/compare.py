@@ -21,7 +21,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from app.integrations.util_bbdd.progress import RunProgress
 
@@ -75,6 +75,8 @@ class CompareOptions:
     routines: bool = False
     formats: tuple[str, ...] = REPORT_FORMATS
     sql_dialect: str = "auto"
+    #: Idioma de los informes (util_bbdd 5.10.0): ``es`` o ``en``
+    locale: Literal["es", "en"] = "es"
 
 
 def sql_dialect_for(option: str, target_db_type: str) -> str:
@@ -230,6 +232,7 @@ def compare_schemas(
                 sql_source_inspector=source_inspector,
                 sql_source_schema=source_schema,
                 mermaid_src=mermaid_js,  # incrustado o None: sin scripts de otros orígenes (CSP del sitio, ADR-007)
+                locale=options.locale,
             )
             reports: dict[str, str] = {}
             for fmt in options.formats:

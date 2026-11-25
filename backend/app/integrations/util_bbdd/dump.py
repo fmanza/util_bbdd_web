@@ -83,6 +83,8 @@ class DumpOptions:
     max_parallel_tables: int = 1
     manage_indexes: Literal["none", "secondary"] = "none"
     sync_pk_sequences: bool = True
+    #: Idioma del informe Excel (util_bbdd 5.10.0): ``es`` o ``en``
+    locale: Literal["es", "en"] = "es"
 
 
 def parse_tables(raw: str | None) -> tuple[str, ...]:
@@ -124,6 +126,7 @@ def _config(
         on_error=options.on_error,
         rejects_csv_path=rejects if options.on_error == "isolate" else None,
         max_rejects=options.max_rejects if options.on_error == "isolate" else None,
+        locale=options.locale,
         **extra,
     )
 

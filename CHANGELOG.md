@@ -5,6 +5,24 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Added
+
+- Idioma de los documentos e informes (util_bbdd 5.10.0): nuevo parámetro **Idioma** (*Español* por defecto o
+  *English*) en la documentación (tarjeta *Formatos*), la comparación (*Informes*) y el volcado (*Carga y
+  errores*; se aplica al informe Excel de `dump_apply`). Se pasa a util_bbdd como `locale`. No cambia la interfaz de
+  la web ni los datos que muestra (diferencias, resultado del volcado). El visor de la documentación Markdown pone
+  el `lang` de cada página según el idioma de la ejecución (`es` en las anteriores).
+
+### Changed
+
+- Backend: util_bbdd fijado en **5.10.0** (wheel de la release `v5.10.0`, hash en `uv.lock`; antes 5.9.1).
+- Frontend (i18n): el error de red al subir un fichero y el título por defecto de los errores sin *problem details*
+  salen de las traducciones (antes «No se pudo enviar el fichero» y «Error» fijos en el código). Las fechas y los
+  números se formatean con la locale del idioma activo de i18next (`es-ES` para español, igual que antes). Se borra la
+  clave sin uso `nav.phase`. Nueva prueba `i18n/literals.test.ts`: falla ante textos visibles escritos en el código
+  (texto JSX, atributos como `aria-label` o `title`, títulos y mensajes, fallbacks) y ante claves `t()` que no existen,
+  con una lista de términos técnicos permitidos por fichero.
+
 ## [1.23.0] - 2026-11-25
 
 ### Changed

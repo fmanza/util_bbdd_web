@@ -71,6 +71,7 @@ def run(ctx: JobContext) -> None:
         routines=params.routines,
         formats=tuple(f for f in REPORT_FORMATS if getattr(params, f)),
         sql_dialect=params.sql_dialect,
+        locale=params.locale,
     )
     try:
         summary = compare_schemas(
