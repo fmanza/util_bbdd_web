@@ -44,7 +44,7 @@ rechazan esas FK, **no se puede aplicar** hasta volver a planificar.
 
 Requisitos (si no se cumplen, el panel *Aplicar en una base de datos destino* explica por qué):
 
-- el permiso **«Puede aplicar DDL»**, que concede un administrador en *Usuarios*;
+- el permiso **«Aplicar DDL»**, del rol ([roles y permisos](usuarios_y_sesiones.md#roles-y-permisos));
 - ser **propietario** del proyecto;
 - una conexión del proyecto del motor destino que **no** sea de solo lectura.
 
@@ -83,7 +83,7 @@ tablas.
 
 | Código | Causa | Qué hacer |
 |---|---|---|
-| 403 al lanzar | Sin el permiso «Puede aplicar DDL» o sin ser propietario | Pídelo a un administrador o al propietario |
+| 403 al lanzar | Sin el permiso «Aplicar DDL» o sin ser propietario | Pídelo a un administrador o al propietario |
 | `plan_changed` | El plan guardado no es el revisado, se generó con otra versión de util_bbdd o (planes anteriores a la 1.3.0) el origen cambió | Planifica de nuevo y revisa |
 | `target_conflict` | El destino ya tiene tablas o vistas con esos nombres | Bórralas o usa otro schema/BD destino |
 | `fk_type_mismatch` | FK entre tipos distintos con destino MariaDB/MySQL (planes anteriores a la 1.3.0) | Planifica de nuevo |

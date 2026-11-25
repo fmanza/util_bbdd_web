@@ -16,6 +16,8 @@ from app.core.config import Settings, get_settings
 from app.db.models import Role, User
 from app.db.session import get_engine
 from app.domain.identity.audit import CLI_CONTEXT
+from app.domain.identity.permissions import BuiltinRole
+from app.domain.identity.roles import builtin_role
 from app.domain.identity.users import create_user
 from app.main import create_app
 
@@ -73,13 +75,13 @@ def client(migrated: Settings) -> Iterator[TestClient]:
 
 @pytest.fixture
 def make_user(db: Session, migrated: Settings) -> Callable[..., User]:
-    def _make(username: str, password: str = USER_PASSWORD, role: Role = "user") -> User:
+    def _make(username: str, password: str = USER_PASSWORD, role: BuiltinRole = "user") -> User:
         return create_user(
             db,
             username=username,
             display_name=username.title(),
             password=password,
-            role=role,
+            role=builtin_role(db, role),
             settings=migrated,
             ctx=CLI_CONTEXT,
             actor_id=None,
@@ -96,6 +98,29 @@ def admin(make_user: Callable[..., User]) -> User:
 @pytest.fixture
 def user(make_user: Callable[..., User]) -> User:
     return make_user("ana", USER_PASSWORD, "user")
+
+
+def grant(db: Session, user: User, *permissions: str) -> User:
+    """Da a ``user`` un rol con exactamente ``permissions`` (``revoke``: ninguno); lo crea si no existe (ADR-014).
+
+    Sustituye a los antiguos ``update(User).values(can_*=...)`` de los tests.
+    """
+    from sqlalchemy import select
+
+    from app.domain.identity.permissions import normalize
+
+    wanted = normalize(set(permissions))
+    name = "test: " + (", ".join(wanted) or "-")
+    role = db.scalar(select(Role).where(Role.name == name))
+    if role is None:
+        role = Role(name=name, permissions=list(wanted))
+        db.add(role)
+        db.flush()
+    db.refresh(user)
+    user.role = role
+    user.sync_legacy_columns()
+    db.commit()
+    return user
 
 
 def do_login(client: TestClient, username: str, password: str) -> None:

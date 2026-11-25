@@ -24,6 +24,7 @@ from app.jobs.worker import Worker
 from app.workspace.layout import run_dir
 from tests.api.test_projects import login_as, new_project
 from tests.api.test_runs import wait_for, worker  # noqa: F401  (fixture)
+from tests.conftest import grant
 
 SCHEMA = """
 CREATE TABLE clientes (id INTEGER PRIMARY KEY, nombre TEXT NOT NULL);
@@ -81,7 +82,7 @@ def project(user_client: TestClient, settings: Settings) -> dict[str, object]:
 
 @pytest.fixture
 def allowed(db: Session, user: User) -> User:
-    db.execute(update(User).where(User.id == user.id).values(can_write_data=True))
+    grant(db, user, "data.write")
     db.commit()
     return user
 
@@ -266,7 +267,7 @@ def test_apply_rules(
     read_only = preview(user_client, project, worker, db, target_connection="lectura")
 
     assert apply(user_client, project, preview_id).status_code == 403  # sin permiso
-    db.execute(update(User).where(User.id == user.id).values(can_write_data=True))
+    grant(db, user, "data.write")
     db.commit()
     assert apply(user_client, project, read_only, confirm="lectura").status_code == 422
     assert apply(user_client, project, preview_id, confirm="Destino").status_code == 422
@@ -281,7 +282,7 @@ def test_apply_rules(
     user_client.post(f"/api/v1/projects/{project['id']}/members", json={"username": "eva", "role": "editor"})
     eva_user = db.scalar(select(User).where(User.username == "eva"))
     assert eva_user is not None
-    db.execute(update(User).where(User.id == eva_user.id).values(can_write_data=True))
+    grant(db, eva_user, "data.write")
     db.commit()
     not_owner = apply(eva, project, preview_id)
     assert not_owner.status_code == 403 and "propietario" in not_owner.text
@@ -303,9 +304,9 @@ def test_catalog_and_permission(
     admin = login_as(user_client, make_user, "jefa", role="admin")
 
     assert operations["dump_preview"]["form"] is True and operations["dump_apply"]["form"] is False
-    assert user_client.get("/api/v1/auth/me").json()["can_write_data"] is False
-    assert admin.patch(f"/api/v1/users/{user.id}", json={"can_write_data": True}).json()["can_write_data"] is True
-    assert user_client.get("/api/v1/auth/me").json()["can_write_data"] is True
+    assert "data.write" not in user_client.get("/api/v1/auth/me").json()["permissions"]
+    role = admin.post("/api/v1/roles", json={"name": "Volcadores", "permissions": ["data.write"]}).json()
+    assert admin.patch(f"/api/v1/users/{user.id}", json={"role_id": role["id"]}).json()["permissions"] == ["data.write"]
 
 
 def test_sqlite_dates_stored_as_text_are_dumped(
@@ -434,7 +435,7 @@ def test_worker_rechecks_permission_owner_and_read_only(
     db.commit()
     assert code().startswith("forbidden: La conexión destino es de solo lectura")
     connection.read_only = False
-    db.execute(update(User).where(User.id == allowed.id).values(can_write_data=False))
+    grant(db, allowed)
     db.commit()
     assert code().startswith("forbidden: El usuario ya no tiene permiso")
 
@@ -517,7 +518,7 @@ def test_restore_rules(
 ) -> None:
     from app.db.models import Connection, ProjectConnection
 
-    db.execute(update(User).where(User.id == user.id).values(can_write_data=True))
+    grant(db, user, "data.write")
     db.commit()
     preview_id = preview(user_client, project, worker, db)
     dump = wait_for(worker, db, apply(user_client, project, preview_id).json()["id"], timeout=180)
@@ -528,7 +529,7 @@ def test_restore_rules(
 
     eva = login_as(user_client, make_user, "eva")
     user_client.post(f"/api/v1/projects/{project['id']}/members", json={"username": "eva", "role": "editor"})
-    db.execute(update(User).where(User.username == "eva").values(can_write_data=True))
+    grant(db, db.scalars(select(User).where(User.username == "eva")).one(), "data.write")
     db.commit()
     assert launch(eva, project["id"], "dump_restore", **restore).status_code == 403  # no es owner
     link = db.scalars(select(ProjectConnection).where(ProjectConnection.alias == "destino")).one()
@@ -539,7 +540,7 @@ def test_restore_rules(
     read_only = launch(user_client, project["id"], "dump_restore", **restore)
     assert read_only.status_code == 422 and "solo lectura" in read_only.text
     connection.read_only = False
-    db.execute(update(User).where(User.id == user.id).values(can_write_data=False))
+    grant(db, user)
     db.commit()
     assert launch(user_client, project["id"], "dump_restore", **restore).status_code == 403
 

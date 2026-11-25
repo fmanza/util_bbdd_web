@@ -107,10 +107,10 @@ def _connection_ids(ctx: JobContext, params: DumpPreviewParams) -> dict[str, int
 
 
 def _check_writer(db: Session, ctx: JobContext, action: str) -> Run:
-    """Permiso ``can_write_data`` y rol owner del usuario del run (pudieron cambiar desde que se encoló)."""
+    """Permiso ``data.write`` y rol owner del usuario del run (pudieron cambiar desde que se encoló)."""
     run = db.get(Run, ctx.run_id)
     user = db.get(User, run.user_id) if run and run.user_id else None
-    if run is None or user is None or not user.is_active or not user.can_write_data:
+    if run is None or user is None or not user.is_active or not user.can("data.write"):
         raise JobError("forbidden", f"El usuario ya no tiene permiso para {action}.")
     try:
         membership = get_membership(db, user, ctx.project_id)

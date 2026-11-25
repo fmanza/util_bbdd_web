@@ -98,7 +98,7 @@ def _visible(user: User) -> Any:
 
 
 def can_edit(user: User, connection: Connection) -> bool:
-    return connection.owner_id == user.id or (connection.visibility == "shared" and user.role == "admin")
+    return connection.owner_id == user.id or (connection.visibility == "shared" and user.can("connections.share"))
 
 
 ConnectionSort = Literal["name", "db_type", "visibility", "last_test_at"]
@@ -168,8 +168,8 @@ def get_editable(db: Session, user: User, connection_id: int) -> Connection:
 
 
 def _check_visibility(user: User, visibility: Visibility | None) -> None:
-    if visibility == "shared" and user.role != "admin":
-        raise ConnectionForbiddenError("Solo un administrador puede crear conexiones compartidas.")
+    if visibility == "shared" and not user.can("connections.share"):
+        raise ConnectionForbiddenError("Tu rol no tiene el permiso «Compartir conexiones».")
 
 
 def _check_name(db: Session, owner_id: int, name: str, exclude_id: int | None = None) -> str:

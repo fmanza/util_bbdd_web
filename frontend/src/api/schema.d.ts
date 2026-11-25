@@ -449,9 +449,9 @@ export interface paths {
          * Guardar mis preferencias
          * @description Guarda las preferencias del usuario de la sesión y devuelve el usuario actualizado.
          *
-         *     Hoy solo el tema de la interfaz (``color_scheme``: ``light``, ``dark`` o ``auto``). Solo actúa sobre la propia
-         *     cuenta (no admite identificador de usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera
-         *     ``X-CSRF-Token``.
+         *     El tema (``color_scheme``: ``light``, ``dark`` o ``auto``) y el idioma de la interfaz (``language``: ``es`` o
+         *     ``en``); al menos uno, y lo que no llega no cambia. Solo actúa sobre la propia cuenta (no admite identificador de
+         *     usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera ``X-CSRF-Token``.
          */
         patch: operations["update_my_preferences_api_v1_auth_me_preferences_patch"];
         trace?: never;
@@ -1195,6 +1195,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar roles
+         * @description Roles con su número de usuarios: los base primero y después por nombre.
+         */
+        get: operations["list_roles_api_v1_roles_get"];
+        put?: never;
+        /**
+         * Crear rol
+         * @description Crea un rol con permisos que tiene quien lo crea (se audita como ``role.create``).
+         */
+        post: operations["create_role_api_v1_roles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/roles/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catálogo de permisos
+         * @description Permisos que puede tener un rol, en el orden en que se muestran.
+         */
+        get: operations["list_permissions_api_v1_roles_permissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/roles/{role_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar rol
+         * @description Borra un rol personalizado sin usuarios (``role.delete``).
+         */
+        delete: operations["delete_role_api_v1_roles__role_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Editar rol
+         * @description Renombra el rol o cambia sus permisos (los roles base no cambian). Quitar permisos cierra las sesiones
+         *     de sus usuarios (``role.update``).
+         */
+        patch: operations["update_role_api_v1_roles__role_id__patch"];
+        trace?: never;
+    };
     "/api/v1/runs": {
         parameters: {
             query?: never;
@@ -1645,7 +1714,8 @@ export interface paths {
         put?: never;
         /**
          * Crear usuario
-         * @description Crea un usuario con la contraseña inicial, el rol, el estado, los permisos y la cuota indicados.
+         * @description Crea un usuario con la contraseña inicial, el rol, el estado y la cuota indicados. Solo se asignan roles cuyos
+         *     permisos tiene quien da de alta.
          */
         post: operations["create_user_api_v1_users_post"];
         delete?: never;
@@ -1678,8 +1748,8 @@ export interface paths {
         head?: never;
         /**
          * Editar, desactivar o reactivar usuario
-         * @description Cambia nombre, rol, estado, permisos (SQL libre, aplicar DDL, escribir datos), cuota o contraseña. Desactivar o
-         *     restablecer la contraseña cierra sus sesiones.
+         * @description Cambia nombre, rol, estado, cuota o contraseña. Cambiar el rol exige tener los permisos del actual y del nuevo;
+         *     cambiar el rol, desactivar o restablecer la contraseña cierra sus sesiones.
          */
         patch: operations["update_user_api_v1_users__user_id__patch"];
         trace?: never;
@@ -3013,12 +3083,6 @@ export interface components {
          * @description Usuario de la sesión actual.
          */
         Me: {
-            /** Can Apply Ddl */
-            can_apply_ddl: boolean;
-            /** Can Run Sql */
-            can_run_sql: boolean;
-            /** Can Write Data */
-            can_write_data: boolean;
             /**
              * Color Scheme
              * @description Tema de la interfaz: claro, oscuro o el del sistema (``auto``)
@@ -3030,10 +3094,17 @@ export interface components {
             /** Id */
             id: number;
             /**
-             * Role
+             * Language
+             * @description Idioma de la interfaz
              * @enum {string}
              */
-            role: "admin" | "user";
+            language: "es" | "en";
+            /**
+             * Permissions
+             * @description Permisos de su rol (ADR-014)
+             */
+            permissions: ("users.manage" | "roles.manage" | "sessions.manage" | "audit.read" | "templates.manage" | "queries.manage" | "allowlist.manage" | "storage.manage" | "runs.admin" | "connections.share" | "sql.run" | "ddl.apply" | "data.write")[];
+            role: components["schemas"]["RoleRef"];
             /** Username */
             username: string;
         };
@@ -3398,6 +3469,23 @@ export interface components {
              */
             new_password: string;
         };
+        /**
+         * PermissionOut
+         * @description Permiso del catálogo (ADR-014).
+         */
+        PermissionOut: {
+            /**
+             * Group
+             * @description Administración o capacidades sobre bases de datos
+             * @enum {string}
+             */
+            group: "admin" | "databases";
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "users.manage" | "roles.manage" | "sessions.manage" | "audit.read" | "templates.manage" | "queries.manage" | "allowlist.manage" | "storage.manage" | "runs.admin" | "connections.share" | "sql.run" | "ddl.apply" | "data.write";
+        };
         /** PlanColumnOut */
         PlanColumnOut: {
             /**
@@ -3519,15 +3607,19 @@ export interface components {
         };
         /**
          * PreferencesUpdate
-         * @description Preferencias de la propia cuenta; un campo desconocido da 422.
+         * @description Preferencias de la propia cuenta: al menos una; un campo desconocido da 422.
          */
         PreferencesUpdate: {
             /**
              * Color Scheme
              * @description Tema de la interfaz: claro, oscuro o el del sistema (``auto``)
-             * @enum {string}
              */
-            color_scheme: "light" | "dark" | "auto";
+            color_scheme?: ("light" | "dark" | "auto") | null;
+            /**
+             * Language
+             * @description Idioma de la interfaz
+             */
+            language?: ("es" | "en") | null;
         };
         /**
          * ProbeErrorOut
@@ -3726,6 +3818,73 @@ export interface components {
             findings: components["schemas"]["ReadinessFindingOut"][];
             /** Supported */
             supported: boolean;
+        };
+        /**
+         * RoleCreate
+         * @description Alta de un rol personalizado.
+         */
+        RoleCreate: {
+            /** Name */
+            name: string;
+            /** Permissions */
+            permissions?: string[];
+        };
+        /**
+         * RoleOut
+         * @description Rol con sus permisos efectivos y su número de usuarios.
+         */
+        RoleOut: {
+            /**
+             * Builtin
+             * @description ``admin`` o ``user`` en los roles base (no se borran)
+             */
+            builtin: ("admin" | "user") | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Permissions */
+            permissions: ("users.manage" | "roles.manage" | "sessions.manage" | "audit.read" | "templates.manage" | "queries.manage" | "allowlist.manage" | "storage.manage" | "runs.admin" | "connections.share" | "sql.run" | "ddl.apply" | "data.write")[];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * User Count
+             * @default 0
+             */
+            user_count: number;
+        };
+        /**
+         * RoleRef
+         * @description Rol de un usuario (ADR-014).
+         */
+        RoleRef: {
+            /**
+             * Builtin
+             * @description ``admin`` o ``user`` en los roles base; null en los demás
+             */
+            builtin: ("admin" | "user") | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /**
+         * RoleUpdate
+         * @description Cambio de nombre o de permisos (los roles base no cambian).
+         */
+        RoleUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Permissions */
+            permissions?: string[] | null;
         };
         /** RoutineDiffOut */
         RoutineDiffOut: {
@@ -4348,21 +4507,6 @@ export interface components {
          * @description Alta de usuario con las mismas opciones que la edición (salvo la contraseña, que es obligatoria).
          */
         UserCreate: {
-            /**
-             * Can Apply Ddl
-             * @default false
-             */
-            can_apply_ddl: boolean;
-            /**
-             * Can Run Sql
-             * @default false
-             */
-            can_run_sql: boolean;
-            /**
-             * Can Write Data
-             * @default false
-             */
-            can_write_data: boolean;
             /** Display Name */
             display_name: string;
             /**
@@ -4376,11 +4520,10 @@ export interface components {
              */
             password: string;
             /**
-             * Role
-             * @default user
-             * @enum {string}
+             * Role Id
+             * @description Rol (ADR-014); sin él, el rol base «Usuario»
              */
-            role: "admin" | "user";
+            role_id?: number | null;
             /**
              * Storage Quota Mb
              * @description Cuota propia en MB (0 = sin límite); null = la global (ADR-012)
@@ -4417,12 +4560,6 @@ export interface components {
          * @description Usuario visto por un administrador.
          */
         UserOut: {
-            /** Can Apply Ddl */
-            can_apply_ddl: boolean;
-            /** Can Run Sql */
-            can_run_sql: boolean;
-            /** Can Write Data */
-            can_write_data: boolean;
             /**
              * Created At
              * Format: date-time
@@ -4442,16 +4579,17 @@ export interface components {
              */
             password_changed_at: string;
             /**
+             * Permissions
+             * @description Permisos de su rol
+             */
+            permissions: ("users.manage" | "roles.manage" | "sessions.manage" | "audit.read" | "templates.manage" | "queries.manage" | "allowlist.manage" | "storage.manage" | "runs.admin" | "connections.share" | "sql.run" | "ddl.apply" | "data.write")[];
+            /**
              * Project Count
              * @description Proyectos de los que es miembro
              * @default 0
              */
             project_count: number;
-            /**
-             * Role
-             * @enum {string}
-             */
-            role: "admin" | "user";
+            role: components["schemas"]["RoleRef"];
             /**
              * Storage Quota Mb
              * @description Cuota propia en MB (0 = sin límite); null = la global (ADR-012)
@@ -4483,7 +4621,7 @@ export interface components {
         /**
          * UserTransfer
          * @description Vista previa o resultado de una transferencia (``reasons``: ``same_user``, ``target_inactive``,
-         *     ``target_not_admin``, ``busy``).
+         *     ``target_cannot_share``, ``busy``).
          */
         UserTransfer: {
             /**
@@ -4514,7 +4652,7 @@ export interface components {
              */
             owned_projects: components["schemas"]["TransferItem"][];
             /** Reasons */
-            reasons: ("same_user" | "target_inactive" | "target_not_admin" | "busy")[];
+            reasons: ("same_user" | "target_inactive" | "target_cannot_share" | "busy")[];
         };
         /**
          * UserTransferRequest
@@ -4535,20 +4673,17 @@ export interface components {
          * @description Edición parcial de usuario; ``password`` restablece la contraseña y cierra sus sesiones.
          */
         UserUpdate: {
-            /** Can Apply Ddl */
-            can_apply_ddl?: boolean | null;
-            /** Can Run Sql */
-            can_run_sql?: boolean | null;
-            /** Can Write Data */
-            can_write_data?: boolean | null;
             /** Display Name */
             display_name?: string | null;
             /** Is Active */
             is_active?: boolean | null;
             /** Password */
             password?: string | null;
-            /** Role */
-            role?: ("admin" | "user") | null;
+            /**
+             * Role Id
+             * @description Rol nuevo (ADR-014); cierra sus sesiones
+             */
+            role_id?: number | null;
             /**
              * Storage Quota Mb
              * @description Cuota propia en MB (0 = sin límite); ``null`` explícito vuelve a la global
@@ -4665,7 +4800,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso o token CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4703,7 +4838,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso o token CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4751,7 +4886,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso o token CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4805,7 +4940,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4874,7 +5009,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4937,7 +5072,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4998,7 +5133,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5048,7 +5183,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5100,7 +5235,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5147,7 +5282,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5202,7 +5337,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5258,7 +5393,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5322,7 +5457,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5365,7 +5500,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5422,7 +5557,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5460,7 +5595,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5501,7 +5636,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5539,7 +5674,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5586,7 +5721,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o CSRF no válido */
+            /** @description Sin el permiso o CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5639,7 +5774,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador */
+            /** @description Sin el permiso */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8431,6 +8566,244 @@ export interface operations {
             };
         };
     };
+    list_roles_api_v1_roles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleOut"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_role_api_v1_roles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ya existe un rol con ese nombre */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Permiso desconocido */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_permissions_api_v1_roles_permissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PermissionOut"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_role_api_v1_roles__role_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Es un rol base o tiene usuarios */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_role_api_v1_roles__role_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleOut"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nombre repetido, o es un rol base */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Permiso desconocido */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_my_runs_api_v1_runs_get: {
         parameters: {
             query?: {
@@ -9454,7 +9827,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso o token CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9497,7 +9870,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso o token CSRF no válido */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9528,7 +9901,7 @@ export interface operations {
                 /** @description Texto en usuario o nombre */
                 q?: string | null;
                 /** @description Solo usuarios de este rol */
-                role?: ("admin" | "user") | null;
+                role_id?: number | null;
                 /** @description ``active`` (sin bloqueo), ``inactive`` o ``locked`` (por intentos) */
                 status?: ("active" | "inactive" | "locked") | null;
                 sort?: ("username" | "display_name" | "role" | "created_at" | "projects") | null;
@@ -9558,7 +9931,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9612,7 +9985,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9664,7 +10037,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9714,7 +10087,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9784,7 +10157,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9798,7 +10171,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Último administrador o autodesactivación */
+            /** @description Último administrador, o desactivarte o cambiar tu propio rol */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -9843,7 +10216,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9899,7 +10272,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9961,7 +10334,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -10013,7 +10386,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin rol de administrador o token CSRF no válido */
+            /** @description Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes */
             403: {
                 headers: {
                     [name: string]: unknown;

@@ -5,9 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { NavLink as RouterNavLink, Outlet, useLocation } from 'react-router';
 
 import { UserMenu } from '../features/auth/UserMenu';
-import { useMe } from '../features/auth/useAuth';
+import { can, useMe } from '../features/auth/useAuth';
 import { useColorSchemeSync } from '../features/auth/useColorSchemeSync';
-import { ADMIN_NAV, MAIN_NAV, type NavItem, type NavSection } from './navigation';
+import { useLanguageSync } from '../features/auth/useLanguageSync';
+import { allowedAdminNav, MAIN_NAV, type NavItem, type NavSection } from './navigation';
 
 function SectionTitle({ children }: { children: string }) {
   return (
@@ -21,6 +22,7 @@ export function Layout() {
   const { t } = useTranslation();
   const { data: me } = useMe();
   useColorSchemeSync(me);
+  useLanguageSync(me);
   const { pathname } = useLocation();
   // En móvil el menú se pliega tras la hamburguesa y se cierra al navegar.
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false);
@@ -31,6 +33,7 @@ export function Layout() {
     getInitialValueInEffect: false,
   });
   const inAdmin = pathname.startsWith('/admin/');
+  const adminNav = allowedAdminNav((permission) => can(me, permission));
 
   const link = (item: NavItem) => (
     <NavLink
@@ -81,7 +84,7 @@ export function Layout() {
         <AppShell.Section grow component={ScrollArea}>
           <Stack gap={2}>
             {MAIN_NAV.map(section)}
-            {me?.role === 'admin' && (
+            {adminNav.length > 0 && (
               <NavLink
                 mt="md"
                 label={t('nav.admin')}
@@ -94,7 +97,7 @@ export function Layout() {
                 childrenOffset={0}
                 fw={600}
               >
-                {ADMIN_NAV.map(section)}
+                {adminNav.map(section)}
               </NavLink>
             )}
           </Stack>

@@ -1,7 +1,8 @@
-"""Dependencias comunes de los routers: BD, ajustes, sesión actual, rol admin y CSRF (ADR-003)."""
+"""Dependencias comunes de los routers: BD, ajustes, sesión actual, permisos del rol (ADR-014) y CSRF (ADR-003)."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Response
@@ -12,6 +13,7 @@ from app.core.security import session_csrf_token, tokens_match
 from app.db.models import User, UserSession
 from app.db.session import get_session
 from app.domain.identity.audit import RequestContext
+from app.domain.identity.permissions import Permission
 from app.domain.identity.sessions import resolve_session
 
 SESSION_COOKIE = "ubw_session"
@@ -69,18 +71,32 @@ def current_user(session: CurrentSession) -> User:
 CurrentUser = Annotated[User, Depends(current_user)]
 
 
-def require_admin(user: CurrentUser) -> User:
-    """Usuario actual con rol ``admin``.
+def require_permission(*permissions: Permission) -> Callable[[User], User]:
+    """Dependencia: usuario actual cuyo rol tiene **alguno** de ``permissions`` (ADR-014).
 
     Raises:
-        HTTPException: 403 si no es administrador.
+        HTTPException: 403 si no tiene ninguno.
     """
-    if user.role != "admin":
-        raise HTTPException(status_code=403, detail="Se necesita el rol de administrador")
-    return user
+
+    def dependency(user: CurrentUser) -> User:
+        if not any(user.can(permission) for permission in permissions):
+            raise HTTPException(status_code=403, detail="No tienes permiso para esta acción")
+        return user
+
+    return dependency
 
 
-AdminUser = Annotated[User, Depends(require_admin)]
+UserManager = Annotated[User, Depends(require_permission("users.manage"))]
+RoleManager = Annotated[User, Depends(require_permission("roles.manage"))]
+#: Ver los roles: quien los gestiona y quien asigna roles a usuarios.
+RoleReader = Annotated[User, Depends(require_permission("roles.manage", "users.manage"))]
+SessionManager = Annotated[User, Depends(require_permission("sessions.manage"))]
+AuditReader = Annotated[User, Depends(require_permission("audit.read"))]
+TemplateManager = Annotated[User, Depends(require_permission("templates.manage"))]
+QueryManager = Annotated[User, Depends(require_permission("queries.manage"))]
+AllowlistManager = Annotated[User, Depends(require_permission("allowlist.manage"))]
+StorageManager = Annotated[User, Depends(require_permission("storage.manage"))]
+RunsAdmin = Annotated[User, Depends(require_permission("runs.admin"))]
 
 
 def csrf_protect(request: Request, settings: SettingsDep) -> None:

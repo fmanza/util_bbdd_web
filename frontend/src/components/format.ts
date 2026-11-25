@@ -1,7 +1,4 @@
-import i18n from '../i18n';
-
-/** Locale de `Intl` de cada idioma de la app (sin entrada, el propio código de idioma). */
-const INTL_LOCALES: Readonly<Record<string, string>> = { es: 'es-ES' };
+import { intlLocale } from '../i18n';
 
 interface Formatters {
   dateTime: Intl.DateTimeFormat;
@@ -11,8 +8,7 @@ const cache = new Map<string, Formatters>();
 
 /** Formateadores del idioma activo de i18next (se crean una vez por locale). */
 function formatters(): Formatters {
-  const language = i18n.resolvedLanguage ?? i18n.language;
-  const locale = INTL_LOCALES[language] ?? language;
+  const locale = intlLocale();
   let entry = cache.get(locale);
   if (!entry) {
     entry = {

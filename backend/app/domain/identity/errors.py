@@ -55,11 +55,53 @@ class LastAdminError(AppError):
     title = "Debe quedar al menos un administrador activo"
 
 
+class RoleNotFoundError(AppError):
+    """El rol no existe."""
+
+    status = 404
+    title = "Rol no encontrado"
+
+
+class RoleNameTakenError(AppError):
+    """Ya hay un rol con ese nombre (sin distinguir mayúsculas)."""
+
+    status = 409
+    title = "Ya existe un rol con ese nombre"
+
+
+class RoleBuiltinError(AppError):
+    """Los roles base no se borran ni cambian de permisos."""
+
+    status = 409
+    title = "Los roles base no se pueden cambiar ni borrar"
+
+
+class RoleInUseError(AppError):
+    """El rol tiene usuarios."""
+
+    status = 409
+    title = "El rol tiene usuarios"
+
+
+class InvalidPermissionError(AppError):
+    """Permisos que no están en el catálogo."""
+
+    status = 422
+    title = "Permiso desconocido"
+
+
+class PermissionEscalationError(AppError):
+    """Se intenta dar (o quitar) un permiso que no se tiene."""
+
+    status = 403
+    title = "No puedes conceder permisos que no tienes"
+
+
 class SelfModificationError(AppError):
     """Un administrador no puede desactivarse ni quitarse el rol a sí mismo."""
 
     status = 409
-    title = "No puedes desactivarte ni quitarte el rol de administrador"
+    title = "No puedes desactivarte ni cambiar tu propio rol"
 
 
 class SelfDeletionError(AppError):

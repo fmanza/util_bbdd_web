@@ -12,9 +12,12 @@ import {
   IconServer,
   IconSql,
   IconTemplate,
+  IconUserShield,
   IconUsers,
   IconWorldCheck,
 } from '@tabler/icons-react';
+
+import type { Permission } from '../features/auth/useAuth';
 
 /** Entrada del menú lateral: `label` es la clave i18n (de `core.json`, el menú está en el bundle inicial). */
 export interface NavItem {
@@ -23,6 +26,8 @@ export interface NavItem {
   icon: Icon;
   /** Solo activa con la ruta exacta (Inicio). */
   end?: boolean;
+  /** Permiso del rol que exige (las de administración; ADR-014). */
+  permission?: Permission;
 }
 
 export interface NavSection {
@@ -54,29 +59,56 @@ export const MAIN_NAV: readonly NavSection[] = [
   },
 ];
 
-/** Administración (solo rol admin), en subgrupos dentro de una sección plegable. */
+/** Administración, en subgrupos dentro de una sección plegable; cada entrada se ve con su permiso (ADR-014). */
 export const ADMIN_NAV: readonly NavSection[] = [
   {
     title: 'nav.adminSections.access',
     items: [
-      { to: '/admin/users', label: 'nav.users', icon: IconUsers },
-      { to: '/admin/sessions', label: 'nav.sessions', icon: IconDeviceDesktop },
-      { to: '/admin/allowlist', label: 'nav.allowlist', icon: IconWorldCheck },
-      { to: '/admin/audit', label: 'nav.audit', icon: IconListSearch },
+      { to: '/admin/users', label: 'nav.users', icon: IconUsers, permission: 'users.manage' },
+      { to: '/admin/roles', label: 'nav.roles', icon: IconUserShield, permission: 'roles.manage' },
+      {
+        to: '/admin/sessions',
+        label: 'nav.sessions',
+        icon: IconDeviceDesktop,
+        permission: 'sessions.manage',
+      },
+      {
+        to: '/admin/allowlist',
+        label: 'nav.allowlist',
+        icon: IconWorldCheck,
+        permission: 'allowlist.manage',
+      },
+      { to: '/admin/audit', label: 'nav.audit', icon: IconListSearch, permission: 'audit.read' },
     ],
   },
   {
     title: 'nav.adminSections.shared',
     items: [
-      { to: '/admin/templates', label: 'nav.templates', icon: IconTemplate },
-      { to: '/admin/queries', label: 'nav.queries', icon: IconSql },
+      { to: '/admin/templates', label: 'nav.templates', icon: IconTemplate, permission: 'templates.manage' },
+      { to: '/admin/queries', label: 'nav.queries', icon: IconSql, permission: 'queries.manage' },
     ],
   },
   {
     title: 'nav.adminSections.operation',
     items: [
-      { to: '/admin/runs', label: 'nav.adminRuns', icon: IconListDetails },
-      { to: '/admin/storage', label: 'nav.storage', icon: IconServer },
+      { to: '/admin/runs', label: 'nav.adminRuns', icon: IconListDetails, permission: 'runs.admin' },
+      { to: '/admin/storage', label: 'nav.storage', icon: IconServer, permission: 'storage.manage' },
     ],
   },
 ];
+
+/** Secciones de administración con solo las entradas que permite `allowed` (sin las que se quedan vacías). */
+export function allowedAdminNav(allowed: (permission: Permission) => boolean): NavSection[] {
+  return ADMIN_NAV.map((s) => ({
+    ...s,
+    items: s.items.filter((i) => !i.permission || allowed(i.permission)),
+  })).filter((s) => s.items.length > 0);
+}
+
+/** Permiso que exige una ruta de administración (`undefined` si no es una de ellas). */
+export function adminPermission(pathname: string): Permission | undefined {
+  const item = ADMIN_NAV.flatMap((s) => s.items).find(
+    (i) => pathname === i.to || pathname.startsWith(`${i.to}/`),
+  );
+  return item?.permission;
+}

@@ -1,6 +1,6 @@
 """Queries nombradas (CRUD de admins, ejecución por cualquiera que vea la conexión) y SQL libre restringido.
 
-SQL libre: permiso ``users.can_run_sql`` + rol ``editor`` en el proyecto + conexión del proyecto con
+SQL libre: permiso ``sql.run`` del rol (ADR-014) + rol ``editor`` en el proyecto + conexión del proyecto con
 ``read_only = true`` + guardián de solo lectura + transacción de solo lectura en el motor (ver
 ``app/integrations/util_bbdd/sql.py``). Se audita con el texto (truncado) de la consulta.
 """
@@ -88,15 +88,15 @@ def run_free_sql(
 
     Raises:
         ProjectNotFoundError, ProjectForbiddenError: No es miembro o no es editor.
-        SqlNotAllowedError: Sin ``can_run_sql``.
+        SqlNotAllowedError: Sin ``sql.run``.
         ProjectConnectionNotFoundError: Alias desconocido.
         ConnectionNotReadOnlyError: La conexión no es ``read_only``.
         SqlRejectedError: No es una única sentencia de lectura, o el motor la rechaza (mensaje recortado).
         DatabaseAccessError, DatabaseTimeoutError.
     """
     membership = get_membership(db, user, project_id, "editor")
-    if not user.can_run_sql:
-        raise SqlNotAllowedError("Pide a un administrador el permiso «Puede ejecutar SQL».")
+    if not user.can("sql.run"):
+        raise SqlNotAllowedError("Tu rol no tiene el permiso «Ejecutar SQL libre»; pídeselo a un administrador.")
     connection = get_project_connection(db, membership.project, alias).connection
     if not connection.read_only:
         raise ConnectionNotReadOnlyError("Marca la conexión como «Solo lectura» para usar SQL libre sobre ella.")

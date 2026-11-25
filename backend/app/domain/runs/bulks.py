@@ -3,7 +3,7 @@
 ``bulk_preview`` (modo seco) solo lee: exige que el fichero sea **del mismo proyecto**. Escribir filas exige, **al
 encolar** (y de nuevo en el worker):
 
-1. Permiso ``users.can_write_data`` y rol ``owner``.
+1. Permiso ``data.write`` del rol (ADR-014) y rol ``owner``.
 2. Una ``bulk_preview`` correcta del mismo proyecto de hace menos de ``PREVIEW_MAX_AGE`` y **sin errores de
    validación**: la carga usa sus parámetros.
 3. El mismo fichero (SHA-256) y la misma conexión destino (id), no ``read_only`` y del mismo motor.
@@ -111,8 +111,8 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunParamsError: Vista previa, destino, fichero o confirmaciones no válidos (422).
         RunStateError: La vista previa tiene errores u otra escritura está en curso sobre el destino (409).
     """
-    if not user.can_write_data:
-        raise BulkForbiddenError("Necesitas el permiso «Puede escribir datos»; pídeselo a un administrador.")
+    if not user.can("data.write"):
+        raise BulkForbiddenError("Tu rol no tiene el permiso «Escribir datos»; pídeselo a un administrador.")
     if membership.role != "owner":
         raise BulkForbiddenError("Solo el propietario del proyecto puede cargar datos.")
     preview_run = db.get(Run, params["preview_run"])

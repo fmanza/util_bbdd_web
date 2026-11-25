@@ -2,12 +2,21 @@ import { useMantineColorScheme } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api, CSRF_HEADER, ensureOk, isApiError, unwrap } from '../../api/client';
+import { setLanguage } from '../../i18n';
 import type { components } from '../../api/schema';
 
 export type Me = components['schemas']['Me'];
 export type LoginRequest = components['schemas']['LoginRequest'];
 export type PasswordChange = components['schemas']['PasswordChange'];
 export type ColorScheme = Me['color_scheme'];
+export type Language = Me['language'];
+export type Permission = Me['permissions'][number];
+export type RoleRef = Me['role'];
+
+/** El rol de `me` tiene `permission` (ADR-014). */
+export function can(me: Me | null | undefined, permission: Permission): boolean {
+  return me?.permissions.includes(permission) ?? false;
+}
 
 export const meQueryKey = ['auth', 'me'] as const;
 
@@ -87,6 +96,33 @@ export function useUpdatePreferences() {
       if (!context) return;
       setColorScheme(context.previousScheme);
       if (context.previousMe !== undefined) queryClient.setQueryData(meQueryKey, context.previousMe);
+    },
+    onSuccess: (me) => {
+      queryClient.setQueryData(meQueryKey, me);
+    },
+  });
+}
+
+/**
+ * Guarda el idioma en la cuenta con actualización optimista, como el tema: la interfaz y la caché de `me` cambian al
+ * instante, y si el servidor falla vuelven los dos al idioma anterior.
+ */
+export function useUpdateLanguage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (language: Language): Promise<Me> =>
+      unwrap(await api.PATCH('/api/v1/auth/me/preferences', { body: { language } })),
+    onMutate: async (next) => {
+      await queryClient.cancelQueries({ queryKey: meQueryKey });
+      const previousMe = queryClient.getQueryData<Me | null>(meQueryKey);
+      await setLanguage(next);
+      if (previousMe) queryClient.setQueryData<Me>(meQueryKey, { ...previousMe, language: next });
+      return { previousMe };
+    },
+    onError: async (_error, _next, context) => {
+      if (!context?.previousMe) return;
+      await setLanguage(context.previousMe.language);
+      queryClient.setQueryData(meQueryKey, context.previousMe);
     },
     onSuccess: (me) => {
       queryClient.setQueryData(meQueryKey, me);

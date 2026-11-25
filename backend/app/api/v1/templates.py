@@ -14,7 +14,7 @@ from typing import Annotated, Any, Final
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, Response
 
-from app.api.deps import AdminUser, Context, CurrentUser, DbSession, SettingsDep
+from app.api.deps import Context, CurrentUser, DbSession, SettingsDep, TemplateManager
 from app.api.v1.schemas_templates import TemplateKind, TemplateOut, TemplateUpdate
 from app.core.config import Settings
 from app.db.models import DocumentTemplate, Project
@@ -33,7 +33,7 @@ _MULTIPART_OVERHEAD: Final = 64 * 1024
 _SAFE_HEADERS: Final = {"X-Content-Type-Options": "nosniff"}
 _401: dict[int | str, dict[str, Any]] = {401: {"description": "No autenticado"}}
 _404: dict[int | str, dict[str, Any]] = {404: {"description": "No existe o no es visible"}}
-_ADMIN: dict[int | str, dict[str, Any]] = {**_401, 403: {"description": "Sin rol de administrador o CSRF no válido"}}
+_ADMIN: dict[int | str, dict[str, Any]] = {**_401, 403: {"description": "Sin el permiso o CSRF no válido"}}
 _EDITOR: dict[int | str, dict[str, Any]] = {
     **_401, **_404, 403: {"description": "Rol inferior a editor o CSRF no válido"}
 }  # fmt: skip
@@ -116,7 +116,7 @@ def download_global(template_id: str, _: CurrentUser, db: DbSession, settings: S
 def create_global(
     request: Request,
     file: Annotated[UploadFile, _FILE_FIELD],
-    admin: AdminUser,
+    admin: TemplateManager,
     db: DbSession,
     settings: SettingsDep,
     ctx: Context,
@@ -136,7 +136,9 @@ def create_global(
     responses={**_ADMIN, **_404, 409: {"description": "Nombre repetido"},
                422: {"description": "Estilo de tabla que no está en la plantilla"}},
 )  # fmt: skip
-def update_global(template_id: str, body: TemplateUpdate, admin: AdminUser, db: DbSession, ctx: Context) -> TemplateOut:
+def update_global(
+    template_id: str, body: TemplateUpdate, admin: TemplateManager, db: DbSession, ctx: Context
+) -> TemplateOut:
     """Cambia el nombre o el estilo de tabla (uno de los de la plantilla)."""
     template = service.get_template(db, None, template_id)
     return _out(
@@ -151,7 +153,7 @@ def update_global(template_id: str, body: TemplateUpdate, admin: AdminUser, db: 
     "/{template_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Borrar una plantilla global",
     responses={**_ADMIN, **_404, 409: {"description": "La usa una documentación en cola o en curso"}},
 )  # fmt: skip
-def delete_global(template_id: str, admin: AdminUser, db: DbSession, settings: SettingsDep, ctx: Context) -> None:
+def delete_global(template_id: str, admin: TemplateManager, db: DbSession, settings: SettingsDep, ctx: Context) -> None:
     """Borra la plantilla y su fichero, salvo que la use una documentación en cola o en curso."""
     template = service.get_template(db, None, template_id)
     service.delete_template(db, admin, template, settings=settings, ctx=ctx)

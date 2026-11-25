@@ -35,11 +35,10 @@ def test_login_sets_session_and_csrf_cookies_with_flags(client: TestClient, user
         "id": user.id,
         "username": "ana",
         "display_name": "Ana",
-        "role": "user",
-        "can_run_sql": False,
-        "can_apply_ddl": False,
-        "can_write_data": False,
+        "role": {"id": user.role_id, "name": "Usuario", "builtin": "user"},
+        "permissions": [],
         "color_scheme": "auto",
+        "language": "es",
     }
     cookies = response.headers.get_list("set-cookie")
     session_cookie = next(c for c in cookies if c.startswith("__Host-ubw_session=")).lower()

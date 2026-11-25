@@ -100,6 +100,10 @@ const pages: RouteObject[] = [
                 lazy: async () => ({ Component: (await import('../features/admin/UsersPage')).UsersPage }),
               },
               {
+                path: 'roles',
+                lazy: async () => ({ Component: (await import('../features/admin/RolesPage')).RolesPage }),
+              },
+              {
                 path: 'sessions',
                 lazy: async () => ({
                   Component: (await import('../features/admin/SessionsPage')).SessionsPage,

@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 
 import { ErrorAlert } from '../../../components/ErrorAlert';
-import { useMe } from '../../auth/useAuth';
+import { can, useMe } from '../../auth/useAuth';
 import { useProjectConnections } from '../../projects/useProjects';
 import { isActive, type RunDetail, useLaunchRun } from '../useRuns';
 import { useDumpConstraints } from './useDump';
 
 /**
  * Constraints que un volcado interrumpido dejó desactivadas en el destino y la acción «Restaurar constraints» (G31):
- * mismos controles que el volcado (permiso `can_write_data` + owner, destino no `read_only`, alias escrito a mano).
+ * mismos controles que el volcado (permiso `data.write` + owner, destino no `read_only`, alias escrito a mano).
  */
 export function PendingConstraints({ run }: { run: RunDetail }) {
   const { t } = useTranslation();
@@ -27,9 +27,9 @@ export function PendingConstraints({ run }: { run: RunDetail }) {
   if (!data?.pending) return null;
   const alias = data.target_connection ?? '';
   const target = (connections.data ?? []).find((c) => c.alias === alias);
-  const allowed = Boolean(me?.can_write_data) && run.my_role === 'owner';
+  const allowed = can(me, 'data.write') && run.my_role === 'owner';
   const reason = !allowed
-    ? me?.can_write_data
+    ? can(me, 'data.write')
       ? t('dump.restore.ownerOnly')
       : t('dump.restore.noPermission')
     : target?.read_only

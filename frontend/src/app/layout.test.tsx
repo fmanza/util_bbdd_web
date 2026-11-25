@@ -53,7 +53,7 @@ describe('menú lateral', () => {
       within(access)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['Usuarios', 'Sesiones', 'Destinos permitidos', 'Auditoría']);
+    ).toEqual(['Usuarios', 'Roles', 'Sesiones', 'Destinos permitidos', 'Auditoría']);
     const operation = within(nav).getByRole('group', { name: 'Operación' });
     expect(within(operation).getByRole('link', { name: 'Todas las ejecuciones' })).toHaveAttribute(
       'href',

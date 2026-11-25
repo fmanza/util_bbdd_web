@@ -2910,18 +2910,6 @@
       "Me": {
         "description": "Usuario de la sesión actual.",
         "properties": {
-          "can_apply_ddl": {
-            "title": "Can Apply Ddl",
-            "type": "boolean"
-          },
-          "can_run_sql": {
-            "title": "Can Run Sql",
-            "type": "boolean"
-          },
-          "can_write_data": {
-            "title": "Can Write Data",
-            "type": "boolean"
-          },
           "color_scheme": {
             "description": "Tema de la interfaz: claro, oscuro o el del sistema (``auto``)",
             "enum": [
@@ -2940,13 +2928,40 @@
             "title": "Id",
             "type": "integer"
           },
-          "role": {
+          "language": {
+            "description": "Idioma de la interfaz",
             "enum": [
-              "admin",
-              "user"
+              "es",
+              "en"
             ],
-            "title": "Role",
+            "title": "Language",
             "type": "string"
+          },
+          "permissions": {
+            "description": "Permisos de su rol (ADR-014)",
+            "items": {
+              "enum": [
+                "users.manage",
+                "roles.manage",
+                "sessions.manage",
+                "audit.read",
+                "templates.manage",
+                "queries.manage",
+                "allowlist.manage",
+                "storage.manage",
+                "runs.admin",
+                "connections.share",
+                "sql.run",
+                "ddl.apply",
+                "data.write"
+              ],
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "role": {
+            "$ref": "#/components/schemas/RoleRef"
           },
           "username": {
             "title": "Username",
@@ -2958,10 +2973,9 @@
           "username",
           "display_name",
           "role",
-          "can_run_sql",
-          "can_apply_ddl",
-          "can_write_data",
-          "color_scheme"
+          "permissions",
+          "color_scheme",
+          "language"
         ],
         "title": "Me",
         "type": "object"
@@ -3796,6 +3810,45 @@
         "title": "PasswordChange",
         "type": "object"
       },
+      "PermissionOut": {
+        "description": "Permiso del catálogo (ADR-014).",
+        "properties": {
+          "group": {
+            "description": "Administración o capacidades sobre bases de datos",
+            "enum": [
+              "admin",
+              "databases"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "users.manage",
+              "roles.manage",
+              "sessions.manage",
+              "audit.read",
+              "templates.manage",
+              "queries.manage",
+              "allowlist.manage",
+              "storage.manage",
+              "runs.admin",
+              "connections.share",
+              "sql.run",
+              "ddl.apply",
+              "data.write"
+            ],
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "group"
+        ],
+        "title": "PermissionOut",
+        "type": "object"
+      },
       "PlanColumnOut": {
         "properties": {
           "auto_increment": {
@@ -4081,22 +4134,42 @@
       },
       "PreferencesUpdate": {
         "additionalProperties": false,
-        "description": "Preferencias de la propia cuenta; un campo desconocido da 422.",
+        "description": "Preferencias de la propia cuenta: al menos una; un campo desconocido da 422.",
         "properties": {
           "color_scheme": {
-            "description": "Tema de la interfaz: claro, oscuro o el del sistema (``auto``)",
-            "enum": [
-              "light",
-              "dark",
-              "auto"
+            "anyOf": [
+              {
+                "enum": [
+                  "light",
+                  "dark",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Color Scheme",
-            "type": "string"
+            "description": "Tema de la interfaz: claro, oscuro o el del sistema (``auto``)",
+            "title": "Color Scheme"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "es",
+                  "en"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Idioma de la interfaz",
+            "title": "Language"
           }
         },
-        "required": [
-          "color_scheme"
-        ],
         "title": "PreferencesUpdate",
         "type": "object"
       },
@@ -4566,6 +4639,177 @@
           "error"
         ],
         "title": "ReadinessOut",
+        "type": "object"
+      },
+      "RoleCreate": {
+        "description": "Alta de un rol personalizado.",
+        "properties": {
+          "name": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RoleCreate",
+        "type": "object"
+      },
+      "RoleOut": {
+        "description": "Rol con sus permisos efectivos y su número de usuarios.",
+        "properties": {
+          "builtin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "user"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "``admin`` o ``user`` en los roles base (no se borran)",
+            "title": "Builtin"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "enum": [
+                "users.manage",
+                "roles.manage",
+                "sessions.manage",
+                "audit.read",
+                "templates.manage",
+                "queries.manage",
+                "allowlist.manage",
+                "storage.manage",
+                "runs.admin",
+                "connections.share",
+                "sql.run",
+                "ddl.apply",
+                "data.write"
+              ],
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_count": {
+            "default": 0,
+            "title": "User Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "builtin",
+          "permissions",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RoleOut",
+        "type": "object"
+      },
+      "RoleRef": {
+        "description": "Rol de un usuario (ADR-014).",
+        "properties": {
+          "builtin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "user"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "``admin`` o ``user`` en los roles base; null en los demás",
+            "title": "Builtin"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "builtin"
+        ],
+        "title": "RoleRef",
+        "type": "object"
+      },
+      "RoleUpdate": {
+        "description": "Cambio de nombre o de permisos (los roles base no cambian).",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "permissions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 64,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permissions"
+          }
+        },
+        "title": "RoleUpdate",
         "type": "object"
       },
       "RoutineDiffOut": {
@@ -6305,21 +6549,6 @@
       "UserCreate": {
         "description": "Alta de usuario con las mismas opciones que la edición (salvo la contraseña, que es obligatoria).",
         "properties": {
-          "can_apply_ddl": {
-            "default": false,
-            "title": "Can Apply Ddl",
-            "type": "boolean"
-          },
-          "can_run_sql": {
-            "default": false,
-            "title": "Can Run Sql",
-            "type": "boolean"
-          },
-          "can_write_data": {
-            "default": false,
-            "title": "Can Write Data",
-            "type": "boolean"
-          },
           "display_name": {
             "maxLength": 128,
             "minLength": 1,
@@ -6339,14 +6568,17 @@
             "type": "string",
             "writeOnly": true
           },
-          "role": {
-            "default": "user",
-            "enum": [
-              "admin",
-              "user"
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Role",
-            "type": "string"
+            "description": "Rol (ADR-014); sin él, el rol base «Usuario»",
+            "title": "Role Id"
           },
           "storage_quota_mb": {
             "anyOf": [
@@ -6436,18 +6668,6 @@
       "UserOut": {
         "description": "Usuario visto por un administrador.",
         "properties": {
-          "can_apply_ddl": {
-            "title": "Can Apply Ddl",
-            "type": "boolean"
-          },
-          "can_run_sql": {
-            "title": "Can Run Sql",
-            "type": "boolean"
-          },
-          "can_write_data": {
-            "title": "Can Write Data",
-            "type": "boolean"
-          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6482,6 +6702,29 @@
             "title": "Password Changed At",
             "type": "string"
           },
+          "permissions": {
+            "description": "Permisos de su rol",
+            "items": {
+              "enum": [
+                "users.manage",
+                "roles.manage",
+                "sessions.manage",
+                "audit.read",
+                "templates.manage",
+                "queries.manage",
+                "allowlist.manage",
+                "storage.manage",
+                "runs.admin",
+                "connections.share",
+                "sql.run",
+                "ddl.apply",
+                "data.write"
+              ],
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
           "project_count": {
             "default": 0,
             "description": "Proyectos de los que es miembro",
@@ -6489,12 +6732,7 @@
             "type": "integer"
           },
           "role": {
-            "enum": [
-              "admin",
-              "user"
-            ],
-            "title": "Role",
-            "type": "string"
+            "$ref": "#/components/schemas/RoleRef"
           },
           "storage_quota_mb": {
             "anyOf": [
@@ -6523,10 +6761,8 @@
           "username",
           "display_name",
           "role",
+          "permissions",
           "is_active",
-          "can_run_sql",
-          "can_apply_ddl",
-          "can_write_data",
           "locked_until",
           "password_changed_at",
           "created_at",
@@ -6564,7 +6800,7 @@
         "type": "object"
       },
       "UserTransfer": {
-        "description": "Vista previa o resultado de una transferencia (``reasons``: ``same_user``, ``target_inactive``,\n``target_not_admin``, ``busy``).",
+        "description": "Vista previa o resultado de una transferencia (``reasons``: ``same_user``, ``target_inactive``,\n``target_cannot_share``, ``busy``).",
         "properties": {
           "busy_projects": {
             "description": "Proyectos creados con ejecuciones en cola o en curso",
@@ -6615,7 +6851,7 @@
               "enum": [
                 "same_user",
                 "target_inactive",
-                "target_not_admin",
+                "target_cannot_share",
                 "busy"
               ],
               "type": "string"
@@ -6659,39 +6895,6 @@
       "UserUpdate": {
         "description": "Edición parcial de usuario; ``password`` restablece la contraseña y cierra sus sesiones.",
         "properties": {
-          "can_apply_ddl": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Can Apply Ddl"
-          },
-          "can_run_sql": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Can Run Sql"
-          },
-          "can_write_data": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Can Write Data"
-          },
           "display_name": {
             "anyOf": [
               {
@@ -6731,20 +6934,17 @@
             ],
             "title": "Password"
           },
-          "role": {
+          "role_id": {
             "anyOf": [
               {
-                "enum": [
-                  "admin",
-                  "user"
-                ],
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Role"
+            "description": "Rol nuevo (ADR-014); cierra sus sesiones",
+            "title": "Role Id"
           },
           "storage_quota_mb": {
             "anyOf": [
@@ -6911,7 +7111,7 @@
   },
   "info": {
     "title": "util_bbdd_web",
-    "version": "1.24.0"
+    "version": "2.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -6960,7 +7160,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso o token CSRF no válido"
           }
         },
         "summary": "Listar destinos permitidos",
@@ -6996,7 +7196,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso o token CSRF no válido"
           },
           "409": {
             "description": "Ya existe"
@@ -7034,7 +7234,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso o token CSRF no válido"
           },
           "404": {
             "description": "No existe"
@@ -7085,7 +7285,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "409": {
             "description": "Nombre repetido o límite de plantillas"
@@ -7132,7 +7332,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "No existe o no es visible"
@@ -7195,7 +7395,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "No existe o no es visible"
@@ -7253,7 +7453,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "No existe"
@@ -7298,7 +7498,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "No existe"
@@ -7362,7 +7562,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "422": {
             "content": {
@@ -7408,7 +7608,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "Motor no soportado"
@@ -7449,7 +7649,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "No existe"
@@ -7509,7 +7709,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "No existe"
@@ -7676,7 +7876,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "422": {
             "content": {
@@ -7718,7 +7918,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "404": {
             "description": "No existe"
@@ -7762,7 +7962,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           }
         },
         "summary": "Ajustes de almacenamiento",
@@ -7798,7 +7998,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "422": {
             "description": "Valor fuera de rango"
@@ -7827,7 +8027,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           }
         },
         "summary": "Aplicar ahora la retención y la purga",
@@ -7865,7 +8065,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "422": {
             "description": "Valor fuera de rango"
@@ -7980,7 +8180,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o CSRF no válido"
+            "description": "Sin el permiso o CSRF no válido"
           },
           "422": {
             "content": {
@@ -8141,7 +8341,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador"
+            "description": "Sin el permiso"
           },
           "422": {
             "content": {
@@ -8281,7 +8481,7 @@
     },
     "/api/v1/auth/me/preferences": {
       "patch": {
-        "description": "Guarda las preferencias del usuario de la sesión y devuelve el usuario actualizado.\n\nHoy solo el tema de la interfaz (``color_scheme``: ``light``, ``dark`` o ``auto``). Solo actúa sobre la propia\ncuenta (no admite identificador de usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera\n``X-CSRF-Token``.",
+        "description": "Guarda las preferencias del usuario de la sesión y devuelve el usuario actualizado.\n\nEl tema (``color_scheme``: ``light``, ``dark`` o ``auto``) y el idioma de la interfaz (``language``: ``es`` o\n``en``); al menos uno, y lo que no llega no cambia. Solo actúa sobre la propia cuenta (no admite identificador de\nusuario), es idempotente y no se registra en la auditoría. Requiere la cabecera ``X-CSRF-Token``.",
         "operationId": "update_my_preferences_api_v1_auth_me_preferences_patch",
         "requestBody": {
           "content": {
@@ -11372,6 +11572,216 @@
         ]
       }
     },
+    "/api/v1/roles": {
+      "get": {
+        "description": "Roles con su número de usuarios: los base primero y después por nombre.",
+        "operationId": "list_roles_api_v1_roles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleOut"
+                  },
+                  "title": "Response List Roles Api V1 Roles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes"
+          }
+        },
+        "summary": "Listar roles",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "description": "Crea un rol con permisos que tiene quien lo crea (se audita como ``role.create``).",
+        "operationId": "create_role_api_v1_roles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes"
+          },
+          "409": {
+            "description": "Ya existe un rol con ese nombre"
+          },
+          "422": {
+            "description": "Permiso desconocido"
+          }
+        },
+        "summary": "Crear rol",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/roles/permissions": {
+      "get": {
+        "description": "Permisos que puede tener un rol, en el orden en que se muestran.",
+        "operationId": "list_permissions_api_v1_roles_permissions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PermissionOut"
+                  },
+                  "title": "Response List Permissions Api V1 Roles Permissions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes"
+          }
+        },
+        "summary": "Catálogo de permisos",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/roles/{role_id}": {
+      "delete": {
+        "description": "Borra un rol personalizado sin usuarios (``role.delete``).",
+        "operationId": "delete_role_api_v1_roles__role_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role_id",
+            "required": true,
+            "schema": {
+              "title": "Role Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "409": {
+            "description": "Es un rol base o tiene usuarios"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Borrar rol",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "description": "Renombra el rol o cambia sus permisos (los roles base no cambian). Quitar permisos cierra las sesiones\nde sus usuarios (``role.update``).",
+        "operationId": "update_role_api_v1_roles__role_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role_id",
+            "required": true,
+            "schema": {
+              "title": "Role Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "403": {
+            "description": "Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes"
+          },
+          "404": {
+            "description": "No existe"
+          },
+          "409": {
+            "description": "Nombre repetido, o es un rol base"
+          },
+          "422": {
+            "description": "Permiso desconocido"
+          }
+        },
+        "summary": "Editar rol",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/api/v1/runs": {
       "get": {
         "description": "Ejecuciones de todos los proyectos de los que eres miembro.",
@@ -12676,7 +13086,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso o token CSRF no válido"
           },
           "422": {
             "content": {
@@ -12718,7 +13128,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso o token CSRF no válido"
           },
           "404": {
             "description": "No existe"
@@ -12767,23 +13177,19 @@
           {
             "description": "Solo usuarios de este rol",
             "in": "query",
-            "name": "role",
+            "name": "role_id",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "admin",
-                    "user"
-                  ],
-                  "type": "string"
+                  "type": "integer"
                 },
                 {
                   "type": "null"
                 }
               ],
               "description": "Solo usuarios de este rol",
-              "title": "Role"
+              "title": "Role Id"
             }
           },
           {
@@ -12891,7 +13297,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "422": {
             "content": {
@@ -12910,7 +13316,7 @@
         ]
       },
       "post": {
-        "description": "Crea un usuario con la contraseña inicial, el rol, el estado, los permisos y la cuota indicados.",
+        "description": "Crea un usuario con la contraseña inicial, el rol, el estado y la cuota indicados. Solo se asignan roles cuyos\npermisos tiene quien da de alta.",
         "operationId": "create_user_api_v1_users_post",
         "requestBody": {
           "content": {
@@ -12940,7 +13346,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "409": {
             "description": "El usuario ya existe"
@@ -12985,7 +13391,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "404": {
             "description": "No existe"
@@ -13038,7 +13444,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "404": {
             "description": "No existe"
@@ -13060,7 +13466,7 @@
         ]
       },
       "patch": {
-        "description": "Cambia nombre, rol, estado, permisos (SQL libre, aplicar DDL, escribir datos), cuota o contraseña. Desactivar o\nrestablecer la contraseña cierra sus sesiones.",
+        "description": "Cambia nombre, rol, estado, cuota o contraseña. Cambiar el rol exige tener los permisos del actual y del nuevo;\ncambiar el rol, desactivar o restablecer la contraseña cierra sus sesiones.",
         "operationId": "update_user_api_v1_users__user_id__patch",
         "parameters": [
           {
@@ -13101,13 +13507,13 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el rol tiene permisos que no tienes"
           },
           "404": {
             "description": "No existe"
           },
           "409": {
-            "description": "Último administrador o autodesactivación"
+            "description": "Último administrador, o desactivarte o cambiar tu propio rol"
           },
           "422": {
             "content": {
@@ -13156,7 +13562,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "404": {
             "description": "No existe"
@@ -13218,7 +13624,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "404": {
             "description": "No existe el usuario o el destino"
@@ -13284,7 +13690,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "404": {
             "description": "No existe el usuario o el destino"
@@ -13336,7 +13742,7 @@
             "description": "No autenticado"
           },
           "403": {
-            "description": "Sin rol de administrador o token CSRF no válido"
+            "description": "Sin el permiso, CSRF no válido, o el usuario tiene permisos que no tienes"
           },
           "404": {
             "description": "No existe"

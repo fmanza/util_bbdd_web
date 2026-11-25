@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.db.models import AuditEntry, MetadataCache, User
 from tests.api.test_projects import login_as, new_project
-from tests.conftest import do_login
+from tests.conftest import USER_PASSWORD, do_login
 
 
 @pytest.fixture
@@ -207,9 +207,16 @@ def sql_project(user_client: TestClient, user: User, connection_id: int, admin: 
 
 
 def grant_sql(client: TestClient, user: User) -> None:
+    """El admin da a ``user`` un rol con ``sql.run``; cambiar el rol cierra su sesión, así que ``client`` vuelve a
+    iniciarla."""
     admin = TestClient(client.app, base_url="https://testserver")
     do_login(admin, "admin", "admin-password-1234")
-    assert admin.patch(f"/api/v1/users/{user.id}", json={"can_run_sql": True}).json()["can_run_sql"] is True
+    roles = {r["name"]: r["id"] for r in admin.get("/api/v1/roles").json()}
+    role_id = (
+        roles.get("SQL") or admin.post("/api/v1/roles", json={"name": "SQL", "permissions": ["sql.run"]}).json()["id"]
+    )
+    assert admin.patch(f"/api/v1/users/{user.id}", json={"role_id": role_id}).json()["permissions"] == ["sql.run"]
+    do_login(client, user.username, USER_PASSWORD)
 
 
 def test_free_sql_requires_permission(user_client: TestClient, user: User, sql_project: dict[str, object]) -> None:
@@ -306,14 +313,14 @@ def test_free_sql_timeout(
 def test_admin_toggles_sql_permission_and_me_reports_it(
     user_client: TestClient, user: User, db: Session, admin: User
 ) -> None:
-    assert user_client.get("/api/v1/auth/me").json()["can_run_sql"] is False
+    assert "sql.run" not in user_client.get("/api/v1/auth/me").json()["permissions"]
 
     grant_sql(user_client, user)
 
-    assert user_client.get("/api/v1/auth/me").json()["can_run_sql"] is True
+    assert user_client.get("/api/v1/auth/me").json()["permissions"] == ["sql.run"]
     entry = db.scalars(select(AuditEntry).where(AuditEntry.action == "user.update")).one()
-    assert entry.details == {"fields": ["can_run_sql"], "can_run_sql": True}
+    assert entry.details == {"fields": ["role"], "role": ["Usuario", "SQL"]}
 
 
 def test_user_cannot_grant_itself(user_client: TestClient, user: User) -> None:
-    assert user_client.patch(f"/api/v1/users/{user.id}", json={"can_run_sql": True}).status_code == 403
+    assert user_client.patch(f"/api/v1/users/{user.id}", json={"role_id": 1}).status_code == 403

@@ -2,7 +2,14 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { ADMIN, callsTo, session, type StubResponse, stubApi } from '../../../test/api';
+import {
+  ADMIN as FULL_ADMIN,
+  callsTo,
+  session,
+  type StubResponse,
+  stubApi,
+  without,
+} from '../../../test/api';
 import { stubEventSource } from '../../../test/eventSource';
 import { FINISHED, RUN } from '../../../test/fixtures_runs';
 import { renderRoute } from '../../../test/render';
@@ -10,7 +17,9 @@ import type { DumpPreview, DumpResult } from './useDump';
 
 const PREVIEW_ID = '01JPREVPREVPREVPREVPREVPRE';
 const DUMP_ID = '01JDUMPDUMPDUMPDUMPDUMPDUM';
-const ALLOWED = { ...ADMIN, can_write_data: true };
+// El admin de estas pruebas no tiene «data.write» salvo en `ALLOWED` (ADR-014: el rol base lo tiene todo).
+const ADMIN = without(FULL_ADMIN, 'data.write');
+const ALLOWED = FULL_ADMIN;
 
 const PREVIEW: DumpPreview = {
   source_engine: 'postgresql',

@@ -37,6 +37,7 @@ from app.domain.identity.errors import (
     UserNotFoundError,
 )
 from app.domain.identity.passwords import check_policy, hash_password
+from app.domain.identity.roles import check_grant
 from app.domain.identity.sessions import revoke_user_sessions
 from app.domain.sorting import SortOrder, like_pattern, order_by
 from app.workspace.layout import remove_tree, safe_path
@@ -54,12 +55,10 @@ class UserChanges:
     """Cambios de un ``PATCH``; ``None`` significa «sin cambio»."""
 
     display_name: str | None = None
+    #: Rol nuevo (ADR-014).
     role: Role | None = None
     is_active: bool | None = None
     password: str | None = None
-    can_run_sql: bool | None = None
-    can_apply_ddl: bool | None = None
-    can_write_data: bool | None = None
     #: Cuota propia en MB (ADR-012); con ``global_storage_quota`` se quita y vuelve a usar la global.
     storage_quota_mb: int | None = None
     global_storage_quota: bool = False
@@ -89,10 +88,13 @@ UserStatus = Literal["active", "inactive", "locked"]
 #: Proyectos de los que el usuario es miembro (subconsulta correlacionada con ``users``).
 _PROJECT_COUNT: Final = select(func.count()).where(ProjectMember.user_id == User.id).correlate(User).scalar_subquery()
 
+#: Nombre del rol del usuario (subconsulta correlacionada con ``users``).
+_ROLE_NAME: Final = select(func.lower(Role.name)).where(Role.id == User.role_id).correlate(User).scalar_subquery()
+
 _USER_SORT: Final[dict[str, Any]] = {
     "username": User.username,
     "display_name": func.lower(User.display_name),
-    "role": User.role,
+    "role": _ROLE_NAME,
     "created_at": User.created_at,
     "projects": _PROJECT_COUNT,
 }
@@ -111,15 +113,15 @@ def list_users(
     offset: int,
     sort: UserSort | None = None,
     order: SortOrder | None = None,
-    role: Role | None = None,
+    role_id: int | None = None,
     status: UserStatus | None = None,
     now: datetime | None = None,
 ) -> tuple[list[tuple[User, int]], int]:
     """Usuarios con su número de proyectos (por nombre de usuario si no se pide otro orden), filtrados por texto en
     usuario o nombre visible, rol y estado."""
     query = select(User, _PROJECT_COUNT.label("project_count"))
-    if role is not None:
-        query = query.where(User.role == role)
+    if role_id is not None:
+        query = query.where(User.role_id == role_id)
     if status is not None:
         locked = and_(User.locked_until.is_not(None), User.locked_until > (now or utcnow()))
         if status == "inactive":
@@ -144,7 +146,15 @@ def list_users(
 
 def count_active_admins(db: Session) -> int:
     """Administradores activos (los bloqueados por intentos cuentan: el bloqueo es temporal)."""
-    return db.scalar(select(func.count()).where(User.role == "admin", User.is_active.is_(True))) or 0
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(User)
+            .join(Role, Role.id == User.role_id)
+            .where(Role.builtin == "admin", User.is_active.is_(True))
+        )
+        or 0
+    )
 
 
 def create_user(
@@ -158,12 +168,11 @@ def create_user(
     ctx: RequestContext,
     actor_id: int | None,
     is_active: bool = True,
-    can_run_sql: bool = False,
-    can_apply_ddl: bool = False,
-    can_write_data: bool = False,
     storage_quota_mb: int | None = None,
 ) -> User:
-    """Crea un usuario (activo salvo que se pida otra cosa) con sus permisos y cuota, y lo audita.
+    """Crea un usuario (activo salvo que se pida otra cosa) con su rol y cuota, y lo audita.
+
+    El router comprueba antes que quien da de alta tiene los permisos del rol (``check_grant``); la CLI no.
 
     Raises:
         UsernameTakenError: El nombre ya existe.
@@ -179,12 +188,10 @@ def create_user(
         password_hash=hash_password(password),
         role=role,
         is_active=is_active,
-        can_run_sql=can_run_sql,
-        can_apply_ddl=can_apply_ddl,
-        can_write_data=can_write_data,
         storage_quota_mb=storage_quota_mb,
         failed_attempts=0,
     )
+    user.sync_legacy_columns()
     db.add(user)
     db.flush()
     audit.record(
@@ -196,11 +203,8 @@ def create_user(
         target_id=user.id,
         details={
             "username": user.username,
-            "role": role,
+            "role": role.name,
             "is_active": is_active,
-            "can_run_sql": can_run_sql,
-            "can_apply_ddl": can_apply_ddl,
-            "can_write_data": can_write_data,
             "storage_quota_mb": storage_quota_mb,
         },
     )
@@ -216,14 +220,25 @@ def update_user(
     Desactivar o restablecer la contraseña revoca las sesiones del usuario; reactivar o restablecer la contraseña
     quita el bloqueo por intentos.
 
+    Cambiar el rol exige tener todos los permisos del rol actual y del nuevo (nadie da ni quita lo que no tiene) y
+    cierra sus sesiones.
+
     Raises:
-        SelfModificationError: El admin intenta desactivarse o quitarse el rol.
+        SelfModificationError: Intenta desactivarse o cambiar su propio rol.
+        PermissionEscalationError: El rol actual o el nuevo tiene permisos que ``actor`` no tiene.
         LastAdminError: Quedaría el sistema sin administradores activos.
         PasswordPolicyError: La contraseña nueva no cumple la política.
     """
-    loses_admin = user.role == "admin" and user.is_active and (changes.role == "user" or changes.is_active is False)
-    if loses_admin and user.id == actor.id:
+    new_role = changes.role if changes.role is not None and changes.role.id != user.role_id else None
+    if user.id == actor.id and (new_role is not None or changes.is_active is False):
         raise SelfModificationError()
+    if new_role is not None:
+        check_grant(actor, set(user.permissions) | set(new_role.permission_list))
+    loses_admin = (
+        user.is_admin
+        and user.is_active
+        and ((new_role is not None and new_role.builtin != "admin") or changes.is_active is False)
+    )
     if loses_admin and count_active_admins(db) <= 1:
         raise LastAdminError()
 
@@ -231,18 +246,12 @@ def update_user(
     if changes.display_name is not None and changes.display_name.strip() != user.display_name:
         user.display_name = changes.display_name.strip() or user.username
         changed.append("display_name")
-    if changes.role is not None and changes.role != user.role:
-        user.role = changes.role
+    previous_role = user.role.name
+    if new_role is not None:
+        user.role = new_role
+        user.sync_legacy_columns()
+        revoke_user_sessions(db, user.id)
         changed.append("role")
-    if changes.can_run_sql is not None and changes.can_run_sql != user.can_run_sql:
-        user.can_run_sql = changes.can_run_sql
-        changed.append("can_run_sql")
-    if changes.can_apply_ddl is not None and changes.can_apply_ddl != user.can_apply_ddl:
-        user.can_apply_ddl = changes.can_apply_ddl
-        changed.append("can_apply_ddl")
-    if changes.can_write_data is not None and changes.can_write_data != user.can_write_data:
-        user.can_write_data = changes.can_write_data
-        changed.append("can_write_data")
     quota = None if changes.global_storage_quota else changes.storage_quota_mb
     if (changes.global_storage_quota or quota is not None) and quota != user.storage_quota_mb:
         user.storage_quota_mb = quota
@@ -287,10 +296,7 @@ def update_user(
             target_id=user.id,
             details={
                 "fields": changed,
-                **({"role": user.role} if "role" in changed else {}),
-                **({"can_run_sql": user.can_run_sql} if "can_run_sql" in changed else {}),
-                **({"can_apply_ddl": user.can_apply_ddl} if "can_apply_ddl" in changed else {}),
-                **({"can_write_data": user.can_write_data} if "can_write_data" in changed else {}),
+                **({"role": [previous_role, user.role.name]} if "role" in changed else {}),
                 **({"storage_quota_mb": user.storage_quota_mb} if "storage_quota_mb" in changed else {}),
             },
         )
@@ -374,7 +380,7 @@ def deletion_check(db: Session, user: User, *, actor: User) -> DeletionCheck:
     reasons: list[DeletionReason] = []
     if user.id == actor.id:
         reasons.append("self")
-    if user.role == "admin" and user.is_active and count_active_admins(db) <= 1:
+    if user.is_admin and user.is_active and count_active_admins(db) <= 1:
         reasons.append("last_admin")
     projects = [
         ProjectRef(id=pid, name=name, role=role)
@@ -437,7 +443,7 @@ def delete_user(db: Session, user: User, *, actor: User, settings: Settings, ctx
         raise UserInUseError(
             "Es miembro o creador de proyectos, o tiene conexiones compartidas o en uso.", **check.as_extra()
         )
-    user_id, was_admin = user.id, user.role == "admin"
+    user_id, was_admin = user.id, user.is_admin
     private = db.scalar(select(func.count()).where(Connection.owner_id == user_id)) or 0
     audit.record(
         db,
@@ -446,7 +452,7 @@ def delete_user(db: Session, user: User, *, actor: User, settings: Settings, ctx
         actor_id=actor.id,
         target_type="user",
         target_id=user_id,
-        details={"username": user.username, "role": user.role, "connections_deleted": private},
+        details={"username": user.username, "role": user.role.name, "connections_deleted": private},
     )
     db.delete(user)
     if was_admin:
@@ -466,12 +472,21 @@ def _remove_empty_user_folder(settings: Settings, user_id: int) -> None:
     remove_tree(folder)
 
 
-def update_preferences(db: Session, user: User, *, color_scheme: ColorScheme) -> User:
-    """Guarda las preferencias de ``user`` (su propia cuenta).
+def update_preferences(
+    db: Session, user: User, *, color_scheme: ColorScheme | None = None, language: str | None = None
+) -> User:
+    """Guarda las preferencias de ``user`` (su propia cuenta): las que lleguen (``None`` = sin cambio).
 
-    Sin auditoría: es una preferencia estética sin efecto en la seguridad (sesión 2026-11-23-tema-color).
+    Sin auditoría: son preferencias de presentación sin efecto en la seguridad (sesiones 2026-11-23-tema-color y
+    2026-11-25-roles-idioma).
     """
-    if user.color_scheme != color_scheme:
+    changed = False
+    if color_scheme is not None and user.color_scheme != color_scheme:
         user.color_scheme = color_scheme
+        changed = True
+    if language is not None and user.language != language:
+        user.language = language
+        changed = True
+    if changed:
         db.commit()
     return user

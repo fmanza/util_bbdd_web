@@ -1,4 +1,4 @@
-"""``/api/v1/admin/queries``: queries nombradas de solo lectura por motor (solo ``admin``)."""
+"""``/api/v1/admin/queries``: queries nombradas de solo lectura por motor (permiso ``queries.manage``)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import AdminUser, Context, DbSession
+from app.api.deps import Context, DbSession, QueryManager
 from app.api.v1.explorer import named_query_out
 from app.api.v1.schemas_explorer import NamedQueryCreate, NamedQueryOut, NamedQueryUpdate
 from app.domain.explorer import sql
@@ -15,13 +15,13 @@ router = APIRouter(prefix="/admin/queries", tags=["admin"])
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     401: {"description": "No autenticado"},
-    403: {"description": "Sin rol de administrador o CSRF no válido"},
+    403: {"description": "Sin el permiso o CSRF no válido"},
 }
 
 
 @router.get("", response_model=list[NamedQueryOut], summary="Listar queries nombradas", responses=_ERRORS)
 def list_queries(
-    _: AdminUser, db: DbSession, db_type: Annotated[str | None, Query(max_length=32)] = None
+    _: QueryManager, db: DbSession, db_type: Annotated[str | None, Query(max_length=32)] = None
 ) -> list[NamedQueryOut]:
     """Todas las queries nombradas o, con ``db_type``, las de un motor."""
     return [named_query_out(q) for q in sql.list_named_queries(db, db_type=db_type)]
@@ -35,7 +35,7 @@ def list_queries(
     responses={**_ERRORS, 404: {"description": "Motor no soportado"}, 409: {"description": "Nombre repetido"},
                422: {"description": "Plantilla no válida o no es de solo lectura"}},
 )  # fmt: skip
-def create_query(body: NamedQueryCreate, admin: AdminUser, db: DbSession, ctx: Context) -> NamedQueryOut:
+def create_query(body: NamedQueryCreate, admin: QueryManager, db: DbSession, ctx: Context) -> NamedQueryOut:
     """``sql_template`` usa ``{param}`` (sintaxis de util_bbdd); debe ser una única consulta de lectura."""
     query = sql.create_named_query(
         db, admin, db_type=body.db_type, name=body.name, description=body.description,
@@ -51,7 +51,9 @@ def create_query(body: NamedQueryCreate, admin: AdminUser, db: DbSession, ctx: C
     responses={**_ERRORS, 404: {"description": "No existe"}, 409: {"description": "Nombre repetido"},
                422: {"description": "Plantilla no válida"}},
 )  # fmt: skip
-def update_query(query_id: int, body: NamedQueryUpdate, admin: AdminUser, db: DbSession, ctx: Context) -> NamedQueryOut:
+def update_query(
+    query_id: int, body: NamedQueryUpdate, admin: QueryManager, db: DbSession, ctx: Context
+) -> NamedQueryOut:
     """Cambia nombre, descripción o plantilla SQL; un campo que no se envía no cambia."""
     query = sql.get_named_query(db, query_id)
     updated = sql.update_named_query(
@@ -64,6 +66,6 @@ def update_query(query_id: int, body: NamedQueryUpdate, admin: AdminUser, db: Db
     "/{query_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Borrar query nombrada",
     responses={**_ERRORS, 404: {"description": "No existe"}},
 )  # fmt: skip
-def delete_query(query_id: int, admin: AdminUser, db: DbSession, ctx: Context) -> None:
+def delete_query(query_id: int, admin: QueryManager, db: DbSession, ctx: Context) -> None:
     """Borra la query nombrada."""
     sql.delete_named_query(db, admin, sql.get_named_query(db, query_id), ctx=ctx)

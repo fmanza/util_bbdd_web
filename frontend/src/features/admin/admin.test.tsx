@@ -2,25 +2,48 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { ADMIN, callsTo, session, stubApi } from '../../test/api';
+import { ADMIN, ADMIN_ROLE, ALL_PERMISSIONS, callsTo, session, stubApi, USER_ROLE } from '../../test/api';
 import { renderRoute } from '../../test/render';
 
 const ANA = {
   id: 2,
   username: 'ana',
   display_name: 'Ana',
-  role: 'user',
+  role: USER_ROLE,
+  permissions: [] as string[],
   is_active: true,
-  can_run_sql: false,
-  can_apply_ddl: false,
-  can_write_data: false,
   locked_until: null,
   password_changed_at: '2026-10-20T08:00:00Z',
   created_at: '2026-10-20T08:00:00Z',
   updated_at: '2026-10-20T08:00:00Z',
   project_count: 0,
 };
-const ADMIN_USER = { ...ANA, id: 1, username: 'admin', display_name: 'Admin', role: 'admin' };
+const ADMIN_USER = {
+  ...ANA,
+  id: 1,
+  username: 'admin',
+  display_name: 'Admin',
+  role: ADMIN_ROLE,
+  permissions: [...ALL_PERMISSIONS] as string[],
+};
+const SQL_ROLE = { id: 7, name: 'SQL y DDL', builtin: null, permissions: ['sql.run', 'ddl.apply'] };
+const ROLES = [
+  {
+    ...ADMIN_ROLE,
+    permissions: [...ALL_PERMISSIONS],
+    user_count: 1,
+    created_at: '2026-11-25T08:00:00Z',
+    updated_at: '2026-11-25T08:00:00Z',
+  },
+  {
+    ...USER_ROLE,
+    permissions: [],
+    user_count: 1,
+    created_at: '2026-11-25T08:00:00Z',
+    updated_at: '2026-11-25T08:00:00Z',
+  },
+  { ...SQL_ROLE, user_count: 0, created_at: '2026-11-25T08:00:00Z', updated_at: '2026-11-25T08:00:00Z' },
+];
 
 describe('UsersPage', () => {
   it('lista usuarios con su estado', async () => {
@@ -88,18 +111,16 @@ describe('UsersPage', () => {
       username: 'luis',
       display_name: 'Luis',
       password: 'frase-de-paso-luis',
-      role: 'user',
+      role_id: null,
       is_active: true,
-      can_run_sql: false,
-      can_apply_ddl: false,
-      can_write_data: false,
       storage_quota_mb: null,
     });
   });
 
-  it('da de alta con permisos, cuota propia e inactivo', async () => {
+  it('da de alta con rol, cuota propia e inactivo', async () => {
     const fetchMock = stubApi({
       ...session(ADMIN),
+      'GET /api/v1/roles': { body: ROLES },
       'GET /api/v1/users': { body: { items: [], total: 0, active_admins: 1 } },
       'POST /api/v1/users': { status: 201, body: { ...ANA, id: 9, username: 'luis' } },
     });
@@ -112,8 +133,10 @@ describe('UsersPage', () => {
     await user.type(within(dialog).getByRole('textbox', { name: /Nombre visible/ }), 'Luis');
     await user.type(within(dialog).getByLabelText(/^Contraseña/), 'frase-de-paso-luis');
     await user.click(within(dialog).getByRole('switch', { name: /Cuenta activa/ }));
-    await user.click(within(dialog).getByRole('switch', { name: /Puede ejecutar SQL libre/ }));
-    await user.click(within(dialog).getByRole('switch', { name: /Puede aplicar DDL/ }));
+    await user.click(within(dialog).getByRole('combobox', { name: 'Rol' }));
+    // También están las opciones del filtro de la página: la del modal es la última que se monta.
+    const options = await screen.findAllByRole('option', { name: 'SQL y DDL', hidden: true });
+    await user.click(options.at(-1) as HTMLElement);
     await user.click(within(dialog).getByRole('switch', { name: /Usar la cuota global/ }));
     const quota = within(dialog).getByRole('textbox', { name: /Cuota propia/ });
     await user.clear(quota);
@@ -123,9 +146,7 @@ describe('UsersPage', () => {
     await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/users')).toHaveLength(1));
     expect(await callsTo(fetchMock, 'POST', '/api/v1/users')[0]?.json()).toMatchObject({
       is_active: false,
-      can_run_sql: true,
-      can_apply_ddl: true,
-      can_write_data: false,
+      role_id: 7,
       storage_quota_mb: 500,
     });
   });
@@ -133,6 +154,7 @@ describe('UsersPage', () => {
   it('filtra por rol y estado', async () => {
     const fetchMock = stubApi({
       ...session(ADMIN),
+      'GET /api/v1/roles': { body: ROLES },
       'GET /api/v1/users': { body: { items: [ANA], total: 1, active_admins: 1 } },
     });
     const user = userEvent.setup();
@@ -147,7 +169,7 @@ describe('UsersPage', () => {
     await waitFor(() => {
       const last = callsTo(fetchMock, 'GET', '/api/v1/users').at(-1);
       const params = new URL(last?.url ?? 'http://x').searchParams;
-      expect(params.get('role')).toBe('admin');
+      expect(params.get('role_id')).toBe('1');
       expect(params.get('status')).toBe('locked');
       expect(params.get('offset')).toBe('0');
     });

@@ -7,7 +7,7 @@
     "error": "Se ha producido un error",
     "errorBody": "Inténtalo de nuevo más tarde.",
     "noPermission": "Sin permiso",
-    "noPermissionBody": "Esta sección es solo para administradores.",
+    "noPermissionBody": "Tu rol no tiene permiso para esta sección.",
     "cancel": "Cancelar",
     "save": "Guardar",
     "edit": "Editar",
@@ -30,6 +30,7 @@
     "runs": "Ejecuciones",
     "admin": "Administración",
     "users": "Usuarios",
+    "roles": "Roles",
     "sessions": "Sesiones",
     "audit": "Auditoría",
     "allowlist": "Destinos permitidos",
@@ -78,6 +79,12 @@
     "auto": "Sistema",
     "saveFailed": "No se ha podido guardar el tema. Se mantiene el anterior."
   },
+  "language": {
+    "label": "Idioma",
+    "es": "Español",
+    "en": "English",
+    "saveFailed": "No se ha podido guardar el idioma. Se mantiene el anterior."
+  },
   "home": {
     "title": "Inicio",
     "intro": "Conexiones, proyectos y ejecuciones de util_bbdd para varios usuarios. Las secciones se habilitan fase a fase según el ROADMAP."
@@ -97,5 +104,21 @@
     "title": "Página no encontrada",
     "body": "La dirección no corresponde a ninguna sección.",
     "back": "Volver al inicio"
+  },
+  "errors": {
+    "http": {
+      "400": "Petición no válida",
+      "401": "No autenticado",
+      "403": "Sin permiso",
+      "404": "No encontrado",
+      "409": "Conflicto",
+      "413": "Demasiado grande",
+      "422": "Datos no válidos",
+      "429": "Demasiadas peticiones",
+      "500": "Error interno",
+      "502": "Error en la base de datos o el servicio externo",
+      "503": "Servicio no disponible",
+      "504": "Tiempo de espera agotado"
+    }
   }
 }

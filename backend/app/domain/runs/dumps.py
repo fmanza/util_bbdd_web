@@ -2,7 +2,7 @@
 
 ``dump_preview`` es el modo seco (solo lee). Escribir filas en la BD destino exige, **al encolar**:
 
-1. Permiso ``users.can_write_data`` (lo concede un admin) y rol ``owner`` en el proyecto.
+1. Permiso ``data.write`` del rol (ADR-014) y rol ``owner`` en el proyecto.
 2. Una ``dump_preview`` correcta del mismo proyecto de hace menos de ``PREVIEW_MAX_AGE``: el volcado usa **sus**
    parámetros (no se pueden cambiar entre la revisión y la ejecución).
 3. Las conexiones de la vista previa siguen en el proyecto con el **mismo id** (un alias reasignado a otra
@@ -104,8 +104,8 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunParamsError: Vista previa, destino o confirmaciones no válidos (422).
         RunStateError: Otro volcado en curso sobre el destino (409).
     """
-    if not user.can_write_data:
-        raise DumpForbiddenError("Necesitas el permiso «Puede escribir datos»; pídeselo a un administrador.")
+    if not user.can("data.write"):
+        raise DumpForbiddenError("Tu rol no tiene el permiso «Escribir datos»; pídeselo a un administrador.")
     if membership.role != "owner":
         raise DumpForbiddenError("Solo el propietario del proyecto puede volcar datos.")
     preview_run = db.get(Run, params["preview_run"])
@@ -289,8 +289,8 @@ def check_restore(db: Session, user: User, membership: Membership, params: dict[
         RunParamsError: Volcado, diario, destino o confirmación no válidos (422).
         RunStateError: Otra escritura en curso sobre el destino (409).
     """
-    if not user.can_write_data:
-        raise DumpForbiddenError("Necesitas el permiso «Puede escribir datos»; pídeselo a un administrador.")
+    if not user.can("data.write"):
+        raise DumpForbiddenError("Tu rol no tiene el permiso «Escribir datos»; pídeselo a un administrador.")
     if membership.role != "owner":
         raise DumpForbiddenError("Solo el propietario del proyecto puede restaurar constraints.")
     link, _ = restore_target(db, membership.project, db.get(Run, params["dump_run"]), settings)

@@ -156,7 +156,7 @@ def test_transfer_reasons(admin_client: TestClient, admin: User, make_user: Call
     same = admin_client.get(f"/api/v1/users/{luis_id}/transfer-preview", params={"target_user_id": luis_id}).json()
     assert [p["new_name"] for p in same["created_projects"]] == [None]  # sin renombrados absurdos
     assert reasons(luis_id, inactive.id) == ["target_inactive", "busy"]
-    assert reasons(admin.id, mar.id) == ["target_not_admin"]  # la compartida solo va a otro admin
+    assert reasons(admin.id, mar.id) == ["target_cannot_share"]  # la compartida solo va a otro admin
     blocked = admin_client.post(f"/api/v1/users/{luis_id}/transfer", json={"target_user_id": mar.id})
     assert blocked.status_code == 409
     assert [(p["id"], p["name"]) for p in blocked.json()["busy_projects"]] == [(busy["id"], "Ocupado")]

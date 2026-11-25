@@ -13,8 +13,9 @@ import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
-import { PASSWORD_MIN_LENGTH } from '../auth/useAuth';
-import { type Role, type User, type UserUpdate, useCreateUser, useUpdateUser } from './useAdmin';
+import { PASSWORD_MIN_LENGTH, useMe } from '../auth/useAuth';
+import { grantable, roleLabel } from './roleLabel';
+import { type User, type UserUpdate, useCreateUser, useRoles, useUpdateUser } from './useAdmin';
 
 const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,64}$/;
 
@@ -32,14 +33,14 @@ export function UserFormModal({ user, lastAdmin = false, opened, onClose }: User
   const { t } = useTranslation();
   const create = useCreateUser();
   const update = useUpdateUser();
+  const { data: me } = useMe();
+  const roles = useRoles(opened);
   const mutation = user ? update : create;
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
-  const [role, setRole] = useState<Role>(user?.role ?? 'user');
+  // Rol (ADR-014): sin elegir, el base «Usuario» al crear.
+  const [roleId, setRoleId] = useState<number | null>(user?.role.id ?? null);
   const [isActive, setIsActive] = useState(user?.is_active ?? true);
-  const [canRunSql, setCanRunSql] = useState(user?.can_run_sql ?? false);
-  const [canApplyDdl, setCanApplyDdl] = useState(user?.can_apply_ddl ?? false);
-  const [canWriteData, setCanWriteData] = useState(user?.can_write_data ?? false);
   // Cuota propia en MB (ADR-012): `null` = la global; 0 = sin límite.
   const ownQuota = user?.storage_quota_mb ?? null;
   const [globalQuota, setGlobalQuota] = useState(ownQuota === null);
@@ -59,6 +60,22 @@ export function UserFormModal({ user, lastAdmin = false, opened, onClose }: User
       submitted && invalid.password ? t('auth.passwordTooShort', { min: PASSWORD_MIN_LENGTH }) : undefined,
   };
 
+  // Nadie asigna un rol con permisos que no tiene, ni cambia el de quien tiene más, ni el suyo (ADR-014).
+  const mine = me?.permissions ?? [];
+  const defaultRole = roles.data?.find((r) => r.builtin === 'user');
+  const roleOptions = (roles.data ?? []).map((r) => ({
+    value: String(r.id),
+    label: roleLabel(t, r),
+    disabled: !grantable(mine, r.permissions),
+  }));
+  const roleLocked = lastAdmin
+    ? t('admin.users.lastAdminHint')
+    : user && user.id === me?.id
+      ? t('admin.users.ownRoleHint')
+      : user && !grantable(mine, user.permissions)
+        ? t('admin.users.higherRoleHint')
+        : null;
+
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
@@ -68,11 +85,8 @@ export function UserFormModal({ user, lastAdmin = false, opened, onClose }: User
     if (user) {
       const body: UserUpdate = {};
       if (displayName.trim() !== user.display_name) body.display_name = displayName.trim();
-      if (role !== user.role) body.role = role;
+      if (roleId !== null && roleId !== user.role.id) body.role_id = roleId;
       if (isActive !== user.is_active) body.is_active = isActive;
-      if (canRunSql !== user.can_run_sql) body.can_run_sql = canRunSql;
-      if (canApplyDdl !== user.can_apply_ddl) body.can_apply_ddl = canApplyDdl;
-      if (canWriteData !== user.can_write_data) body.can_write_data = canWriteData;
       const quota = globalQuota ? null : quotaMb;
       if (quota !== ownQuota) body.storage_quota_mb = quota;
       if (password) body.password = password;
@@ -83,11 +97,8 @@ export function UserFormModal({ user, lastAdmin = false, opened, onClose }: User
           username,
           display_name: displayName.trim(),
           password,
-          role,
+          role_id: roleId,
           is_active: isActive,
-          can_run_sql: canRunSql,
-          can_apply_ddl: canApplyDdl,
-          can_write_data: canWriteData,
           storage_quota_mb: globalQuota ? null : quotaMb,
         },
         { onSuccess: onClose },
@@ -125,15 +136,13 @@ export function UserFormModal({ user, lastAdmin = false, opened, onClose }: User
           />
           <Select
             label={t('admin.users.role')}
-            data={[
-              { value: 'user', label: t('roles.user') },
-              { value: 'admin', label: t('roles.admin') },
-            ]}
-            value={role}
-            onChange={(value) => setRole(value === 'admin' ? 'admin' : 'user')}
+            data={roleOptions}
+            value={roleId === null ? (defaultRole ? String(defaultRole.id) : null) : String(roleId)}
+            onChange={(value) => value && setRoleId(Number(value))}
             allowDeselect={false}
-            disabled={lastAdmin}
-            description={lastAdmin ? t('admin.users.lastAdminHint') : undefined}
+            disabled={roleLocked !== null}
+            description={roleLocked ?? t('admin.users.roleHint')}
+            error={roles.isError ? t('admin.users.rolesError') : undefined}
           />
           <Switch
             label={t('admin.users.active')}
@@ -147,24 +156,6 @@ export function UserFormModal({ user, lastAdmin = false, opened, onClose }: User
             checked={isActive}
             disabled={lastAdmin}
             onChange={(event) => setIsActive(event.currentTarget.checked)}
-          />
-          <Switch
-            label={t('admin.users.canRunSql')}
-            description={t('admin.users.canRunSqlHint')}
-            checked={canRunSql}
-            onChange={(event) => setCanRunSql(event.currentTarget.checked)}
-          />
-          <Switch
-            label={t('admin.users.canApplyDdl')}
-            description={t('admin.users.canApplyDdlHint')}
-            checked={canApplyDdl}
-            onChange={(event) => setCanApplyDdl(event.currentTarget.checked)}
-          />
-          <Switch
-            label={t('admin.users.canWriteData')}
-            description={t('admin.users.canWriteDataHint')}
-            checked={canWriteData}
-            onChange={(event) => setCanWriteData(event.currentTarget.checked)}
           />
           <Switch
             label={t('admin.users.globalQuota')}

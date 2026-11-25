@@ -198,7 +198,7 @@ def sql_capabilities(project_id: int, user: CurrentUser, db: DbSession) -> SqlCa
     reason = None
     if not membership.can("editor"):
         reason = "role"
-    elif not user.can_run_sql:
+    elif not user.can("sql.run"):
         reason = "permission"
     connections = [
         SqlConnection(

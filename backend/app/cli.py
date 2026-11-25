@@ -28,6 +28,7 @@ from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.db.session import get_engine
 from app.domain.identity.audit import CLI_CONTEXT
+from app.domain.identity.roles import builtin_role
 from app.domain.identity.users import create_user
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ def _read_password(from_stdin: bool) -> str:
 
 
 def create_admin(username: str, display_name: str | None, *, password_stdin: bool) -> int:
-    """Crea un usuario ``admin``; devuelve el código de salida."""
+    """Crea un usuario con el rol base «Administrador»; devuelve el código de salida."""
     settings = get_settings()
     password = _read_password(password_stdin)
     factory = sessionmaker(bind=get_engine(), expire_on_commit=False)
@@ -54,7 +55,7 @@ def create_admin(username: str, display_name: str | None, *, password_stdin: boo
                 username=username,
                 display_name=display_name or username,
                 password=password,
-                role="admin",
+                role=builtin_role(db, "admin"),
                 settings=settings,
                 ctx=CLI_CONTEXT,
                 actor_id=None,

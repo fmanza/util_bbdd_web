@@ -25,6 +25,7 @@ from app.jobs.worker import Worker
 from app.workspace.layout import run_dir
 from tests.api.test_projects import login_as, new_project
 from tests.api.test_runs import wait_for, worker  # noqa: F401  (fixture)
+from tests.conftest import grant
 
 TARGET = """
 CREATE TABLE clientes (id INTEGER PRIMARY KEY, nombre TEXT NOT NULL, email TEXT);
@@ -81,7 +82,7 @@ def project(user_client: TestClient, settings: Settings) -> dict[str, object]:
 
 @pytest.fixture
 def allowed(db: Session, user: User) -> User:
-    db.execute(update(User).where(User.id == user.id).values(can_write_data=True))
+    grant(db, user, "data.write")
     db.commit()
     return user
 
@@ -339,7 +340,7 @@ def test_apply_rules(
     read_only = preview(user_client, project, worker, db, upload_id, target_connection="lectura", on_error="isolate")
 
     assert apply(user_client, project, run.id).status_code == 403  # sin permiso
-    db.execute(update(User).where(User.id == user.id).values(can_write_data=True))
+    grant(db, user, "data.write")
     db.commit()
     assert apply(user_client, project, read_only.id, confirm="lectura").status_code == 422
     assert apply(user_client, project, run.id, confirm="Destino").status_code == 422
@@ -351,7 +352,7 @@ def test_apply_rules(
 
     eva = login_as(user_client, make_user, "eva")
     user_client.post(f"/api/v1/projects/{project['id']}/members", json={"username": "eva", "role": "editor"})
-    db.execute(update(User).where(User.username == "eva").values(can_write_data=True))
+    grant(db, db.scalars(select(User).where(User.username == "eva")).one(), "data.write")
     db.commit()
     assert apply(eva, project, run.id).status_code == 403
 

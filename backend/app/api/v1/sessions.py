@@ -1,4 +1,4 @@
-"""``/api/v1/sessions``: sesiones activas y revocación (solo ``admin``)."""
+"""``/api/v1/sessions``: sesiones activas y revocación (permiso ``sessions.manage``)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import AdminUser, Context, CurrentSession, DbSession, SettingsDep
+from app.api.deps import Context, CurrentSession, DbSession, SessionManager, SettingsDep
 from app.api.v1.schemas import MAX_PAGE_SIZE, SessionOut, SessionPage
 from app.domain.identity import auth, sessions
 from app.domain.identity.sessions import SessionSort
@@ -16,13 +16,13 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     401: {"description": "No autenticado"},
-    403: {"description": "Sin rol de administrador o token CSRF no válido"},
+    403: {"description": "Sin el permiso o token CSRF no válido"},
 }
 
 
 @router.get("", response_model=SessionPage, summary="Listar sesiones activas", responses=_ERRORS)
 def list_sessions(
-    _: AdminUser,
+    _: SessionManager,
     current: CurrentSession,
     db: DbSession,
     settings: SettingsDep,
@@ -60,6 +60,6 @@ def list_sessions(
     summary="Revocar sesión",
     responses={**_ERRORS, 404: {"description": "No existe"}},
 )
-def revoke_session(session_id: int, admin: AdminUser, db: DbSession, ctx: Context) -> None:
+def revoke_session(session_id: int, admin: SessionManager, db: DbSession, ctx: Context) -> None:
     """Cierra la sesión indicada de inmediato."""
     auth.revoke_session(db, session_id, actor=admin, ctx=ctx)

@@ -11,6 +11,7 @@
       "empty": "No hay usuarios que coincidan.",
       "displayName": "Nombre visible",
       "role": "Rol",
+      "roleHint": "Sus permisos son los del rol. Cambiar el rol cierra sus sesiones.",
       "status": "Estado",
       "createdAt": "Alta",
       "active": "Cuenta activa",
@@ -21,12 +22,6 @@
       "usernameRule": "De 3 a 64 caracteres: letras, números, punto, guion o guion bajo",
       "resetPassword": "Restablecer contraseña",
       "resetPasswordHint": "Déjalo vacío para no cambiarla. Si la cambias, se cierran sus sesiones.",
-      "canRunSql": "Puede ejecutar SQL libre",
-      "canRunSqlHint": "Solo consultas de lectura sobre conexiones «Solo lectura» de proyectos donde sea editor. Se audita.",
-      "canApplyDdl": "Puede aplicar DDL",
-      "canApplyDdlHint": "Permite aplicar migraciones en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada aplicación exige modo seco previo y confirmación.",
-      "canWriteData": "Puede escribir datos",
-      "canWriteDataHint": "Permite volcar filas y cargar ficheros en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Cada escritura exige una vista previa reciente y confirmación.",
       "globalQuota": "Usar la cuota global",
       "globalQuotaHint": "Desactívalo para darle una cuota propia de almacenamiento.",
       "quotaMb": "Cuota propia (MB)",
@@ -72,7 +67,7 @@
         "reasons": {
           "same_user": "El destino es el mismo usuario.",
           "target_inactive": "El destino está desactivado.",
-          "target_not_admin": "Hay conexiones compartidas: el destino debe ser administrador.",
+          "target_cannot_share": "Hay conexiones compartidas: el rol del destino debe tener el permiso «Compartir conexiones».",
           "busy": "Hay ejecuciones en cola o en curso en estos proyectos:"
         },
         "nothing": "No tiene proyectos ni conexiones que transferir.",
@@ -82,6 +77,116 @@
         "removed": "Proyectos de los que se le quita",
         "renamed": "{{name}} → {{newName}}",
         "submit": "Transferir"
+      },
+      "rolesError": "No se pudieron cargar los roles.",
+      "ownRoleHint": "No puedes cambiar tu propio rol.",
+      "higherRoleHint": "Su rol tiene permisos que tú no tienes: no puedes cambiárselo."
+    },
+    "roles": {
+      "title": "Roles",
+      "intro": "Cada usuario tiene un rol, y el rol decide qué puede hacer. «Administrador» tiene todos los permisos y «Usuario», ninguno; no se pueden cambiar ni borrar. Quitar permisos a un rol cierra las sesiones de sus usuarios.",
+      "new": "Nuevo rol",
+      "search": "Buscar rol",
+      "name": "Nombre",
+      "permissions": "Permisos",
+      "users": "Usuarios",
+      "builtin": "Base",
+      "noPermissions": "Ninguno",
+      "view": "Ver",
+      "editLabel": "Editar el rol {{name}}",
+      "createTitle": "Nuevo rol",
+      "editTitle": "Rol {{name}}",
+      "builtinHint": "Es un rol base: no se puede cambiar ni borrar.",
+      "notYours": "(No lo tienes: no puedes darlo ni quitarlo.)",
+      "groups": {
+        "admin": "Administración",
+        "databases": "Conexiones y bases de datos"
+      },
+      "delete": "Borrar",
+      "deleteLabel": "Borrar el rol {{name}}",
+      "deleteTitle": "Borrar rol",
+      "deleteBody": "Se borrará el rol «{{name}}». No se puede deshacer.",
+      "inUse": "Tiene usuarios: asígnales otro rol antes de borrarlo.",
+      "notYoursRole": "Tiene permisos que tú no tienes."
+    },
+    "permissions": {
+      "users": {
+        "manage": {
+          "label": "Gestionar usuarios",
+          "hint": "Alta, edición, borrado, transferencia y desbloqueo de usuarios."
+        }
+      },
+      "roles": {
+        "manage": {
+          "label": "Gestionar roles",
+          "hint": "Crear, cambiar y borrar roles."
+        }
+      },
+      "sessions": {
+        "manage": {
+          "label": "Gestionar sesiones",
+          "hint": "Ver las sesiones activas y cerrarlas."
+        }
+      },
+      "audit": {
+        "read": {
+          "label": "Ver la auditoría",
+          "hint": "Consultar el registro de auditoría."
+        }
+      },
+      "templates": {
+        "manage": {
+          "label": "Gestionar plantillas globales",
+          "hint": "Subir, cambiar y borrar las plantillas de documento globales."
+        }
+      },
+      "queries": {
+        "manage": {
+          "label": "Gestionar queries nombradas",
+          "hint": "Crear, cambiar y borrar las queries nombradas por motor."
+        }
+      },
+      "allowlist": {
+        "manage": {
+          "label": "Gestionar destinos permitidos",
+          "hint": "Añadir y quitar destinos de la lista anti-SSRF."
+        }
+      },
+      "storage": {
+        "manage": {
+          "label": "Gestionar el almacenamiento",
+          "hint": "Cuota global, retención, purga por cuota y límites de la carga."
+        }
+      },
+      "runs": {
+        "admin": {
+          "label": "Administrar ejecuciones",
+          "hint": "Ver las ejecuciones de todos los proyectos y eliminarlas."
+        }
+      },
+      "connections": {
+        "share": {
+          "label": "Compartir conexiones",
+          "hint": "Crear y gestionar conexiones compartidas con todos los usuarios."
+        }
+      },
+      "sql": {
+        "run": {
+          "label": "Ejecutar SQL libre",
+          "hint": "Solo consultas de lectura sobre conexiones «Solo lectura» de proyectos donde sea editor. Se audita."
+        }
+      },
+      "ddl": {
+        "apply": {
+          "label": "Aplicar DDL",
+          "hint": "Aplicar migraciones en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Exige modo seco previo y confirmación."
+        }
+      },
+      "data": {
+        "write": {
+          "label": "Escribir datos",
+          "hint": "Volcar filas y cargar ficheros en conexiones destino que no sean de solo lectura, en proyectos de los que sea propietario. Exige vista previa reciente y confirmación."
+        }
       }
     },
     "sessions": {

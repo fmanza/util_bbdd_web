@@ -55,8 +55,8 @@ celdas con formato de fecha llegan como fecha y no dependen de ello.
 
 ## 3. Cargar
 
-Requisitos (si falta alguno, el panel *Ejecutar la carga* explica cuál): permiso **«Puede escribir datos»** (lo
-concede un administrador en *Usuarios*), ser **propietario** del proyecto, conexión destino **no** de solo lectura,
+Requisitos (si falta alguno, el panel *Ejecutar la carga* explica cuál): permiso **«Escribir datos»** del
+rol ([roles y permisos](usuarios_y_sesiones.md#roles-y-permisos)), ser **propietario** del proyecto, conexión destino **no** de solo lectura,
 vista previa **sin errores** y de **menos de 60 minutos**.
 
 La confirmación pide marcar que has revisado la vista previa y escribir el alias del destino; en **actualizar y
@@ -105,7 +105,7 @@ avisa. Artefactos: `result.json`, la auditoría de util_bbdd `carga.jsonl` y, si
 | 413 al subir | Fichero mayor que el límite (o el proxy lo corta antes) | Divide el fichero; en el proxy, `client_max_body_size` |
 | 415 / 422 al subir | Extensión no admitida, contenido que no corresponde o Excel con macros | Guarda como `.csv` o `.xlsx` sin macros |
 | `invalid_file` | No se pudo leer (codificación, separador, hoja) o supera `UBW_BULK_MAX_ROWS` | Fija separador y codificación, o divide el fichero |
-| 403 al cargar | Sin «Puede escribir datos» o sin ser propietario | Pídelo a un administrador o al propietario |
+| 403 al cargar | Sin «Escribir datos» o sin ser propietario | Pídelo a un administrador o al propietario |
 | 409 al cargar | La vista previa tiene errores u otra escritura en curso sobre el destino | Corrige y repite la vista previa, o espera |
 | 422 «número de filas» | `confirm_rows` distinto de las filas afectadas | Escribe el número que muestra la vista previa |
 | `preview_changed` | Cambiaron la tabla, el mapeo o las filas afectadas | Repite la vista previa |

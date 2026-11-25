@@ -16,3 +16,20 @@
 | **Readiness** | Informe de util_bbdd sobre la configuración del servidor (`EngineReadinessReport`) |
 | **Capa anticorrupción** | `backend/app/integrations/util_bbdd/`, único importador de util_bbdd |
 | **GAP** | Hueco de la API de util_bbdd registrado en `docs/plan/UTIL_BBDD_GAPS.md` |
+| **Rol** | Nombre y permisos del catálogo (ADR-014); cada usuario tiene uno. Base: *Administrador* (todos) y *Usuario* (ninguno) |
+| **Permiso** | Entrada del catálogo fijo de `app/domain/identity/permissions.py` (`users.manage`, `sql.run`…) |
+
+## Términos en inglés de la interfaz (2.0.0)
+
+Inglés británico, coherente con doc_organize_web. ejecución → *run*; lanzar ejecución → *Launch run*; conexión →
+*connection*; motor → *engine*; volcado / volcar → *data dump* / *dump*; carga (bulk) → *bulk load*; modo seco →
+*dry run*; plan de migración → *migration plan*; destinos permitidos → *allowed targets*; queries nombradas → *named
+queries*; plantilla → *template*; artefactos → *artefacts*; purgar → *purge*; cuota → *quota*; retención →
+*retention*; frontera → *boundary*; patrones → *patterns*; destino / origen → *target* / *source*; vista previa →
+*preview*; apartar filas / rechazos → *set aside* / *rejects*; deshacer / confirmar (transacción) → *roll back* /
+*commit*; lote → *batch*; sentencia → *statement*; vaciar el destino → *empty the target*; ajustar contador de PK →
+*sync*; asociar conexión → *attach*; SQL libre → *free SQL*; relanzar → *relaunch*; Correcta / Fallida / Omitida →
+*Succeeded* / *Failed* / *Skipped*; Mi espacio → *My storage*; catálogo → *catalogue*; Nulos → *Nullable*; rol base
+→ *built-in role*; Administrador / Usuario → *Administrator* / *User*. Se quedan en español los nombres de ficheros
+que genera util_bbdd (`rechazos.csv`, `volcado.jsonl`…) y los idiomas se muestran en su propio nombre (*Español*,
+*English*).

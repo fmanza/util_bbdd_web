@@ -33,8 +33,8 @@ como texto ISO se cargan como fechas.
 
 ## 2. Volcar
 
-Requisitos (si falta alguno, el panel *Volcar los datos* explica cuál): permiso **«Puede escribir datos»** (lo concede
-un administrador en *Usuarios*), ser **propietario** del proyecto, conexión destino **no** de solo lectura y vista
+Requisitos (si falta alguno, el panel *Volcar los datos* explica cuál): permiso **«Escribir datos»** del rol
+([roles y permisos](usuarios_y_sesiones.md#roles-y-permisos)), ser **propietario** del proyecto, conexión destino **no** de solo lectura y vista
 previa de **menos de 60 minutos**.
 
 **Volcar en «destino»…** abre la confirmación: marca que has revisado la vista previa y escribe el alias del destino.
@@ -77,7 +77,7 @@ retención tampoco lo purga).
 
 - Si el proceso murió, el worker lanza **solo** una restauración (`dump_restore`) con los mismos controles que el
   volcado.
-- Si no, o si esa restauración falla, el propietario con «Puede escribir datos» pulsa **Restaurar constraints…** y
+- Si no, o si esa restauración falla, el propietario con «Escribir datos» pulsa **Restaurar constraints…** y
   escribe el alias del destino. Una constraint que no se puede reactivar (filas que no la cumplen) sigue pendiente:
   corrige los datos y vuelve a restaurar.
 
@@ -88,7 +88,7 @@ las toca.
 
 | Código | Causa | Qué hacer |
 |---|---|---|
-| 403 al volcar | Sin «Puede escribir datos» o sin ser propietario | Pídelo a un administrador o al propietario |
+| 403 al volcar | Sin «Escribir datos» o sin ser propietario | Pídelo a un administrador o al propietario |
 | 422 «más de 60 minutos» | Vista previa antigua | Lanza otra vista previa |
 | `preview_changed` | Cambiaron tablas o columnas desde la vista previa | Repite la vista previa y revísala |
 | `dump_partial` | Alguna tabla falló o alguna constraint no se reactivó | Revisa el resultado por tabla; corrige los datos o el destino |

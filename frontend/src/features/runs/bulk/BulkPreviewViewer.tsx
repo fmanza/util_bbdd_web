@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { ErrorAlert } from '../../../components/ErrorAlert';
-import { useMe } from '../../auth/useAuth';
+import { can, useMe } from '../../auth/useAuth';
 import { type BulkPreview, useBulkPreview } from '../../bulk/useBulk';
 import { useProjectConnections } from '../../projects/useProjects';
 import { SqlBlock } from '../migrate/SqlBlock';
@@ -145,13 +145,13 @@ function ApplyPanel({ run, preview }: { run: RunDetail; preview: BulkPreview }) 
   const [confirming, setConfirming] = useState(false);
   const alias = String(run.params['target_connection']);
   const target = (connections.data ?? []).find((c) => c.alias === alias);
-  const allowed = Boolean(me?.can_write_data) && run.my_role === 'owner';
+  const allowed = can(me, 'data.write') && run.my_role === 'owner';
   const finished = run.finished_at ? new Date(run.finished_at).getTime() : 0;
   const stale = connections.dataUpdatedAt - finished > PREVIEW_MAX_AGE_MS;
   const reason = preview.errors.length
     ? t('bulk.apply.hasErrors')
     : !allowed
-      ? me?.can_write_data
+      ? can(me, 'data.write')
         ? t('bulk.apply.ownerOnly')
         : t('bulk.apply.noPermission')
       : target?.read_only

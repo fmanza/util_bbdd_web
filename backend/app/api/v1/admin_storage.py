@@ -1,4 +1,4 @@
-"""``/api/v1/admin/storage``: cuota, retención, purga por cuota y límites de la carga administrables (solo ``admin``,
+"""``/api/v1/admin/storage``: cuota, retención, purga por cuota y límites de la carga administrables (permiso ``storage.manage``,
 ADR-012)."""
 
 from __future__ import annotations
@@ -7,7 +7,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import AdminUser, Context, DbSession, SettingsDep
+from app.api.deps import Context, DbSession, SettingsDep, StorageManager
 from app.api.v1.schemas_storage import PurgePreviewOut, StorageSettingsOut, StorageUpdate, UsageOut, UsagePage
 from app.domain.sorting import SortOrder
 from app.domain.storage import service
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/admin/storage", tags=["admin"])
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     401: {"description": "No autenticado"},
-    403: {"description": "Sin rol de administrador o CSRF no válido"},
+    403: {"description": "Sin el permiso o CSRF no válido"},
 }
 
 
@@ -30,7 +30,7 @@ def usage_out(usage: Usage) -> UsageOut:
 
 
 @router.get("", response_model=StorageSettingsOut, summary="Ajustes de almacenamiento", responses=_ERRORS)
-def get_storage(_: AdminUser, db: DbSession, settings: SettingsDep) -> StorageSettingsOut:
+def get_storage(_: StorageManager, db: DbSession, settings: SettingsDep) -> StorageSettingsOut:
     """Cada ajuste con el valor que se aplica y el de su variable ``UBW_*`` (cuota, retención, purga por cuota y
     límites de la carga de ficheros)."""
     return _settings_out(service.settings_state(db, settings))
@@ -41,7 +41,7 @@ def get_storage(_: AdminUser, db: DbSession, settings: SettingsDep) -> StorageSe
     responses={**_ERRORS, 422: {"description": "Valor fuera de rango"}},
 )  # fmt: skip
 def update_storage(
-    body: StorageUpdate, admin: AdminUser, db: DbSession, settings: SettingsDep, ctx: Context
+    body: StorageUpdate, admin: StorageManager, db: DbSession, settings: SettingsDep, ctx: Context
 ) -> StorageSettingsOut:
     """Un campo que no se envía no cambia; ``null`` vuelve al valor de su variable ``UBW_*``. Se aplica sin reiniciar:
     la cuota al momento y la retención en la siguiente pasada del worker (o con «Aplicar ahora»)."""
@@ -52,7 +52,7 @@ def update_storage(
     "/preview", response_model=PurgePreviewOut, summary="Qué se purgaría con esos ajustes",
     responses={**_ERRORS, 422: {"description": "Valor fuera de rango"}},
 )  # fmt: skip
-def preview_storage(body: StorageUpdate, _: AdminUser, db: DbSession, settings: SettingsDep) -> PurgePreviewOut:
+def preview_storage(body: StorageUpdate, _: StorageManager, db: DbSession, settings: SettingsDep) -> PurgePreviewOut:
     """Los ajustes actuales con los de ``body`` encima; no se borra nada."""
     return PurgePreviewOut(**vars(service.preview(db, settings, body.changes())))
 
@@ -61,14 +61,14 @@ def preview_storage(body: StorageUpdate, _: AdminUser, db: DbSession, settings: 
     "/maintenance", status_code=status.HTTP_202_ACCEPTED, summary="Aplicar ahora la retención y la purga",
     responses=_ERRORS,
 )  # fmt: skip
-def request_maintenance(admin: AdminUser, db: DbSession, ctx: Context) -> None:
+def request_maintenance(admin: StorageManager, db: DbSession, ctx: Context) -> None:
     """El worker la aplica en su siguiente ciclo (en lugar de esperar a la pasada horaria)."""
     service.request_maintenance(db, admin, ctx=ctx)
 
 
 @router.get("/usage", response_model=UsagePage, summary="Espacio por usuario", responses=_ERRORS)
 def storage_usage(
-    _: AdminUser,
+    _: StorageManager,
     db: DbSession,
     settings: SettingsDep,
     q: Annotated[str | None, Query(max_length=64)] = None,

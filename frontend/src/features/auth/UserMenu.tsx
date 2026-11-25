@@ -1,10 +1,11 @@
 import { Badge, Button, Menu, Text, VisuallyHidden } from '@mantine/core';
-import { IconCheck, IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-react';
+import { IconCheck, IconDeviceDesktop, IconLanguage, IconMoon, IconSun } from '@tabler/icons-react';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 
-import { type ColorScheme, useLogout, useMe, useUpdatePreferences } from './useAuth';
+import { LANGUAGES } from '../../i18n';
+import { type ColorScheme, useLogout, useMe, useUpdateLanguage, useUpdatePreferences } from './useAuth';
 
 const THEME_OPTIONS: readonly { value: ColorScheme; icon: typeof IconSun }[] = [
   { value: 'light', icon: IconSun },
@@ -24,8 +25,11 @@ export function UserMenu() {
   const { data: me } = useMe();
   const logout = useLogout();
   const preferences = useUpdatePreferences();
+  const language = useUpdateLanguage();
   const themeLabelId = useId();
   const themeErrorId = useId();
+  const languageLabelId = useId();
+  const languageErrorId = useId();
 
   if (!me) {
     return null;
@@ -44,17 +48,18 @@ export function UserMenu() {
         // y volvería a activar las opciones mientras la petición sigue viva (carrera de dos guardados).
         onClose={() => {
           if (!preferences.isPending) preferences.reset();
+          if (!language.isPending) language.reset();
         }}
       >
         <Menu.Target>
           <Button
             variant="subtle"
             rightSection={
-              me.role === 'admin' ? (
-                <Badge size="xs" variant="light">
-                  {t('roles.admin')}
+              me.role.builtin === 'user' ? undefined : (
+                <Badge size="xs" variant="light" tt="none">
+                  {me.role.builtin ? t(`roles.${me.role.builtin}`) : me.role.name}
                 </Badge>
-              ) : undefined
+              )
             }
             aria-label={t('auth.userMenu', { name: me.display_name })}
           >
@@ -110,12 +115,49 @@ export function UserMenu() {
             </Text>
           )}
           <Menu.Divider />
+          <Menu.Label id={languageLabelId}>{t('language.label')}</Menu.Label>
+          <div
+            role="group"
+            aria-labelledby={languageLabelId}
+            aria-describedby={language.isError ? languageErrorId : undefined}
+          >
+            {LANGUAGES.map((value) => {
+              const checked = me.language === value;
+              const busy = language.isPending;
+              return (
+                <Menu.Item
+                  key={value}
+                  ref={asMenuItemRadio}
+                  lang={value}
+                  aria-checked={checked}
+                  closeMenuOnClick={false}
+                  aria-disabled={busy}
+                  data-disabled={busy}
+                  leftSection={<IconLanguage size={16} stroke={1.6} aria-hidden />}
+                  rightSection={checked ? <IconCheck size={16} stroke={1.8} aria-hidden /> : undefined}
+                  onClick={() => {
+                    if (!busy && !checked) language.mutate(value);
+                  }}
+                >
+                  {/* Cada idioma con su propio nombre (Español, English), como en doc_organize_web. */}
+                  {t(`language.${value}`)}
+                </Menu.Item>
+              );
+            })}
+          </div>
+          {language.isError && (
+            <Text id={languageErrorId} size="sm" c="red" px="sm" py={4} maw={240}>
+              {t('language.saveFailed')}
+            </Text>
+          )}
+          <Menu.Divider />
           <Menu.Item onClick={onLogout} disabled={logout.isPending}>
             {t('auth.logout')}
           </Menu.Item>
         </Menu.Dropdown>
       </Menu>
       {preferences.isError && <VisuallyHidden role="alert">{t('theme.saveFailed')}</VisuallyHidden>}
+      {language.isError && <VisuallyHidden role="alert">{t('language.saveFailed')}</VisuallyHidden>}
     </>
   );
 }

@@ -10,6 +10,7 @@ Fase 8: ``users.can_write_data`` (volcar datos en una BD destino, ADR-009).
 Fase 9: ``uploads`` (ficheros CSV/Excel de la carga bulk, ADR-010).
 Plantillas de documento: ``document_templates`` (Word y Excel de la documentación, ADR-011).
 Almacenamiento administrable: ``app_settings`` y ``users.storage_quota_mb`` (ADR-012).
+Roles y permisos: ``roles`` y ``users.role_id`` (ADR-014); ``users.role`` y ``users.can_*`` quedan sin uso.
 """
 
 from __future__ import annotations
@@ -36,8 +37,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
-Role = Literal["admin", "user"]
-ROLES: tuple[Role, ...] = ("admin", "user")
+#: Valor de la columna antigua ``users.role`` (sin uso desde ADR-014; se mantiene en sincronía con el rol).
+LegacyRole = Literal["admin", "user"]
 ColorScheme = Literal["light", "dark", "auto"]
 Visibility = Literal["private", "shared"]
 ProjectRole = Literal["owner", "editor", "viewer"]
@@ -82,22 +83,78 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(64), unique=True)
     display_name: Mapped[str] = mapped_column(String(128))
     password_hash: Mapped[str] = mapped_column(String(255))
-    role: Mapped[str] = mapped_column(String(16))
+    #: Rol con sus permisos (ADR-014). En la BD la columna admite ``NULL`` (se añadió con ``ALTER TABLE``), pero
+    #: siempre tiene valor.
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), index=True)
+    #: Columnas anteriores a ADR-014: sin uso, se escriben en sincronía con el rol (``sync_legacy_columns``) para poder
+    #: volver a una imagen anterior sin perder permisos.
+    legacy_role: Mapped[str] = mapped_column("role", String(16))
     is_active: Mapped[bool] = mapped_column(default=True)
-    can_run_sql: Mapped[bool] = mapped_column(default=False)
-    can_apply_ddl: Mapped[bool] = mapped_column(default=False)
-    can_write_data: Mapped[bool] = mapped_column(default=False)
+    legacy_can_run_sql: Mapped[bool] = mapped_column("can_run_sql", default=False)
+    legacy_can_apply_ddl: Mapped[bool] = mapped_column("can_apply_ddl", default=False)
+    legacy_can_write_data: Mapped[bool] = mapped_column("can_write_data", default=False)
     #: Cuota propia en MB (ADR-012): ``None`` = la global, ``0`` = sin límite.
     storage_quota_mb: Mapped[int | None] = mapped_column(default=None)
     #: Tema de la interfaz (``light``, ``dark`` o ``auto`` = el del sistema); viaja con la cuenta.
     color_scheme: Mapped[str] = mapped_column(String(8), default="auto", server_default="auto")
+    #: Idioma de la interfaz (``es`` o ``en``); viaja con la cuenta.
+    language: Mapped[str] = mapped_column(String(5), default="es", server_default="es")
     failed_attempts: Mapped[int] = mapped_column(default=0)
     locked_until: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)
     password_changed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
+    role: Mapped[Role] = relationship(foreign_keys=[role_id], lazy="joined")
     sessions: Mapped[list[UserSession]] = relationship(back_populates="user", passive_deletes=True)
+
+    @property
+    def is_admin(self) -> bool:
+        """Tiene el rol base «Administrador»."""
+        return self.role.builtin == "admin"
+
+    @property
+    def permissions(self) -> list[str]:
+        """Permisos de su rol, en el orden del catálogo."""
+        return self.role.permission_list
+
+    def can(self, permission: str) -> bool:
+        """Su rol tiene ``permission``."""
+        return permission in self.role.permission_list
+
+    def sync_legacy_columns(self) -> None:
+        """Escribe ``role`` y ``can_*`` (sin uso) a partir del rol, para que una imagen anterior a ADR-014 vea los mismos
+        permisos."""
+        from app.domain.identity.permissions import LEGACY_FLAGS
+
+        self.legacy_role = "admin" if self.is_admin else "user"
+        for column, permission in LEGACY_FLAGS.items():
+            setattr(self, f"legacy_{column}", self.can(permission))
+
+
+class Role(Base):
+    """Rol: nombre y permisos del catálogo (ADR-014). Los roles base (``builtin``) no se borran ni cambian de
+    permisos; «Administrador» tiene siempre todos."""
+
+    __tablename__ = "roles"
+    __table_args__ = (CheckConstraint("builtin IS NULL OR builtin IN ('admin', 'user')", name="builtin"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True)
+    builtin: Mapped[str | None] = mapped_column(String(8), unique=True, default=None)
+    permissions: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
+
+    @property
+    def permission_list(self) -> list[str]:
+        """Permisos efectivos en el orden del catálogo (todos en «Administrador»)."""
+        from app.domain.identity.permissions import PERMISSIONS, normalize
+
+        if self.builtin == "admin":
+            return list(PERMISSIONS)
+        return list(normalize(self.permissions or []))
 
 
 class UserSession(Base):

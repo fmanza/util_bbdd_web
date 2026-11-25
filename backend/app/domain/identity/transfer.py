@@ -49,7 +49,7 @@ JOURNAL_DIR: Final = ".transfers"
 #: Longitud máxima de los nombres de proyectos y conexiones (``String(100)``).
 _NAME_MAX: Final = 100
 
-TransferReason = Literal["same_user", "target_inactive", "target_not_admin", "busy"]
+TransferReason = Literal["same_user", "target_inactive", "target_cannot_share", "busy"]
 
 
 @dataclass(frozen=True)
@@ -164,8 +164,8 @@ def transfer_preview(db: Session, origin: User, target: User) -> TransferPlan:
         Item(id=i, name=n, new_name=new, visibility=visibility[i])
         for i, n, new in _renamed([(c, n) for c, n, _ in connection_rows], target_connections, suffix)
     ]
-    if target.role != "admin" and any(c.visibility == "shared" for c in connections):
-        reasons.append("target_not_admin")
+    if not target.can("connections.share") and any(c.visibility == "shared" for c in connections):
+        reasons.append("target_cannot_share")
 
     busy_ids = set(
         db.scalars(
@@ -233,7 +233,7 @@ def transfer_user(
     """Transfiere a ``target`` lo que impide borrar ``origin`` (ver el módulo) y devuelve lo hecho.
 
     Raises:
-        TransferBlockedError: Mismo usuario, destino inactivo, conexiones compartidas a un no admin o ejecuciones en
+        TransferBlockedError: Mismo usuario, destino inactivo, conexiones compartidas a quien no tiene ``connections.share`` o ejecuciones en
             cola o en curso en un proyecto que creó.
     """
     # Escribir primero toma el bloqueo de escritura de SQLite: nadie encola ejecuciones ni cambia miembros o

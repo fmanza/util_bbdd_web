@@ -5,12 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from app.domain.identity.passwords import MAX_PASSWORD_LENGTH
+from app.domain.identity.permissions import Permission
 
-Role = Literal["admin", "user"]
 ColorScheme = Literal["light", "dark", "auto"]
+Language = Literal["es", "en"]
+BuiltinRole = Literal["admin", "user"]
 Username = Annotated[str, Field(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9._-]+$")]
 DisplayName = Annotated[str, Field(min_length=1, max_length=128)]
 Password = Annotated[SecretStr, Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)]
@@ -45,25 +47,41 @@ class PasswordChange(BaseModel):
     new_password: Password
 
 
+class RoleRef(_Out):
+    """Rol de un usuario (ADR-014)."""
+
+    id: int
+    name: str
+    builtin: BuiltinRole | None = Field(description="``admin`` o ``user`` en los roles base; null en los demás")
+
+
 class Me(_Out):
     """Usuario de la sesión actual."""
 
     id: int
     username: str
     display_name: str
-    role: Role
-    can_run_sql: bool
-    can_apply_ddl: bool
-    can_write_data: bool
+    role: RoleRef
+    permissions: list[Permission] = Field(description="Permisos de su rol (ADR-014)")
     color_scheme: ColorScheme = Field(description="Tema de la interfaz: claro, oscuro o el del sistema (``auto``)")
+    language: Language = Field(description="Idioma de la interfaz")
 
 
 class PreferencesUpdate(BaseModel):
-    """Preferencias de la propia cuenta; un campo desconocido da 422."""
+    """Preferencias de la propia cuenta: al menos una; un campo desconocido da 422."""
 
     model_config = ConfigDict(extra="forbid")
 
-    color_scheme: ColorScheme = Field(description="Tema de la interfaz: claro, oscuro o el del sistema (``auto``)")
+    color_scheme: ColorScheme | None = Field(
+        default=None, description="Tema de la interfaz: claro, oscuro o el del sistema (``auto``)"
+    )
+    language: Language | None = Field(default=None, description="Idioma de la interfaz")
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> PreferencesUpdate:
+        if self.color_scheme is None and self.language is None:
+            raise ValueError("Indica al menos una preferencia")
+        return self
 
 
 # --- users ------------------------------------------------------------------------------------------------------
@@ -75,11 +93,9 @@ class UserOut(_Out):
     id: int
     username: str
     display_name: str
-    role: Role
+    role: RoleRef
+    permissions: list[Permission] = Field(description="Permisos de su rol")
     is_active: bool
-    can_run_sql: bool
-    can_apply_ddl: bool
-    can_write_data: bool
     storage_quota_mb: int | None = Field(
         default=None, description="Cuota propia en MB (0 = sin límite); null = la global (ADR-012)"
     )
@@ -96,11 +112,8 @@ class UserCreate(BaseModel):
     username: Username
     display_name: DisplayName
     password: Password
-    role: Role = "user"
+    role_id: int | None = Field(default=None, description="Rol (ADR-014); sin él, el rol base «Usuario»")
     is_active: bool = True
-    can_run_sql: bool = False
-    can_apply_ddl: bool = False
-    can_write_data: bool = False
     storage_quota_mb: Annotated[int | None, Field(ge=0, le=10_000_000)] = Field(
         default=None, description="Cuota propia en MB (0 = sin límite); null = la global (ADR-012)"
     )
@@ -110,11 +123,8 @@ class UserUpdate(BaseModel):
     """Edición parcial de usuario; ``password`` restablece la contraseña y cierra sus sesiones."""
 
     display_name: DisplayName | None = None
-    role: Role | None = None
+    role_id: int | None = Field(default=None, description="Rol nuevo (ADR-014); cierra sus sesiones")
     is_active: bool | None = None
-    can_run_sql: bool | None = None
-    can_apply_ddl: bool | None = None
-    can_write_data: bool | None = None
     storage_quota_mb: Annotated[int | None, Field(ge=0, le=10_000_000)] = Field(
         default=None, description="Cuota propia en MB (0 = sin límite); ``null`` explícito vuelve a la global"
     )
@@ -124,6 +134,44 @@ class UserUpdate(BaseModel):
     def global_storage_quota(self) -> bool:
         """Se envió ``storage_quota_mb: null``: quitar la cuota propia."""
         return "storage_quota_mb" in self.model_fields_set and self.storage_quota_mb is None
+
+
+# --- roles ------------------------------------------------------------------------------------------------------
+
+RoleName = Annotated[str, Field(min_length=1, max_length=64)]
+
+
+class PermissionOut(BaseModel):
+    """Permiso del catálogo (ADR-014)."""
+
+    name: Permission
+    group: Literal["admin", "databases"] = Field(description="Administración o capacidades sobre bases de datos")
+
+
+class RoleOut(_Out):
+    """Rol con sus permisos efectivos y su número de usuarios."""
+
+    id: int
+    name: str
+    builtin: BuiltinRole | None = Field(description="``admin`` o ``user`` en los roles base (no se borran)")
+    permissions: list[Permission]
+    user_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class RoleCreate(BaseModel):
+    """Alta de un rol personalizado."""
+
+    name: RoleName
+    permissions: list[str] = Field(default_factory=list, max_length=64)
+
+
+class RoleUpdate(BaseModel):
+    """Cambio de nombre o de permisos (los roles base no cambian)."""
+
+    name: RoleName | None = None
+    permissions: list[str] | None = Field(default=None, max_length=64)
 
 
 class UserPage(BaseModel):
@@ -184,10 +232,10 @@ class UserTransferRequest(BaseModel):
 
 class UserTransfer(BaseModel):
     """Vista previa o resultado de una transferencia (``reasons``: ``same_user``, ``target_inactive``,
-    ``target_not_admin``, ``busy``)."""
+    ``target_cannot_share``, ``busy``)."""
 
     can_transfer: bool
-    reasons: list[Literal["same_user", "target_inactive", "target_not_admin", "busy"]]
+    reasons: list[Literal["same_user", "target_inactive", "target_cannot_share", "busy"]]
     created_projects: list[TransferItem] = Field(description="Proyectos que creó: cambian de carpeta")
     owned_projects: list[TransferItem] = Field(description="Proyectos de los que es propietario: el destino también")
     other_memberships: list[TransferItem] = Field(

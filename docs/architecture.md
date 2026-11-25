@@ -120,7 +120,7 @@ Decisiones: [ADR-001](adr/ADR-001-stack-y-proyecto-aparte.md) ·
 [ADR-006](adr/ADR-006-integracion-util-bbdd.md) · [ADR-007](adr/ADR-007-sitio-html-aislado.md) ·
 [ADR-008](adr/ADR-008-aplicar-migraciones.md) · [ADR-009](adr/ADR-009-volcado-de-datos.md) ·
 [ADR-010](adr/ADR-010-carga-bulk.md) · [ADR-011](adr/ADR-011-plantillas-de-documento.md) ·
-[ADR-012](adr/ADR-012-almacenamiento-administrable.md) · [ADR-013](adr/ADR-013-borrado-de-usuarios.md).
+[ADR-012](adr/ADR-012-almacenamiento-administrable.md) · [ADR-013](adr/ADR-013-borrado-de-usuarios.md) · [ADR-014](adr/ADR-014-roles-y-permisos.md).
 
 \* *Administrable*: la variable es el valor por defecto; un admin puede cambiarlo en *Administración → Almacenamiento*
 sin reiniciar, y entonces manda el de la web hasta que lo restablezca

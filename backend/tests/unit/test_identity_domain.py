@@ -14,6 +14,7 @@ from app.db.models import AuditEntry, User, UserSession, utcnow
 from app.domain.identity import auth
 from app.domain.identity.audit import RequestContext
 from app.domain.identity.errors import InvalidCredentialsError, LastAdminError, SelfModificationError
+from app.domain.identity.roles import builtin_role
 from app.domain.identity.sessions import create_session, is_expired, resolve_session
 from app.domain.identity.users import UserChanges, update_user
 from tests.conftest import ADMIN_PASSWORD, USER_PASSWORD
@@ -67,9 +68,9 @@ def test_last_admin_cannot_be_demoted_or_deactivated(
     other = make_user("otro", ADMIN_PASSWORD, "admin")
 
     with pytest.raises(SelfModificationError):
-        update_user(db, admin, UserChanges(role="user"), actor=admin, settings=migrated, ctx=CTX)
+        update_user(db, admin, UserChanges(role=builtin_role(db, "user")), actor=admin, settings=migrated, ctx=CTX)
 
     update_user(db, other, UserChanges(is_active=False), actor=admin, settings=migrated, ctx=CTX)
     # ``admin`` es ahora el único activo; otro admin (reactivado) no puede dejarlo sin rol.
     with pytest.raises(LastAdminError):
-        update_user(db, admin, UserChanges(role="user"), actor=other, settings=migrated, ctx=CTX)
+        update_user(db, admin, UserChanges(role=builtin_role(db, "user")), actor=other, settings=migrated, ctx=CTX)

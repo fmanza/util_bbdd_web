@@ -12,26 +12,13 @@ test.skip(
   'Define el admin E2E y UBW_E2E_SQLITE=1',
 );
 
+// El admin E2E tiene el rol base «Administrador», con todos los permisos (ADR-014): no hace falta activarlos.
 async function login(page: Page) {
   await page.goto('/login');
   await page.getByLabel('Usuario').fill(ADMIN_USER ?? '');
   await page.getByLabel('Contraseña').fill(ADMIN_PASSWORD ?? '');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await expect(page.getByRole('button', { name: /Menú de usuario/ })).toBeVisible();
-}
-
-async function setOwnSqlPermission(page: Page, value: boolean) {
-  await page.goto('/admin/users');
-  // Con más de 50 usuarios (una página) el admin E2E puede no estar en la primera: se busca.
-  await page.getByLabel('Buscar por usuario o nombre').fill(ADMIN_USER ?? '');
-  await page.getByRole('button', { name: `Editar ${ADMIN_USER}` }).click();
-  const dialog = page.getByRole('dialog');
-  const toggle = dialog.getByRole('switch', { name: /Puede ejecutar SQL libre/ });
-  if ((await toggle.isChecked()) !== value) {
-    await toggle.click({ force: true });
-  }
-  await dialog.getByRole('button', { name: 'Guardar' }).click();
-  await expect(dialog).toBeHidden();
 }
 
 test('explorar una BD SQLite, queries nombradas y SQL libre de solo lectura', async ({ page }) => {
@@ -79,7 +66,6 @@ test('explorar una BD SQLite, queries nombradas y SQL libre de solo lectura', as
   await expect(page.getByText('2 filas', { exact: false })).toBeVisible({ timeout: 30_000 });
 
   // SQL libre: permiso propio, proyecto con la conexión y consultas.
-  await setOwnSqlPermission(page, true);
   await page.goto('/projects');
   await page.getByRole('button', { name: 'Nuevo proyecto' }).click();
   await page
@@ -107,7 +93,6 @@ test('explorar una BD SQLite, queries nombradas y SQL libre de solo lectura', as
   await page.getByRole('tab', { name: 'Ajustes' }).click();
   await page.getByRole('button', { name: 'Borrar proyecto' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
-  await setOwnSqlPermission(page, false);
   await page.goto('/admin/queries');
   await page.getByRole('button', { name: `Borrar ${queryName}` }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();

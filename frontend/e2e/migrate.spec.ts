@@ -16,26 +16,13 @@ test.skip(
   'Define el admin E2E, UTIL_BBDD_BENCH_PASSWORD y UBW_E2E_MIGRATE=1 (y prepara el bench)',
 );
 
+// El admin E2E tiene el rol base «Administrador», con todos los permisos (ADR-014): no hace falta activarlos.
 async function login(page: Page) {
   await page.goto('/login');
   await page.getByLabel('Usuario').fill(ADMIN_USER ?? '');
   await page.getByLabel('Contraseña').fill(ADMIN_PASSWORD ?? '');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await expect(page.getByRole('button', { name: /Menú de usuario/ })).toBeVisible();
-}
-
-async function setOwnPermission(page: Page, label: RegExp, value: boolean) {
-  await page.goto('/admin/users');
-  // Con más de 50 usuarios (una página) el admin E2E puede no estar en la primera: se busca.
-  await page.getByLabel('Buscar por usuario o nombre').fill(ADMIN_USER ?? '');
-  await page.getByRole('button', { name: `Editar ${ADMIN_USER}` }).click();
-  const dialog = page.getByRole('dialog');
-  const toggle = dialog.getByRole('switch', { name: label });
-  if ((await toggle.isChecked()) !== value) {
-    await toggle.click({ force: true });
-  }
-  await dialog.getByRole('button', { name: 'Guardar' }).click();
-  await expect(dialog).toBeHidden();
 }
 
 async function createConnection(
@@ -89,7 +76,6 @@ test('planificar, modo seco y aplicar una migración PostgreSQL → MySQL', asyn
     await page.getByRole('button', { name: 'Añadir destino' }).click();
     await page.reload();
   }
-  await setOwnPermission(page, /Puede aplicar DDL/, true);
   const pgUrl = await createConnection(page, 'postgresql', pg, PG_PORT, true);
   const myUrl = await createConnection(page, 'mysql', my, MYSQL_PORT, false);
 
@@ -157,5 +143,4 @@ test('planificar, modo seco y aplicar una migración PostgreSQL → MySQL', asyn
     await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
     await expect(page.getByRole('heading', { name: 'Conexiones' })).toBeVisible();
   }
-  await setOwnPermission(page, /Puede aplicar DDL/, false);
 });

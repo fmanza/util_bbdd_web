@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
-import i18n from '../i18n';
+import i18n, { LANGUAGE_STORAGE_KEY } from '../i18n';
+import enFeatures from '../i18n/en/features.json';
 import features from '../i18n/es/features.json';
 
 import { cleanup, configure } from '@testing-library/react';
@@ -7,6 +8,10 @@ import { afterEach, vi } from 'vitest';
 
 // En la app las traducciones de las pantallas llegan con la primera ruta lazy; en los tests, desde el principio.
 i18n.addResourceBundle('es', 'translation', features, true, true);
+i18n.addResourceBundle('en', 'translation', enFeatures, true, true);
+// Los tests buscan textos en español: el idioma se fija aunque jsdom diga `en-US` en `navigator.languages`.
+await i18n.changeLanguage('es');
+document.documentElement.lang = 'es';
 
 // jsdom no implementa matchMedia ni ResizeObserver, que Mantine usa.
 Object.defineProperty(window, 'matchMedia', {
@@ -47,5 +52,9 @@ afterEach(() => {
   // Tema (1.21.0): Mantine lo guarda en localStorage y en <html>; cada test empieza en `auto`.
   localStorage.removeItem('ubw-color-scheme');
   document.documentElement.removeAttribute('data-mantine-color-scheme');
+  // Idioma: cada test empieza en español.
+  localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+  if (i18n.language !== 'es') void i18n.changeLanguage('es');
+  document.documentElement.lang = 'es';
   vi.unstubAllGlobals();
 });

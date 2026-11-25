@@ -22,7 +22,7 @@ import { Link, useNavigate } from 'react-router';
 
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { formatDateTime } from '../../../components/format';
-import { useMe } from '../../auth/useAuth';
+import { can, useMe } from '../../auth/useAuth';
 import { useProjectConnections } from '../../projects/useProjects';
 import { RunStatusBadge } from '../RunStatusBadge';
 import { TableFilterSummary } from '../TableFilterSummary';
@@ -154,7 +154,7 @@ function ConfirmDump({
   );
 }
 
-/** Lanzar el volcado de una vista previa (ADR-009): permiso `can_write_data` + owner, destino no `read_only`. */
+/** Lanzar el volcado de una vista previa (ADR-009): permiso `data.write` + owner, destino no `read_only`. */
 function DumpApplyPanel({ run, preview }: { run: RunDetail; preview: DumpPreview }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -166,12 +166,12 @@ function DumpApplyPanel({ run, preview }: { run: RunDetail; preview: DumpPreview
 
   const alias = String(run.params['target_connection']);
   const target = (connections.data ?? []).find((c) => c.alias === alias);
-  const allowed = Boolean(me?.can_write_data) && run.my_role === 'owner';
+  const allowed = can(me, 'data.write') && run.my_role === 'owner';
   const finished = run.finished_at ? new Date(run.finished_at).getTime() : 0;
   // Referencia de «ahora»: la última consulta del historial (la API comprueba la hora real).
   const stale = dumps.dataUpdatedAt - finished > PREVIEW_MAX_AGE_MS;
   const reason = !allowed
-    ? me?.can_write_data
+    ? can(me, 'data.write')
       ? t('dump.apply.ownerOnly')
       : t('dump.apply.noPermission')
     : target?.read_only

@@ -19,6 +19,7 @@ from app.api.v1 import (
     explorer,
     operations,
     projects,
+    roles,
     runs,
     sessions,
     templates,
@@ -29,6 +30,7 @@ from app.api.v1 import (
 router = APIRouter(prefix="/v1", dependencies=[Depends(csrf_protect)])
 router.include_router(auth.router)
 router.include_router(users.router)
+router.include_router(roles.router)
 router.include_router(sessions.router)
 router.include_router(audit.router)
 router.include_router(engines.router)

@@ -245,8 +245,8 @@ Con el administrador, en este orden:
 
 1. **Administración → Destinos permitidos**: añade los hosts o redes de las bases de datos. Sin esto, ninguna
    conexión de red funciona.
-2. **Administración → Usuarios**: crea las cuentas. Concede los permisos especiales solo a quien los necesite:
-   *Puede ejecutar SQL libre*, *Puede aplicar DDL* y *Puede escribir datos*.
+2. **Administración → Roles** y **Usuarios**: crea los roles que necesites y las cuentas. Da los permisos
+   especiales (*Ejecutar SQL libre*, *Aplicar DDL* y *Escribir datos*) solo a los roles que los necesiten.
 3. **Conexiones**: crea las conexiones. Para lo que solo lee, usa usuarios de BD de solo lectura y marca
    «Solo lectura» ([detalle](deployment.md#usuarios-de-bd-para-las-conexiones)).
 4. **Proyectos**: crea un proyecto, asocia conexiones y añade miembros. Lanza una **Prueba del motor de ejecuciones**

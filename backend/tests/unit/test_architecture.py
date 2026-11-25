@@ -58,3 +58,39 @@ def test_layer_dependencies() -> None:
                     offenders.append(f"{path.relative_to(APP_DIR)} -> {name}")
 
     assert offenders == [], f"Dependencias entre capas no permitidas (.ai/architecture.md): {offenders}"
+
+
+#: Módulos que pueden leer las columnas antiguas ``users.role`` / ``users.can_*`` (ADR-014): el modelo, que las mantiene
+#: en sincronía, y la migración que las convierte.
+LEGACY_ALLOWED = {APP_DIR / "db" / "models.py"}
+
+
+def test_permissions_come_from_the_role() -> None:
+    """Nada vuelve a comparar con ``role == "admin"`` ni lee ``can_run_sql``/``can_apply_ddl``/``can_write_data``: los
+    permisos se consultan con ``user.can(...)`` y los routers con ``require_permission`` (ADR-014)."""
+    offenders = []
+    for path in APP_DIR.rglob("*.py"):
+        if path in LEGACY_ALLOWED:
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Attribute) and node.attr in {
+                "can_run_sql",
+                "can_apply_ddl",
+                "can_write_data",
+                "legacy_role",
+                "legacy_can_run_sql",
+                "legacy_can_apply_ddl",
+                "legacy_can_write_data",
+            }:
+                offenders.append(f"{path.relative_to(APP_DIR)}:{node.lineno} .{node.attr}")
+            if (
+                isinstance(node, ast.Compare)
+                and isinstance(node.left, ast.Attribute)
+                and node.left.attr == "role"
+                and any(isinstance(c, ast.Constant) and c.value in {"admin", "user"} for c in node.comparators)
+            ):
+                offenders.append(f"{path.relative_to(APP_DIR)}:{node.lineno} role == 'admin'/'user'")
+            if isinstance(node, ast.Name) and node.id in {"AdminUser", "require_admin"}:
+                offenders.append(f"{path.relative_to(APP_DIR)}:{node.lineno} {node.id}")
+
+    assert offenders == [], f"Permisos fuera del rol (ADR-014): {offenders}"

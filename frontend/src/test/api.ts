@@ -9,26 +9,56 @@ export interface StubResponse {
 
 type Handler = StubResponse | ((request: Request) => StubResponse | Promise<StubResponse>);
 
+/** Catálogo de permisos (ADR-014), en el orden de la API. */
+export const ALL_PERMISSIONS = [
+  'users.manage',
+  'roles.manage',
+  'sessions.manage',
+  'audit.read',
+  'templates.manage',
+  'queries.manage',
+  'allowlist.manage',
+  'storage.manage',
+  'runs.admin',
+  'connections.share',
+  'sql.run',
+  'ddl.apply',
+  'data.write',
+] as const;
+export type TestPermission = (typeof ALL_PERMISSIONS)[number];
+export const PERMISSION_CATALOG = ALL_PERMISSIONS.map((name) => ({
+  name,
+  group: ['connections.share', 'sql.run', 'ddl.apply', 'data.write'].includes(name) ? 'databases' : 'admin',
+}));
+export const ADMIN_ROLE = { id: 1, name: 'Administrador', builtin: 'admin' } as const;
+export const USER_ROLE = { id: 2, name: 'Usuario', builtin: 'user' } as const;
+
 export const ADMIN = {
   id: 1,
   username: 'admin',
   display_name: 'Admin',
-  role: 'admin',
-  can_run_sql: true,
-  can_apply_ddl: false,
-  can_write_data: false,
+  role: ADMIN_ROLE,
+  permissions: [...ALL_PERMISSIONS] as TestPermission[],
   color_scheme: 'auto',
+  language: 'es',
 } as const;
 export const USER = {
   id: 2,
   username: 'ana',
   display_name: 'Ana',
-  role: 'user',
-  can_run_sql: false,
-  can_apply_ddl: false,
-  can_write_data: false,
+  role: USER_ROLE,
+  permissions: [] as TestPermission[],
   color_scheme: 'auto',
+  language: 'es',
 } as const;
+
+/** `me` sin algunos permisos (p. ej. un admin de pruebas sin «Escribir datos»). */
+export function without<T extends { permissions: readonly TestPermission[] }>(
+  me: T,
+  ...removed: TestPermission[]
+): T {
+  return { ...me, permissions: me.permissions.filter((p) => !removed.includes(p)) };
+}
 
 /**
  * Sustituye `fetch` por un enrutador `"MÉTODO /ruta" → respuesta`. Las rutas sin handler responden 404 con

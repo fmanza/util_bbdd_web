@@ -18,7 +18,7 @@ import { Link, useNavigate } from 'react-router';
 
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { formatDateTime } from '../../../components/format';
-import { useMe } from '../../auth/useAuth';
+import { can, useMe } from '../../auth/useAuth';
 import { useProjectConnections } from '../../projects/useProjects';
 import { RunStatusBadge } from '../RunStatusBadge';
 import { type RunDetail, useLaunchRun } from '../useRuns';
@@ -75,7 +75,7 @@ function ConfirmApply({
 }
 
 /**
- * Aplicar un plan en una conexión destino (ADR-008): permiso `can_apply_ddl` + owner, destino no `read_only` del motor
+ * Aplicar un plan en una conexión destino (ADR-008): permiso `ddl.apply` + owner, destino no `read_only` del motor
  * del plan, modo seco previo (menos de 60 min) y doble confirmación. La API vuelve a comprobarlo todo.
  */
 export function ApplyPanel({ run, plan }: { run: RunDetail; plan: MigrationPlan }) {
@@ -88,7 +88,7 @@ export function ApplyPanel({ run, plan }: { run: RunDetail; plan: MigrationPlan 
   const [target, setTarget] = useState('');
   const [confirming, setConfirming] = useState(false);
 
-  const allowed = Boolean(me?.can_apply_ddl) && run.my_role === 'owner';
+  const allowed = can(me, 'ddl.apply') && run.my_role === 'owner';
   const blocked = plan.error_count > 0 || Boolean(plan.fk_blocking);
   const eligible = (connections.data ?? []).filter((c) => c.db_type === plan.target_engine && !c.read_only);
   // Referencia de «ahora»: la última consulta del historial (se refresca sola; la API comprueba la hora real).
@@ -114,7 +114,7 @@ export function ApplyPanel({ run, plan }: { run: RunDetail; plan: MigrationPlan 
       <Title order={4}>{t('migrate.apply.title')}</Title>
       {!allowed ? (
         <Text size="sm" c="dimmed">
-          {me?.can_apply_ddl ? t('migrate.apply.ownerOnly') : t('migrate.apply.noPermission')}
+          {can(me, 'ddl.apply') ? t('migrate.apply.ownerOnly') : t('migrate.apply.noPermission')}
         </Text>
       ) : blocked ? (
         <Text size="sm" c="dimmed">

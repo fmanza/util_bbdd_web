@@ -54,7 +54,7 @@
 | Carga: `invalid_file` | Codificación, separador u hoja incorrectos, o más filas que las máximas (*Administración → Almacenamiento*) | Fija separador y codificación en el formulario o divide el fichero |
 | Carga: `preview_changed` | Cambiaron la tabla, el mapeo o las filas afectadas desde la vista previa | Repite la vista previa |
 | Carga: `bulk_partial` | Falló una partición de una carga paralela; las demás quedaron confirmadas | Revisa las particiones y corrige el destino |
-| Migración: 403 al aplicar | Sin «Puede aplicar DDL» o sin ser propietario | Un admin concede el permiso; aplica el propietario |
+| Migración: 403 al aplicar | Sin «Aplicar DDL» o sin ser propietario | Un admin da a su rol el permiso; aplica el propietario |
 | Migración: «El origen ha cambiado desde el plan» | Cambió el schema origen tras planificar | Planifica de nuevo |
 | Carga cancelada sin filas en el destino | Sin plan paralelo la carga va en una sola transacción: cancelarla la deshace entera | Es lo esperado; vuelve a lanzarla desde una vista previa nueva |
 | Plan de migración o vista previa del volcado: `invalid_params` «… casa con el filtro de tablas» | Ningún objeto del schema casa con los patrones de *Incluir*/*Excluir* | Pulsa **Probar patrones** y corrígelos |
@@ -67,7 +67,7 @@
 | Ejecución fallida con `graphviz_failed`, o un diagrama con «No se pudo generar el diagrama» | `dot` terminó con error en un diagrama (GAPS G39). Desde util_bbdd 4.1.0 ese diagrama queda con un aviso y el documento sigue; la imagen oficial además repite sin aristas ortogonales los diagramas que abortan Graphviz | Desmarca «Relaciones en ángulo recto» en el formulario, reduce la profundidad o desactiva los diagramas; fuera de la imagen oficial, instala `docker/dot-wrapper.sh` como `dot` |
 | Explorador: el schema tarda en abrirse | Primera lectura de un schema grande | Espera (hasta `UBW_METADATA_TIMEOUT_SECONDS`); después va desde la caché |
 | Una tabla nueva no aparece | El árbol viene de la caché | **Refrescar** |
-| SQL libre: 403 | Sin permiso «Puede ejecutar SQL libre» o sin rol editor | Un admin activa el permiso en *Usuarios* |
+| SQL libre: 403 | Sin permiso «Ejecutar SQL libre» o sin rol editor | Un admin da a su rol el permiso (*Roles*) |
 | SQL libre: 409 | La conexión no es «Solo lectura» | Marca la conexión como solo lectura |
 | SQL libre: 422 «Solo se admiten consultas SELECT» | La consulta escribe o tiene varias sentencias | Una única consulta de lectura |
 | Oracle: ORA-01466 en SQL libre | Tabla creada hace unos segundos (transacción de solo lectura) | Reintentar pasados unos segundos |

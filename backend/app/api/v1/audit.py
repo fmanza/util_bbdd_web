@@ -1,4 +1,4 @@
-"""``/api/v1/audit``: consulta del registro de auditoría (solo ``admin``)."""
+"""``/api/v1/audit``: consulta del registro de auditoría (permiso ``audit.read``)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import AdminUser, DbSession
+from app.api.deps import AuditReader, DbSession
 from app.api.v1.schemas import MAX_PAGE_SIZE, AuditEntryOut, AuditPage
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditSort
@@ -19,10 +19,10 @@ router = APIRouter(prefix="/audit", tags=["audit"])
     "",
     response_model=AuditPage,
     summary="Consultar auditoría",
-    responses={401: {"description": "No autenticado"}, 403: {"description": "Sin rol de administrador"}},
+    responses={401: {"description": "No autenticado"}, 403: {"description": "Sin el permiso"}},
 )
 def list_audit(
-    _: AdminUser,
+    _: AuditReader,
     db: DbSession,
     action: Annotated[str | None, Query(max_length=64, description="Acción o prefijo, p. ej. `auth.`")] = None,
     actor_id: Annotated[int | None, Query(ge=1)] = None,

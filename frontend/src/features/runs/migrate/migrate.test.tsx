@@ -2,7 +2,14 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { ADMIN, callsTo, session, type StubResponse, stubApi } from '../../../test/api';
+import {
+  ADMIN as FULL_ADMIN,
+  callsTo,
+  session,
+  type StubResponse,
+  stubApi,
+  without,
+} from '../../../test/api';
 import { stubEventSource } from '../../../test/eventSource';
 import {
   FINISHED,
@@ -19,7 +26,9 @@ import { chooseOperation } from '../../../test/launch';
 import { renderRoute } from '../../../test/render';
 
 const DRY_ID = '01JDRYDRYDRYDRYDRYDRYDRYDR';
-const ALLOWED = { ...ADMIN, can_apply_ddl: true };
+// El admin de estas pruebas no tiene «ddl.apply» salvo en `ALLOWED` (ADR-014: el rol base lo tiene todo).
+const ADMIN = without(FULL_ADMIN, 'ddl.apply');
+const ALLOWED = FULL_ADMIN;
 
 function dryRun(finishedAt: string, status: 'succeeded' | 'failed' = 'succeeded') {
   return {

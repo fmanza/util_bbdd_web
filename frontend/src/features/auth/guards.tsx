@@ -2,9 +2,11 @@ import { Center, Loader } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation } from 'react-router';
 
+import { adminPermission } from '../../app/navigation';
+
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { NoPermission } from '../../components/NoPermission';
-import { useMe } from './useAuth';
+import { can, useMe } from './useAuth';
 
 /** Rutas con sesión: sin ella redirige a `/login?next=<ruta actual>`. */
 export function RequireAuth() {
@@ -29,8 +31,10 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Rutas de administración: un usuario sin rol `admin` ve el estado «sin permiso». */
+/** Rutas de administración: cada una exige el permiso de su entrada del menú (ADR-014); sin él, «sin permiso». */
 export function RequireAdmin() {
   const { data: me } = useMe();
-  return me?.role === 'admin' ? <Outlet /> : <NoPermission />;
+  const { pathname } = useLocation();
+  const permission = adminPermission(pathname);
+  return permission && can(me, permission) ? <Outlet /> : <NoPermission />;
 }

@@ -9,7 +9,8 @@ import type { Column } from '../../components/tableState';
 import { useListState } from '../../components/useListState';
 import { useMe } from '../auth/useAuth';
 import { DeleteUserModal } from './DeleteUserModal';
-import { type User, type UserFilters, useUnlockUser, useUsers } from './useAdmin';
+import { grantable, roleLabel } from './roleLabel';
+import { type User, type UserFilters, useRoles, useUnlockUser, useUsers } from './useAdmin';
 import { UserFormModal } from './UserFormModal';
 
 type Editing = { user: User | null } | null;
@@ -24,7 +25,7 @@ function isLocked(user: User): boolean {
 
 /** Es el único administrador activo: no se puede desactivar, quitarle el rol ni borrar. */
 function isLastAdmin(user: User, activeAdmins: number): boolean {
-  return user.role === 'admin' && user.is_active && activeAdmins <= 1;
+  return user.role.builtin === 'admin' && user.is_active && activeAdmins <= 1;
 }
 
 function UserStatus({ user, lastAdmin }: { user: User; lastAdmin: boolean }) {
@@ -56,8 +57,11 @@ export function UsersPage() {
   const [deleting, setDeleting] = useState<User | null>(null);
   const { data, isPending, isError, error } = useUsers(list.state, filters);
   const unlock = useUnlockUser();
+  const roles = useRoles();
   const { data: me } = useMe();
   const activeAdmins = data?.active_admins ?? 0;
+  // Solo se actúa sobre quien no tiene permisos que tú no tienes (ADR-014; el backend respondería 403).
+  const manageable = (u: User) => grantable(me?.permissions ?? [], u.permissions);
 
   const setFilter = (next: Partial<UserFilters>) => {
     setFilters((f) => ({ ...f, ...next }));
@@ -72,7 +76,7 @@ export function UsersPage() {
       sortable: true,
       cell: (u) => u.display_name,
     },
-    { key: 'role', header: t('admin.users.role'), sortable: true, cell: (u) => t(`roles.${u.role}`) },
+    { key: 'role', header: t('admin.users.role'), sortable: true, cell: (u) => roleLabel(t, u.role) },
     {
       key: 'status',
       header: t('admin.users.status'),
@@ -91,14 +95,16 @@ export function UsersPage() {
       hiddenHeader: true,
       cell: (u) => (
         <Group gap="xs" wrap="nowrap">
-          <Button
-            size="xs"
-            variant="light"
-            onClick={() => setEditing({ user: u })}
-            aria-label={t('admin.users.editLabel', { username: u.username })}
-          >
-            {t('common.edit')}
-          </Button>
+          {manageable(u) && (
+            <Button
+              size="xs"
+              variant="light"
+              onClick={() => setEditing({ user: u })}
+              aria-label={t('admin.users.editLabel', { username: u.username })}
+            >
+              {t('common.edit')}
+            </Button>
+          )}
           {isLocked(u) && (
             <Button
               size="xs"
@@ -111,7 +117,7 @@ export function UsersPage() {
               {t('admin.users.unlock')}
             </Button>
           )}
-          {!isLastAdmin(u, activeAdmins) && u.id !== me?.id && (
+          {!isLastAdmin(u, activeAdmins) && u.id !== me?.id && manageable(u) && (
             <Button
               size="xs"
               variant="light"
@@ -157,11 +163,10 @@ export function UsersPage() {
                 label={t('admin.users.filterRole')}
                 data={[
                   { value: ALL, label: t('admin.users.all') },
-                  { value: 'admin', label: t('roles.admin') },
-                  { value: 'user', label: t('roles.user') },
+                  ...(roles.data ?? []).map((r) => ({ value: String(r.id), label: roleLabel(t, r) })),
                 ]}
                 value={filters.role || ALL}
-                onChange={(value) => setFilter({ role: value === 'admin' || value === 'user' ? value : '' })}
+                onChange={(value) => setFilter({ role: value && value !== ALL ? value : '' })}
                 allowDeselect={false}
                 w={170}
               />

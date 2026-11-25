@@ -1,12 +1,20 @@
 import createClient, { type Middleware } from 'openapi-fetch';
 
-import i18n from '../i18n';
+import i18n, { currentLanguage } from '../i18n';
 import type { paths } from './schema';
 
 /** Con TLS la cookie lleva el prefijo `__Host-` (ASVS 3.4.4); en desarrollo (HTTP) no. */
 export const CSRF_COOKIES = ['__Host-ubw_csrf', 'ubw_csrf'] as const;
 export const CSRF_HEADER = 'X-CSRF-Token';
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+// Idioma de la interfaz en cada petición (el backend aún responde en español; base para traducir sus mensajes).
+const languageMiddleware: Middleware = {
+  onRequest({ request }) {
+    request.headers.set('Accept-Language', currentLanguage());
+    return request;
+  },
+};
 
 /** Valor de una cookie legible por JavaScript (solo `ubw_csrf`; la de sesión es `HttpOnly`). */
 export function readCookie(name: string): string | undefined {
@@ -37,7 +45,7 @@ export const api = createClient<paths>({
   credentials: 'same-origin',
   fetch: (request) => globalThis.fetch(request),
 });
-api.use(csrfMiddleware);
+api.use(csrfMiddleware, languageMiddleware);
 
 export interface ProblemFieldError {
   loc: (string | number)[];

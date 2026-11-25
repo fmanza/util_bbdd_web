@@ -66,7 +66,7 @@ ORDER BY n_live_tup DESC
 Pestaña **SQL** de un proyecto. Requisitos, todos a la vez:
 
 1. Ser **editor o propietario** del proyecto.
-2. Tener el permiso **«Puede ejecutar SQL libre»**, que activa un administrador en *Usuarios*.
+2. Tener el permiso **«Ejecutar SQL libre»**, del rol (*Administración → Roles*, [roles y permisos](usuarios_y_sesiones.md#roles-y-permisos)).
 3. Usar una conexión del proyecto marcada como **Solo lectura**.
 
 Solo se admite **una consulta de lectura** (`SELECT`, `WITH … SELECT`, `UNION`). Se rechazan `INSERT`, `UPDATE`,

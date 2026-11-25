@@ -109,7 +109,7 @@ queda en el destino, salvo en una carga sin plan paralelo, que va en una sola tr
   lanzan de nuevo desde su origen.
 - **Purgar** (editores) borra los ficheros de una ejecución terminada para liberar cuota; el resumen queda en el
   historial. Un volcado que dejó constraints sin restaurar en el destino no se purga hasta restaurarlas.
-- **Eliminar** (solo administradores, desde *Administración → Todas las ejecuciones*) borra la ejecución por completo:
+- **Eliminar** (permiso *Administrar ejecuciones*, desde *Administración → Todas las ejecuciones*) borra la ejecución por completo:
   ficheros y fila, que desaparece del historial. Si una ejecución se relanzó desde otra que ya no existe, «Relanzada
   de» muestra su id sin enlace y «(eliminada)».
 

@@ -50,13 +50,13 @@ artefactos o en un ZIP.
 | Gestionar miembros, ajustes y borrar el proyecto | | | ✓ |
 | Escribir en una BD destino (aplicar migración, volcar, cargar) | | | ✓ + permiso especial |
 
-**Permisos especiales**: los concede un administrador al editar el usuario.
+**Permisos especiales**: los da el rol del usuario ([roles y permisos](usuarios_y_sesiones.md#roles-y-permisos)).
 
 | Permiso | Para | Además exige |
 |---|---|---|
-| *Puede ejecutar SQL libre* | Consultas de lectura en la pestaña *SQL* | Ser editor; la conexión debe ser «Solo lectura» |
-| *Puede aplicar DDL* | Crear en el destino lo que genera un plan de migración | Ser propietario; un modo seco reciente; escribir el alias del destino |
-| *Puede escribir datos* | Volcados y cargas bulk | Ser propietario; una vista previa reciente; escribir el alias (y más confirmaciones si borra o vacía) |
+| *Ejecutar SQL libre* | Consultas de lectura en la pestaña *SQL* | Ser editor; la conexión debe ser «Solo lectura» |
+| *Aplicar DDL* | Crear en el destino lo que genera un plan de migración | Ser propietario; un modo seco reciente; escribir el alias del destino |
+| *Escribir datos* | Volcados y cargas bulk | Ser propietario; una vista previa reciente; escribir el alias (y más confirmaciones si borra o vacía) |
 
 Ninguna operación escribe en una conexión marcada como «Solo lectura».
 

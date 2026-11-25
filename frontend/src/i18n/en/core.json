@@ -1,0 +1,124 @@
+{
+  "app": {
+    "title": "util_bbdd web"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "errorBody": "Please try again later.",
+    "noPermission": "No permission",
+    "noPermissionBody": "Your role does not have permission for this section.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "actions": "Actions",
+    "yes": "Yes",
+    "no": "No",
+    "delete": "Delete",
+    "reference": "Reference: {{id}}"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "user": "User"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "engines": "Engines",
+    "connections": "Connections",
+    "projects": "Projects",
+    "runs": "Runs",
+    "admin": "Administration",
+    "users": "Users",
+    "roles": "Roles",
+    "sessions": "Sessions",
+    "audit": "Audit",
+    "allowlist": "Allowed targets",
+    "queries": "Named queries",
+    "templates": "Templates",
+    "storage": "Storage",
+    "adminRuns": "All runs",
+    "myStorage": "My storage",
+    "openMenu": "Open the menu",
+    "closeMenu": "Close the menu",
+    "sections": {
+      "work": "Work",
+      "data": "Data",
+      "account": "My account"
+    },
+    "adminSections": {
+      "access": "Access and security",
+      "shared": "Shared content",
+      "operation": "Operations"
+    }
+  },
+  "auth": {
+    "loginIntro": "Sign in with your username.",
+    "username": "Username",
+    "password": "Password",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "userMenu": "User menu for {{name}}",
+    "required": "Required field",
+    "myStorage": "My storage",
+    "changePassword": "Change password",
+    "changePasswordIntro": "Changing it signs you out of your sessions in other browsers.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat the new password",
+    "passwordHint": "At least {{min}} characters. A long phrase is better than a complex word.",
+    "passwordTooShort": "Must be at least {{min}} characters long",
+    "passwordMismatch": "The passwords do not match",
+    "passwordChanged": "Password changed",
+    "passwordChangedBody": "Your other sessions have been signed out."
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "System",
+    "saveFailed": "The theme could not be saved. The previous one is kept."
+  },
+  "language": {
+    "label": "Language",
+    "es": "Español",
+    "en": "English",
+    "saveFailed": "The language could not be saved. The previous one is kept."
+  },
+  "home": {
+    "title": "Home",
+    "intro": "util_bbdd connections, projects and runs for multiple users. Sections are enabled phase by phase according to the ROADMAP."
+  },
+  "health": {
+    "loading": "Checking the service…",
+    "ok": "Service operational",
+    "degraded": "Service degraded",
+    "unreachable": "Cannot reach the API",
+    "unreachableBody": "Check that the backend is running.",
+    "appVersion": "Application version",
+    "libVersion": "util_bbdd version",
+    "notInstalled": "not installed",
+    "database": "Configuration database"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "This address does not match any section.",
+    "back": "Back to home"
+  },
+  "errors": {
+    "http": {
+      "400": "Invalid request",
+      "401": "Not signed in",
+      "403": "Not allowed",
+      "404": "Not found",
+      "409": "Conflict",
+      "413": "Too large",
+      "422": "Invalid data",
+      "429": "Too many requests",
+      "500": "Internal error",
+      "502": "Error in the database or external service",
+      "503": "Service unavailable",
+      "504": "Timed out"
+    }
+  }
+}

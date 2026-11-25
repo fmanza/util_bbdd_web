@@ -108,11 +108,12 @@ def me(session: CurrentSession) -> Me:
 def update_my_preferences(body: PreferencesUpdate, session: CurrentSession, db: DbSession) -> Me:
     """Guarda las preferencias del usuario de la sesión y devuelve el usuario actualizado.
 
-    Hoy solo el tema de la interfaz (``color_scheme``: ``light``, ``dark`` o ``auto``). Solo actúa sobre la propia
-    cuenta (no admite identificador de usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera
-    ``X-CSRF-Token``.
+    El tema (``color_scheme``: ``light``, ``dark`` o ``auto``) y el idioma de la interfaz (``language``: ``es`` o
+    ``en``); al menos uno, y lo que no llega no cambia. Solo actúa sobre la propia cuenta (no admite identificador de
+    usuario), es idempotente y no se registra en la auditoría. Requiere la cabecera ``X-CSRF-Token``.
     """
-    return Me.model_validate(users.update_preferences(db, session.user, color_scheme=body.color_scheme))
+    user = users.update_preferences(db, session.user, color_scheme=body.color_scheme, language=body.language)
+    return Me.model_validate(user)
 
 
 @router.get("/me/storage", response_model=MyStorageOut, summary="Mi espacio", responses=_401)

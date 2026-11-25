@@ -9,14 +9,12 @@ const user = (id: number, username: string) => ({
   id,
   username,
   display_name: username.toUpperCase(),
-  role: 'user',
+  role: { id: 2, name: 'Usuario', builtin: 'user' as const },
+  permissions: [] as string[],
   is_active: true,
   locked_until: null,
   created_at: '2026-11-06T08:00:00Z',
   last_login_at: null,
-  can_run_sql: false,
-  can_apply_ddl: false,
-  can_write_data: false,
 });
 
 describe('listas con orden, paginación de 25 y búsqueda', () => {

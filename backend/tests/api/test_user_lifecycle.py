@@ -16,6 +16,7 @@ from app.db.models import AuditEntry, Connection, User, UserSession, utcnow
 from app.domain.identity import users as users_module
 from app.domain.identity.audit import CLI_CONTEXT
 from app.domain.identity.errors import LastAdminError
+from app.domain.identity.roles import builtin_role
 from app.domain.identity.users import UserChanges, update_user
 from tests.api.test_connections import PG
 from tests.api.test_projects import login_as, new_project
@@ -34,41 +35,30 @@ def _usernames(client: TestClient, **params: object) -> list[str]:
 
 
 def test_create_user_with_all_options_is_audited(admin_client: TestClient, db: Session) -> None:
-    body = {
-        **NEW_USER,
-        "role": "user",
-        "is_active": False,
-        "can_run_sql": True,
-        "can_apply_ddl": True,
-        "can_write_data": False,
-        "storage_quota_mb": 0,
-    }
+    role = admin_client.post("/api/v1/roles", json={"name": "SQL y DDL", "permissions": ["ddl.apply", "sql.run"]})
+    body = {**NEW_USER, "role_id": role.json()["id"], "is_active": False, "storage_quota_mb": 0}
 
     created = admin_client.post("/api/v1/users", json=body)
 
     assert created.status_code == 201, created.text
     user = created.json()
-    assert (user["is_active"], user["can_run_sql"], user["can_apply_ddl"], user["can_write_data"]) == (
-        False,
-        True,
-        True,
-        False,
-    )
+    assert user["is_active"] is False
+    assert user["role"]["name"] == "SQL y DDL" and user["permissions"] == ["sql.run", "ddl.apply"]
     assert user["storage_quota_mb"] == 0
     assert user["project_count"] == 0
     entry = db.scalars(
         select(AuditEntry).where(AuditEntry.action == "user.create", AuditEntry.target_id == str(user["id"]))
     ).one()
     assert entry.details is not None
-    assert entry.details["can_apply_ddl"] is True and entry.details["is_active"] is False
+    assert entry.details["role"] == "SQL y DDL" and entry.details["is_active"] is False
     assert "password" not in str(entry.details)
 
 
 def test_create_user_defaults_are_unchanged(admin_client: TestClient) -> None:
     user = admin_client.post("/api/v1/users", json=NEW_USER).json()
 
-    assert user["role"] == "user" and user["is_active"] is True
-    assert not (user["can_run_sql"] or user["can_apply_ddl"] or user["can_write_data"])
+    assert user["role"]["builtin"] == "user" and user["is_active"] is True
+    assert user["permissions"] == []
     assert user["storage_quota_mb"] is None
     assert admin_client.post("/api/v1/users", json={**NEW_USER, "storage_quota_mb": -1}).status_code == 422
 
@@ -87,13 +77,14 @@ def test_filter_by_role_and_status(admin_client: TestClient, make_user: Callable
     expired.locked_until = utcnow() - timedelta(minutes=10)
     db.commit()
 
-    assert _usernames(admin_client, role="admin") == ["admin", "carla"]
+    admin_id, user_id = builtin_role(db, "admin").id, builtin_role(db, "user").id
+    assert _usernames(admin_client, role_id=admin_id) == ["admin", "carla"]
     assert _usernames(admin_client, status="inactive") == ["dani"]
     assert _usernames(admin_client, status="locked") == ["eva"]
     assert _usernames(admin_client, status="active") == ["admin", "bea", "carla", "fran"]
-    assert _usernames(admin_client, role="user", status="active", q="b") == ["bea"]
+    assert _usernames(admin_client, role_id=user_id, status="active", q="b") == ["bea"]
     assert admin_client.get("/api/v1/users", params={"status": "borrado"}).status_code == 422
-    assert admin_client.get("/api/v1/users", params={"role": "root"}).status_code == 422
+    assert admin_client.get("/api/v1/users", params={"role_id": "root"}).status_code == 422
     assert admin_client.get("/api/v1/users").json()["active_admins"] == 2
 
 
@@ -172,7 +163,7 @@ def test_delete_user_without_dependencies(
     assert luis.get("/api/v1/auth/me").status_code == 401
     assert not folder.exists()
     entry = db.scalars(select(AuditEntry).where(AuditEntry.action == "user.delete")).one()
-    assert entry.details == {"username": "luis", "role": "user", "connections_deleted": 1}
+    assert entry.details == {"username": "luis", "role": "Usuario", "connections_deleted": 1}
     # Sus acciones pasadas siguen atribuidas por nombre.
     logins = admin_client.get("/api/v1/audit", params={"action": "auth.login", "q": "luis"}).json()["items"]
     assert [e["actor_username"] for e in logins] == ["luis"]

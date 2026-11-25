@@ -10,13 +10,18 @@ export type UserCreate = components['schemas']['UserCreate'];
 export type UserUpdate = components['schemas']['UserUpdate'];
 export type SessionInfo = components['schemas']['SessionOut'];
 export type AuditEntry = components['schemas']['AuditEntryOut'];
-export type Role = User['role'];
+export type RoleRef = User['role'];
+export type RoleOut = components['schemas']['RoleOut'];
+export type RoleCreate = components['schemas']['RoleCreate'];
+export type RoleUpdate = components['schemas']['RoleUpdate'];
+export type PermissionInfo = components['schemas']['PermissionOut'];
 export type UserDeletionCheck = components['schemas']['UserDeletionCheck'];
 export type UserTransfer = components['schemas']['UserTransfer'];
 export type TransferItem = components['schemas']['TransferItem'];
 /** Filtros propios de la lista de usuarios (vacío = todos). */
 export interface UserFilters {
-  role: Role | '';
+  /** Id del rol, como texto (vacío = todos). */
+  role: string;
   status: 'active' | 'inactive' | 'locked' | '';
 }
 
@@ -34,7 +39,7 @@ export function useUsers(list: ListState, filters: UserFilters = { role: '', sta
           params: {
             query: {
               ...listQuery<SortOf<'/api/v1/users'>>(list),
-              role: filters.role || null,
+              role_id: filters.role ? Number(filters.role) : null,
               status: filters.status || null,
             },
           },
@@ -155,8 +160,58 @@ export function useUpdateUser() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ['users'] }),
         queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+        queryClient.invalidateQueries({ queryKey: ['roles'] }),
       ]),
   });
+}
+
+// --- roles (ADR-014) ---------------------------------------------------------------------------------------------
+
+/** Roles con su número de usuarios (los base primero). */
+export function useRoles(enabled = true) {
+  return useQuery({
+    queryKey: ['roles'],
+    queryFn: async () => unwrap(await api.GET('/api/v1/roles')),
+    enabled,
+  });
+}
+
+/** Catálogo de permisos (fijo por versión). */
+export function usePermissionCatalog() {
+  return useQuery({
+    queryKey: ['roles', 'permissions'],
+    queryFn: async () => unwrap(await api.GET('/api/v1/roles/permissions')),
+    staleTime: Infinity,
+  });
+}
+
+function useRoleMutation<V>(fn: (vars: V) => Promise<unknown>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['roles'] }),
+        queryClient.invalidateQueries({ queryKey: ['users'] }),
+        queryClient.invalidateQueries({ queryKey: meQueryKey }),
+      ]),
+  });
+}
+
+export function useCreateRole() {
+  return useRoleMutation(async (body: RoleCreate) => unwrap(await api.POST('/api/v1/roles', { body })));
+}
+
+export function useUpdateRole() {
+  return useRoleMutation(async ({ id, body }: { id: number; body: RoleUpdate }) =>
+    unwrap(await api.PATCH('/api/v1/roles/{role_id}', { params: { path: { role_id: id } }, body })),
+  );
+}
+
+export function useDeleteRole() {
+  return useRoleMutation(async (id: number) =>
+    ensureOk(await api.DELETE('/api/v1/roles/{role_id}', { params: { path: { role_id: id } } })),
+  );
 }
 
 export function useSessions(list: ListState) {

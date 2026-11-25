@@ -86,7 +86,7 @@ def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any
         run = db.get(Run, ctx.run_id)
         user = db.get(User, run.user_id) if run and run.user_id else None
         plan_run = db.get(Run, params.plan_run)
-        if run is None or user is None or not user.is_active or not user.can_apply_ddl:
+        if run is None or user is None or not user.is_active or not user.can("ddl.apply"):
             raise JobError("forbidden", "El usuario ya no tiene permiso para aplicar migraciones.")
         try:
             membership = get_membership(db, user, ctx.project_id)

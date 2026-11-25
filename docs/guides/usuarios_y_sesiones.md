@@ -1,16 +1,51 @@
 # Usuarios, sesiones y auditoría
 
-Guía de uso de la identidad multiusuario. Disponible desde la versión 0.2.0 (Fase 1); vigente en 1.21.0.
+Guía de uso de la identidad multiusuario. Disponible desde la versión 0.2.0 (Fase 1); vigente en 2.0.0.
 
-## Roles
+## Roles y permisos
 
-| Rol | Puede |
+Desde la 2.0.0 cada usuario tiene un **rol**, y el rol decide qué puede hacer además de usar la aplicación
+([ADR-014](../adr/ADR-014-roles-y-permisos.md)). Todos pueden iniciar sesión, cambiar su contraseña, elegir tema e
+idioma y trabajar en los proyectos de los que son miembros (el acceso a cada proyecto sigue siendo por miembros:
+propietario, editor o lector).
+
+| Permiso | Permite |
 |---|---|
-| `user` | Iniciar y cerrar sesión, cambiar su contraseña, elegir su tema y usar las secciones de la aplicación |
-| `admin` | Lo anterior y, además, gestionar usuarios, ver y revocar sesiones, consultar la auditoría y el resto de *Administración* (destinos permitidos, plantillas, queries nombradas, ejecuciones de todos los proyectos y almacenamiento) |
+| Gestionar usuarios | *Administración → Usuarios*: alta, edición, borrado, transferencia y desbloqueo |
+| Gestionar roles | *Administración → Roles* |
+| Gestionar sesiones | *Administración → Sesiones* |
+| Ver la auditoría | *Administración → Auditoría* |
+| Gestionar plantillas globales | *Administración → Plantillas* |
+| Gestionar queries nombradas | *Administración → Queries nombradas* |
+| Gestionar destinos permitidos | *Administración → Destinos permitidos* |
+| Gestionar el almacenamiento | *Administración → Almacenamiento* |
+| Administrar ejecuciones | *Administración → Ejecuciones de todos los proyectos* |
+| Compartir conexiones | Crear y gestionar conexiones compartidas |
+| Ejecutar SQL libre | SQL de solo lectura en el [explorador](explorador.md) |
+| Aplicar DDL | Aplicar migraciones ([migración](migracion.md)) en proyectos de los que sea propietario |
+| Escribir datos | Volcar y cargar datos ([volcado](volcado.md), [carga](carga.md)) en proyectos de los que sea propietario |
+
+Hay dos **roles base**: *Administrador* (todos los permisos) y *Usuario* (ninguno). No se pueden cambiar ni borrar.
+El menú *Administración* muestra solo las secciones que permite tu rol.
 
 El primer administrador se crea por línea de comandos ([despliegue](deployment.md#primer-administrador)); no existen
 credenciales por defecto.
+
+### Gestionar roles
+
+*Administración → Roles* (permiso *Gestionar roles*). La lista muestra cada rol con sus permisos y cuántos usuarios
+lo tienen.
+
+- **Nuevo rol**: nombre y permisos, agrupados en *Administración* y *Conexiones y bases de datos*. Los permisos que tú
+  no tienes salen desactivados: nadie da ni quita un permiso que no tiene.
+- **Editar**: cambia el nombre o los permisos. **Quitar permisos cierra las sesiones** de los usuarios con ese rol
+  (dejan de valer al momento); añadirlos no.
+- **Borrar**: solo un rol sin usuarios (asígnales otro antes).
+- Todo se registra en la auditoría (`role.create`, `role.update`, `role.delete`).
+
+Al actualizar a la 2.0.0, los administradores pasan al rol *Administrador* (que también incluye SQL libre, aplicar
+DDL y escribir datos), los usuarios sin permisos especiales al rol *Usuario*, y los que tenían alguno a un rol con
+exactamente esos permisos («Usuario + SQL», «Usuario + DDL + datos»…), que puedes renombrar.
 
 ## Iniciar y cerrar sesión
 
@@ -54,27 +89,41 @@ Menú con tu nombre → *Tema*: **Claro**, **Oscuro** o **Sistema** (el que teng
 - API: el tema llega en `color_scheme` de `GET /api/v1/auth/me` y se cambia con `PATCH /api/v1/auth/me/preferences`
   (`{"color_scheme": "light" | "dark" | "auto"}`, con la cabecera `X-CSRF-Token`). Solo actúa sobre la propia cuenta.
 
+## Idioma
+
+Menú con tu nombre → *Idioma*: **Español** o **English**. Cada opción aparece en su propio idioma.
+
+- Se guarda **en tu cuenta**, como el tema, y se aplica al momento a toda la interfaz, incluidas las fechas y los
+  números.
+- La pantalla de inicio de sesión usa el último idioma usado en ese navegador; en un navegador nuevo, el del
+  navegador (inglés si lo prefiere, y si no, español).
+- **Qué sigue en español** con la interfaz en inglés: el detalle de los mensajes de error que envía el servidor
+  (el título del aviso sí se traduce), los mensajes de las ejecuciones y su log, y los documentos que se generan
+  (documentación, informes y ficheros descargados).
+- API: `language` en `GET /api/v1/auth/me` y `PATCH /api/v1/auth/me/preferences` (`{"language": "es" | "en"}`,
+  junto con `color_scheme` o por separado).
+
 ## Administración de usuarios
 
-*Administración → Usuarios* (solo `admin`).
+*Administración → Usuarios* (permiso *Gestionar usuarios*).
 
 | Acción | Cómo | Efecto |
 |---|---|---|
-| Crear | *Nuevo usuario*: usuario, nombre visible, rol, contraseña inicial y, desde la 1.22.0, las mismas opciones que al editar (cuenta activa, permisos especiales y cuota) | Comunícale la contraseña por un canal seguro. Si desactivas *Cuenta activa*, se da de alta sin poder iniciar sesión todavía |
-| Editar | *Editar* en la fila | Cambia nombre visible o rol |
+| Crear | *Nuevo usuario*: usuario, nombre visible, rol, contraseña inicial, cuenta activa y cuota | Comunícale la contraseña por un canal seguro. Si desactivas *Cuenta activa*, se da de alta sin poder iniciar sesión todavía |
+| Editar | *Editar* en la fila | Cambia nombre visible o rol. Cambiar el rol cierra sus sesiones |
 | Desactivar / reactivar | Interruptor *Cuenta activa* | Desactivar cierra sus sesiones al momento |
 | Desbloquear | *Desbloquear* en la fila (solo si está *Bloqueado*) | Quita el bloqueo temporal por intentos fallidos; se audita |
 | Eliminar | *Eliminar* en la fila | Ver [Eliminar un usuario](#eliminar-un-usuario) |
 | Restablecer contraseña | Campo *Restablecer contraseña* al editar | Cierra todas sus sesiones y quita el bloqueo por intentos |
 | Cuota de almacenamiento | Desactiva *Usar la cuota global* y pon su *Cuota propia (MB)* (`0` = sin límite) | Sustituye la cuota general de [Almacenamiento](#almacenamiento) para ese usuario |
-| Permisos especiales | *Puede ejecutar SQL libre*, *Puede aplicar DDL* y *Puede escribir datos* al crear o editar | SQL de solo lectura ([explorador](explorador.md)); aplicar migraciones ([migración](migracion.md)) y volcar o cargar datos ([volcado](volcado.md),
-[carga](carga.md)) en proyectos de los que sea propietario |
 
 Reglas:
 
-- Siempre debe quedar **al menos un administrador activo**. El único que queda lleva la marca *Único administrador*:
-  su rol y su *Cuenta activa* no se pueden cambiar y no tiene *Eliminar*.
-- Un administrador no puede desactivarse, quitarse el rol ni eliminarse a sí mismo (pídeselo a otro administrador).
+- Siempre debe quedar **al menos un usuario activo con el rol *Administrador***. El único que queda lleva la marca
+  *Único administrador*: su rol y su *Cuenta activa* no se pueden cambiar y no tiene *Eliminar*.
+- Nadie puede desactivarse, cambiar su propio rol ni eliminarse a sí mismo (pídeselo a otro administrador).
+- Solo puedes asignar roles cuyos permisos tienes, y no puedes cambiar el rol de quien tiene permisos que tú no
+  tienes: esas opciones salen desactivadas.
 - El estado *Bloqueado* indica un bloqueo temporal por intentos fallidos.
 - La lista se filtra por **Rol** y por **Estado** (*Activo*, *Desactivado* o *Bloqueado*), además de la búsqueda por
   usuario o nombre, y la columna *Proyectos* (de los que es miembro) se puede ordenar.
@@ -108,7 +157,7 @@ en cola o en curso en un proyecto que creó.
 
 ## Almacenamiento
 
-*Administración → Almacenamiento* (solo `admin`, [ADR-012](../adr/ADR-012-almacenamiento-administrable.md)). Cada ajuste
+*Administración → Almacenamiento* (permiso *Gestionar el almacenamiento*, [ADR-012](../adr/ADR-012-almacenamiento-administrable.md)). Cada ajuste
 parte de su variable `UBW_*` (se indica junto al campo) y se aplica **sin reiniciar**: la cuota y los límites de la
 carga al momento y la retención en la siguiente pasada del worker (cada hora) o al pulsar **Aplicar ahora** (en *Cuota y
 retención*). *Restablecer* lo devuelve a la variable. La pantalla tiene dos apartados, cada uno con su

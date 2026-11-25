@@ -6,7 +6,7 @@ import { ErrorAlert } from '../../components/ErrorAlert';
 import { ResultTable } from '../../components/ResultTable';
 import { useRunSql, useSqlCapabilities } from './useExplorer';
 
-/** SQL libre de solo lectura sobre una conexión ``read_only`` del proyecto (permiso ``can_run_sql`` y editor). */
+/** SQL libre de solo lectura sobre una conexión ``read_only`` del proyecto (permiso ``sql.run`` del rol y editor). */
 export function SqlConsole({ projectId }: { projectId: number }) {
   const { t } = useTranslation();
   const capabilities = useSqlCapabilities(projectId);

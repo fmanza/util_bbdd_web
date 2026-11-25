@@ -27,6 +27,10 @@ applyTo: "frontend/**/*.{ts,tsx}"
 
 ## Estilo
 - Sin `any`; tipos del cliente generado; `import type` para tipos.
-- Textos con `useTranslation()`; claves en `src/i18n/es/core.json` (lo que se ve sin pasar por una ruta lazy) o
-  `src/i18n/es/features.json` (pantallas; se carga con la primera ruta lazy).
+- Textos con `useTranslation()`; claves en `core.json` (lo que se ve sin pasar por una ruta lazy) o `features.json`
+  (pantallas; se carga con la primera ruta lazy), **en `src/i18n/es/` y en `src/i18n/en/`** (inglés británico, términos
+  en `.ai/glossary.md`). `i18n.test.ts` exige las mismas claves y marcadores en los dos idiomas, y `literals.test.ts`,
+  que ningún texto visible esté escrito en el código.
+- Permisos: `can(me, 'permiso')` (`features/auth/useAuth.ts`); las rutas y el menú de *Administración* toman el permiso
+  de su entrada en `app/navigation.ts` (ADR-014). Nada compara con un nombre de rol.
 - Prettier + ESLint (`npm run lint`) sin avisos.

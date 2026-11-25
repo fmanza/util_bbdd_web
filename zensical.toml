@@ -53,6 +53,7 @@ nav = [
       "adr/ADR-011-plantillas-de-documento.md",
       "adr/ADR-012-almacenamiento-administrable.md",
       "adr/ADR-013-borrado-de-usuarios.md",
+      "adr/ADR-014-roles-y-permisos.md",
     ] },
     "plan/ROADMAP.md",
     "plan/UTIL_BBDD_GAPS.md",

@@ -22,7 +22,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { isApiError } from '../../api/client';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { zodResolver } from '../../components/zodResolver';
-import { useMe } from '../auth/useAuth';
+import { can, useMe } from '../auth/useAuth';
 import { type EngineDetail, type EngineParam, useEngine, useEngines } from '../engines/useEngines';
 import {
   buildConnectionSchema,
@@ -262,7 +262,7 @@ function ConnectionForm({ engine, connection }: ConnectionFormProps) {
             />
           )}
         />
-        {me?.role === 'admin' && (
+        {can(me, 'connections.share') && (
           <Controller
             control={form.control}
             name="visibility"

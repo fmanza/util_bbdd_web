@@ -2,7 +2,7 @@
 
 Escribir en una BD destino exige, **al encolar**:
 
-1. Permiso ``users.can_apply_ddl`` (lo concede un admin) y rol ``owner`` en el proyecto.
+1. Permiso ``ddl.apply`` del rol (ADR-014) y rol ``owner`` en el proyecto.
 2. Un plan ``migrate_plan`` correcto del mismo proyecto, sin avisos ``ERROR`` ni FK entre tipos distintos
    con destino MariaDB/MySQL (``fk_blocking``).
 3. Conexión destino del proyecto **no** ``read_only`` y del motor del plan.
@@ -94,7 +94,7 @@ def load_stored_plan(db: Session, run: Run, settings: Settings) -> Any | None:
 
 def can_apply(user: User, membership: Membership) -> bool:
     """Permiso para lanzar ``migrate_apply`` (modo seco o aplicar)."""
-    return bool(user.can_apply_ddl) and membership.role == "owner"
+    return user.can("ddl.apply") and membership.role == "owner"
 
 
 def check_plan(db: Session, membership: Membership, params: dict[str, Any]) -> None:
@@ -115,8 +115,8 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunParamsError: Plan, destino, modo seco o confirmación no válidos (422).
         RunStateError: Plan con errores u otra aplicación en curso sobre el destino (409).
     """
-    if not user.can_apply_ddl:
-        raise MigrationForbiddenError("Necesitas el permiso «Puede aplicar DDL»; pídeselo a un administrador.")
+    if not user.can("ddl.apply"):
+        raise MigrationForbiddenError("Tu rol no tiene el permiso «Aplicar DDL»; pídeselo a un administrador.")
     if membership.role != "owner":
         raise MigrationForbiddenError("Solo el propietario del proyecto puede aplicar migraciones.")
     plan_run = db.get(Run, params["plan_run"])

@@ -1,6 +1,6 @@
 """Fase 7: reglas de ADR-008 al encolar ``migrate_plan`` y ``migrate_apply`` (permiso + owner, destino no
 ``read_only`` y del motor del plan, plan sin errores, modo seco reciente, confirmación, sin relanzar, sin dos
-aplicaciones a la vez), endpoints ``/plan`` y ``/migration-report`` y el permiso ``can_apply_ddl``.
+aplicaciones a la vez), endpoints ``/plan`` y ``/migration-report`` y el permiso ``ddl.apply`` (ADR-014).
 
 Los planes se siembran directamente (fila + ``plan.json``): SQLite no es motor de migración. El flujo real contra
 motores está en ``tests/integration/test_bench_migrate.py``.
@@ -23,6 +23,7 @@ from app.core.ulid import new_ulid
 from app.db.models import Artifact, AuditEntry, Run, User, utcnow
 from app.workspace.layout import ensure_layout, run_dir, run_relative_path, scan_artifacts
 from tests.api.test_projects import login_as, new_project
+from tests.conftest import grant
 
 PLAN: dict[str, Any] = {
     "format": 1,
@@ -103,7 +104,7 @@ def project(user_client: TestClient) -> dict[str, object]:
 
 @pytest.fixture
 def allowed(db: Session, user: User) -> User:
-    db.execute(update(User).where(User.id == user.id).values(can_apply_ddl=True))
+    grant(db, user, "ddl.apply")
     db.commit()
     return user
 
@@ -209,7 +210,7 @@ def test_apply_requires_the_permission(
     response = launch(user_client, project["id"], "migrate_apply", plan_run=plan_id, target_connection="destino")
 
     assert response.status_code == 403
-    assert "Puede aplicar DDL" in response.text
+    assert "Aplicar DDL" in response.text
 
 
 def test_apply_requires_owner_even_with_permission(
@@ -225,7 +226,7 @@ def test_apply_requires_owner_even_with_permission(
     user_client.post(f"/api/v1/projects/{project['id']}/members", json={"username": "eva", "role": "editor"})
     eva = db.scalar(select(User).where(User.username == "eva"))
     assert eva is not None
-    db.execute(update(User).where(User.id == eva.id).values(can_apply_ddl=True))
+    grant(db, eva, "ddl.apply")
     db.commit()
 
     response = launch(editor, project["id"], "migrate_apply", plan_run=plan_id, target_connection="destino")
@@ -349,21 +350,23 @@ def test_plan_and_report_endpoints(
     assert outsider.get(f"/api/v1/runs/{plan_id}/plan").status_code == 404
 
 
-# --- permiso can_apply_ddl ----------------------------------------------------------------------------------------
+# --- permiso ddl.apply (ADR-014) ---------------------------------------------------------------------------------
 
 
-def test_admin_grants_can_apply_ddl(
+def test_admin_grants_ddl_apply_with_a_role(
     user_client: TestClient, user: User, make_user: Callable[..., User], db: Session
 ) -> None:
     admin = login_as(user_client, make_user, "jefa", role="admin")
+    assert "ddl.apply" not in user_client.get("/api/v1/auth/me").json()["permissions"]
+    role = admin.post("/api/v1/roles", json={"name": "Migradores", "permissions": ["ddl.apply"]}).json()
 
-    assert user_client.get("/api/v1/auth/me").json()["can_apply_ddl"] is False
-    response = admin.patch(f"/api/v1/users/{user.id}", json={"can_apply_ddl": True})
+    response = admin.patch(f"/api/v1/users/{user.id}", json={"role_id": role["id"]})
 
-    assert response.status_code == 200 and response.json()["can_apply_ddl"] is True
-    assert user_client.get("/api/v1/auth/me").json()["can_apply_ddl"] is True
+    assert response.status_code == 200 and response.json()["permissions"] == ["ddl.apply"]
+    # Cambiar el rol cierra sus sesiones: los permisos nuevos valen desde el siguiente inicio de sesión.
+    assert user_client.get("/api/v1/auth/me").status_code == 401
     entry = db.scalars(select(AuditEntry).where(AuditEntry.action == "user.update")).all()[-1]
-    assert (entry.details or {})["can_apply_ddl"] is True
+    assert (entry.details or {})["role"] == ["Usuario", "Migradores"]
 
 
 # --- auditoría de la Fase 7: cancelación y comprobaciones en el worker --------------------------------------------
@@ -447,14 +450,14 @@ def test_worker_rechecks_permission_owner_target_and_engine(
     connection.db_type = "mysql"
     db.commit()
 
-    db.execute(update(User).where(User.id == allowed.id).values(can_apply_ddl=False))
+    grant(db, allowed)
     db.commit()
     assert code().startswith("forbidden: El usuario ya no tiene permiso")
-    db.execute(update(User).where(User.id == allowed.id).values(can_apply_ddl=True))
+    grant(db, allowed, "ddl.apply")
     db.commit()
 
     eva = make_user("eva")
-    db.execute(update(User).where(User.id == eva.id).values(can_apply_ddl=True))
+    grant(db, eva, "ddl.apply")
     db.execute(update(Run).where(Run.id == run_id).values(user_id=eva.id))
     db.commit()
     assert code().startswith("forbidden: El usuario ya no es miembro")

@@ -13,26 +13,13 @@ test.skip(
   !ADMIN_USER || !ADMIN_PASSWORD || !process.env.UBW_E2E_SQLITE,
   'Define el admin E2E y UBW_E2E_SQLITE=1',
 );
+// El admin E2E tiene el rol base «Administrador», con todos los permisos (ADR-014): no hace falta activarlos.
 async function login(page: Page) {
   await page.goto('/login');
   await page.getByLabel('Usuario').fill(ADMIN_USER ?? '');
   await page.getByLabel('Contraseña').fill(ADMIN_PASSWORD ?? '');
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
   await expect(page.getByRole('button', { name: /Menú de usuario/ })).toBeVisible();
-}
-
-async function setOwnPermission(page: Page, value: boolean) {
-  await page.goto('/admin/users');
-  // Con más de 50 usuarios (una página) el admin E2E puede no estar en la primera: se busca.
-  await page.getByLabel('Buscar por usuario o nombre').fill(ADMIN_USER ?? '');
-  await page.getByRole('button', { name: `Editar ${ADMIN_USER}` }).click();
-  const dialog = page.getByRole('dialog');
-  const toggle = dialog.getByRole('switch', { name: /Puede escribir datos/ });
-  if ((await toggle.isChecked()) !== value) {
-    await toggle.click({ force: true });
-  }
-  await dialog.getByRole('button', { name: 'Guardar' }).click();
-  await expect(dialog).toBeHidden();
 }
 
 async function createConnection(page: Page, name: string, file: string, readOnly: boolean): Promise<string> {
@@ -101,7 +88,6 @@ test('vista previa y volcado SQLite → SQLite, vaciando y después añadiendo',
   const stamp = Date.now();
   const [src, dst, project] = [`e2e-dump-src-${stamp}`, `e2e-dump-dst-${stamp}`, `e2e-dump-${stamp}`];
   await login(page);
-  await setOwnPermission(page, true);
   const srcUrl = await createConnection(page, src, 'e2e-volcado-origen.db', true);
   const dstUrl = await createConnection(page, dst, 'e2e-volcado-destino.db', false);
   await page.goto('/projects');
@@ -140,5 +126,4 @@ test('vista previa y volcado SQLite → SQLite, vaciando y después añadiendo',
     await page.getByRole('dialog').getByRole('button', { name: 'Borrar' }).click();
     await expect(page.getByRole('heading', { name: 'Conexiones' })).toBeVisible();
   }
-  await setOwnPermission(page, false);
 });

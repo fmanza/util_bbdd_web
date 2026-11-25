@@ -119,7 +119,7 @@ def _recheck(ctx: JobContext, params: BulkApplyParams) -> tuple[BulkPreviewParam
     with new_session() as db:
         run = db.get(Run, ctx.run_id)
         user = db.get(User, run.user_id) if run and run.user_id else None
-        if run is None or user is None or not user.is_active or not user.can_write_data:
+        if run is None or user is None or not user.is_active or not user.can("data.write"):
             raise JobError("forbidden", "El usuario ya no tiene permiso para escribir datos.")
         try:
             membership = get_membership(db, user, ctx.project_id)
