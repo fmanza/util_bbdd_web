@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-11-25
+
 ### Changed
 
 - Detalle de una ejecución: los parámetros ya no se listan como una tabla de nombres internos. La sección
