@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-11-25
+
 ### Added
 
 - Idioma de los documentos e informes (util_bbdd 5.10.0): nuevo parámetro **Idioma** (*Español* por defecto o
