@@ -13,6 +13,8 @@ from dataclasses import dataclass, fields
 from functools import cache
 from typing import Any, Literal, get_args
 
+from app.i18n import LocalizedError, Msg
+
 ParamType = Literal["string", "integer", "float", "boolean", "object"]
 ParamKind = Literal["plain", "secret", "host", "port", "path", "blocked"]
 
@@ -208,8 +210,9 @@ def list_engines() -> list[EngineDetail]:
     return [engine_detail(db_type) for db_type in SyncDatabaseManager.get_supported_db_types()]
 
 
-class InvalidParamsError(ValueError):
-    """``build_conn_params`` rechaza los parámetros (faltan requeridos o combinación no válida)."""
+class InvalidParamsError(LocalizedError, ValueError):
+    """``build_conn_params`` rechaza los parámetros (faltan requeridos o combinación no válida); ``msg`` lleva el
+    texto de util_bbdd como parámetro (``reason``)."""
 
 
 def build_params(db_type: str, params: dict[str, Any]) -> dict[str, Any]:
@@ -225,4 +228,4 @@ def build_params(db_type: str, params: dict[str, Any]) -> dict[str, Any]:
     try:
         return dict(build_conn_params(db_type, **params))
     except ValueError as exc:
-        raise InvalidParamsError(str(exc)) from None
+        raise InvalidParamsError(Msg("integrations.invalid_conn_params", reason=str(exc))) from None

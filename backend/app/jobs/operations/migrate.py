@@ -11,6 +11,7 @@ from app.db.session import new_session
 from app.domain.projects.service import get_membership, get_project_connection
 from app.domain.runs.migrations import REPORT_PATH, load_plan, load_stored_plan
 from app.domain.runs.operations import MigrateApplyParams, MigratePlanParams
+from app.i18n import Msg
 from app.integrations.util_bbdd.isolated import classify
 from app.integrations.util_bbdd.migrate import (
     ApplyReport,
@@ -27,7 +28,7 @@ from app.integrations.util_bbdd.migrate import (
 )
 from app.integrations.util_bbdd.progress import RunProgress
 from app.jobs.context import JobContext, JobError
-from app.jobs.operations.documentation import _MESSAGES
+from app.jobs.operations.documentation import library_msg
 
 #: Comienzo del ``ValueError`` de ``MigrationPlanner.plan`` cuando el filtro no deja nada (util_bbdd 5.9.0).
 NO_MATCH_PREFIX = "Ninguna tabla ni vista del schema"
@@ -43,12 +44,12 @@ def _job_error(exc: Exception) -> JobError:
     if isinstance(exc, JobError):
         return exc
     if isinstance(exc, ValueError) and "no soportado" in str(exc).lower():
-        return JobError("invalid_params", "Combinación de motores no soportada por util_bbdd.")
+        return JobError("invalid_params", Msg("jobs.migrate.engines_unsupported"))
     if isinstance(exc, ValueError) and str(exc).startswith(NO_MATCH_PREFIX):
         # util_bbdd 5.9.0: ``plan(table_filter=...)`` sin ninguna tabla ni vista que case
-        return JobError("invalid_params", "Ninguna tabla ni vista del schema casa con el filtro de tablas.")
+        return JobError("invalid_params", Msg("jobs.migrate.no_matching_tables"))
     code = classify(exc)
-    return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
+    return JobError(code, library_msg(code, exc))
 
 
 def run_plan(ctx: JobContext) -> None:
@@ -87,30 +88,30 @@ def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any
         user = db.get(User, run.user_id) if run and run.user_id else None
         plan_run = db.get(Run, params.plan_run)
         if run is None or user is None or not user.is_active or not user.can("ddl.apply"):
-            raise JobError("forbidden", "El usuario ya no tiene permiso para aplicar migraciones.")
+            raise JobError("forbidden", Msg("jobs.no_permission_for", action=Msg("jobs.action.migrate")))
         try:
             membership = get_membership(db, user, ctx.project_id)
         except AppError:
-            raise JobError("forbidden", "El usuario ya no es miembro del proyecto.") from None
+            raise JobError("forbidden", Msg("jobs.not_member")) from None
         if membership.role != "owner":
-            raise JobError("forbidden", "Solo el propietario del proyecto puede aplicar migraciones.")
+            raise JobError("forbidden", Msg("jobs.owner_only_for", action=Msg("jobs.action.migrate")))
         if plan_run is None or plan_run.project_id != ctx.project_id:
-            raise JobError("invalid_params", "El plan ya no existe.")
+            raise JobError("invalid_params", Msg("jobs.migrate.plan_gone"))
         try:
             plan = load_plan(db, plan_run, ctx.settings)
             stored = load_stored_plan(db, plan_run, ctx.settings)
         except AppError:
-            raise JobError("invalid_params", "El plan ya no está disponible (¿purgado?).") from None
+            raise JobError("invalid_params", Msg("jobs.migrate.plan_unavailable")) from None
         try:
             link = get_project_connection(db, run.project, params.target_connection)
         except AppError:
             raise JobError(
-                "invalid_params", f"El proyecto ya no tiene la conexión «{params.target_connection}»."
+                "invalid_params", Msg("jobs.connection_alias_gone", alias=params.target_connection)
             ) from None
         if link.connection.read_only:
-            raise JobError("forbidden", "La conexión destino es de solo lectura.")
+            raise JobError("forbidden", Msg("jobs.target_read_only"))
         if link.connection.db_type != plan.get("target_engine"):
-            raise JobError("invalid_params", f"La conexión destino ya no es {plan.get('target_engine')}.")
+            raise JobError("invalid_params", Msg("jobs.target_engine_changed", engine=plan.get("target_engine")))
         return dict(plan_run.params), plan, stored
 
 
@@ -151,21 +152,17 @@ def run_apply(ctx: JobContext) -> None:
         )
         report = apply_plan(migration, target, mode=params.mode, outputs_dir=ctx.run_dir / "outputs", progress=progress)
     except PlanOutdatedError:
-        raise JobError(
-            "plan_changed", "El plan se generó con otra versión de util_bbdd o está dañado: vuelve a planificar."
-        ) from None
+        raise JobError("plan_changed", Msg("jobs.migrate.plan_outdated")) from None
     except PlanChangedError:
-        changed = "El origen ha cambiado desde el plan" if stored is None else "El plan guardado no es el revisado"
-        raise JobError("plan_changed", f"{changed}: vuelve a planificar.") from None
+        key = "jobs.migrate.source_changed" if stored is None else "jobs.migrate.plan_not_reviewed"
+        raise JobError("plan_changed", Msg(key)) from None
     except PlanBlockedError:
-        raise JobError("plan_blocked", "El plan tiene avisos de severidad ERROR.") from None
+        raise JobError("plan_blocked", Msg("jobs.migrate.plan_blocked")) from None
     except FkTypeMismatchError:
-        raise JobError("fk_type_mismatch", "El plan tiene claves foráneas entre tipos distintos.") from None
+        raise JobError("fk_type_mismatch", Msg("jobs.migrate.fk_type_mismatch")) from None
     except TargetConflictError as exc:
         _write_report(ctx, ApplyReport(params.mode, plan["statements_hash"], 0, conflicts=exc.tables).to_dict())
-        raise JobError(
-            "target_conflict", f"El destino ya tiene tablas o vistas del plan: {', '.join(exc.tables)}."
-        ) from None
+        raise JobError("target_conflict", Msg("jobs.migrate.target_conflict", tables=", ".join(exc.tables))) from None
     except JobError:
         raise
     except Exception as exc:  # frontera de util_bbdd
@@ -174,7 +171,7 @@ def run_apply(ctx: JobContext) -> None:
     _write_report(ctx, report.to_dict())
     ctx.logger.info("Migración", extra={"mode": params.mode, "applied": report.applied, "conflicts": report.conflicts})
     if params.mode == "dry_run" and ctx.cancel_requested():  # el modo seco no escribe: para al terminar
-        raise JobError("cancelled", "Cancelada por un usuario.")
+        raise JobError("cancelled", Msg("jobs.cancelled_by_user"))
     _raise_for_report(report)
     message = (
         f"Modo seco correcto: {report.statements} sentencias listas para aplicar"
@@ -188,28 +185,26 @@ def _raise_for_report(report: ApplyReport) -> None:
     """Convierte en fallo lo que impide aplicar (modo seco) o lo que falló a medias (aplicar)."""
     if report.mode == "dry_run":
         if report.conflicts:
-            raise JobError(
-                "target_conflict", f"El destino ya tiene tablas o vistas del plan: {', '.join(report.conflicts)}."
-            )
+            raise JobError("target_conflict", Msg("jobs.migrate.target_conflict", tables=", ".join(report.conflicts)))
         if report.fk_blocking:
             pairs = ", ".join(
                 f"{m['table']}.{m['column']} → {m['ref_table']}.{m['ref_column']}" for m in report.fk_mismatches
             )
-            raise JobError(
-                "fk_type_mismatch", f"Claves foráneas entre tipos distintos (el destino las rechazará): {pairs}."
-            )
+            raise JobError("fk_type_mismatch", Msg("jobs.migrate.fk_blocking", pairs=pairs))
         invalid = [v["view"] for v in report.views if v["valid"] is False]
         if invalid:
-            raise JobError("view_invalid", f"Vistas que no se pueden crear en el destino: {', '.join(invalid)}.")
+            raise JobError("view_invalid", Msg("jobs.migrate.view_invalid", views=", ".join(invalid)))
         return
     if report.cancelled:
-        raise JobError(
-            "cancelled",
-            f"Cancelada entre sentencias: quedaron aplicadas {report.applied} de {report.statements} en el destino.",
-        )
+        raise JobError("cancelled", Msg("jobs.migrate.cancelled", applied=report.applied, statements=report.statements))
     if report.error is not None:
         raise JobError(
             "apply_partial",
-            f"Falló la sentencia {report.failed_position}/{report.statements}; quedaron aplicadas {report.applied}. "
-            f"Motor: {report.error}",
+            Msg(
+                "jobs.migrate.apply_partial",
+                position=report.failed_position,
+                statements=report.statements,
+                applied=report.applied,
+                error=report.error,
+            ),
         )

@@ -9,17 +9,17 @@ from __future__ import annotations
 
 from typing import Final
 
-from fastapi import HTTPException
 from fastapi.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.api.deps import csrf_protect, current_session
 from app.core.config import Settings, get_settings
-from app.core.errors import problem
+from app.core.errors import AppError, problem
 from app.core.middleware import UPLOAD_PATH
 from app.db.session import new_session
 from app.domain.storage.settings import effective_settings
+from app.i18n import Msg
 
 #: Margen sobre el tamaño máximo para la cabecera ``Content-Length`` (límites del multipart y otros campos).
 MULTIPART_OVERHEAD: Final = 64 * 1024
@@ -44,14 +44,25 @@ class UploadGuard:
         try:
             max_mb = await run_in_threadpool(_check_session, request, settings, bulk=match.group(2) == "uploads")
             csrf_protect(request, settings)
-        except HTTPException as exc:
-            await problem(exc.status_code, str(exc.detail))(scope, receive, send)
+        except AppError as exc:  # 401 sin sesión o 403 sin token CSRF, como en el endpoint
+            detail = exc.detail.render() if exc.detail else None
+            await problem(exc.status, exc.title.render(), detail, code=exc.error_code)(scope, receive, send)
             return
         declared = request.headers.get("content-length", "")
         if not declared.isdigit():
-            response = problem(411, "Falta Content-Length", "La subida debe indicar su tamaño.")
+            response = problem(
+                411,
+                Msg("api.upload_length_required_title").render(),
+                Msg("api.upload_length_required").render(),
+                code="api.upload_length_required",
+            )
         elif int(declared) > max_mb * 1024 * 1024 + MULTIPART_OVERHEAD:
-            response = problem(413, "El fichero es demasiado grande", f"El máximo es {max_mb} MB.")
+            response = problem(
+                413,
+                Msg("api.upload_too_large_title").render(),
+                Msg("api.upload_too_large", max_mb=max_mb).render(),
+                code="api.upload_too_large",
+            )
         else:
             await self.app(scope, receive, send)
             return
@@ -59,7 +70,7 @@ class UploadGuard:
 
 
 def _check_session(request: Request, settings: Settings, *, bulk: bool) -> int:
-    """Valida la sesión (``HTTPException`` 401) y devuelve el tamaño máximo de la subida en MB."""
+    """Valida la sesión (``NotAuthenticatedError`` 401) y devuelve el tamaño máximo de la subida en MB."""
     with new_session() as db:
         current_session(request, db, settings)
         if bulk:

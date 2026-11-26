@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
 
+from app.i18n import LocalizedError, Msg
 from app.integrations.util_bbdd.compare import resolve_schema
 from app.integrations.util_bbdd.dump import redact_values
 from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
@@ -61,6 +62,14 @@ class StructureChangedError(RuntimeError):
 
 class MatchesChangedError(RuntimeError):
     """Las filas del destino que coinciden por PK ya no son las confirmadas (update/delete)."""
+
+
+class TableNotFoundError(LocalizedError, LookupError):
+    """La tabla destino de la carga no existe."""
+
+
+class FileInvalidError(LocalizedError, ValueError):
+    """El fichero ya no valida contra la tabla destino (``reason``: los errores de validación)."""
 
 
 @dataclass(frozen=True)
@@ -222,7 +231,7 @@ def _prepare(target: Target, frame: Any, options: BulkOptions) -> dict[str, Any]
         table = crud.reflect_table(_qualified(schema, options.table))
     except Exception:
         manager.close()
-        raise LookupError(f"La tabla «{options.table}» no existe en el destino.") from None
+        raise TableNotFoundError(Msg("integrations.bulk.table_not_found", table=options.table)) from None
     columns = [c.name for c in table.columns]
     pk = [c.name for c in table.primary_key.columns]
     mapping = _resolve_mapping(list(frame.columns), columns, options.mapping)
@@ -474,7 +483,7 @@ def run_bulk(
 
     Raises:
         StructureChangedError: La tabla o el mapeo cambiaron. ``MatchesChangedError``: en update/delete, las filas
-            afectadas ya no son ``expected_matches`` (las confirmadas). ``ValueError``: el fichero ya no valida.
+            afectadas ya no son ``expected_matches`` (las confirmadas). ``FileInvalidError``: el fichero ya no valida.
     """
     import pandas as pd
     from util_bbdd.audit import JsonLinesAuditSink
@@ -486,7 +495,7 @@ def run_bulk(
         if structure_hash(prepared, options) != expected_structure:
             raise StructureChangedError()
         if prepared["errors"]:
-            raise ValueError("; ".join(prepared["errors"]))
+            raise FileInvalidError(Msg("integrations.bulk.file_invalid", reason="; ".join(prepared["errors"])))
         frame, table, pk, engine = prepared["frame"], prepared["table"], prepared["pk"], prepared["engine"]
         # Como en la vista previa: sin la PK en el fichero, o excluida, no se cuentan coincidencias.
         matches = _scan(frames, prepared, options, True)[1] if _counts_pk(table, options, frame, pk) else None

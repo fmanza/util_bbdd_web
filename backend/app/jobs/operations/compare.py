@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.domain.runs.operations import CompareParams
+from app.i18n import Msg
 from app.integrations.util_bbdd.compare import (
     REPORT_FORMATS,
     CompareOptions,
@@ -17,9 +18,8 @@ from app.integrations.util_bbdd.compare import (
 from app.integrations.util_bbdd.isolated import classify
 from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.jobs.context import JobContext, JobError
-from app.jobs.operations.documentation import _MESSAGES
+from app.jobs.operations.documentation import library_msg
 
-_SIDES = {"source": "origen", "target": "destino"}
 #: Fases de util_bbdd en el mensaje de progreso del run.
 _PHASES = {"metadata": "Leyendo el catálogo", "tables": "Tablas", "views": "Vistas", "routines": "Rutinas"}
 
@@ -29,22 +29,21 @@ def _job_error(exc: Exception) -> JobError:
     if isinstance(exc, JobError):
         return exc
     if is_cancellation(exc):
-        return JobError("cancelled", "Cancelada por un usuario.")
+        return JobError("cancelled", Msg("jobs.cancelled_by_user"))
     if isinstance(exc, SchemaNotFoundError):
-        return JobError("invalid_params", str(exc))
+        return JobError("invalid_params", exc.msg)
     if isinstance(exc, SideError):
         code = classify(exc.cause)
-        base = _MESSAGES.get(code, f"util_bbdd falló ({type(exc.cause).__name__}).")
-        return JobError(code, f"{_SIDES[exc.side].capitalize()}: {base}")
+        return JobError(code, Msg(f"jobs.compare.side.{exc.side}", reason=library_msg(code, exc.cause)))
     code = classify(exc)
-    return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
+    return JobError(code, library_msg(code, exc))
 
 
 def _side(ctx: JobContext, alias: str, schema: str | None, side: str) -> Side:
     try:
         db_type, conn_params = ctx.connection_params(alias)
     except JobError as exc:
-        raise JobError(exc.code, f"{_SIDES[side].capitalize()}: {exc.message}") from None
+        raise JobError(exc.code, Msg(f"jobs.compare.side.{side}", reason=exc.message)) from None
     return Side(db_type=db_type, conn_params=conn_params, schema=schema, alias=alias)
 
 

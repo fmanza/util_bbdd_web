@@ -25,6 +25,7 @@ from app.domain.identity.errors import (
 )
 from app.domain.identity.permissions import BuiltinRole, normalize, unknown
 from app.domain.identity.sessions import revoke_user_sessions
+from app.i18n import Msg
 
 
 @dataclass(frozen=True)
@@ -75,13 +76,15 @@ def check_grant(actor: User, permissions: list[str] | set[str]) -> None:
     """
     missing = set(permissions) - set(actor.permissions)
     if missing:
-        raise PermissionEscalationError(f"No tienes: {', '.join(sorted(missing))}.", missing=sorted(missing))
+        raise PermissionEscalationError(
+            Msg("identity.permission_escalation", permissions=", ".join(sorted(missing))), missing=sorted(missing)
+        )
 
 
 def _validated(permissions: list[str]) -> list[str]:
     bad = unknown(permissions)
     if bad:
-        raise InvalidPermissionError(f"No están en el catálogo: {', '.join(bad)}.", unknown=bad)
+        raise InvalidPermissionError(Msg("identity.invalid_permission", permissions=", ".join(bad)), unknown=bad)
     return list(normalize(permissions))
 
 
@@ -180,7 +183,7 @@ def delete_role(db: Session, role: Role, *, actor: User, ctx: RequestContext) ->
     db.flush()
     if user_count(db, role.id):
         db.rollback()
-        raise RoleInUseError("Asigna otro rol a sus usuarios antes de borrarlo.")
+        raise RoleInUseError(Msg("identity.role_in_use"))
     audit.record(
         db,
         action=AuditAction.ROLE_DELETE,

@@ -5,7 +5,8 @@ Un driver colgado no bloquea la API: el hijo (*spawn*) se mata al vencer el time
 desactiva el logging y la salida estándar, porque util_bbdd y los drivers pueden escribir la URL de conexión.
 
 Al padre solo vuelve el resultado de la tarea (tipos simples) o un error saneado: un código, el tipo de la excepción
-y, únicamente si la excepción es ``PublicError``, un mensaje que la tarea ha decidido mostrar.
+y, únicamente si la excepción es ``PublicError``, un mensaje que la tarea ha decidido mostrar (un :class:`Msg`, que
+viaja como diccionario y el padre compone en el idioma de la petición, ADR-015).
 """
 
 from __future__ import annotations
@@ -21,18 +22,19 @@ from dataclasses import dataclass
 from multiprocessing.connection import Connection
 from typing import Any, Literal
 
+from app.i18n import LocalizedError, Msg
+
 ErrorCode = Literal[
     "driver_missing", "invalid_config", "connection_failed", "timeout", "query_error", "not_read_only", "unknown"
 ]
 
 
-class PublicError(Exception):
-    """Error cuyo ``code`` y ``message`` puede ver el usuario (la tarea garantiza que no llevan secretos)."""
+class PublicError(LocalizedError):
+    """Error cuyo ``code`` y ``msg`` puede ver el usuario (la tarea garantiza que no llevan secretos)."""
 
-    def __init__(self, code: ErrorCode, message: str) -> None:
-        super().__init__(message)
+    def __init__(self, code: ErrorCode, msg: Msg) -> None:
+        super().__init__(msg)
         self.code = code
-        self.message = message
 
 
 @dataclass(frozen=True)
@@ -41,7 +43,7 @@ class TaskError:
 
     code: ErrorCode
     exc_type: str
-    message: str | None = None
+    message: Msg | None = None
 
 
 @dataclass(frozen=True)
@@ -83,7 +85,7 @@ def _child(send: Connection, target: str, kwargs: dict[str, Any]) -> None:
         function = getattr(importlib.import_module(module_name), function_name)
         payload = {"ok": True, "value": function(**kwargs)}
     except BaseException as exc:  # frontera del proceso: todo se reduce a un código (y un mensaje si es público)
-        message = exc.message if isinstance(exc, PublicError) else None
+        message = exc.msg.to_dict() if isinstance(exc, PublicError) else None
         payload = {"ok": False, "error": (classify(exc), type(exc).__name__, message)}
     with contextlib.suppress(Exception):
         send.send(payload)
@@ -114,7 +116,8 @@ def run_isolated(target: str, kwargs: dict[str, Any], *, timeout: float) -> Task
                 if payload.get("ok"):
                     return TaskResult(value=payload.get("value"), error=None, duration_ms=_elapsed(start))
                 code, exc_type, message = payload.get("error", ("unknown", "Unknown", None))
-                return TaskResult(value=None, error=TaskError(code, exc_type, message), duration_ms=_elapsed(start))
+                msg = Msg.from_dict(message) if isinstance(message, dict) else None
+                return TaskResult(value=None, error=TaskError(code, exc_type, msg), duration_ms=_elapsed(start))
             if not process.is_alive() and not receive.poll(0):
                 return TaskResult(None, TaskError("unknown", "ProcessDied"), _elapsed(start))
         return TaskResult(None, TaskError("timeout", "TimeoutError"), _elapsed(start))

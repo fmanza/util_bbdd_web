@@ -435,7 +435,7 @@ def test_worker_rechecks_permission_owner_target_and_engine(
     def code() -> str:
         with pytest.raises(JobError) as info:
             _recheck(db, settings, project, run_id)
-        return info.value.code + ": " + info.value.message
+        return info.value.code + ": " + info.value.message.render("es")
 
     link = db.scalars(select(ProjectConnection).where(ProjectConnection.alias == "destino")).one()
     connection = db.get(Connection, link.connection_id)

@@ -277,7 +277,10 @@ def test_allowlisted_target_is_probed_with_decrypted_password(
 
     tested = admin_client.post(f"/api/v1/connections/{connection_id}/test").json()
 
-    assert tested["error"] == {"code": "connection_failed", "message": service.ERROR_MESSAGES["connection_failed"]}
+    assert tested["error"] == {
+        "code": "connection_failed",
+        "message": service.ERROR_MESSAGES["connection_failed"].render("es"),
+    }
     assert seen["password"] == SECRET
     assert seen["connect_timeout"] == 10
     assert seen["db_type"] == "postgresql"

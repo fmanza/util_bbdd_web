@@ -15,11 +15,14 @@ from app.domain.runs.operations import BulkApplyParams, BulkPreviewParams
 from app.domain.uploads.errors import UploadContentError
 from app.domain.uploads.files import ReadOptions, iter_frames
 from app.domain.uploads.service import upload_file
+from app.i18n import Msg
 from app.integrations.util_bbdd.bulk import (
     BulkOptions,
+    FileInvalidError,
     Frames,
     MatchesChangedError,
     StructureChangedError,
+    TableNotFoundError,
     Target,
     build_bulk_preview,
     run_bulk,
@@ -28,7 +31,7 @@ from app.integrations.util_bbdd.compare import SchemaNotFoundError
 from app.integrations.util_bbdd.isolated import classify
 from app.integrations.util_bbdd.progress import RunProgress
 from app.jobs.context import JobContext, JobError
-from app.jobs.operations.documentation import _MESSAGES
+from app.jobs.operations.documentation import library_msg
 
 #: Con plan paralelo la carga junta el fichero en memoria: por encima de este tamaño la vista previa lo avisa (D-4).
 PARALLEL_MEMORY_WARNING_BYTES: Final = 200 * 1024 * 1024
@@ -54,11 +57,13 @@ def _job_error(exc: Exception) -> JobError:
     if isinstance(exc, JobError):
         return exc
     if isinstance(exc, UploadContentError):
-        return JobError("invalid_file", str(exc.detail or exc))
-    if isinstance(exc, LookupError | SchemaNotFoundError):
-        return JobError("invalid_params", str(exc))
+        return JobError("invalid_file", exc.detail or exc.title)
+    if isinstance(exc, SchemaNotFoundError | TableNotFoundError):
+        return JobError("invalid_params", exc.msg)
+    if isinstance(exc, FileInvalidError):  # antes llegaba como ``invalid_config`` genérico: mismo código, con el motivo
+        return JobError("invalid_config", exc.msg)
     code = classify(exc)
-    return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
+    return JobError(code, library_msg(code, exc))
 
 
 def _write(path: Path, data: dict[str, Any]) -> None:
@@ -71,14 +76,14 @@ def _source(ctx: JobContext, params: BulkPreviewParams) -> tuple[Path, str, dict
     with new_session() as db:
         run = db.get(Run, ctx.run_id)
         if run is None:
-            raise JobError("invalid_params", "La ejecución ya no existe.")
+            raise JobError("invalid_params", Msg("jobs.run_gone"))
         upload = project_upload(db, run.project, params.upload)
         if upload is None:
-            raise JobError("invalid_params", "El fichero ya no existe en el proyecto.")
+            raise JobError("invalid_params", Msg("jobs.bulk.upload_gone"))
         try:
             link = get_project_connection(db, run.project, params.target_connection)
         except AppError:
-            raise JobError("invalid_params", "El proyecto ya no tiene la conexión destino.") from None
+            raise JobError("invalid_params", Msg("jobs.bulk.target_gone")) from None
         fixed = {
             "target_connection_id": link.connection_id,
             "upload_sha256": upload.sha256,
@@ -120,29 +125,29 @@ def _recheck(ctx: JobContext, params: BulkApplyParams) -> tuple[BulkPreviewParam
         run = db.get(Run, ctx.run_id)
         user = db.get(User, run.user_id) if run and run.user_id else None
         if run is None or user is None or not user.is_active or not user.can("data.write"):
-            raise JobError("forbidden", "El usuario ya no tiene permiso para escribir datos.")
+            raise JobError("forbidden", Msg("jobs.no_permission_for", action=Msg("jobs.action.write_data")))
         try:
             membership = get_membership(db, user, ctx.project_id)
         except AppError:
-            raise JobError("forbidden", "El usuario ya no es miembro del proyecto.") from None
+            raise JobError("forbidden", Msg("jobs.not_member")) from None
         if membership.role != "owner":
-            raise JobError("forbidden", "Solo el propietario del proyecto puede cargar datos.")
+            raise JobError("forbidden", Msg("jobs.owner_only_for", action=Msg("jobs.action.bulk")))
         preview_run = db.get(Run, params.preview_run)
         if preview_run is None or preview_run.project_id != ctx.project_id:
-            raise JobError("invalid_params", "La vista previa ya no existe.")
+            raise JobError("invalid_params", Msg("jobs.preview_gone"))
         try:
             preview = load_preview(db, preview_run, ctx.settings)
         except AppError:
-            raise JobError("invalid_params", "La vista previa ya no está disponible (¿purgada?).") from None
+            raise JobError("invalid_params", Msg("jobs.preview_unavailable")) from None
         changed = target_changed(db, run.project, preview_run.params, preview)
         if changed:
             raise JobError("preview_changed", changed)
         preview_params = BulkPreviewParams.model_validate(preview_run.params)
         link = get_project_connection(db, run.project, preview_params.target_connection)
         if link.connection.read_only:
-            raise JobError("forbidden", "La conexión destino es de solo lectura.")
+            raise JobError("forbidden", Msg("jobs.target_read_only"))
         if link.connection.db_type != preview["target_engine"]:
-            raise JobError("invalid_params", f"La conexión destino ya no es {preview['target_engine']}.")
+            raise JobError("invalid_params", Msg("jobs.target_engine_changed", engine=preview["target_engine"]))
         return preview_params, preview
 
 
@@ -151,7 +156,7 @@ def run_apply(ctx: JobContext) -> None:
     ctx.progress("preparing", "Comprobando permiso, vista previa, fichero y destino")
     preview_params, preview = _recheck(ctx, params)
     if ctx.cancel_requested():  # pedida mientras se comprobaba: aún no se ha tocado el destino
-        raise JobError("cancelled", "Cancelada por un usuario antes de escribir en el destino.")
+        raise JobError("cancelled", Msg("jobs.cancelled_before_write"))
     path, kind, _ = _source(ctx, preview_params)
     db_type, conn_params = ctx.connection_params(preview_params.target_connection)
     ctx.progress("running", f"{preview['operation'].upper()} de {preview['rows']} filas en «{preview['table']}»")
@@ -170,11 +175,10 @@ def run_apply(ctx: JobContext) -> None:
             expected_matches=params.confirm_rows, progress=progress,
         )  # fmt: skip
     except StructureChangedError:
-        raise JobError("preview_changed", "La tabla o el mapeo cambiaron desde la vista previa: repítela.") from None
+        raise JobError("preview_changed", Msg("jobs.bulk.structure_changed")) from None
     except MatchesChangedError as exc:
         raise JobError(
-            "preview_changed",
-            f"Ahora coinciden {exc} filas, no las {params.confirm_rows} confirmadas: repite la vista previa.",
+            "preview_changed", Msg("jobs.bulk.matches_changed", matches=str(exc), confirmed=params.confirm_rows)
         ) from None
     except Exception as exc:  # frontera de util_bbdd
         ctx.logger.error("Carga fallida", extra={"exc_type": type(exc).__name__})
@@ -191,16 +195,13 @@ def run_apply(ctx: JobContext) -> None:
     )  # fmt: skip
     failed = [p["index"] for p in result["partitions"] if p["error"]]
     if result["cancelled"]:
-        kept = (
-            f"quedan confirmadas {result['committed']} filas de las particiones terminadas"
-            if result["committed"]
-            else "la carga se deshizo entera; no se escribió nada"
-        )
-        raise JobError("cancelled", f"Cancelada por un usuario: {kept}.")
+        if result["committed"]:
+            raise JobError("cancelled", Msg("jobs.bulk.cancelled_kept", committed=result["committed"]))
+        raise JobError("cancelled", Msg("jobs.bulk.cancelled_rolled_back"))
     if result["error"]:
-        raise JobError("bulk_failed", f"La carga falló: {result['error']}")
+        raise JobError("bulk_failed", Msg("jobs.bulk.failed", error=result["error"]))
     if failed:
-        raise JobError("bulk_partial", f"Fallaron {len(failed)} particiones; las demás quedaron confirmadas.")
+        raise JobError("bulk_partial", Msg("jobs.bulk.partial", partitions=len(failed)))
     ctx.progress("reporting", result_message(result), 100)
 
 

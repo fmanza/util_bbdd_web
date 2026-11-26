@@ -19,6 +19,7 @@ from app.core.config import Settings
 from app.db.models import Run
 from app.domain.runs import service
 from app.domain.runs.errors import ArtifactNotFoundError
+from app.i18n import Msg
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def load_pages(db: Session, run: Run, settings: Settings) -> MarkdownPages:
         a.path[len(DOCS) :]: a for a in run.artifacts if a.path.startswith(DOCS) and a.path.endswith(".md")
     }
     if run.operation != "documentation" or not pages_by_path:
-        raise ArtifactNotFoundError("Esta ejecución no tiene documentación Markdown.")
+        raise ArtifactNotFoundError(Msg("runs.no_markdown_doc"))
     manifest = next((a for a in run.artifacts if a.path == MANIFEST), None)
     if manifest is None or manifest.size_bytes > MAX_MANIFEST_BYTES:
         return MarkdownPages("paths")

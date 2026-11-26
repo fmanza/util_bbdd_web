@@ -36,6 +36,7 @@ from app.domain.engines import get_engine
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.sorting import SortOrder, like_pattern, order_by
+from app.i18n import LocalizedError, Msg
 from app.integrations.util_bbdd import probe
 from app.integrations.util_bbdd.catalog import EngineDetail, InvalidParamsError, build_params
 
@@ -47,15 +48,22 @@ _PROBES = threading.BoundedSemaphore(MAX_CONCURRENT_PROBES)
 
 ErrorCode = Literal["driver_missing", "invalid_config", "connection_failed", "timeout", "not_allowed", "unknown"]
 
-ERROR_MESSAGES: Final[dict[str, str]] = {
-    "driver_missing": "El driver del motor no está instalado en el servidor.",
-    "invalid_config": "Los parámetros de conexión no son válidos para el motor.",
-    "connection_failed": "No se pudo conectar: servidor inaccesible, credenciales incorrectas o BD inexistente.",
-    "timeout": "La conexión no respondió a tiempo.",
-    "not_allowed": "El destino no está en la lista de destinos permitidos. Pide a un administrador que lo añada.",
-    "secret_unreadable": "No se puede descifrar la contraseña guardada: vuelve a introducirla.",
-    "unknown": "Error inesperado al conectar.",
+#: Motivo de cada código de fallo de una prueba de conexión (ADR-015: se compone en el idioma de quien lo lee).
+ERROR_MESSAGES: Final[dict[str, Msg]] = {
+    "driver_missing": Msg("connections.probe.driver_missing"),
+    "invalid_config": Msg("connections.probe.invalid_config"),
+    "connection_failed": Msg("connections.probe.connection_failed"),
+    "timeout": Msg("connections.probe.timeout"),
+    "not_allowed": Msg("connections.probe.not_allowed"),
+    "secret_unreadable": Msg("connections.probe.secret_unreadable"),
+    "unknown": Msg("connections.probe.unknown"),
 }
+
+
+def exc_msg(exc: Exception, key: str) -> Msg:
+    """Mensaje para el usuario de una excepción de la capa de integración: su :class:`Msg` si lo trae
+    (``LocalizedError``) o, si no, su texto como parámetro ``reason`` de ``key`` (solo textos que ya se mostraban)."""
+    return exc.msg if isinstance(exc, LocalizedError) else Msg(key, reason=str(exc))
 
 
 @dataclass(frozen=True)
@@ -160,7 +168,7 @@ def get_editable(db: Session, user: User, connection_id: int) -> Connection:
     """
     connection = get_visible(db, user, connection_id)
     if not can_edit(user, connection):
-        raise ConnectionForbiddenError("Es una conexión compartida: solo un administrador puede modificarla.")
+        raise ConnectionForbiddenError(Msg("connections.shared_admin_only"))
     return connection
 
 
@@ -169,13 +177,13 @@ def get_editable(db: Session, user: User, connection_id: int) -> Connection:
 
 def _check_visibility(user: User, visibility: Visibility | None) -> None:
     if visibility == "shared" and not user.can("connections.share"):
-        raise ConnectionForbiddenError("Tu rol no tiene el permiso «Compartir conexiones».")
+        raise ConnectionForbiddenError(Msg("connections.share_permission"))
 
 
 def _check_name(db: Session, owner_id: int, name: str, exclude_id: int | None = None) -> str:
     name = name.strip()
     if not name:
-        raise ConnectionParamsError("El nombre no puede estar vacío.", field="name")
+        raise ConnectionParamsError(Msg("connections.name_empty"), field="name")
     query = select(Connection.id).where(Connection.owner_id == owner_id, func.lower(Connection.name) == name.lower())
     if exclude_id is not None:
         query = query.where(Connection.id != exclude_id)
@@ -190,7 +198,7 @@ def _check_required(engine: EngineDetail, params: dict[str, Any], password: str 
     try:
         build_params(engine.db_type, {**resolve_paths(engine, params, settings), **secrets})
     except InvalidParamsError as exc:
-        raise ConnectionParamsError(str(exc)) from None
+        raise ConnectionParamsError(exc_msg(exc, "connections.invalid_params")) from None
 
 
 def _stored_password(connection: Connection, settings: Settings) -> str | None:

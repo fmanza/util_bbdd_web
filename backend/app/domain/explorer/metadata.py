@@ -19,6 +19,7 @@ from app.core.config import Settings
 from app.db.models import Connection, MetadataCache, utcnow
 from app.domain.connections.service import prepare_connection, probe_slot
 from app.domain.explorer.errors import DatabaseAccessError, DatabaseTimeoutError, ObjectNotFoundError
+from app.i18n import Msg
 from app.integrations.util_bbdd import metadata
 from app.integrations.util_bbdd.isolated import TaskResult
 from app.integrations.util_bbdd.metadata import ObjectKind
@@ -35,15 +36,15 @@ def _conn_params(db: Session, connection: Connection, settings: Settings) -> dic
     prepared = prepare_connection(db, connection, settings)
     db.commit()  # cierra la transacción de lectura antes de una espera larga
     if prepared.conn_params is None:
-        raise DatabaseAccessError(prepared.error_code or "unknown")
+        raise DatabaseAccessError(reason=prepared.error_code or "unknown")
     return prepared.conn_params
 
 
 def _value(result: TaskResult) -> Any:
     if result.error is not None:
         if result.error.code == "timeout":
-            raise DatabaseTimeoutError("timeout")
-        raise DatabaseAccessError(result.error.code)
+            raise DatabaseTimeoutError(reason="timeout")
+        raise DatabaseAccessError(reason=result.error.code)
     return result.value
 
 
@@ -132,7 +133,7 @@ def table_detail(snapshot: CachedSnapshot, table: str) -> dict[str, Any]:
     data = snapshot.data
     match = next((t for t in data.get("tables", []) if t["name"] == table), None)
     if match is None:
-        raise ObjectNotFoundError(f"La tabla «{table}» no está en el schema (prueba a refrescar).")
+        raise ObjectNotFoundError(Msg("explorer.table_not_found", table=table))
     fks = data.get("foreign_keys", [])
     return {
         "name": table,

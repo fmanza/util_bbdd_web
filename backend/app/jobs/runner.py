@@ -21,6 +21,7 @@ from app.db.models import Artifact, ProjectConnection, Run, utcnow
 from app.db.session import new_session
 from app.domain.runs.operations import get_operation
 from app.domain.storage.settings import effective_settings
+from app.i18n import DEFAULT_LANG, Msg
 from app.integrations.util_bbdd import library_version
 from app.jobs.context import JobContext, JobError
 from app.workspace.layout import (
@@ -147,10 +148,13 @@ def finalize_run(
     status: str,
     *,
     error_code: str | None = None,
-    error_message: str | None = None,
+    error_message: Msg | None = None,
     only_if_running: bool = True,
 ) -> bool:
     """Cierra un run: estado final, ``run.json``, artefactos registrados y tamaño.
+
+    ``error_message`` se guarda como clave y parámetros (``error_detail``, ADR-015) y, compuesto en español, en
+    ``error_message`` (``run.json`` y ejecuciones anteriores a la 2.0.0).
 
     Returns:
         ``False`` si el run ya no estaba en curso (lo cerró otro proceso).
@@ -164,7 +168,8 @@ def finalize_run(
         run.phase = "done"
         run.finished_at = utcnow()
         run.error_code = error_code
-        run.error_message = (error_message or "")[:500] or None
+        run.error_detail = error_message.to_dict() if error_message else None
+        run.error_message = error_message.render(DEFAULT_LANG)[:500] if error_message else None
         run.cancel_requested = False
         directory = run_dir(settings.workspace_dir, run.workspace_path) if run.workspace_path else None
         files = scan_artifacts(directory) if directory and directory.exists() else []
@@ -224,7 +229,7 @@ def run_job(run_id: str) -> None:
     except Exception as exc:  # frontera del job: el detalle (sin mensaje, que puede llevar datos) va al log
         logger.error("Error inesperado en la ejecución", extra={"exc_type": type(exc).__name__})
         finalize_run(
-            run_id, "failed", error_code="job_error", error_message=f"Error inesperado ({type(exc).__name__})."
+            run_id, "failed", error_code="job_error", error_message=Msg("jobs.unexpected", exc_type=type(exc).__name__)
         )
         return
     logger.info("Ejecución terminada")

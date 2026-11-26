@@ -39,6 +39,7 @@ from app.domain.runs.service import apply_retention
 from app.domain.storage.purge import purge_over_quota
 from app.domain.storage.settings import effective_settings, maintenance_requested_since
 from app.domain.uploads.service import purge_old_uploads
+from app.i18n import Msg
 from app.jobs import queue
 from app.jobs.runner import finalize_run, run_job
 
@@ -102,9 +103,7 @@ class Worker:
         with new_session() as db:
             orphans = queue.stale_running(db, stale_after=self.stale_after, exclude_worker=self.id)
         for run_id in orphans:
-            finalize_run(
-                run_id, "failed", error_code="interrupted", error_message="El worker se detuvo durante la ejecución."
-            )
+            finalize_run(run_id, "failed", error_code="interrupted", error_message=Msg("jobs.interrupted"))
             self._restore_after(run_id)
         if orphans:
             logger.warning("Ejecuciones huérfanas cerradas", extra={"runs": orphans})
@@ -134,7 +133,7 @@ class Worker:
             logger.error("Fallo leyendo la petición de mantenimiento", extra={"exc_type": type(exc).__name__})
             return False
 
-    def _stop_child(self, run_id: str, status: str, code: str, message: str) -> None:
+    def _stop_child(self, run_id: str, status: str, code: str, message: Msg) -> None:
         child = self.children.pop(run_id)
         child.process.terminate()
         child.process.join(TERMINATE_GRACE)
@@ -169,7 +168,7 @@ class Worker:
             del self.children[run_id]
             closed = finalize_run(
                 run_id, "failed", error_code="worker_crash",
-                error_message=f"El proceso del job terminó de forma inesperada (código {child.process.exitcode}).",
+                error_message=Msg("jobs.worker_crash", exitcode=child.process.exitcode),
             )  # fmt: skip
             if closed:
                 logger.warning("Job sin estado final", extra={"run_id": run_id, "exitcode": child.process.exitcode})
@@ -193,11 +192,11 @@ class Worker:
                     logger.info("Cancelación cooperativa pedida", extra={"run_id": run_id})
                 if now - child.cancel_seen < COOPERATIVE_CANCEL_GRACE:
                     continue
-            self._stop_child(run_id, "cancelled", "cancelled", "Cancelada por un usuario.")
+            self._stop_child(run_id, "cancelled", "cancelled", Msg("jobs.cancelled_by_user"))
         limit = self.settings.job_timeout_seconds
         for run_id, child in list(self.children.items()):
             if time.monotonic() - child.started > limit:
-                self._stop_child(run_id, "failed", "job_timeout", f"Superó el tiempo máximo ({limit} s).")
+                self._stop_child(run_id, "failed", "job_timeout", Msg("jobs.timeout", limit=limit))
 
     def claim(self) -> None:
         while len(self.children) < self.settings.worker_concurrency:
@@ -222,7 +221,7 @@ class Worker:
 
     def shutdown(self) -> None:
         for run_id in list(self.children):
-            self._stop_child(run_id, "failed", "interrupted", "El worker se detuvo durante la ejecución.")
+            self._stop_child(run_id, "failed", "interrupted", Msg("jobs.interrupted"))
         with new_session() as db:
             queue.unregister_worker(db, self.id)
         logger.info("Worker detenido", extra={"worker_id": self.id})

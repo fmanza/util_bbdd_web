@@ -64,7 +64,7 @@ def _out(connection: Connection, user: User) -> ConnectionOut:
 def _error(code: str | None) -> ProbeErrorOut | None:
     if code is None:
         return None
-    return ProbeErrorOut(code=code, message=ERROR_MESSAGES.get(code, ERROR_MESSAGES["unknown"]))
+    return ProbeErrorOut(code=code, message=ERROR_MESSAGES.get(code, ERROR_MESSAGES["unknown"]).render())
 
 
 @router.get("", response_model=ConnectionPage, summary="Listar conexiones", responses=_401)

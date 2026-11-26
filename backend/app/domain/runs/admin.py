@@ -24,6 +24,7 @@ from app.domain.projects.errors import ProjectNotFoundError
 from app.domain.runs.errors import RunNotFoundError, RunStateError
 from app.domain.runs.service import artifact_count, dump_journal
 from app.domain.sorting import SortOrder, like_pattern, order_by
+from app.i18n import Msg
 from app.workspace.layout import UnsafePathError, remove_tree, run_dir
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,6 @@ AdminRunSort = Literal["created_at", "finished_at", "project", "operation", "sta
 
 class DeleteConfirmationError(AppError):
     status = 422
-    title = "Confirmación incorrecta: escribe el nombre exacto del proyecto"
 
 
 @dataclass(frozen=True)
@@ -158,11 +158,9 @@ def delete_run(db: Session, actor: User, run_id: str, *, settings: Settings, ctx
     if run is None:
         raise RunNotFoundError()
     if run.status not in DELETABLE:
-        raise RunStateError("Solo se eliminan ejecuciones terminadas: cancélala o espera a que termine.")
+        raise RunStateError(Msg("runs.delete_only_finished"))
     if dump_journal(run, settings) is not None:
-        raise RunStateError(
-            "Este volcado dejó constraints sin restaurar en el destino: restáuralas antes de eliminarlo."
-        )
+        raise RunStateError(Msg("runs.delete_pending_constraints"))
     folder = _folder(run, settings)
     audit.record(
         db, action=AuditAction.RUN_DELETE, ctx=ctx, actor_id=actor.id, target_type="run", target_id=run.id,

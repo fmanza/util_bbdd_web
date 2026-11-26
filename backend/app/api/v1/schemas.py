@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+from pydantic_core import PydanticCustomError
 
 from app.domain.identity.passwords import MAX_PASSWORD_LENGTH
 from app.domain.identity.permissions import Permission
@@ -80,7 +81,7 @@ class PreferencesUpdate(BaseModel):
     @model_validator(mode="after")
     def _at_least_one(self) -> PreferencesUpdate:
         if self.color_scheme is None and self.language is None:
-            raise ValueError("Indica al menos una preferencia")
+            raise PydanticCustomError("api.preferences_empty", "api.preferences_empty")
         return self
 
 

@@ -34,6 +34,7 @@ from app.domain.connections.errors import (
 )
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
+from app.i18n import Msg
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
@@ -65,9 +66,7 @@ def normalize_pattern(pattern: str) -> str:
         pass
     if _HOSTNAME.fullmatch(value) and len(value) <= 253:
         return value
-    raise InvalidAllowlistPatternError(
-        "Usa una red CIDR (10.0.0.0/8), una IP, un nombre de host (db.empresa.local) o un comodín (*.empresa.local)."
-    )
+    raise InvalidAllowlistPatternError(Msg("connections.allowlist_pattern"))
 
 
 def build_policy(patterns: Iterable[str]) -> Policy:

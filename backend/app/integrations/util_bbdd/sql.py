@@ -27,6 +27,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Final
 
+from app.i18n import LocalizedError, Msg
 from app.integrations.util_bbdd.isolated import PublicError, TaskResult, run_isolated
 
 #: Dialecto de ``sqlglot`` por motor; HSQLDB no tiene y no admite SQL libre.
@@ -54,8 +55,12 @@ MAX_ENGINE_MESSAGE: Final = 300
 PARAM_VALUE: Final = re.compile(r"^(?:[A-Za-z_][A-Za-z0-9_$#]{0,127}|-?\d{1,18}(?:\.\d{1,18})?)$")
 
 
-class ReadOnlyViolation(ValueError):
-    """El SQL no es una única sentencia de lectura."""
+class ReadOnlyViolation(LocalizedError, ValueError):
+    """El SQL no es una única sentencia de lectura (``msg``: el motivo para el usuario)."""
+
+
+class InvalidTemplateError(LocalizedError, ValueError):
+    """Plantilla de query nombrada mal formada (``msg``: el motivo para el usuario)."""
 
 
 def check_read_only(sql: str, db_type: str) -> None:
@@ -70,27 +75,28 @@ def check_read_only(sql: str, db_type: str) -> None:
 
     dialect = DIALECTS.get(db_type)
     if dialect is None:
-        raise ReadOnlyViolation(f"El SQL libre no está disponible para {db_type}.")
+        raise ReadOnlyViolation(Msg("integrations.sql.engine_unsupported", db_type=db_type))
     try:
         statements = [s for s in sqlglot.parse(sql, read=dialect) if s is not None]
     except ParseError:
-        raise ReadOnlyViolation("No se ha podido analizar el SQL; revisa la sintaxis.") from None
+        raise ReadOnlyViolation(Msg("integrations.sql.parse_error")) from None
     if len(statements) != 1:
-        raise ReadOnlyViolation("Escribe una única sentencia (sin «;» entre varias).")
+        raise ReadOnlyViolation(Msg("integrations.sql.single_statement"))
     root = statements[0]
     if not isinstance(root, tuple(getattr(exp, n) for n in _ALLOWED_ROOTS)):
-        raise ReadOnlyViolation("Solo se admiten consultas SELECT (también con WITH o UNION).")
+        raise ReadOnlyViolation(Msg("integrations.sql.select_only"))
     forbidden = tuple(getattr(exp, n) for n in _FORBIDDEN_NODES if hasattr(exp, n))
     for node in root.walk():
         if isinstance(node, forbidden):
-            raise ReadOnlyViolation(f"La consulta contiene una operación no permitida ({type(node).__name__}).")
+            raise ReadOnlyViolation(Msg("integrations.sql.forbidden_node", node=type(node).__name__))
 
 
 def template_params(sql_template: str) -> list[str]:
     """Nombres ``{param}`` de una plantilla de util_bbdd (en orden y sin repetir).
 
     Raises:
-        ValueError: Plantilla mal formada (llaves sin cerrar, índices posicionales o atributos).
+        InvalidTemplateError: Plantilla mal formada (índices posicionales o atributos).
+        ValueError: Llaves sin cerrar (lo lanza ``string.Formatter``, con su texto en inglés).
     """
     from string import Formatter
 
@@ -99,7 +105,7 @@ def template_params(sql_template: str) -> list[str]:
         if field is None:
             continue
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", field):
-            raise ValueError(f"Parámetro no válido en la plantilla: «{{{field}}}»")
+            raise InvalidTemplateError(Msg("integrations.sql.invalid_template_param", field=field))
         if field not in names:
             names.append(field)
     return names
@@ -165,7 +171,9 @@ def _run_read_only(manager: Any, sql: str, limit: int, timeout: float) -> dict[s
     try:
         result = manager.execute_custom_result(sql, timeout=timeout, read_only=True, max_rows=limit + 1)
     except DatabaseOperationError as exc:
-        raise PublicError("query_error", _engine_message(exc.__cause__ or exc)) from None
+        raise PublicError(
+            code="query_error", msg=Msg("integrations.sql.engine_error", reason=_engine_message(exc.__cause__ or exc))
+        ) from None
     rows = [[to_cell(v) for v in row] for row in result.rows[:limit]]
     return {
         "columns": [str(c) for c in result.columns],
@@ -183,7 +191,7 @@ def free_sql_task(db_type: str, conn_params: dict[str, Any], sql: str, limit: in
     try:
         check_read_only(sql, db_type)
     except ReadOnlyViolation as exc:
-        raise PublicError("not_read_only", str(exc)) from None
+        raise PublicError(code="not_read_only", msg=exc.msg) from None
     with SyncDatabaseManager(db_type, conn_params, use_pool=False) as manager:
         return _run_read_only(manager, sql, limit, timeout)
 
@@ -210,12 +218,12 @@ def named_query_task(
                 final_sql = str(manager.resolve_query(name, **params).final_sql)
             except (e.QueryValidationError, e.QueryParameterError, e.QueryNotFoundError) as exc:
                 raise PublicError(
-                    "invalid_config", f"Parámetros no válidos para la query ({type(exc).__name__})."
+                    code="invalid_config", msg=Msg("integrations.sql.invalid_query_params", exc_type=type(exc).__name__)
                 ) from None
             try:
                 check_read_only(final_sql, db_type)
             except ReadOnlyViolation as exc:
-                raise PublicError("not_read_only", str(exc)) from None
+                raise PublicError(code="not_read_only", msg=exc.msg) from None
             return _run_read_only(manager, final_sql, limit, timeout)
 
 

@@ -251,3 +251,22 @@ def test_downgrade_to_0004_and_0003_preserves_related_rows(settings: Settings) -
     # Al volver a subir, el proyecto (borrado con su tabla en la 0003) no vuelve; lo demás sigue intacto.
     run_migrations()
     assert _related_rows() == (*RELATED_INTACT[:3], [])
+
+
+def test_migration_0016_adds_and_drops_run_error_detail(settings: Settings) -> None:
+    """``runs.error_detail`` (ADR-015) se añade y se quita sin recrear ``runs``."""
+    from alembic import command
+    from alembic.config import Config
+
+    from tests.conftest import BACKEND_DIR
+
+    run_migrations()
+    assert "error_detail" in {c["name"] for c in inspect(get_engine()).get_columns("runs")}
+
+    command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0015")
+    columns = {c["name"] for c in inspect(get_engine()).get_columns("runs")}
+    assert "error_detail" not in columns
+    assert {"error_code", "error_message"} <= columns
+
+    run_migrations()
+    assert "error_detail" in {c["name"] for c in inspect(get_engine()).get_columns("runs")}

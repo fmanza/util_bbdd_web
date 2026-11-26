@@ -14,8 +14,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.errors import field_error
 from app.db.models import Connection, NamedQuery, User
-from app.domain.connections.service import prepare_connection, probe_slot
+from app.domain.connections.service import exc_msg, prepare_connection, probe_slot
 from app.domain.engines import get_engine
 from app.domain.explorer.errors import (
     ConnectionNotReadOnlyError,
@@ -30,6 +31,7 @@ from app.domain.explorer.errors import (
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.projects.service import get_membership, get_project_connection
+from app.i18n import Msg
 from app.integrations.util_bbdd import sql as sql_engine
 from app.integrations.util_bbdd.isolated import TaskResult
 
@@ -54,10 +56,12 @@ def _result(result: TaskResult) -> QueryResult:
     if result.error is not None:
         code = result.error.code
         if code == "timeout":
-            raise DatabaseTimeoutError("timeout")
+            raise DatabaseTimeoutError(reason="timeout")
         if code in ("query_error", "not_read_only", "invalid_config") and result.error.message:
-            raise SqlRejectedError(code, result.error.message)
-        raise DatabaseAccessError(code)
+            message = result.error.message
+            detail = message if isinstance(message, Msg) else Msg("explorer.rejected", reason=message)
+            raise SqlRejectedError(detail, reason=code)
+        raise DatabaseAccessError(reason=code)
     value = result.value
     return QueryResult(value["columns"], value["rows"], value["truncated"], value["row_count"], value["duration_ms"])
 
@@ -66,7 +70,7 @@ def _conn_params(db: Session, connection: Connection, settings: Settings) -> dic
     prepared = prepare_connection(db, connection, settings)
     db.commit()
     if prepared.conn_params is None:
-        raise DatabaseAccessError(prepared.error_code or "unknown")
+        raise DatabaseAccessError(reason=prepared.error_code or "unknown")
     return prepared.conn_params
 
 
@@ -96,17 +100,17 @@ def run_free_sql(
     """
     membership = get_membership(db, user, project_id, "editor")
     if not user.can("sql.run"):
-        raise SqlNotAllowedError("Tu rol no tiene el permiso «Ejecutar SQL libre»; pídeselo a un administrador.")
+        raise SqlNotAllowedError(Msg("explorer.sql_not_allowed"))
     connection = get_project_connection(db, membership.project, alias).connection
     if not connection.read_only:
-        raise ConnectionNotReadOnlyError("Marca la conexión como «Solo lectura» para usar SQL libre sobre ella.")
+        raise ConnectionNotReadOnlyError(Msg("explorer.connection_not_read_only"))
     if len(sql) > MAX_SQL_CHARS:
-        raise SqlRejectedError("not_read_only", f"La consulta supera {MAX_SQL_CHARS} caracteres.")
+        raise SqlRejectedError(Msg("explorer.sql_too_long", max_chars=MAX_SQL_CHARS), reason="not_read_only")
     try:
         sql_engine.check_read_only(sql, connection.db_type)
     except sql_engine.ReadOnlyViolation as exc:
         _audit_sql(db, user, ctx, connection, sql, outcome="failure", details={"error": "not_read_only"})
-        raise SqlRejectedError("not_read_only", str(exc)) from None
+        raise SqlRejectedError(exc_msg(exc, "explorer.rejected"), reason="not_read_only") from None
     params = _conn_params(db, connection, settings)
     with probe_slot():
         raw = sql_engine.run_free_sql(
@@ -180,9 +184,8 @@ def _validate_template(db_type: str, sql_template: str) -> None:
     try:
         sql_engine.check_template(sql_template, db_type)
     except (ValueError, sql_engine.ReadOnlyViolation) as exc:
-        raise NamedQueryInvalidError(
-            str(exc), errors=[{"loc": ["body", "sql_template"], "msg": str(exc), "type": "value_error"}]
-        ) from None
+        message = exc_msg(exc, "explorer.rejected")
+        raise NamedQueryInvalidError(message, errors=[field_error("sql_template", message)]) from None
 
 
 def _check_name(db: Session, db_type: str, name: str, exclude_id: int | None = None) -> None:
@@ -267,25 +270,21 @@ def run_named_query(
         NamedQueryInvalidError: Faltan o sobran parámetros, o algún valor no es identificador ni número (GAPS G18).
     """
     if query.db_type != connection.db_type:
-        raise NamedQueryNotFoundError("La query no es de este motor.")
+        raise NamedQueryNotFoundError(Msg("explorer.query_other_engine"))
     expected = query_params(query)
     missing = [p for p in expected if p not in params]
     extra = [p for p in params if p not in expected]
-    errors = [{"loc": ["body", "params", p], "msg": "Obligatorio", "type": "missing"} for p in missing]
-    errors += [{"loc": ["body", "params", p], "msg": "No es un parámetro de la query", "type": "extra"} for p in extra]
+    errors = [field_error(["body", "params", p], Msg("explorer.param_required"), "missing") for p in missing]
+    errors += [field_error(["body", "params", p], Msg("explorer.param_unknown"), "extra") for p in extra]
     values: dict[str, str] = {}
     for name in expected:
         if name in params:
             value = str(params[name]).strip()
             if not sql_engine.PARAM_VALUE.fullmatch(value):
-                errors.append({
-                    "loc": ["body", "params", name],
-                    "msg": "Solo identificadores (letras, números, _ $ #) o números",
-                    "type": "value_error",
-                })  # fmt: skip
+                errors.append(field_error(["body", "params", name], Msg("explorer.param_value")))
             values[name] = value
     if errors:
-        raise NamedQueryInvalidError("Revisa los parámetros de la query.", errors=errors)
+        raise NamedQueryInvalidError(Msg("explorer.check_params"), errors=errors)
     conn_params = _conn_params(db, connection, settings)
     with probe_slot():
         raw = sql_engine.run_named_query(

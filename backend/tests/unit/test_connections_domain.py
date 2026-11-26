@@ -167,7 +167,7 @@ def test_invalid_params_rejected(
     with pytest.raises(ConnectionParamsError) as info:
         validate_params(engine_detail(db_type), params, files_settings)
 
-    assert fragment in (info.value.detail or "")
+    assert info.value.detail is not None and fragment in info.value.detail.render("es")
 
 
 def test_valid_params_are_normalized(files_settings: Settings) -> None:
@@ -256,8 +256,9 @@ def test_build_params_reports_missing_required_without_secrets() -> None:
     with pytest.raises(InvalidParamsError) as info:
         build_params("postgresql", {"host": "db", "password": "no-mostrar"})
 
-    assert "user" in str(info.value)
-    assert "no-mostrar" not in str(info.value)
+    text = info.value.msg.render("es")
+    assert "user" in text
+    assert "no-mostrar" not in text
     assert (
         build_params("postgresql", {"host": "h", "user": "u", "password": "p", "database": "d", "sslmode": "require"})[
             "sslmode"

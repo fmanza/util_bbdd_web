@@ -46,7 +46,7 @@ def test_policy_rejects(password: str, fragment: str) -> None:
     with pytest.raises(PasswordPolicyError) as info:
         check_policy(password, username="usuario-largo1", min_length=12)
 
-    assert fragment in (info.value.detail or "")
+    assert info.value.detail is not None and fragment in info.value.detail.render("es")
 
 
 def test_policy_accepts_valid_password() -> None:

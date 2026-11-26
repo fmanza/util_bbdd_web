@@ -15,6 +15,7 @@ from app.db.models import Run
 from app.db.session import new_session
 from app.domain.connections.service import ERROR_MESSAGES, prepare_connection
 from app.domain.projects.service import get_project_connection
+from app.i18n import Msg
 from app.integrations.util_bbdd import probe
 
 Phase = Literal["preparing", "connecting", "running", "reporting"]
@@ -24,10 +25,14 @@ PROGRESS_INTERVAL: Final = 1.0
 
 
 class JobError(Exception):
-    """Fallo controlado de una operación: ``code`` estable y ``message`` para el usuario (sin datos sensibles)."""
+    """Fallo controlado de una operación: ``code`` estable y ``message`` para el usuario (sin datos sensibles).
 
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
+    ``message`` es un :class:`Msg` (ADR-015): se guarda como clave y parámetros (``runs.error_detail``) y la API lo
+    compone en el idioma de quien consulta la ejecución.
+    """
+
+    def __init__(self, code: str, message: Msg) -> None:
+        super().__init__(message.key)
         self.code = code
         self.message = message
 
@@ -83,11 +88,11 @@ class JobContext:
         with new_session() as db:
             project = db.get(Project, self.project_id)
             if project is None:
-                raise JobError("invalid_params", "El proyecto ya no existe.")
+                raise JobError("invalid_params", Msg("jobs.project_gone"))
             try:
                 link = get_project_connection(db, project, alias)
             except Exception:
-                raise JobError("invalid_params", f"El proyecto no tiene la conexión «{alias}».") from None
+                raise JobError("invalid_params", Msg("jobs.connection_alias_missing", alias=alias)) from None
             db_type = link.connection.db_type
             prepared = prepare_connection(db, link.connection, self.settings)
             db.commit()

@@ -97,9 +97,13 @@ Menú con tu nombre → *Idioma*: **Español** o **English**. Cada opción apare
   números.
 - La pantalla de inicio de sesión usa el último idioma usado en ese navegador; en un navegador nuevo, el del
   navegador (inglés si lo prefiere, y si no, español).
-- **Qué sigue en español** con la interfaz en inglés: el detalle de los mensajes de error que envía el servidor
-  (el título del aviso sí se traduce), los mensajes de las ejecuciones y su log, y los documentos que se generan
-  (documentación, informes y ficheros descargados).
+- Los **mensajes de error** del servidor (título, detalle y errores de cada campo) y el motivo del fallo de una
+  ejecución llegan en tu idioma; el de una ejecución lo ve cada miembro del proyecto en el suyo
+  ([ADR-015](../adr/ADR-015-idioma-de-los-mensajes-de-la-api.md)).
+- **Qué sigue en español** con la interfaz en inglés: el progreso de las ejecuciones y su log, los avisos de la
+  documentación, los textos que vienen de util_bbdd dentro de un mensaje (p. ej. el motivo por el que rechaza un
+  plan), el motivo del fallo de las ejecuciones anteriores a la 2.0.0 y los documentos que se generan, cuyo idioma
+  se elige al lanzarlos (parámetro *Idioma*).
 - API: `language` en `GET /api/v1/auth/me` y `PATCH /api/v1/auth/me/preferences` (`{"language": "es" | "en"}`,
   junto con `color_scheme` o por separado).
 

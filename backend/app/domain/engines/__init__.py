@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.domain.connections.errors import EngineNotFoundError
+from app.i18n import Msg
 from app.integrations.util_bbdd.catalog import EngineDetail, UnknownEngineError, engine_detail, list_engines
 
 
@@ -20,4 +21,4 @@ def get_engine(db_type: str) -> EngineDetail:
     try:
         return engine_detail(db_type.strip().lower())
     except UnknownEngineError:
-        raise EngineNotFoundError(f"util_bbdd no soporta el motor «{db_type}».") from None
+        raise EngineNotFoundError(Msg("engines.not_supported", db_type=db_type)) from None

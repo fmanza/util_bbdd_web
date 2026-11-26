@@ -54,6 +54,7 @@ nav = [
       "adr/ADR-012-almacenamiento-administrable.md",
       "adr/ADR-013-borrado-de-usuarios.md",
       "adr/ADR-014-roles-y-permisos.md",
+      "adr/ADR-015-idioma-de-los-mensajes-de-la-api.md",
     ] },
     "plan/ROADMAP.md",
     "plan/UTIL_BBDD_GAPS.md",

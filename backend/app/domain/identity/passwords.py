@@ -11,6 +11,7 @@ from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
 from app.domain.identity.errors import PasswordPolicyError
+from app.i18n import Msg
 
 MAX_PASSWORD_LENGTH = 128  # acota el coste de Argon2 ante entradas enormes
 
@@ -59,11 +60,11 @@ def check_policy(password: str, *, username: str, min_length: int) -> None:
         PasswordPolicyError: Longitud fuera de rango, igual al nombre de usuario o demasiado común (ASVS 2.1.7).
     """
     if len(password) < min_length:
-        raise PasswordPolicyError(f"La contraseña debe tener al menos {min_length} caracteres.")
+        raise PasswordPolicyError(Msg("identity.password_too_short", min_length=min_length))
     if len(password) > MAX_PASSWORD_LENGTH:
-        raise PasswordPolicyError(f"La contraseña no puede superar {MAX_PASSWORD_LENGTH} caracteres.")
+        raise PasswordPolicyError(Msg("identity.password_too_long", max_length=MAX_PASSWORD_LENGTH))
     if password.strip().lower() == username.strip().lower():
-        raise PasswordPolicyError("La contraseña no puede coincidir con el nombre de usuario.")
+        raise PasswordPolicyError(Msg("identity.password_equals_username"))
     lowered = password.lower()
     if lowered in _common_passwords() or lowered in _PRODUCT_WORDS:
-        raise PasswordPolicyError("Esa contraseña es demasiado común: elige otra.")
+        raise PasswordPolicyError(Msg("identity.password_too_common"))

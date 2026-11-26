@@ -22,12 +22,13 @@ from typing import Any, Final
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.errors import AppError
+from app.core.errors import AppError, field_error
 from app.db.models import Project, Run, Upload, User, utcnow
 from app.domain.projects.service import Membership, get_project_connection
 from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError, RunStateError
 from app.domain.runs.service import get_artifact_by_path
 from app.domain.runs.targets import active_write
+from app.i18n import Msg
 
 PREVIEW_PATH: Final = "outputs/bulk/preview.json"
 RESULT_PATH: Final = "outputs/bulk/result.json"
@@ -37,16 +38,14 @@ PREVIEW_MAX_AGE: Final = timedelta(minutes=60)
 
 class BulkForbiddenError(AppError):
     status = 403
-    title = "No puedes cargar datos en este proyecto"
 
 
 class BulkNotAvailableError(AppError):
     status = 404
-    title = "Esta ejecución no tiene una vista previa o un resultado de carga"
 
 
-def _params_error(field: str, message: str) -> RunParamsError:
-    return RunParamsError(message, errors=[{"loc": ["body", "params", field], "msg": message, "type": "value_error"}])
+def _params_error(field: str, message: Msg) -> RunParamsError:
+    return RunParamsError(message, errors=[field_error(["body", "params", field], message)])
 
 
 def _load(db: Session, run: Run, path: str, settings: Settings) -> dict[str, Any]:
@@ -55,7 +54,7 @@ def _load(db: Session, run: Run, path: str, settings: Settings) -> dict[str, Any
     except ArtifactNotFoundError:
         raise BulkNotAvailableError() from None
     if artifact.size_bytes > JSON_MAX_BYTES:
-        raise BulkNotAvailableError("El documento es demasiado grande para el visor.")
+        raise BulkNotAvailableError(Msg("runs.document_too_large"))
     data: dict[str, Any] = json.loads(file.read_text(encoding="utf-8"))
     return data
 
@@ -83,23 +82,23 @@ def project_upload(db: Session, project: Project, upload_id: str) -> Upload | No
 def check_preview(db: Session, membership: Membership, params: dict[str, Any]) -> None:
     """``bulk_preview``: el fichero es de este proyecto."""
     if project_upload(db, membership.project, params["upload"]) is None:
-        raise _params_error("upload", "El fichero no existe en este proyecto.")
+        raise _params_error("upload", Msg("runs.bulk.upload_missing"))
 
 
 def target_changed(
     db: Session, project: Project, preview_params: dict[str, Any], preview: dict[str, Any]
-) -> str | None:
+) -> Msg | None:
     """Motivo por el que la conexión destino o el fichero ya no son los de la vista previa (``None`` si lo son)."""
     alias = str(preview_params["target_connection"])
     try:
         link = get_project_connection(db, project, alias)
     except AppError:
-        return f"El proyecto ya no tiene la conexión «{alias}»."
+        return Msg("runs.connection_gone", alias=alias)
     if link.connection_id != preview.get("target_connection_id"):
-        return f"La conexión «{alias}» ya no es la de la vista previa: repítela."
+        return Msg("runs.connection_replaced", alias=alias)
     upload = project_upload(db, project, str(preview_params["upload"]))
     if upload is None or upload.sha256 != preview.get("upload_sha256"):
-        return "El fichero de la vista previa ya no está o ha cambiado."
+        return Msg("runs.bulk.upload_changed")
     return None
 
 
@@ -112,37 +111,37 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunStateError: La vista previa tiene errores u otra escritura está en curso sobre el destino (409).
     """
     if not user.can("data.write"):
-        raise BulkForbiddenError("Tu rol no tiene el permiso «Escribir datos»; pídeselo a un administrador.")
+        raise BulkForbiddenError(Msg("runs.missing_permission", permission=Msg("runs.permission.data_write")))
     if membership.role != "owner":
-        raise BulkForbiddenError("Solo el propietario del proyecto puede cargar datos.")
+        raise BulkForbiddenError(Msg("runs.bulk.owner_only"))
     preview_run = db.get(Run, params["preview_run"])
     if preview_run is None or preview_run.project_id != membership.project.id:
-        raise _params_error("preview_run", "La vista previa no existe en este proyecto.")
+        raise _params_error("preview_run", Msg("runs.preview_missing"))
     try:
         preview = load_preview(db, preview_run, settings)
     except AppError:
-        raise _params_error("preview_run", "La ejecución indicada no es una vista previa correcta.") from None
+        raise _params_error("preview_run", Msg("runs.preview_invalid")) from None
     if preview_run.finished_at is None or utcnow() - preview_run.finished_at > PREVIEW_MAX_AGE:
-        raise _params_error("preview_run", "La vista previa tiene más de 60 minutos: repítela.")
+        raise _params_error("preview_run", Msg("runs.preview_expired"))
     if preview.get("errors"):
-        raise RunStateError("La vista previa tiene errores de validación: corrígelos y repítela.")
+        raise RunStateError(Msg("runs.bulk.preview_has_errors"))
     changed = target_changed(db, membership.project, preview_run.params, preview)
     if changed:
         raise _params_error("preview_run", changed)
     alias = str(preview_run.params["target_connection"])
     link = get_project_connection(db, membership.project, alias)
     if link.connection.read_only:
-        raise _params_error("preview_run", "La conexión destino es de solo lectura.")
+        raise _params_error("preview_run", Msg("runs.target_read_only"))
     if link.connection.db_type != preview.get("target_engine"):
-        raise _params_error("preview_run", f"La conexión destino ya no es {preview.get('target_engine')}.")
+        raise _params_error("preview_run", Msg("runs.target_engine_changed", engine=str(preview.get("target_engine"))))
     if params.get("confirm") != alias:
-        raise _params_error("confirm", "Escribe el alias de la conexión destino para confirmar.")
+        raise _params_error("confirm", Msg("runs.confirm_alias"))
     if preview.get("operation") in {"update", "delete"} and params.get("confirm_rows") != preview.get("matches"):
-        raise _params_error("confirm_rows", "Escribe el número de filas afectadas que indica la vista previa.")
+        raise _params_error("confirm_rows", Msg("runs.bulk.confirm_rows"))
     if not plan_atomic(preview) and not params.get("accept_non_atomic"):
-        raise _params_error("accept_non_atomic", "La carga paralela no es atómica: acéptalo para continuar.")
+        raise _params_error("accept_non_atomic", Msg("runs.bulk.accept_non_atomic"))
     if active_write(db, membership.project.id, alias):
-        raise RunStateError("Ya hay una escritura en curso sobre esa conexión destino.")
+        raise RunStateError(Msg("runs.write_in_progress"))
 
 
 def plan_atomic(preview: dict[str, Any]) -> bool:

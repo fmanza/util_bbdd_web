@@ -14,9 +14,11 @@ import pytest
 
 from app.api.v1.runs import MERMAID_MISSING_WARNING, _archive_extras
 from app.core.config import Settings
+from app.core.errors import AppError
 from app.db.models import Run
 from app.domain.templates.errors import TemplateContentError
 from app.domain.templates.files import base_template, check_template, kind_for, stored_suffix
+from app.i18n import Msg
 from app.integrations.util_bbdd import documentation as doc
 from app.integrations.util_bbdd.documentation import (
     MARKDOWN_MERMAID_ARTIFACT,
@@ -30,6 +32,13 @@ from app.integrations.util_bbdd.documentation import (
     public_message,
 )
 from app.workspace.layout import zip_stream
+
+
+def _text(exc: AppError) -> str:
+    """Detalle y errores por campo en español (ADR-015: el error lleva un ``Msg``, no el texto)."""
+    parts = [exc.detail.render("es")] if exc.detail else []
+    parts += [e["msg"].render("es") for e in exc.extra.get("errors", []) if isinstance(e.get("msg"), Msg)]  # type: ignore[attr-defined]
+    return " ".join(parts)
 
 
 def test_imprimir_has_no_markdown_block_without_markdown() -> None:
@@ -124,7 +133,7 @@ def test_markdown_input_error_follows_the_cause_chain() -> None:
 
     assert isinstance(error, MarkdownInputError)
     assert error.kind == "previous"
-    assert error.message.startswith("La documentación anterior")
+    assert error.msg.render("es").startswith("La documentación anterior")
     assert markdown_input_error(ValueError("otra cosa"), MarkdownInputs()) is None
 
 
@@ -187,8 +196,9 @@ def test_trace_check_rejects(tmp_path: Path, name: str, content: bytes, message:
     path = tmp_path / name
     path.write_bytes(content)
 
-    with pytest.raises(TemplateContentError, match=message):
+    with pytest.raises(TemplateContentError) as raised:
         check_template(path, "trace", max_uncompressed=0)
+    assert message in _text(raised.value)
 
 
 def test_trace_base_template_is_valid(tmp_path: Path) -> None:

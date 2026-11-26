@@ -162,7 +162,7 @@ def test_anonymous_api_is_limited_per_ip_and_health_is_exempt(app_with: AppFacto
     statuses = [client.get("/api/v1/auth/me").status_code for _ in range(4)]
     assert statuses == [401, 401, 401, 429]
     limited = client.get("/api/v1/auth/me")
-    assert limited.json()["code"] == "rate_limited"
+    assert limited.json()["code"] == "core.rate_limited"
     assert int(limited.headers["Retry-After"]) >= 1
     assert limited.headers["X-Request-ID"]
     assert all(client.get("/api/health").status_code == 200 for _ in range(5))
@@ -208,7 +208,7 @@ def test_login_attempts_per_minute(app_with: AppFactory, user: User) -> None:
         headers={"X-CSRF-Token": csrf},
     )
     assert response.status_code == 429
-    assert response.json()["code"] == "rate_limited"
+    assert response.json()["code"] == "core.rate_limited"
     assert "Retry-After" in response.headers
 
 

@@ -9,11 +9,20 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
 
+from app.core.errors import AppError
 from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import get_operation, validate_params
 from app.domain.uploads.errors import UploadContentError, UploadTypeError
 from app.domain.uploads.files import ReadOptions, display_name, kind_for, read_frame
+from app.i18n import Msg
 from app.integrations.util_bbdd.bulk import _count_matches, _required_columns, _resolve_mapping, verify
+
+
+def _text(exc: AppError) -> str:
+    """Detalle y errores por campo en español (ADR-015: el error lleva un ``Msg``, no el texto)."""
+    parts = [exc.detail.render("es")] if exc.detail else []
+    parts += [e["msg"].render("es") for e in exc.extra.get("errors", []) if isinstance(e.get("msg"), Msg)]  # type: ignore[attr-defined]
+    return " ".join(parts)
 
 
 @pytest.mark.parametrize(
@@ -46,8 +55,9 @@ def test_read_csv_encodings_delimiters_and_limits(tmp_path: Path) -> None:
     frame = read_frame(latin, "csv", ReadOptions(), max_rows=10)
 
     assert list(frame.columns) == ["id", "nombre"] and frame.iloc[0]["nombre"] == "Begoña"
-    with pytest.raises(UploadContentError, match="más de 10 filas"):
+    with pytest.raises(UploadContentError) as raised:
         read_frame(big, "csv", ReadOptions(), max_rows=10)
+    assert "más de 10 filas" in _text(raised.value)
     with pytest.raises(UploadContentError):
         read_frame(latin, "csv", ReadOptions(encoding="utf-8"), max_rows=10)
 
@@ -71,8 +81,9 @@ def test_describe_an_empty_excel_sheet_still_lists_the_sheets(tmp_path: Path) ->
 
     assert empty == {"columns": [], "sample": [], "sheets": ["Vacía", "Datos"]}
     assert full["columns"] == ["id", "nombre"] and full["sheets"] == ["Vacía", "Datos"]
-    with pytest.raises(UploadContentError, match="no tiene columnas"):
+    with pytest.raises(UploadContentError) as raised:
         read_frame(path, "xlsx", ReadOptions(), max_rows=10)  # la vista previa y la carga la siguen rechazando
+    assert "no tiene columnas" in _text(raised.value)
     csv = tmp_path / "vacio.csv"
     csv.write_text("", encoding="utf-8")
     with pytest.raises(UploadContentError):
@@ -580,7 +591,7 @@ def test_apply_job_ends_cancelled(
     with pytest.raises(JobError) as raised:
         job.run_apply(ctx)  # type: ignore[arg-type]
 
-    assert raised.value.code == "cancelled" and message in raised.value.message
+    assert raised.value.code == "cancelled" and message in raised.value.message.render("es")
     if cancel_before:
         assert calls == []
     else:

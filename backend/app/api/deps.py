@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, Response
+from fastapi import Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.core.errors import AppError
 from app.core.security import session_csrf_token, tokens_match
 from app.db.models import User, UserSession
 from app.db.session import get_session
@@ -47,16 +48,34 @@ def request_context(request: Request) -> RequestContext:
 Context = Annotated[RequestContext, Depends(request_context)]
 
 
+class NotAuthenticatedError(AppError):
+    """Sin cookie de sesión o con una sesión caducada o revocada."""
+
+    status = 401
+
+
+class PermissionDeniedError(AppError):
+    """El rol del usuario no tiene ninguno de los permisos que exige la ruta (ADR-014)."""
+
+    status = 403
+
+
+class InvalidCsrfTokenError(AppError):
+    """Falta la cabecera ``X-CSRF-Token`` o no coincide con la cookie y la sesión."""
+
+    status = 403
+
+
 def current_session(request: Request, db: DbSession, settings: SettingsDep) -> UserSession:
     """Sesión válida de la cookie ``ubw_session``.
 
     Raises:
-        HTTPException: 401 si no hay cookie o la sesión no es válida.
+        NotAuthenticatedError: 401 si no hay cookie o la sesión no es válida.
     """
     token = request.cookies.get(session_cookie(settings))
     session = resolve_session(db, token, settings) if token else None
     if session is None:
-        raise HTTPException(status_code=401, detail="No autenticado")
+        raise NotAuthenticatedError()
     return session
 
 
@@ -75,12 +94,12 @@ def require_permission(*permissions: Permission) -> Callable[[User], User]:
     """Dependencia: usuario actual cuyo rol tiene **alguno** de ``permissions`` (ADR-014).
 
     Raises:
-        HTTPException: 403 si no tiene ninguno.
+        PermissionDeniedError: 403 si no tiene ninguno.
     """
 
     def dependency(user: CurrentUser) -> User:
         if not any(user.can(permission) for permission in permissions):
-            raise HTTPException(status_code=403, detail="No tienes permiso para esta acción")
+            raise PermissionDeniedError()
         return user
 
     return dependency
@@ -106,17 +125,17 @@ def csrf_protect(request: Request, settings: SettingsDep) -> None:
     ``HMAC(clave, token_de_sesión)``.
 
     Raises:
-        HTTPException: 403 si falta o no coincide.
+        InvalidCsrfTokenError: 403 si falta o no coincide.
     """
     if request.method in SAFE_METHODS:
         return
     header = request.headers.get(CSRF_HEADER, "")
     cookie = request.cookies.get(csrf_cookie(settings), "")
     if not header or not cookie or not tokens_match(header, cookie):
-        raise HTTPException(status_code=403, detail="Token CSRF ausente o no válido")
+        raise InvalidCsrfTokenError()
     session_token = request.cookies.get(session_cookie(settings))
     if session_token and not tokens_match(header, session_csrf_token(settings, session_token)):
-        raise HTTPException(status_code=403, detail="Token CSRF ausente o no válido")
+        raise InvalidCsrfTokenError()
 
 
 def set_auth_cookies(response: Response, settings: Settings, session_token: str) -> str:

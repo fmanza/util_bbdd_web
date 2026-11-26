@@ -16,6 +16,7 @@ from app.domain.projects.service import get_membership, get_project_connection
 from app.domain.runs.dumps import PREVIEW_PATH, RESULT_PATH, connections_changed, load_preview, restore_target
 from app.domain.runs.operations import DumpApplyParams, DumpPreviewParams, DumpRestoreParams
 from app.domain.runs.service import DUMP_JOURNAL_PATH, DUMP_TARGET_PATH
+from app.i18n import Msg
 from app.integrations.util_bbdd.compare import SchemaNotFoundError
 from app.integrations.util_bbdd.dump import (
     DumpOptions,
@@ -31,7 +32,7 @@ from app.integrations.util_bbdd.dump import (
 )
 from app.integrations.util_bbdd.isolated import classify
 from app.jobs.context import JobContext, JobError
-from app.jobs.operations.documentation import _MESSAGES
+from app.jobs.operations.documentation import library_msg, msg_list
 
 RESTORE_PATH: Final = "outputs/dump/restore.json"
 
@@ -62,12 +63,13 @@ def _job_error(exc: Exception) -> JobError:
     if isinstance(exc, JobError):
         return exc
     if isinstance(exc, NoMatchingTablesError):
-        return JobError("invalid_params", "Ninguna tabla del origen casa con el filtro de tablas.")
-    if isinstance(exc, SchemaNotFoundError | UnknownTablesError):
-        prefix = "Tablas que no existen en el origen: " if isinstance(exc, UnknownTablesError) else ""
-        return JobError("invalid_params", f"{prefix}{exc}")
+        return JobError("invalid_params", Msg("jobs.dump.no_matching_tables"))
+    if isinstance(exc, SchemaNotFoundError):
+        return JobError("invalid_params", exc.msg)
+    if isinstance(exc, UnknownTablesError):
+        return JobError("invalid_params", Msg("jobs.dump.unknown_tables", tables=", ".join(exc.tables)))
     code = classify(exc)
-    return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
+    return JobError(code, library_msg(code, exc))
 
 
 def _write(path: Path, data: dict[str, Any]) -> None:
@@ -99,48 +101,48 @@ def _connection_ids(ctx: JobContext, params: DumpPreviewParams) -> dict[str, int
     with new_session() as db:
         run = db.get(Run, ctx.run_id)
         if run is None:
-            raise JobError("invalid_params", "La ejecución ya no existe.")
+            raise JobError("invalid_params", Msg("jobs.run_gone"))
         return {
             f"{side}_connection_id": get_project_connection(db, run.project, alias).connection_id
             for side, alias in (("source", params.source_connection), ("target", params.target_connection))
         }
 
 
-def _check_writer(db: Session, ctx: JobContext, action: str) -> Run:
+def _check_writer(db: Session, ctx: JobContext, action: Msg) -> Run:
     """Permiso ``data.write`` y rol owner del usuario del run (pudieron cambiar desde que se encoló)."""
     run = db.get(Run, ctx.run_id)
     user = db.get(User, run.user_id) if run and run.user_id else None
     if run is None or user is None or not user.is_active or not user.can("data.write"):
-        raise JobError("forbidden", f"El usuario ya no tiene permiso para {action}.")
+        raise JobError("forbidden", Msg("jobs.no_permission_for", action=action))
     try:
         membership = get_membership(db, user, ctx.project_id)
     except AppError:
-        raise JobError("forbidden", "El usuario ya no es miembro del proyecto.") from None
+        raise JobError("forbidden", Msg("jobs.not_member")) from None
     if membership.role != "owner":
-        raise JobError("forbidden", f"Solo el propietario del proyecto puede {action}.")
+        raise JobError("forbidden", Msg("jobs.owner_only_for", action=action))
     return run
 
 
 def _recheck(ctx: JobContext, params: DumpApplyParams) -> tuple[DumpPreviewParams, dict[str, Any]]:
     """Vuelve a comprobar en el worker permiso, rol owner, vista previa y destino (pudieron cambiar al encolar)."""
     with new_session() as db:
-        run = _check_writer(db, ctx, "volcar datos")
+        run = _check_writer(db, ctx, Msg("jobs.action.dump"))
         preview_run = db.get(Run, params.preview_run)
         if preview_run is None or preview_run.project_id != ctx.project_id:
-            raise JobError("invalid_params", "La vista previa ya no existe.")
+            raise JobError("invalid_params", Msg("jobs.preview_gone"))
         try:
             preview = load_preview(db, preview_run, ctx.settings)
         except AppError:
-            raise JobError("invalid_params", "La vista previa ya no está disponible (¿purgada?).") from None
+            raise JobError("invalid_params", Msg("jobs.preview_unavailable")) from None
         preview_params = DumpPreviewParams.model_validate(preview_run.params)
         changed = connections_changed(db, run.project, preview_run.params, preview)
         if changed:
             raise JobError("preview_changed", changed)
         link = get_project_connection(db, run.project, preview_params.target_connection)
         if link.connection.read_only:
-            raise JobError("forbidden", "La conexión destino es de solo lectura.")
+            raise JobError("forbidden", Msg("jobs.target_read_only"))
         if link.connection.db_type != preview["target_engine"]:
-            raise JobError("invalid_params", f"La conexión destino ya no es {preview['target_engine']}.")
+            raise JobError("invalid_params", Msg("jobs.target_engine_changed", engine=preview["target_engine"]))
         return preview_params, preview
 
 
@@ -149,7 +151,7 @@ def run_apply(ctx: JobContext) -> None:
     ctx.progress("preparing", "Comprobando permiso, vista previa y destino")
     preview_params, preview = _recheck(ctx, params)
     if ctx.cancel_requested():  # pedida mientras se comprobaba: aún no se ha tocado el destino
-        raise JobError("cancelled", "Cancelada por un usuario antes de escribir en el destino.")
+        raise JobError("cancelled", Msg("jobs.cancelled_before_write"))
     source, target = _endpoints(ctx, preview_params)
     verb = "Vaciando y cargando" if preview_params.truncate_target else "Cargando"
     ctx.progress("running", f"{verb} {len(preview['tables'])} tablas en «{preview_params.target_connection}»")
@@ -169,21 +171,18 @@ def run_apply(ctx: JobContext) -> None:
             progress=progress,
         )
     except PreviewChangedError:
-        raise JobError("preview_changed", "Las tablas o columnas cambiaron desde la vista previa: repítela.") from None
+        raise JobError("preview_changed", Msg("jobs.dump.structure_changed")) from None
     except Exception as exc:  # frontera de util_bbdd
         ctx.logger.error("Volcado fallido", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     _write(ctx.run_dir / RESULT_PATH, result)
     # Diario pendiente: alguna constraint no se reactivó (también al cancelar); se restauran desde el resultado.
     pending = (ctx.run_dir / DUMP_JOURNAL_PATH).is_file()
-    restore_hint = "; quedan constraints sin restaurar: restáuralas desde el resultado" if pending else ""
     if result.get("cancelled"):
         loaded, total = len(result["completed_tables"]), sum(1 for t in preview["tables"] if t["target_table"])
         ctx.logger.info("Volcado cancelado", extra={"completed": loaded, "tables": total, "pending": pending})
-        raise JobError(
-            "cancelled",
-            f"Cancelada por un usuario: {loaded} de {total} tablas cargadas; la tabla en curso se deshizo{restore_hint}.",
-        )
+        key = "jobs.dump.cancelled_pending" if pending else "jobs.dump.cancelled"
+        raise JobError("cancelled", Msg(key, loaded=loaded, total=total))
     failed = [t["table"] for t in result["tables"] if t["status"] == "error"]
     broken = [f"{c['table']}.{c['constraint']}" for c in result["constraints"] if c["status"] == "failed"]
     loaded = sum(max(t["target_rows_after"] - t["target_rows_before"], 0) for t in result["tables"])
@@ -191,14 +190,14 @@ def run_apply(ctx: JobContext) -> None:
         "Volcado", extra={"failed": failed, "constraints_failed": broken, "rows": loaded, "pending": pending}
     )
     if failed or broken or pending:
-        parts = []
+        parts: list[Msg] = []
         if failed:
-            parts.append(f"tablas con error: {', '.join(failed)}")
+            parts.append(Msg("jobs.dump.failed_tables", tables=", ".join(failed)))
         if broken:
-            parts.append(f"constraints que no se pudieron reactivar: {', '.join(broken)}")
+            parts.append(Msg("jobs.dump.broken_constraints", constraints=", ".join(broken)))
         if pending:
-            parts.append(restore_hint.removeprefix("; "))
-        raise JobError("dump_partial", "Volcado incompleto; " + "; ".join(parts) + ".")
+            parts.append(Msg("jobs.dump.pending_constraints"))
+        raise JobError("dump_partial", Msg("jobs.dump.partial", details=msg_list(parts)))
     rejected = sum(t["rows_rejected"] for t in result["tables"])
     extra = f", {rejected} filas apartadas en rechazos.csv" if rejected else ""
     ctx.progress("reporting", f"{len(result['tables'])} tablas volcadas{extra}", 100)
@@ -209,20 +208,20 @@ def run_restore(ctx: JobContext) -> None:
     params = DumpRestoreParams.model_validate(ctx.params)
     ctx.progress("preparing", "Comprobando permiso, volcado y destino")
     with new_session() as db:
-        run = _check_writer(db, ctx, "restaurar constraints")
+        run = _check_writer(db, ctx, Msg("jobs.action.restore"))
         try:
             link, journal = restore_target(db, run.project, db.get(Run, params.dump_run), ctx.settings)
         except AppError as exc:
             raise JobError("invalid_params", exc.detail or exc.title) from None
         alias = link.alias
         if params.confirm != alias:
-            raise JobError("invalid_params", "La confirmación no es el alias de la conexión destino.")
+            raise JobError("invalid_params", Msg("jobs.dump.confirm_mismatch"))
     db_type, conn_params = ctx.connection_params(alias)
     ctx.progress("running", f"Reactivando las constraints de «{alias}»")
     try:
         result = restore_constraints(Endpoint(db_type, conn_params, None), journal)
     except ValueError:
-        raise JobError("invalid_params", "El diario de constraints no es válido para este destino.") from None
+        raise JobError("invalid_params", Msg("jobs.dump.journal_invalid")) from None
     except Exception as exc:  # frontera de util_bbdd
         ctx.logger.error("Restauración de constraints fallida", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
@@ -230,9 +229,7 @@ def run_restore(ctx: JobContext) -> None:
     failed = [f"{c['table']}.{c['constraint']}" for c in result["constraints"] if c["status"] == "failed"]
     ctx.logger.info("Constraints restauradas", extra={"failed": failed, "pending": result["pending"]})
     if result["pending"]:
-        detail = f": {', '.join(failed)}" if failed else ""
-        raise JobError(
-            "restore_partial",
-            f"No se pudieron reactivar todas las constraints{detail}; corrige los datos y vuelve a restaurar.",
-        )
+        if failed:
+            raise JobError("restore_partial", Msg("jobs.dump.restore_partial_list", constraints=", ".join(failed)))
+        raise JobError("restore_partial", Msg("jobs.dump.restore_partial"))
     ctx.progress("reporting", f"{len(result['constraints'])} constraints reactivadas en «{alias}»", 100)

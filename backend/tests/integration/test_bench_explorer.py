@@ -110,7 +110,8 @@ def test_write_bypassing_the_guard_is_blocked_or_rolled_back(db_type: str) -> No
                 _run_read_only(manager, insert, 10, 30)
             assert info.value.code == "query_error"
             # El error debe ser el de la transacción de solo lectura, no otro cualquiera.
-            assert READ_ONLY_ERRORS[db_type] in info.value.message.lower(), info.value.message
+            text = info.value.msg.render("es")
+            assert READ_ONLY_ERRORS[db_type] in text.lower(), text
 
     count = run_free_sql(db_type, _params(db_type), f"SELECT COUNT(*) AS n FROM {PARENT}", limit=1, timeout=60)
     assert count.value["rows"] == [[1]]

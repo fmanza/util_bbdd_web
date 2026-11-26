@@ -51,12 +51,19 @@ export interface ProblemFieldError {
   loc: (string | number)[];
   msg: string;
   type?: string;
+  /** Código estable del error del campo (clave del mensaje o `type` de Pydantic, ADR-015). */
+  code?: string;
 }
 
 export interface Problem {
   title: string;
   status: number;
   detail?: string;
+  /**
+   * Código estable, independiente del idioma (ADR-015): `runs.preview_expired`, `connection_not_found`… Solo lo traen
+   * las respuestas de la API; un proxy o una caída no.
+   */
+  code?: string;
   /** Errores por campo (422): `loc` como en FastAPI, p. ej. `["body", "params", "host"]`. */
   errors?: ProblemFieldError[];
   /** Identificador de la petición (cabecera `X-Request-ID`): la «referencia» que se da a soporte. */

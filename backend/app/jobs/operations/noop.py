@@ -6,6 +6,7 @@ import html
 import time
 
 from app.domain.runs.operations import NoopParams
+from app.i18n import Msg
 from app.jobs.context import JobContext, JobError
 
 
@@ -21,7 +22,7 @@ def run(ctx: JobContext) -> None:
         time.sleep(params.step_seconds)
         ctx.progress("running", f"Paso {step} de {params.steps}", int(step * 100 / params.steps))
     if params.fail:
-        raise JobError("noop_failed", "Fallo simulado (fail = true).")
+        raise JobError("noop_failed", Msg("jobs.noop_failed"))
 
     ctx.progress("reporting", "Generando artefactos de ejemplo", 100)
     connection_line = (

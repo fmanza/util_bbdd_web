@@ -168,7 +168,7 @@ def test_dry_run_with_blocking_fk_fails() -> None:
     with pytest.raises(JobError) as info:
         _raise_for_report(report)
 
-    assert info.value.code == "fk_type_mismatch" and "P.C → R.ID" in info.value.message
+    assert info.value.code == "fk_type_mismatch" and "P.C → R.ID" in info.value.message.render("es")
 
 
 def _oracle_plan(target: str = "mariadb") -> Any:
@@ -316,7 +316,7 @@ def test_apply_reports_each_statement_and_stops_between_statements_when_cancelle
     assert reported[1][0].startswith(f"Sentencias: 1 de {report.statements} (CREATE TABLE")
     with pytest.raises(JobError) as info:
         _raise_for_report(report)
-    assert info.value.code == "cancelled" and f"aplicadas 1 de {report.statements}" in info.value.message
+    assert info.value.code == "cancelled" and f"aplicadas 1 de {report.statements}" in info.value.message.render("es")
 
 
 def test_blocked_or_fk_blocking_plans_never_reach_the_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -345,7 +345,7 @@ def test_dry_run_with_conflicts_or_invalid_views_fails() -> None:
         _raise_for_report(invalid)
     _raise_for_report(skipped)
 
-    assert first.value.code == "target_conflict" and "clientes" in first.value.message
+    assert first.value.code == "target_conflict" and "clientes" in first.value.message.render("es")
     assert second.value.code == "view_invalid"
 
 
@@ -358,4 +358,4 @@ def test_partial_apply_reports_position_and_applied() -> None:
         _raise_for_report(report)
 
     assert info.value.code == "apply_partial"
-    assert "3/5" in info.value.message and "aplicadas 2" in info.value.message
+    assert "3/5" in info.value.message.render("es") and "aplicadas 2" in info.value.message.render("es")

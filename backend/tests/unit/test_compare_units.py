@@ -92,9 +92,9 @@ def test_resolve_schema_oracle_uses_the_normalized_name() -> None:
 
 
 def test_resolve_schema_missing_or_ambiguous() -> None:
-    with pytest.raises(SchemaNotFoundError, match="destino"):
+    with pytest.raises(SchemaNotFoundError, match="target"):
         resolve_schema("target", "nope", ["dbo"], _Dialect(normalize=False))
-    with pytest.raises(SchemaNotFoundError, match="origen"):
+    with pytest.raises(SchemaNotFoundError, match="source"):
         resolve_schema("source", "ab", ["Ab", "aB"], _Dialect(normalize=False))
 
 
@@ -139,8 +139,8 @@ def test_job_errors_name_the_side_without_driver_text() -> None:
 
     error = _job_error(SideError("target", DriverError("host=10.0.0.7 password=secreto")))
 
-    assert error.message.startswith("Destino:")
-    assert "secreto" not in error.message and "10.0.0.7" not in error.message
+    assert error.message.render("es").startswith("Destino:")
+    assert "secreto" not in error.message.render("es") and "10.0.0.7" not in error.message.render("es")
     assert _job_error(SchemaNotFoundError("source", "x")).code == "invalid_params"
 
 

@@ -37,6 +37,7 @@ from typing import Any, Final, Literal
 
 from docx.opc.exceptions import PackageNotFoundError
 
+from app.i18n import LocalizedError, Msg
 from app.integrations.util_bbdd.progress import RunProgress
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,15 @@ _ABSOLUTE_PATH: Final = re.compile(r"""(?<![^\s'"(])(?:[A-Za-z]:)?[\\/](?:[^\s'"
 WORD_REQUIRED_STYLES: Final = ("Title", "Heading 1", "Heading 2", "Heading 3", "No Spacing")
 
 
-class GraphvizMissingError(RuntimeError):
+class GraphvizMissingError(LocalizedError, RuntimeError):
     """Graphviz (``dot``) no está instalado."""
+
+    def __init__(self) -> None:
+        super().__init__(Msg("integrations.graphviz_missing"))
+
+
+class TableNotFoundError(LocalizedError, LookupError):
+    """La tabla pedida para el grafo no existe en el schema."""
 
 
 def graphviz_failed(exc: BaseException) -> bool:
@@ -148,13 +156,15 @@ class MarkdownInputs:
     previous_name: str = "documentación anterior"
 
 
-class MarkdownInputError(ValueError):
-    """Mapa de trazabilidad (``kind="trace_map"``) o documentación anterior (``kind="previous"``) no válidos."""
+class MarkdownInputError(LocalizedError, ValueError):
+    """Mapa de trazabilidad (``kind="trace_map"``) o documentación anterior (``kind="previous"``) no válidos.
+
+    ``msg`` lleva el texto de util_bbdd, ya sin rutas del servidor, como parámetro (``reason``).
+    """
 
     def __init__(self, kind: Literal["trace_map", "previous"], message: str) -> None:
-        super().__init__(message)
+        super().__init__(Msg(f"integrations.doc.invalid_{kind}", reason=message))
         self.kind = kind
-        self.message = message
 
 
 def markdown_input_error(exc: BaseException, inputs: MarkdownInputs) -> MarkdownInputError | None:
@@ -168,15 +178,15 @@ def markdown_input_error(exc: BaseException, inputs: MarkdownInputs) -> Markdown
         if isinstance(current, DocumentationConfigError):
             message = str(current)
             if "markdown.trace_map" in message:
-                return MarkdownInputError("trace_map", public_message(message, inputs))
+                return MarkdownInputError(kind="trace_map", message=public_message(message, inputs))
             if "markdown.previous" in message:
-                return MarkdownInputError("previous", public_message(message, inputs))
+                return MarkdownInputError(kind="previous", message=public_message(message, inputs))
         seen.add(id(current))
         current = current.__cause__ or current.__context__
     return None
 
 
-def trace_map_error(path: Path, shown_name: str) -> str | None:
+def trace_map_error(path: Path, shown_name: str) -> Msg | None:
     """Valida un mapa de trazabilidad sin conectar (``validate_trace_map``, util_bbdd 5.7.0, G49).
 
     Args:
@@ -184,7 +194,8 @@ def trace_map_error(path: Path, shown_name: str) -> str | None:
         shown_name: Nombre que subió el usuario; sustituye al del fichero en el mensaje.
 
     Returns:
-        ``None`` si es válido; si no, el mensaje con todos los errores, con ``shown_name`` y sin rutas.
+        ``None`` si es válido; si no, el mensaje con todos los errores (texto de util_bbdd, con ``shown_name`` y sin
+        rutas, como parámetro ``reason``).
     """
     from util_bbdd.doc import validate_trace_map
     from util_bbdd.exceptions import DocumentationConfigError
@@ -192,7 +203,8 @@ def trace_map_error(path: Path, shown_name: str) -> str | None:
     try:
         validate_trace_map(path)
     except DocumentationConfigError as exc:
-        return public_message(str(exc), MarkdownInputs(trace_map=path, trace_map_name=shown_name))
+        reason = public_message(str(exc), MarkdownInputs(trace_map=path, trace_map_name=shown_name))
+        return Msg("integrations.doc.invalid_trace_map", reason=reason)
     return None
 
 
@@ -403,7 +415,7 @@ def generate_documentation(
         documentación anterior no válidos, con un mensaje sin rutas) y las excepciones de util_bbdd.
     """
     if options.graphs and GRAPHVIZ_FORMATS & set(options.formats) and shutil.which("dot") is None:
-        raise GraphvizMissingError("Graphviz (dot) no está instalado en el servidor.")
+        raise GraphvizMissingError()
     chosen = templates or DocumentTemplates()
     outcome = _Outcome()
     try:
@@ -582,7 +594,7 @@ def generate_graphs(
     from util_bbdd.analysis.graphviz_ext import GraphvizRelationshipGraphExt
 
     if shutil.which("dot") is None:
-        raise GraphvizMissingError("Graphviz (dot) no está instalado en el servidor.")
+        raise GraphvizMissingError()
     graph_schema = target_schema(db_type, schema)
     output_dir.mkdir(parents=True, exist_ok=True)
     with SyncDatabaseManager(db_type, conn_params, use_pool=False) as manager:
@@ -601,7 +613,7 @@ def generate_graphs(
         if options.table:
             tables = {t.name for t in manager.get_schema_metadata(graph_schema, kinds={_tables_kind()}).tables()}
             if options.table not in tables:
-                raise LookupError(f"La tabla «{options.table}» no existe en el schema.")
+                raise TableNotFoundError(Msg("integrations.doc.table_not_found", table=options.table))
             files = graph.generate_graphviz_graph_paginated_ext(
                 table_name=options.table,
                 output_dir=output_dir,
