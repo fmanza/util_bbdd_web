@@ -43,3 +43,8 @@ adelante con IMPLEMENT».
   `test_apply_rule_codes` lo fijan por `code`.
 - **[runs]**: una escritura nueva que exija otro permiso necesita su entrada en `targets._PERMISSION_NAMES` (clave
   literal `runs.permission.*`).
+
+## Veredicto final
+Veredicto: CLOSED (sale en la 2.2.0) — AUDIT_PLAN `GO`.
+- Commits `8bfc13a` (tests de caracterización) y `a3cabf6` (refactor); PR #30 con CI en verde (run 45878001117,
+  suite completa de pytest y E2E incluidas), fusionado en `develop` (`37dd5ed`) y rama borrada.

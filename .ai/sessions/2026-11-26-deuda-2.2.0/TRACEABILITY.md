@@ -64,3 +64,17 @@ Fuera por decisión: revisión humana del inglés, excepción de mariadb (2027-0
   `UTIL_BBDD_BENCH_*_PORT` y `COMPOSE_FILE` separado por `;`.
 - **[complejidad]**: ruff C901 (máx. 12) y PLR0915 vigilan `backend/app`; `update_user` y `bulk._prepare` están en el
   límite.
+
+## Veredicto final
+Veredicto: CLOSED (2.2.0) — AUDIT_PLAN `GO_CONDICIONAL` → `GO`: la 0017 conserva todas las filas hijas (test y copia
+de la base local) y el CI pasa con los jobs nuevos.
+- pytest completo: 912 passed, 101 skipped, sin avisos.
+- PR #31 (run 45891176321): `e2e` 24 passed y 0 skipped (bench PostgreSQL + MySQL en el runner Linux con
+  `host-gateway`), `image` con Trivy sin hallazgos fuera de `.trivyignore`; fusionado en `develop` (`791a022`, run
+  45895784165 en verde) y rama borrada.
+Pendientes al cierre:
+- Commit `release: v2.2.0 - deuda técnica (Trivy, columnas antiguas, bench en la E2E)` propuesto, no ejecutado.
+- Publicación (pasos 6-8 de `docs/guides/publicar_version.md`) con copia de seguridad antes: llega la `0017`.
+- Revisar `.trivyignore` el 2026-12-26 y `PYSEC-2026-217` el 2027-02-26; revisión humana del inglés.
+- Ideas no comprometidas: bench con MariaDB/SQL Server/Oracle y `pytest -m integration` en el CI; regla de tamaño
+  para los componentes del frontend.
