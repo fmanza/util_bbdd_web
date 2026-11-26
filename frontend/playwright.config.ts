@@ -10,6 +10,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: process.env.UBW_E2E_URL ?? 'http://127.0.0.1:8080',
+    // Los specs buscan los textos en español; sin sesión, la SPA usa el idioma del navegador (2.0.0).
+    locale: 'es-ES',
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

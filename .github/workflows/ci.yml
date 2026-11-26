@@ -4,6 +4,10 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+  # Cada lunes: vulnerabilidades publicadas después del último cambio (job `audit`) y E2E completa.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -94,3 +98,95 @@ jobs:
           curl -sS http://127.0.0.1:8080/api/health || true
           docker compose logs
           exit 1
+
+  # Auditoría de dependencias (docs/guides/onboarding_dev.md › Auditoría de dependencias). Bloquean las de Python y
+  # las de producción de npm; las herramientas de desarrollo de npm solo avisan.
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.22"
+          python-version: "3.12"
+      - name: Python (pip-audit sobre backend/uv.lock)
+        working-directory: backend
+        # Excepciones, con su motivo y fecha de revisión en la guía:
+        #   PYSEC-2026-217 (CVE-2026-44172, mariadb): sin versión corregida; revisar 2027-02-26.
+        run: |
+          uv export --frozen --no-emit-project --format requirements-txt -o "$RUNNER_TEMP/requirements.txt"
+          uvx --from pip-audit==2.10.1 pip-audit --disable-pip --no-deps --progress-spinner off \
+            -r "$RUNNER_TEMP/requirements.txt" \
+            --ignore-vuln PYSEC-2026-217
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.21.0"
+      - name: npm de producción
+        working-directory: frontend
+        run: npm audit --omit=dev
+      - name: npm de desarrollo (aviso)
+        working-directory: frontend
+        continue-on-error: true
+        run: npm audit
+
+  # Playwright contra la imagen con docker compose (docs/guides/onboarding_dev.md › E2E completa). Sin el bench de
+  # motores reales: migrate.spec y el caso PostgreSQL de connections.spec se saltan solos.
+  e2e:
+    runs-on: ubuntu-24.04
+    needs: [backend, frontend]
+    timeout-minutes: 30
+    env:
+      UBW_TAG: ci
+      UBW_RATE_LIMIT_ANONYMOUS_PER_MINUTE: "2000"
+      UBW_RATE_LIMIT_LOGIN_PER_MINUTE: "300"
+      UBW_RATE_LIMIT_LOGIN_FAILURES: "100"
+      UBW_E2E_URL: http://127.0.0.1:8080
+      UBW_E2E_ADMIN_USER: e2e-admin
+      UBW_E2E_SQLITE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build de la imagen runtime
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime
+          tags: util_bbdd_web:ci
+          load: true
+          cache-from: type=gha
+      - name: Arranque
+        run: |
+          mkdir -p secrets
+          python3 scripts/generate_secrets.py
+          docker compose up -d --no-build --wait web
+          docker compose up -d --no-build worker
+      - name: Admin E2E y BD SQLite
+        run: |
+          # Contraseña de un solo uso: el contenedor y sus volúmenes desaparecen con el job.
+          password=$(openssl rand -base64 24)
+          echo "::add-mask::$password"
+          echo "UBW_E2E_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
+          UBW_E2E_ADMIN_PASSWORD="$password" bash scripts/e2e_prepare.sh
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.21.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Playwright
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          npx playwright test --workers=2
+      - name: Logs del compose
+        if: failure()
+        run: mkdir -p frontend/playwright-report && docker compose logs --no-color > frontend/playwright-report/compose.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7

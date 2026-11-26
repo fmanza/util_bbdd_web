@@ -47,7 +47,8 @@ test('un lector ve el proyecto sin poder lanzar; como editor lanza pero no ve lo
   const projectUrl = page.url();
   await page.getByRole('tab', { name: 'Miembros' }).click();
   const members = page.getByRole('tabpanel', { name: 'Miembros' });
-  await members.getByRole('textbox', { name: 'Usuario', exact: true }).fill(username);
+  // Campo con sugerencias (1.22.0): un combobox; se escribe el usuario completo sin elegir sugerencia.
+  await members.getByRole('combobox', { name: 'Usuario', exact: true }).fill(username);
   await members.getByRole('button', { name: 'Añadir miembro' }).click();
   await expect(page.getByRole('cell', { name: username, exact: true })).toBeVisible();
 

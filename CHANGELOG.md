@@ -5,6 +5,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-26
+
+### Added
+
+- CI: job **`e2e`** con Playwright contra la imagen levantada con `docker compose` (admin E2E de un solo uso y BD
+  SQLite de los fixtures; sin el bench de motores reales) y job **`audit`** con `pip-audit` y `npm audit`: fallan ante
+  una vulnerabilidad en Python o en las dependencias de producción de npm; las de desarrollo solo avisan. Los dos se
+  ejecutan también cada lunes. Excepciones con motivo y fecha de revisión en la guía de desarrolladores.
+- `scripts/e2e_prepare.sh`: prepara un compose levantado para la E2E (CI y local).
+
+### Fixed
+
+- E2E (no se había ejecutado desde la 2.0.0): Playwright navega con `locale: 'es-ES'`, porque sin sesión la SPA sigue
+  el idioma del navegador; `members.spec` escribe en el campo con sugerencias (un combobox desde la 1.22.0) y
+  `documentation.spec` espera el detalle de la ejecución antes de buscar «Correcta». Sin cambios en la aplicación.
+
+### Security
+
+- Backend: `certifi` 2026.10.23 (PYSEC-2026-4320) y `opentelemetry-api` 1.45.2 (GHSA-mf5v-w3w3-f6cg).
+- Frontend (solo pruebas): `undici` 8.12.4 por debajo de jsdom.
+
 ## [2.1.0] - 2026-11-26
 
 ### Added
