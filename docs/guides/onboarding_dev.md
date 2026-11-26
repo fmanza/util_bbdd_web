@@ -77,7 +77,18 @@ Los comandos de [SHARED_INSTRUCTIONS.md § «Comandos de desarrollo»][comandos]
 
 ## E2E completa (Fase 10)
 
-Con la imagen levantada (`docker compose up -d --build`) y el admin E2E creado:
+El CI la ejecuta en cada push, en cada PR y los lunes (job `e2e`), sin el bench de motores reales. En local, con la
+imagen levantada, `scripts/e2e_prepare.sh` crea el admin E2E y copia a `/data/files` las BD SQLite de
+`e2e/fixtures/` (se puede repetir):
+
+```bash
+export UBW_E2E_ADMIN_USER=e2e-admin UBW_E2E_ADMIN_PASSWORD="$(openssl rand -base64 24)" UBW_E2E_SQLITE=1
+scripts/e2e_prepare.sh
+cd frontend && npx playwright test --workers=2
+```
+
+Para no tocar los datos de tu instancia, levanta otra con sus propios volúmenes: `COMPOSE_PROJECT_NAME=ubw-e2e
+UBW_PORT=8082` en el `docker compose up` y en el script, y `UBW_E2E_URL=http://127.0.0.1:8082` en Playwright.
 
 - Credenciales en `UBW_E2E_ADMIN_USER`/`UBW_E2E_ADMIN_PASSWORD`; `UBW_E2E_SQLITE=1` para bulk, compare, documentación,
   dump, explorador y plantillas (BD en `/data/files`, ver la cabecera de cada spec); `UBW_E2E_MIGRATE=1` y el bench para
@@ -88,3 +99,24 @@ Con la imagen levantada (`docker compose up -d --build`) y el admin E2E creado:
   docker compose up -d`, y ejecuta `npx playwright test --repeat-each=2 --workers=2`.
 - La API sirve cookies `Secure` (`__Host-`): Chromium las acepta en `http://127.0.0.1`, httpx y PowerShell no
   (`scripts/load_test.py` las gestiona a mano).
+
+## Auditoría de dependencias
+
+El job `audit` del CI (en cada push, en cada PR y los lunes) ejecuta:
+
+| Qué | Herramienta | Si encuentra algo |
+|---|---|---|
+| Python (`backend/uv.lock`) | `pip-audit` sobre `uv export` | Falla |
+| npm de producción | `npm audit --omit=dev` | Falla |
+| npm de desarrollo (eslint, Vitest, Playwright…) | `npm audit` | Solo avisa |
+
+Si falla, actualiza el paquete respetando la regla de las dos semanas (`uv lock --upgrade-package <paquete>`;
+`npm update <paquete> --before=<fecha>`). Si no hay versión corregida, añade una excepción con `--ignore-vuln <id>`
+en `.github/workflows/ci.yml`, su motivo en los riesgos aceptados de
+[ASVS_L2.md](../security/ASVS_L2.md#riesgos-aceptados) y una fecha de revisión en esta tabla:
+
+| Excepción | Paquete | Motivo | Revisar |
+|---|---|---|---|
+| `PYSEC-2026-217` (CVE-2026-44172) | `mariadb` 1.1.14, vía util_bbdd | Sin versión corregida; afecta al escape manual con `big5`. util_bbdd no pasa `charset` al conector y la web usa parámetros enlazados | 2027-02-26 |
+
+`pip-audit` no revisa util_bbdd (se instala por URL) ni los paquetes del sistema de la imagen (`libmariadb`…).

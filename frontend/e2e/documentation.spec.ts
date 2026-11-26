@@ -29,8 +29,10 @@ async function launch(
   await dialog.getByRole('combobox', { name: 'Conexión' }).selectOption('tienda');
   if (fill) await fill(dialog);
   await dialog.getByRole('button', { name: 'Lanzar' }).click();
-  await expect(page).toHaveURL(/\/runs\//);
-  await expect(page.getByText('Correcta')).toBeVisible({ timeout: 120_000 });
+  await expect(page).toHaveURL(/\/runs\/\d+/);
+  // El detalle, no la tabla «Ejecuciones» del proyecto, que también tiene ejecuciones «Correcta».
+  await expect(page.getByRole('heading', { name: `Ejecución ${operation}` })).toBeVisible();
+  await expect(page.getByText('Correcta', { exact: true })).toBeVisible({ timeout: 120_000 });
 }
 
 test('documentar una BD SQLite y ver su grafo de relaciones', async ({ page }) => {

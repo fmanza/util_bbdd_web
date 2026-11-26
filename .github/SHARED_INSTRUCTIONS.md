@@ -136,7 +136,7 @@ Las salidas largas de validación (`.txt`, informes) van a `build/logs/`.
 - Backend: `tests/unit` (lógica pura), `tests/api` (TestClient con SQLite temporal), `tests/integration`
   (`@pytest.mark.integration`, BD reales, fuera del CI).
 - Frontend: Vitest + Testing Library (consultas por rol/texto), `fetch` sustituido con `vi.stubGlobal`.
-- E2E: Playwright contra `docker compose up`.
+- E2E: Playwright contra `docker compose up`; el CI la ejecuta sin el bench (`scripts/e2e_prepare.sh`).
 - Ninguna prueba del CI depende de motores externos.
 
 ### Dependencias
@@ -144,6 +144,8 @@ Las salidas largas de validación (`.txt`, informes) van a `build/logs/`.
 - Python: `uv.lock` con `exclude-newer` (solo versiones de ≥ 2 semanas; excepciones justificadas en `pyproject.toml`).
 - npm: `package-lock.json`, versiones exactas, instalación con `--before=<fecha>`.
 - Imágenes base con versión exacta en `docker/Dockerfile`.
+- Auditoría en el CI (job `audit`, también semanal): `pip-audit` y `npm audit --omit=dev` bloquean; excepciones con
+  motivo y fecha de revisión en `docs/guides/onboarding_dev.md` › Auditoría de dependencias.
 
 ### Formato de commits
 

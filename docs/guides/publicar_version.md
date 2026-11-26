@@ -116,7 +116,7 @@ Documentación y aplicación completa, con Docker:
 uv run --frozen --project backend --only-group docs zensical build --strict && rm -rf site
 docker compose up -d --build
 curl -s http://127.0.0.1:8080/api/health          # "status": "ok" y "worker": "ok"
-cd frontend && npm run e2e && cd ..               # requisitos: Guía de desarrolladores › E2E completa
+cd frontend && npm run e2e && cd ..               # también en el CI (job e2e); requisitos: Guía de desarrolladores › E2E completa
 ```
 
 ## 5. Commit de versión
