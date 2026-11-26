@@ -154,7 +154,7 @@ def finalize_run(
     """Cierra un run: estado final, ``run.json``, artefactos registrados y tamaño.
 
     ``error_message`` se guarda como clave y parámetros (``error_detail``, ADR-015) y, compuesto en español, en
-    ``error_message`` (``run.json`` y ejecuciones anteriores a la 2.0.0).
+    ``error_message`` (``run.json`` y ejecuciones anteriores a la 2.1.0).
 
     Returns:
         ``False`` si el run ya no estaba en curso (lo cerró otro proceso).

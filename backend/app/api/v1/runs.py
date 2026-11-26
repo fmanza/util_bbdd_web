@@ -100,7 +100,7 @@ def _previewable(artifact: Artifact) -> bool:
 
 
 def _error_message(run: Run) -> str | None:
-    """Fallo en el idioma de quien consulta (ADR-015); las ejecuciones anteriores a la 2.0.0 solo tienen el texto."""
+    """Fallo en el idioma de quien consulta (ADR-015); las ejecuciones anteriores a la 2.1.0 solo tienen el texto."""
     if run.error_detail:
         try:
             return Msg.from_dict(run.error_detail).render()

@@ -3,8 +3,9 @@
 ## Session metadata
 - id: 2026-11-26-errores-idioma
 - fecha: 2026-11-26
-- rama: feat/errores-idioma (sobre `36822a7`, release 2.0.0 sin tag)
-- skill: tech_debt + new_feature
+- rama: feat/errores-idioma (sobre `36822a7`), fusionada en `develop` por el PR #28 (`c0599f3`)
+- versión: 2.1.0 (la 2.0.0 ya tenía tag y release en `36822a7`)
+- skill: tech_debt + new_feature + version_closure
 - fase: tech_debt (solo análisis) → PLAN + AUDIT_PLAN + IMPLEMENT + AUDIT_CODE
 
 ## Prompt issued
@@ -32,8 +33,15 @@ alcance, opción (a), adelante».
   runs/templates/uploads; jobs/integrations): 381 claves por idioma.
 - Frontend: `Problem.code`, `ProblemFieldError.code`; `ErrorAlert` usa el título de la API si trae `code` y, si no
   (proxy), el de `errors.http.<status>`; `stubApi` añade `code` a los *problem details* de prueba.
-- Docs: ADR-015, `usuarios_y_sesiones.md` (Idioma), CHANGELOG `[2.0.0]`, G58 en `UTIL_BBDD_GAPS.md`,
-  `backend`/`api_contract.instructions.md`, `architecture.md`, `docs/README.md`, `zensical.toml`.
+- Docs: ADR-015, `usuarios_y_sesiones.md` (Idioma), CHANGELOG (en el cierre pasa de `[2.0.0]` a `[2.1.0]`), G58 en
+  `UTIL_BBDD_GAPS.md`, `backend`/`api_contract.instructions.md`, `architecture.md`, `docs/README.md`, `zensical.toml`.
+- Commit `0430c3c`, PR #28 con CI en verde (backend, docs, frontend, image), fusionado en `develop` (`c0599f3`) y rama
+  borrada.
+- version_closure: la etiqueta `v2.0.0` y su release ya estaban publicadas en `36822a7`, así que D1 sale como
+  **2.1.0** (MINOR: funcionalidad compatible). Versión sincronizada (CHANGELOG, `pyproject.toml`, `__init__.py`,
+  `package.json`/`package-lock.json`, `uv.lock`, `openapi.json` `info.version`, `.env.example`), filas 2.0.0 (`0015`)
+  y 2.1.0 (`0016`) en la tabla de revisiones de `deployment.md` (faltaba también 1.23.0–1.24.0) y «anteriores a la
+  2.1.0» en la guía y en dos docstrings.
 - Validación: ruff format/check, mypy (140 ficheros) limpios; pytest completo 904 passed (fallos por memoria en
   `test_backup`/`test_bulk` y dos reales corregidos: revisión `0016` en `test_backup` y `str(exc)` en
   `test_connections_domain`; los ficheros afectados pasan solos, 95 + 84); export OpenAPI `--check` sin cambios
@@ -62,16 +70,21 @@ alcance, opción (a), adelante».
 - **[i18n backend]**: los textos de excepciones de util_bbdd entran como parámetro (`reason`) y siguen en español
   (G58); los textos ingleses del catálogo usan comillas “…”, no «…».
 - **[runs]**: `runs.error_detail` (JSON `{key, params}`) manda sobre `runs.error_message`, que solo guarda el texto en
-  español para `run.json` y para las ejecuciones anteriores a la 2.0.0.
+  español para `run.json` y para las ejecuciones anteriores a la 2.1.0.
 - **[frontend]**: `ErrorAlert` solo confía en `problem.title` si trae `code`; los stubs de prueba lo añaden en
   `stubApi` (`frontend/src/test/api.ts`).
 - **[tests]**: con poca memoria libre, Vitest da timeouts en `runs.test`, `bulkRun.test` y `bulk.test` también en
   `develop`; repetir con `--maxWorkers=2` antes de buscar una regresión.
+- **[versiones]**: antes de añadir algo «dentro de» una versión, comprobar `git ls-remote --tags origin` y
+  `gh release list`: si el tag ya existe, va a la siguiente versión; un tag publicado no se mueve
+  (`docs/guides/publicar_version.md` § 9).
+- **[despliegue]**: cada versión con migración nueva añade su fila a la tabla «Última revisión de Alembic» de
+  `docs/guides/deployment.md`; en la 2.0.0 se olvidó.
 
 ## Veredicto final
-Veredicto: CLOSED
+Veredicto: CLOSED (2.1.0)
 Pendientes al cierre:
-- Commit `feat(backend,frontend): errores de la API en el idioma del usuario` propuesto, no ejecutado.
+- Commit `release: v2.1.0 - errores de la API en el idioma del usuario` propuesto, no ejecutado.
 - Revisión humana del inglés del catálogo del backend (381 claves) junto con la del frontend.
-- Playwright y publicación de la 2.0.0 (pasos 6-8 de `docs/guides/publicar_version.md`; copia de seguridad antes de
-  migrar: llegan 0014, 0015 y 0016).
+- Playwright y publicación de la 2.1.0 (pasos 6-8 de `docs/guides/publicar_version.md`; copia de seguridad antes de
+  migrar: desde la 2.0.0 llega 0016; desde la 1.24.0, 0014, 0015 y 0016).
