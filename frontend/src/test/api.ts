@@ -83,7 +83,10 @@ export function stubApi(routes: Record<string, Handler>) {
     if (text !== undefined) {
       return new Response(text, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
-    return new Response(JSON.stringify(body ?? {}), {
+    // La API pone `code` en todo *problem details* (ADR-015); sin él, `ErrorAlert` lo trataría como un proxy.
+    const isProblem = status >= 400 && typeof body === 'object' && body !== null && 'title' in body;
+    const payload = isProblem && !('code' in body) ? { code: 'test_error', ...body } : body;
+    return new Response(JSON.stringify(payload ?? {}), {
       status,
       headers: { 'Content-Type': status < 400 ? 'application/json' : 'application/problem+json' },
     });

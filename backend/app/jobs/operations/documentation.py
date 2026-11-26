@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 from app.db.models import Project
 from app.db.session import new_session
@@ -26,6 +26,7 @@ from app.domain.runs.operations import DocumentationParams, RelationshipGraphPar
 from app.domain.templates.errors import TemplateNotFoundError
 from app.domain.templates.files import Kind, display_name
 from app.domain.templates.service import resolve_for_run, template_file
+from app.i18n import LocalizedError, Msg
 from app.integrations.util_bbdd.documentation import (
     MARKDOWN_MERMAID_ARTIFACT,
     MERMAID_JS_REF,
@@ -44,12 +45,25 @@ from app.integrations.util_bbdd.progress import RunProgress, is_cancellation
 from app.jobs.context import JobContext, JobError
 from app.workspace.layout import TEMPLATES_INPUT, write_json_atomic
 
-_MESSAGES = {
-    "connection_failed": "No se pudo conectar con la base de datos.",
-    "driver_missing": "El driver del motor no está instalado en el servidor.",
-    "timeout": "La base de datos no respondió a tiempo.",
-    "invalid_config": "Parámetros no válidos para util_bbdd.",
+#: Mensaje de cada código de ``classify`` (los demás: ``jobs.library_failed`` con el tipo de la excepción).
+_MESSAGES: Final[dict[str, str]] = {
+    "connection_failed": "jobs.connection_failed",
+    "driver_missing": "jobs.driver_missing",
+    "timeout": "jobs.timeout_db",
+    "invalid_config": "jobs.invalid_config",
 }
+
+
+def msg_list(parts: list[Msg]) -> Msg:
+    """Une de uno a tres mensajes con «; » (cada parte se traduce por separado)."""
+    names = ("a", "b", "c")
+    return Msg(f"jobs.list.{len(parts)}", **dict(zip(names, parts, strict=False)))
+
+
+def library_msg(code: str, exc: BaseException) -> Msg:
+    """Mensaje propio de un fallo de util_bbdd o del driver por su código (nunca el texto del driver)."""
+    key = _MESSAGES.get(code)
+    return Msg(key) if key else Msg("jobs.library_failed", exc_type=type(exc).__name__)
 
 
 def _job_error(exc: Exception) -> JobError:
@@ -57,20 +71,17 @@ def _job_error(exc: Exception) -> JobError:
     if isinstance(exc, JobError):
         return exc
     if is_cancellation(exc):
-        return JobError("cancelled", "Cancelada por un usuario.")
+        return JobError("cancelled", Msg("jobs.cancelled_by_user"))
     if isinstance(exc, GraphvizMissingError):
-        return JobError("graphviz_missing", str(exc))
+        return JobError("graphviz_missing", exc.msg)
     if isinstance(exc, MarkdownInputError):  # mensaje ya sin rutas del servidor
-        return JobError(f"invalid_{exc.kind}", exc.message)
-    if isinstance(exc, LookupError):
-        return JobError("invalid_params", str(exc))
+        return JobError(f"invalid_{exc.kind}", exc.msg)
+    if isinstance(exc, LocalizedError) and isinstance(exc, LookupError):  # tabla o schema inexistentes
+        return JobError("invalid_params", exc.msg)
     if graphviz_failed(exc):
-        return JobError(
-            "graphviz_failed",
-            "Graphviz no pudo dibujar un diagrama de relaciones. Reduce la profundidad o desactiva los diagramas.",
-        )
+        return JobError("graphviz_failed", Msg("jobs.doc.graphviz_failed"))
     code = classify(exc)
-    return JobError(code, _MESSAGES.get(code, f"util_bbdd falló ({type(exc).__name__})."))
+    return JobError(code, library_msg(code, exc))
 
 
 #: Avisos por formato (``word``, ``excel``, ``markdown``): cada tarjeta de salida muestra los suyos.
@@ -180,7 +191,7 @@ def _trace_map(ctx: JobContext, params: DocumentationParams, entries: list[dict[
     found = _copy_template(ctx, project, params.trace_map, "trace")
     if found is None:
         entries.append({"kind": "trace", "id": params.trace_map, "applied": False})
-        raise JobError("invalid_trace_map", "El mapa de trazabilidad ya no está disponible.")
+        raise JobError("invalid_trace_map", Msg("jobs.doc.trace_map_gone"))
     template, path = found
     entries.append({
         "kind": "trace", "id": template.id, "scope": "global" if template.project_id is None else "project",
@@ -202,9 +213,9 @@ def _previous(ctx: JobContext, params: DocumentationParams) -> Path | None:
         try:
             source = previous_catalog(db, project, ctx.params, ctx.settings) if project is not None else None
         except RunParamsError as exc:
-            raise JobError("invalid_previous", exc.detail or "La documentación anterior no es válida.") from None
+            raise JobError("invalid_previous", exc.detail or Msg("jobs.doc.previous_invalid")) from None
     if source is None:
-        raise JobError("invalid_previous", "La documentación anterior no existe en el proyecto.")
+        raise JobError("invalid_previous", Msg("jobs.doc.previous_missing"))
     target = ctx.run_dir / "inputs" / "previous" / "catalog.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, target)
@@ -341,6 +352,6 @@ def run_relationship_graph(ctx: JobContext) -> None:
         ctx.logger.error("Grafo fallido", extra={"exc_type": type(exc).__name__})
         raise _job_error(exc) from None
     if not summary["files"]:
-        raise JobError("no_relations", "No hay relaciones que dibujar con esos parámetros.")
+        raise JobError("no_relations", Msg("jobs.doc.no_relations"))
     ctx.logger.info("Grafo generado", extra=summary)
     ctx.progress("reporting", f"{len(summary['files'])} imágenes generadas", 100)

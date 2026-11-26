@@ -10,12 +10,21 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.core.errors import AppError
 from app.domain.uploads.errors import UploadContentError
 from app.domain.uploads.files import ReadOptions, describe, iter_frames
+from app.i18n import Msg
 from app.integrations.util_bbdd import bulk
 from app.integrations.util_bbdd.bulk import BulkOptions, Target, build_bulk_preview, run_bulk
 from app.integrations.util_bbdd.catalog import build_params
 from app.integrations.util_bbdd.progress import RunProgress
+
+
+def _text(exc: AppError) -> str:
+    """Detalle y errores por campo en español (ADR-015: el error lleva un ``Msg``, no el texto)."""
+    parts = [exc.detail.render("es")] if exc.detail else []
+    parts += [e["msg"].render("es") for e in exc.extra.get("errors", []) if isinstance(e.get("msg"), Msg)]  # type: ignore[attr-defined]
+    return " ".join(parts)
 
 
 def _csv(tmp_path: Path, text: str, encoding: str = "utf-8") -> Path:
@@ -31,8 +40,9 @@ def test_iter_frames_reads_a_csv_in_chunks_with_the_row_limit(tmp_path: Path) ->
 
     assert [len(c) for c in chunks] == [2, 2, 1]
     assert all(list(c.columns) == ["id", "nombre"] for c in chunks)  # separador detectado y nombres limpios
-    with pytest.raises(UploadContentError, match="más de 4 filas"):
+    with pytest.raises(UploadContentError) as raised:
         list(iter_frames(path, "csv", ReadOptions(), max_rows=4, chunk_rows=2))
+    assert "más de 4 filas" in _text(raised.value)
 
 
 def test_iter_frames_of_a_header_only_csv_gives_one_empty_chunk(tmp_path: Path) -> None:
@@ -50,8 +60,9 @@ def test_the_encoding_is_checked_on_the_whole_file_not_on_its_head(tmp_path: Pat
 
     assert (info["encoding"], info["delimiter"]) == ("cp1252", ",")
     assert last.iloc[-1]["nombre"] == "Begoña"
-    with pytest.raises(UploadContentError, match="no está en utf-8"):
+    with pytest.raises(UploadContentError) as raised:
         list(iter_frames(path, "csv", ReadOptions(encoding="utf-8"), max_rows=100_000))
+    assert "no está en utf-8" in _text(raised.value)
 
 
 def _target(tmp_path: Path) -> tuple[Target, Path]:

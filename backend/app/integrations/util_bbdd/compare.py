@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, Literal
 
+from app.i18n import LocalizedError, Msg
 from app.integrations.util_bbdd.progress import RunProgress
 
 #: Formato 1 propio de la web (hasta 1.1.0): ``dataclasses.asdict`` del ``SchemaDiff`` + ``format`` y contadores.
@@ -86,15 +87,12 @@ def sql_dialect_for(option: str, target_db_type: str) -> str:
     return _SQL_DIALECTS.get(target_db_type, "generic")
 
 
-class SchemaNotFoundError(LookupError):
+class SchemaNotFoundError(LocalizedError, LookupError):
     """El schema pedido no existe en un lado (``side`` = ``source``/``target``)."""
 
     def __init__(self, side: str, schema: str) -> None:
-        super().__init__(f"El schema «{schema}» no existe en el {_SIDE_NAMES[side]}.")
+        super().__init__(Msg(f"integrations.schema_not_found.{side}", schema=schema))
         self.side = side
-
-
-_SIDE_NAMES: Final = {"source": "origen", "target": "destino"}
 
 
 def resolve_schema(side: str, schema: str | None, available: list[str], dialect: Any) -> str | None:

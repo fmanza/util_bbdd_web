@@ -30,7 +30,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.errors import AppError
+from app.core.errors import AppError, field_error
 from app.core.ulid import new_ulid
 from app.db.models import TERMINAL_STATUSES, ProjectConnection, Run, User, utcnow
 from app.domain.identity import audit
@@ -39,6 +39,7 @@ from app.domain.projects.service import Membership, get_project_connection
 from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError, RunStateError
 from app.domain.runs.service import ACTIVE_STATUSES, DUMP_TARGET_PATH, dump_journal, get_artifact_by_path
 from app.domain.runs.targets import active_write
+from app.i18n import Msg
 from app.workspace.layout import run_dir, run_relative_path
 
 PREVIEW_PATH: Final = "outputs/dump/preview.json"
@@ -50,21 +51,18 @@ TRUNCATE_WORD: Final = "VACIAR"
 
 class DumpForbiddenError(AppError):
     status = 403
-    title = "No puedes volcar datos en este proyecto"
 
 
 class DumpNotAvailableError(AppError):
     status = 404
-    title = "Esta ejecución no tiene una vista previa o un resultado de volcado"
 
 
 class DumpTooLargeError(AppError):
     status = 413
-    title = "El documento es demasiado grande para el visor; descarga el informe"
 
 
-def _params_error(field: str, message: str) -> RunParamsError:
-    return RunParamsError(message, errors=[{"loc": ["body", "params", field], "msg": message, "type": "value_error"}])
+def _params_error(field: str, message: Msg) -> RunParamsError:
+    return RunParamsError(message, errors=[field_error(["body", "params", field], message)])
 
 
 def _load(db: Session, run: Run, path: str, settings: Settings) -> dict[str, Any]:
@@ -105,41 +103,39 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunStateError: Otro volcado en curso sobre el destino (409).
     """
     if not user.can("data.write"):
-        raise DumpForbiddenError("Tu rol no tiene el permiso «Escribir datos»; pídeselo a un administrador.")
+        raise DumpForbiddenError(Msg("runs.missing_permission", permission=Msg("runs.permission.data_write")))
     if membership.role != "owner":
-        raise DumpForbiddenError("Solo el propietario del proyecto puede volcar datos.")
+        raise DumpForbiddenError(Msg("runs.dump.owner_only"))
     preview_run = db.get(Run, params["preview_run"])
     if preview_run is None or preview_run.project_id != membership.project.id:
-        raise _params_error("preview_run", "La vista previa no existe en este proyecto.")
+        raise _params_error("preview_run", Msg("runs.preview_missing"))
     try:
         preview = load_preview(db, preview_run, settings)
     except AppError:
-        raise _params_error("preview_run", "La ejecución indicada no es una vista previa correcta.") from None
+        raise _params_error("preview_run", Msg("runs.preview_invalid")) from None
     if preview_run.finished_at is None or utcnow() - preview_run.finished_at > PREVIEW_MAX_AGE:
-        raise _params_error("preview_run", "La vista previa tiene más de 60 minutos: repítela.")
+        raise _params_error("preview_run", Msg("runs.preview_expired"))
     alias = str(preview_run.params["target_connection"])
     changed = connections_changed(db, membership.project, preview_run.params, preview)
     if changed:
         raise _params_error("preview_run", changed)
     link = get_project_connection(db, membership.project, alias)
     if link.connection.read_only:
-        raise _params_error("preview_run", "La conexión destino es de solo lectura.")
+        raise _params_error("preview_run", Msg("runs.target_read_only"))
     if link.connection.db_type != preview.get("target_engine"):
-        raise _params_error("preview_run", f"La conexión destino ya no es {preview.get('target_engine')}.")
+        raise _params_error("preview_run", Msg("runs.target_engine_changed", engine=str(preview.get("target_engine"))))
     if params.get("confirm") != alias:
-        raise _params_error("confirm", "Escribe el alias de la conexión destino para confirmar.")
+        raise _params_error("confirm", Msg("runs.confirm_alias"))
     if preview.get("truncate_target") and params.get("confirm_truncate") != TRUNCATE_WORD:
-        raise _params_error("confirm_truncate", f"Escribe «{TRUNCATE_WORD}» para confirmar que se vacía el destino.")
+        raise _params_error("confirm_truncate", Msg("runs.dump.confirm_truncate", word=TRUNCATE_WORD))
     if active_write(db, membership.project.id, alias):
-        raise RunStateError("Ya hay un volcado o una migración en curso sobre esa conexión destino.")
+        raise RunStateError(Msg("runs.dump.write_in_progress"))
     pending = pending_restore(db, membership.project.id, alias, settings)
     if pending:
-        raise RunStateError(
-            f"El volcado {pending} dejó constraints sin restaurar en «{alias}»: restáuralas antes de volver a volcar."
-        )
+        raise RunStateError(Msg("runs.dump.pending_restore", run=pending, alias=alias))
 
 
-def connections_changed(db: Session, project: Any, params: dict[str, Any], preview: dict[str, Any]) -> str | None:
+def connections_changed(db: Session, project: Any, params: dict[str, Any], preview: dict[str, Any]) -> Msg | None:
     """Motivo por el que las conexiones ya no son las de la vista previa (``None`` si siguen siendo las mismas).
 
     La vista previa guarda el id de cada conexión: un alias quitado y asociado a otra conexión del mismo motor y con
@@ -150,9 +146,9 @@ def connections_changed(db: Session, project: Any, params: dict[str, Any], previ
         try:
             link = get_project_connection(db, project, alias)
         except AppError:
-            return f"El proyecto ya no tiene la conexión «{alias}»."
+            return Msg("runs.connection_gone", alias=alias)
         if link.connection_id != preview.get(f"{side}_connection_id"):
-            return f"La conexión «{alias}» ya no es la de la vista previa: repítela."
+            return Msg("runs.connection_replaced", alias=alias)
     return None
 
 
@@ -259,25 +255,25 @@ def restore_target(db: Session, project: Any, dump: Run | None, settings: Settin
             misma, es de solo lectura o de otro motor.
     """
     if dump is None or dump.project_id != project.id or dump.operation != "dump_apply":
-        raise _params_error("dump_run", "El volcado no existe en este proyecto.")
+        raise _params_error("dump_run", Msg("runs.dump.run_missing"))
     journal = dump_journal(dump, settings)
     if journal is None:
-        raise _params_error("dump_run", "Este volcado no tiene constraints pendientes de restaurar.")
+        raise _params_error("dump_run", Msg("runs.dump.no_pending_constraints"))
     target = dump_target(dump, settings)
     info = read_journal(journal)
     if target is None or info is None:
-        raise _params_error("dump_run", "El diario de constraints de este volcado no es válido: revísalas a mano.")
+        raise _params_error("dump_run", Msg("runs.dump.journal_invalid"))
     alias = target["alias"]
     try:
         link = get_project_connection(db, project, alias)
     except AppError:
-        raise _params_error("dump_run", f"El proyecto ya no tiene la conexión «{alias}».") from None
+        raise _params_error("dump_run", Msg("runs.connection_gone", alias=alias)) from None
     if link.connection_id != target["connection_id"]:
-        raise _params_error("dump_run", f"La conexión «{alias}» ya no es la del volcado.")
+        raise _params_error("dump_run", Msg("runs.dump.connection_replaced", alias=alias))
     if link.connection.read_only:
-        raise _params_error("dump_run", "La conexión destino es de solo lectura.")
+        raise _params_error("dump_run", Msg("runs.target_read_only"))
     if link.connection.db_type != info["engine"]:
-        raise _params_error("dump_run", f"La conexión destino ya no es {info['engine']}.")
+        raise _params_error("dump_run", Msg("runs.target_engine_changed", engine=str(info["engine"])))
     return link, journal
 
 
@@ -290,14 +286,14 @@ def check_restore(db: Session, user: User, membership: Membership, params: dict[
         RunStateError: Otra escritura en curso sobre el destino (409).
     """
     if not user.can("data.write"):
-        raise DumpForbiddenError("Tu rol no tiene el permiso «Escribir datos»; pídeselo a un administrador.")
+        raise DumpForbiddenError(Msg("runs.missing_permission", permission=Msg("runs.permission.data_write")))
     if membership.role != "owner":
-        raise DumpForbiddenError("Solo el propietario del proyecto puede restaurar constraints.")
+        raise DumpForbiddenError(Msg("runs.dump.restore_owner_only"))
     link, _ = restore_target(db, membership.project, db.get(Run, params["dump_run"]), settings)
     if params.get("confirm") != link.alias:
-        raise _params_error("confirm", "Escribe el alias de la conexión destino para confirmar.")
+        raise _params_error("confirm", Msg("runs.confirm_alias"))
     if active_write(db, membership.project.id, link.alias):
-        raise RunStateError("Ya hay una escritura en curso sobre esa conexión destino.")
+        raise RunStateError(Msg("runs.write_in_progress"))
 
 
 def enqueue_automatic_restore(db: Session, run_id: str, settings: Settings, *, ctx: RequestContext) -> str | None:

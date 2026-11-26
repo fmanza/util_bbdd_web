@@ -13,7 +13,7 @@ from app.api import health, metrics
 from app.api.upload_guard import UploadGuard
 from app.api.v1 import router as v1_router
 from app.core.config import Settings, get_settings
-from app.core.errors import install_error_handlers, problem
+from app.core.errors import http_title, install_error_handlers, problem
 from app.core.logging import configure_logging
 from app.core.middleware import HttpMetrics, HttpMiddleware
 from app.core.ratelimit import SlidingWindowLimiter
@@ -78,7 +78,7 @@ def _mount_spa(app: FastAPI, static_dir: Path) -> None:
     @app.get("/{path:path}", include_in_schema=False, response_model=None)
     def spa(path: str) -> Response:
         if path == "api" or path.startswith("api/"):
-            return problem(404, "Not Found")
+            return problem(404, http_title(404), code="http_404")
         candidate = (root / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(root):
             return FileResponse(candidate)

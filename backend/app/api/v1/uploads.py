@@ -16,6 +16,7 @@ from app.domain.storage.settings import effective_settings
 from app.domain.uploads import files
 from app.domain.uploads import service as uploads
 from app.domain.uploads.errors import UploadTooLargeError
+from app.i18n import Msg
 
 router = APIRouter(prefix="/projects", tags=["uploads"])
 
@@ -74,7 +75,7 @@ def create_upload(
     declared = int(request.headers.get("content-length") or 0)
     max_mb = effective_settings(db, settings).upload_max_mb  # administrable (ADR-012)
     if declared > max_mb * 1024 * 1024 + _MULTIPART_OVERHEAD:
-        raise UploadTooLargeError(f"El máximo es {max_mb} MB.")
+        raise UploadTooLargeError(Msg("api.max_size_mb", max_mb=max_mb))
     membership = get_membership(db, user, project_id)
     upload = uploads.save_upload(
         db, user, membership, filename=file.filename, stream=file.file, settings=settings, ctx=ctx,

@@ -85,8 +85,9 @@ def test_evasions_are_rejected(engine: str, sql: str) -> None:
 
 
 def test_hsqldb_has_no_free_sql() -> None:
-    with pytest.raises(ReadOnlyViolation, match="no está disponible"):
+    with pytest.raises(ReadOnlyViolation) as info:
         check_read_only("SELECT 1", "hsqldb")
+    assert "no está disponible" in info.value.msg.render("es")
 
 
 def test_template_params_and_validation() -> None:
@@ -172,7 +173,7 @@ def test_run_read_only_uses_execute_custom_result(tmp_path: object) -> None:
     assert page["truncated"] is True and page["row_count"] == 2
     assert empty["columns"] == ["id", "v"] and empty["rows"] == [] and empty["truncated"] is False
     assert repeated["columns"] == ["a", "a"] and repeated["rows"] == [[1, 2]]
-    assert info.value.code == "query_error" and "readonly" in info.value.message.lower()
+    assert info.value.code == "query_error" and "readonly" in info.value.msg.render("es").lower()
     con = sqlite3.connect(database)
     try:
         assert con.execute("SELECT COUNT(*) FROM t").fetchone() == (3,)  # el motor bloqueó el DELETE (G19)

@@ -18,6 +18,7 @@ from app.core.config import Settings
 from app.core.errors import problem
 from app.core.ratelimit import Limit, SlidingWindowLimiter
 from app.core.request_context import REQUEST_ID_HEADER, accept_or_generate, bind_request_id, reset_request_id
+from app.i18n import Msg, bind_lang, negotiate, reset_lang
 
 access_logger = logging.getLogger("app.access")
 
@@ -115,6 +116,7 @@ class HttpMiddleware:
         headers = Headers(scope=scope)
         request_id = accept_or_generate(headers.get(REQUEST_ID_HEADER))
         token = bind_request_id(request_id)
+        lang_token = bind_lang(negotiate(headers.get("accept-language")))  # idioma de los errores (ADR-015)
         started = time.perf_counter()
         path = str(scope.get("path", ""))
         status = 500
@@ -132,7 +134,10 @@ class HttpMiddleware:
                 rule, retry_after = limited
                 self.metrics.rate_limited.labels(rule).inc()
                 response = problem(
-                    429, "Demasiadas peticiones", f"Espera {retry_after} s antes de reintentar.", code="rate_limited"
+                    429,
+                    Msg("title.rate_limited").render(),
+                    Msg("core.rate_limited", retry_after=retry_after).render(),
+                    code="core.rate_limited",
                 )
                 response.headers["Retry-After"] = str(retry_after)
                 await response(scope, receive, send_wrapper)
@@ -149,6 +154,7 @@ class HttpMiddleware:
                     "Petición",
                     extra={"method": method, "route": route, "status": status, "ms": round(elapsed * 1000, 1)},
                 )
+            reset_lang(lang_token)
             reset_request_id(token)
 
     def _rate_limit(self, scope: Scope, headers: Headers, path: str) -> tuple[str, int] | None:

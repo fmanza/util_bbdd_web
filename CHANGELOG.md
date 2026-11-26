@@ -21,6 +21,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   formato de fechas y números (`en-GB`). Antes de iniciar sesión, el último idioma del navegador o su preferencia.
   Cabecera `Accept-Language` en todas las peticiones. Traducción completa en `frontend/src/i18n/en/`; una prueba exige
   las mismas claves y marcadores en los dos idiomas.
+- **Errores de la API en el idioma del usuario** ([ADR-015](docs/adr/ADR-015-idioma-de-los-mensajes-de-la-api.md)):
+  título, detalle y errores por campo (también los de validación de Pydantic) según `Accept-Language` (`es`/`en`), con
+  `Content-Language` y `Vary: Accept-Language`. Todo *problem details* y cada entrada de `errors` llevan un `code`
+  estable (`runs.preview_expired`, `connection_not_found`…). El motivo del fallo de una ejecución se guarda como clave y
+  parámetros (`runs.error_detail`, migración `0016`) y se muestra en el idioma de quien la consulta. Catálogo en
+  `backend/app/i18n/catalog/`; una prueba exige las mismas claves y marcadores en los dos idiomas y que ningún error
+  se construya con un texto.
 
 ### Changed
 
@@ -31,8 +38,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - Migraciones `0014` (roles; cada usuario conserva sus permisos y los administradores ganan SQL libre, aplicar DDL y
   escribir datos) y `0015` (`users.language`), sin recrear `users`. `users.role` y `users.can_*` quedan sin uso,
   sincronizados con el rol para poder volver a la 1.24.0.
-- Con la interfaz en inglés, el título de los errores de la API se traduce por estado HTTP; su detalle, los mensajes
-  de las ejecuciones y los documentos generados siguen en español.
+- Con la interfaz en inglés siguen en español el progreso y el log de las ejecuciones, los avisos de la documentación,
+  los textos que vienen de util_bbdd dentro de un mensaje (G58) y los documentos generados (su idioma es el parámetro
+  *Idioma* de cada ejecución).
 
 ## [1.24.0] - 2026-11-25
 

@@ -19,8 +19,11 @@ from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic_core import PydanticCustomError
 
+from app.core.errors import field_error
 from app.domain.runs.errors import RunParamsError, UnknownOperationError
+from app.i18n import Msg, has_key
 
 ALIAS_PATTERN = r"^[a-z0-9_-]{1,32}$"
 ParamType = Literal["string", "integer", "float", "boolean", "connection", "template", "run"]
@@ -103,10 +106,18 @@ def normalize_filter_patterns(params: Any) -> None:
     for name in ("table_include", "table_exclude"):
         patterns = split_patterns(getattr(params, name))
         if len(patterns) > MAX_FILTER_PATTERNS:
-            raise ValueError(f"{name}: como máximo {MAX_FILTER_PATTERNS} patrones")
+            raise PydanticCustomError(
+                "runs.filter_too_many_patterns",
+                "{field}: como máximo {max} patrones",
+                {"field": name, "max": MAX_FILTER_PATTERNS},
+            )
         too_long = next((p for p in patterns if len(p) > MAX_FILTER_PATTERN_LENGTH), None)
         if too_long is not None:
-            raise ValueError(f"{name}: patrón de más de {MAX_FILTER_PATTERN_LENGTH} caracteres: {too_long[:40]}…")
+            raise PydanticCustomError(
+                "runs.filter_pattern_too_long",
+                "{field}: patrón de más de {max} caracteres: {pattern}…",
+                {"field": name, "max": MAX_FILTER_PATTERN_LENGTH, "pattern": too_long[:40]},
+            )
         setattr(params, name, ", ".join(patterns) or None)
 
 
@@ -261,7 +272,9 @@ class DocumentationParams(BaseModel):
     @model_validator(mode="after")
     def _one_format(self) -> DocumentationParams:
         if not (self.word or self.excel or self.html or self.markdown):
-            raise ValueError("Elige al menos un formato (Word, Excel, HTML o Markdown).")
+            raise PydanticCustomError(
+                "runs.documentation_no_format", "Elige al menos un formato (Word, Excel, HTML o Markdown)."
+            )
         # Una plantilla de un formato que no se genera no se usa: se descarta para no bloquear su borrado.
         if not self.word:
             self.word_template = None
@@ -340,7 +353,7 @@ class CompareParams(BaseModel):
     @model_validator(mode="after")
     def _something_to_compare(self) -> CompareParams:
         if not (self.tables or self.views or self.routines):
-            raise ValueError("Elige al menos tablas, vistas o rutinas.")
+            raise PydanticCustomError("runs.compare_nothing", "Elige al menos tablas, vistas o rutinas.")
         return self
 
 
@@ -461,7 +474,10 @@ class DumpPreviewParams(BaseModel):
         """Lista exacta o patrones (util_bbdd 5.9.0), no los dos; patrones dentro de sus límites y normalizados."""
         normalize_filter_patterns(self)
         if (self.tables or "").strip() and (self.table_include or self.table_exclude):
-            raise ValueError("Indica la lista exacta de tablas o los patrones de incluir/excluir, no los dos.")
+            raise PydanticCustomError(
+                "runs.dump_tables_or_patterns",
+                "Indica la lista exacta de tablas o los patrones de incluir/excluir, no los dos.",
+            )
         return self
 
 
@@ -703,8 +719,19 @@ def get_operation(name: str) -> OperationSpec:
     """
     spec = OPERATIONS.get(name)
     if spec is None:
-        raise UnknownOperationError(f"No existe la operación «{name}».")
+        raise UnknownOperationError(Msg("runs.unknown_operation", name=name))
     return spec
+
+
+def _param_msg(error: Any) -> Msg:
+    """Error de Pydantic como :class:`Msg` (ADR-015): los validadores propios usan una clave del catálogo como
+    ``type`` y los de Pydantic tienen ``validation.<type>``; sin traducción, el mensaje original de Pydantic."""
+    kind = str(error.get("type", ""))
+    ctx = {k: v if isinstance(v, str | int | float | bool) else str(v) for k, v in (error.get("ctx") or {}).items()}
+    for key in (kind, f"validation.{kind}"):
+        if has_key(key):
+            return Msg(key, **ctx)
+    return Msg("runs.param_error", text=str(error.get("msg", "")))
 
 
 def validate_params(spec: OperationSpec, params: dict[str, Any]) -> dict[str, Any]:
@@ -717,8 +744,9 @@ def validate_params(spec: OperationSpec, params: dict[str, Any]) -> dict[str, An
         model = spec.model.model_validate(params)
     except ValidationError as exc:
         errors: list[dict[str, Any]] = [
-            {"loc": ["body", "params", *[str(p) for p in e["loc"]]], "msg": str(e["msg"]), "type": e["type"]}
+            field_error(["body", "params", *[str(p) for p in e["loc"]]], _param_msg(e), str(e["type"]))
             for e in exc.errors()
         ]
-        raise RunParamsError(str(errors[0]["msg"]) if errors else None, errors=errors) from None
+        first = errors[0]["msg"] if errors else None
+        raise RunParamsError(first if isinstance(first, Msg) else None, errors=errors) from None
     return model.model_dump(mode="json", by_alias=True)

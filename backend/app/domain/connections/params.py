@@ -12,6 +12,7 @@ from typing import Any
 
 from app.core.config import Settings
 from app.domain.connections.errors import ConnectionParamsError
+from app.i18n import Msg
 from app.integrations.util_bbdd.catalog import EngineDetail, ParamSpec
 
 _SQLITE_MEMORY = ":memory:"
@@ -27,20 +28,20 @@ def _check_type(spec: ParamSpec, value: Any) -> Any:
         "object": isinstance(value, dict),
     }[spec.type]
     if not ok:
-        raise ConnectionParamsError(f"«{spec.name}» debe ser de tipo {spec.type}.", field=spec.name)
+        raise ConnectionParamsError(Msg("connections.param_type", name=spec.name, type=spec.type), field=spec.name)
     if spec.options is not None and spec.type == "string" and value not in spec.options:
-        raise ConnectionParamsError(
-            f"«{spec.name}» debe ser uno de: {', '.join(o or '(vacío)' for o in spec.options)}.", field=spec.name
-        )
+        options = ", ".join(o for o in spec.options if o)
+        key = "connections.param_options_or_empty" if "" in spec.options else "connections.param_options"
+        raise ConnectionParamsError(Msg(key, name=spec.name, options=options), field=spec.name)
     if spec.type == "string" and len(value) > 1024:
-        raise ConnectionParamsError(f"«{spec.name}» es demasiado largo.", field=spec.name)
+        raise ConnectionParamsError(Msg("connections.param_too_long", name=spec.name), field=spec.name)
     return value
 
 
 def _relative_inside(value: str, files_dir: Path, name: str) -> str:
     """Ruta relativa a ``files_dir`` en formato POSIX, o error si sale de ella."""
     if not value.strip() or "\x00" in value:
-        raise ConnectionParamsError(f"«{name}» no puede estar vacío.", field=name)
+        raise ConnectionParamsError(Msg("connections.param_empty", name=name), field=name)
     root = files_dir.resolve()
     raw = Path(value)
     if raw.is_absolute() or PureWindowsPath(value).is_absolute() or PurePosixPath(value).is_absolute():
@@ -48,18 +49,14 @@ def _relative_inside(value: str, files_dir: Path, name: str) -> str:
     else:
         candidate = (root / value).resolve()
     if not candidate.is_relative_to(root):
-        raise ConnectionParamsError(
-            f"«{name}» debe ser una ruta dentro de la carpeta de ficheros del servidor (UBW_FILES_DIR).", field=name
-        )
+        raise ConnectionParamsError(Msg("connections.path_outside_files", name=name), field=name)
     return candidate.relative_to(root).as_posix()
 
 
 def _check_jdbc_url(value: str, files_dir: Path) -> str:
     match = _JDBC_HSQLDB.match(value)
     if not match:
-        raise ConnectionParamsError(
-            "«jdbc_url» debe ser jdbc:hsqldb:hsql://, hsqls://, http(s)://, file: o mem:.", field="jdbc_url"
-        )
+        raise ConnectionParamsError(Msg("connections.jdbc_url"), field="jdbc_url")
     scheme, rest = match.group(1).lower(), match.group(2)
     if scheme == "file":
         path, _, options = rest.partition(";")
@@ -85,17 +82,17 @@ def validate_params(engine: EngineDetail, params: dict[str, Any], settings: Sett
     for name, value in params.items():
         spec = specs.get(name)
         if spec is None:
-            raise ConnectionParamsError(f"«{name}» no es un parámetro de {engine.name}.", field=name)
+            raise ConnectionParamsError(Msg("connections.not_a_param", name=name, engine=engine.name), field=name)
         if spec.kind == "secret":
-            raise ConnectionParamsError("La contraseña se envía en el campo «password», no en «params».", field=name)
+            raise ConnectionParamsError(Msg("connections.password_in_params"), field=name)
         if spec.kind == "blocked":
-            raise ConnectionParamsError(f"«{name}» no se admite por seguridad.", field=name)
+            raise ConnectionParamsError(Msg("connections.param_blocked", name=name), field=name)
         if value is None or value == "":
             continue
         value = _check_type(spec, value)
         if engine.db_type == "sqlite" and name == "database" and value == _SQLITE_MEMORY:
             if settings.environment == "production":
-                raise ConnectionParamsError("Las BD en memoria no tienen sentido en el servidor.", field=name)
+                raise ConnectionParamsError(Msg("connections.sqlite_memory"), field=name)
         elif spec.kind == "path":
             value = _relative_inside(value, files_dir, name)
         elif engine.db_type == "hsqldb" and name == "jdbc_url":

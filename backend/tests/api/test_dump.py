@@ -594,7 +594,7 @@ def test_restore_job_and_automatic_restore(
     )  # fmt: skip
     with pytest.raises(JobError) as partial:
         job.run_restore(ctx)
-    assert partial.value.code == "restore_partial" and "pedidos.fk" in partial.value.message
+    assert partial.value.code == "restore_partial" and "pedidos.fk" in partial.value.message.render("es")
     outcome["status"] = "enabled"
     job.run_restore(ctx)
     written = json.loads((ctx.run_dir / job.RESTORE_PATH).read_text(encoding="utf-8"))

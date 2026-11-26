@@ -22,6 +22,7 @@ from app.domain.projects.service import get_membership
 from app.domain.templates import service
 from app.domain.templates.errors import TemplateTooLargeError
 from app.domain.templates.files import STORED_SUFFIX, base_template
+from app.i18n import Msg
 from app.workspace.layout import mime_type
 
 router = APIRouter(prefix="/document-templates", tags=["templates"])
@@ -61,7 +62,7 @@ def _out(template: DocumentTemplate) -> TemplateOut:
 def _check_length(request: Request, settings: Settings) -> None:
     declared = int(request.headers.get("content-length") or 0)
     if declared > settings.template_max_mb * 1024 * 1024 + _MULTIPART_OVERHEAD:
-        raise TemplateTooLargeError(f"El máximo es {settings.template_max_mb} MB.")
+        raise TemplateTooLargeError(Msg("api.max_size_mb", max_mb=settings.template_max_mb))
 
 
 def _file(template: DocumentTemplate, settings: Settings) -> FileResponse:

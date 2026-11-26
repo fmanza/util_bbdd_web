@@ -10,8 +10,10 @@ import pytest
 
 from app.api.v1.schemas_dump import DumpPreviewOut
 from app.api.v1.schemas_migrate import MigrationPlanOut
+from app.core.errors import AppError
 from app.domain.runs.errors import RunParamsError
 from app.domain.runs.operations import get_operation, validate_params
+from app.i18n import Msg
 from app.integrations.util_bbdd import migrate
 from app.integrations.util_bbdd.dump import DumpOptions, Endpoint, NoMatchingTablesError, build_preview, run_dump
 from app.integrations.util_bbdd.migrate import PlannerOptions, plan_to_dict
@@ -21,6 +23,13 @@ from app.jobs.operations import migrate as migrate_job
 from tests.unit._migration_source import oracle_int_pk_and_fk
 
 # --- parámetros ------------------------------------------------------------------------------------------------------
+
+
+def _text(exc: AppError) -> str:
+    """Detalle y errores por campo en español (ADR-015: el error lleva un ``Msg``, no el texto)."""
+    parts = [exc.detail.render("es")] if exc.detail else []
+    parts += [e["msg"].render("es") for e in exc.extra.get("errors", []) if isinstance(e.get("msg"), Msg)]  # type: ignore[attr-defined]
+    return " ".join(parts)
 
 
 def test_migrate_plan_patterns_are_normalized_and_limited() -> None:
@@ -44,8 +53,9 @@ def test_dump_preview_takes_the_exact_list_or_the_patterns_not_both() -> None:
 
     assert validate_params(operation, {**base, "tables": "pedidos"})["tables"] == "pedidos"
     assert validate_params(operation, {**base, "table_include": "ped*"})["table_include"] == "ped*"
-    with pytest.raises(RunParamsError, match="no los dos"):
+    with pytest.raises(RunParamsError) as raised:
         validate_params(operation, {**base, "tables": "pedidos", "table_exclude": "*_bak"})
+    assert "no los dos" in _text(raised.value)
     with pytest.raises(RunParamsError):
         validate_params(operation, {**base, "table_include": ", ".join(f"T{i}" for i in range(101))})
 
@@ -110,7 +120,7 @@ def test_filter_without_matches_is_a_form_error() -> None:
 
     error = migrate_job._job_error(caught.value)
     assert error.code == "invalid_params"
-    assert "filtro de tablas" in str(error)
+    assert "filtro de tablas" in error.message.render("es")
 
 
 # --- vista previa y volcado ------------------------------------------------------------------------------------------
@@ -167,7 +177,7 @@ def test_preview_without_matches_is_a_form_error(tmp_path: Path) -> None:
 
     error = dump_job._job_error(caught.value)
     assert error.code == "invalid_params"
-    assert "filtro de tablas" in str(error)
+    assert "filtro de tablas" in error.message.render("es")
 
 
 def test_job_options_carry_the_patterns() -> None:

@@ -31,6 +31,7 @@ from docx.enum.style import WD_STYLE_TYPE
 from openpyxl import Workbook, load_workbook
 
 from app.domain.templates.errors import TemplateContentError, TemplateTypeError
+from app.i18n import Msg
 from app.integrations.util_bbdd.documentation import WORD_REQUIRED_STYLES
 from app.integrations.util_bbdd.excel_template import DEFAULT_TABLE_STYLE, TABLE_STYLES, theme_is_safe
 
@@ -92,7 +93,7 @@ def kind_for(filename: str) -> tuple[Kind, bool]:
     """
     suffix = PurePath(filename).suffix.lower()
     if suffix in _MACRO_EXTENSIONS:
-        raise TemplateTypeError("No se admiten plantillas con macros.")
+        raise TemplateTypeError(Msg("templates.macros"))
     found = EXTENSIONS.get(suffix)
     if found is None:
         raise TemplateTypeError()
@@ -106,7 +107,7 @@ def untemplate(path: Path, kind: Kind) -> None:
         TemplateContentError: No es un ZIP.
     """
     if not zipfile.is_zipfile(path):
-        raise TemplateContentError("La plantilla no es un documento de Office (no es un ZIP).")
+        raise TemplateContentError(Msg("templates.not_zip"))
     source, target = _TEMPLATE_TYPES[kind]
     buffer = io.BytesIO()
     with zipfile.ZipFile(path) as archive, zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as out:
@@ -190,44 +191,39 @@ def _check_fields(text: str) -> None:
     """Rechaza los campos cuyo tipo (primera palabra del código) es peligroso o no se puede saber."""
     for code in _field_codes(text):
         if code is None:
-            raise TemplateContentError("La plantilla contiene un campo cuyo tipo se calcula con otro campo.")
+            raise TemplateContentError(Msg("templates.computed_field"))
         words = code.split()
         if words and (field := words[0].upper()) in _DANGEROUS_FIELDS:
-            raise TemplateContentError(f"La plantilla contiene un campo {field}, que no se admite.")
+            raise TemplateContentError(Msg("templates.dangerous_field", field=field))
 
 
 def _check_part(name: str, data: bytes) -> None:
     """DTD, relaciones externas que no son hipervínculos y campos peligrosos de una parte XML."""
     text = data.decode("utf-8", "replace")
     if "<!DOCTYPE" in text.upper():
-        raise TemplateContentError("La plantilla contiene una DTD (<!DOCTYPE>), que Office no usa.")
+        raise TemplateContentError(Msg("templates.dtd"))
     if name.endswith(".rels"):
         for match in _RELATIONSHIP.finditer(text):
             attrs = _attributes(match.group(1))
             if attrs.get("TargetMode", "").lower() == "external" and not attrs.get("Type", "").endswith("/hyperlink"):
-                raise TemplateContentError(
-                    "La plantilla enlaza ficheros externos (plantilla adjunta, imágenes u objetos enlazados); "
-                    "incrústalos o quítalos."
-                )
+                raise TemplateContentError(Msg("templates.external_links"))
         return
     _check_fields(text)
 
 
 def _check_package(path: Path, kind: Kind, max_uncompressed: int) -> None:
     if not zipfile.is_zipfile(path):
-        raise TemplateContentError("La plantilla no es un documento de Office (no es un ZIP).")
+        raise TemplateContentError(Msg("templates.not_zip"))
     with zipfile.ZipFile(path) as archive:
         infos = archive.infolist()
         if sum(info.file_size for info in infos) > max_uncompressed:
-            raise TemplateContentError("La plantilla descomprimida es demasiado grande.")
+            raise TemplateContentError(Msg("templates.uncompressed_too_large"))
         names = [info.filename for info in infos]
         if _MAIN_PART[kind] not in names:
-            raise TemplateContentError(f"El fichero no es un {'Word' if kind == 'word' else 'Excel'}.")
+            raise TemplateContentError(Msg("templates.not_word" if kind == "word" else "templates.not_excel"))
         lowered = [f"/{name.lower()}" for name in names]
         if any(marker in name for name in lowered for marker in _EMBEDDED):
-            raise TemplateContentError(
-                "La plantilla contiene macros, objetos incrustados (OLE, ActiveX) o vínculos a otros libros."
-            )
+            raise TemplateContentError(Msg("templates.embedded"))
         for name in names:
             if name.endswith((".xml", ".rels")):
                 _check_part(name, archive.read(name))
@@ -237,7 +233,7 @@ def _word_info(path: Path) -> TemplateInfo:
     try:
         document = docx.Document(str(path))
     except Exception as exc:  # fichero del usuario: cualquier fallo de lectura es contenido no válido
-        raise TemplateContentError("python-docx no puede abrir la plantilla Word.") from exc
+        raise TemplateContentError(Msg("templates.word_unreadable")) from exc
     missing = []
     for style in WORD_REQUIRED_STYLES:
         try:
@@ -246,8 +242,7 @@ def _word_info(path: Path) -> TemplateInfo:
             missing.append(style)
     if missing:
         raise TemplateContentError(
-            f"A la plantilla le faltan estilos: {', '.join(missing)}. Úsalos una vez en Word (se guardan con el "
-            "documento) o parte de la plantilla base.",
+            Msg("templates.missing_styles", styles=", ".join(missing)),
             missing_styles=missing,
         )
     styles = sorted({str(s.name) for s in document.styles if s.type == WD_STYLE_TYPE.TABLE and s.name})
@@ -258,11 +253,11 @@ def _excel_info(path: Path) -> TemplateInfo:
     try:
         workbook = load_workbook(path)
     except Exception as exc:  # fichero del usuario
-        raise TemplateContentError("openpyxl no puede abrir la plantilla Excel.") from exc
+        raise TemplateContentError(Msg("templates.excel_unreadable")) from exc
     if not workbook.worksheets:
-        raise TemplateContentError("La plantilla Excel no tiene hojas.")
+        raise TemplateContentError(Msg("templates.excel_no_sheets"))
     if not theme_is_safe(workbook.loaded_theme):
-        raise TemplateContentError("El tema de la plantilla Excel usa imágenes; elige un tema sin imágenes.")
+        raise TemplateContentError(Msg("templates.excel_theme_images"))
     return TemplateInfo(table_styles=list(TABLE_STYLES), table_style=DEFAULT_TABLE_STYLE)
 
 
@@ -290,16 +285,16 @@ def stored_suffix(kind: Kind, filename: str) -> str:
 def _trace_info(path: Path) -> TemplateInfo:
     """Mapa de trazabilidad: tamaño, UTF-8 y sintaxis TOML o JSON con un objeto en la raíz (sin estilos de tabla)."""
     if path.stat().st_size > TRACE_MAX_BYTES:
-        raise TemplateContentError(f"Un mapa de trazabilidad no puede superar {TRACE_MAX_BYTES // 1_000_000} MB.")
+        raise TemplateContentError(Msg("templates.trace_map_too_large", max_mb=TRACE_MAX_BYTES // 1_000_000))
     try:
         text = path.read_bytes().decode("utf-8")
         data: object = json.loads(text) if path.suffix.lower() == ".json" else tomllib.loads(text)
     except UnicodeDecodeError:
-        raise TemplateContentError("El mapa de trazabilidad no está en UTF-8.") from None
+        raise TemplateContentError(Msg("templates.trace_map_not_utf8")) from None
     except (ValueError, RecursionError) as exc:  # TOMLDecodeError y JSONDecodeError son ValueError
-        raise TemplateContentError(f"El mapa de trazabilidad no se puede leer: {exc}") from None
+        raise TemplateContentError(Msg("templates.trace_map_unreadable", reason=str(exc))) from None
     if not isinstance(data, dict):
-        raise TemplateContentError("El mapa de trazabilidad debe ser un objeto (tables, views, routines).")
+        raise TemplateContentError(Msg("templates.trace_map_not_object"))
     return TemplateInfo(table_styles=[], table_style=None)
 
 

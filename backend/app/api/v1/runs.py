@@ -4,6 +4,7 @@ artefactos (descarga y vista previa segura), sitio HTML generado (URL firmada, A
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import AsyncIterable
 from pathlib import Path, PurePosixPath
@@ -42,8 +43,11 @@ from app.domain.runs import diff as diff_domain
 from app.domain.runs.errors import ArtifactNotFoundError, RunNotFoundError
 from app.domain.runs.service import RunFilters, RunSort
 from app.domain.sorting import SortOrder
+from app.i18n import Msg
 from app.integrations.util_bbdd.documentation import MARKDOWN_MERMAID_ARTIFACT
 from app.workspace.layout import run_dir, zip_stream
+
+logger = logging.getLogger(__name__)
 
 project_router = APIRouter(prefix="/projects", tags=["runs"])
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -83,18 +87,26 @@ _TEXT_MIMES: Final = frozenset({"text/html", "text/css", "text/javascript", "ima
 
 class PreviewUnavailableError(AppError):
     status = 415
-    title = "Este artefacto no tiene vista previa"
 
 
 class PreviewTooLargeError(AppError):
     status = 413
-    title = "El artefacto es demasiado grande para la vista previa; descárgalo"
 
 
 def _previewable(artifact: Artifact) -> bool:
     if artifact.kind == "markdown":
         return PurePosixPath(artifact.path).suffix.lower() in MARKDOWN_PREVIEW_SUFFIXES
     return artifact.kind in SANDBOXED_KINDS or artifact.kind in TEXT_KINDS
+
+
+def _error_message(run: Run) -> str | None:
+    """Fallo en el idioma de quien consulta (ADR-015); las ejecuciones anteriores a la 2.0.0 solo tienen el texto."""
+    if run.error_detail:
+        try:
+            return Msg.from_dict(run.error_detail).render()
+        except (KeyError, TypeError, ValueError):
+            logger.warning("error_detail ilegible", extra={"run_id": run.id})
+    return run.error_message
 
 
 def _run_out(run: Run, artifacts_count: int) -> RunOut:
@@ -111,7 +123,7 @@ def _run_out(run: Run, artifacts_count: int) -> RunOut:
         progress_message=run.progress_message,
         progress_pct=run.progress_pct,
         error_code=run.error_code,
-        error_message=run.error_message,
+        error_message=_error_message(run),
         cancel_requested=run.cancel_requested,
         user_id=run.user_id,
         username=run.user.username if run.user else None,
@@ -505,7 +517,7 @@ def get_migration_report(run_id: str, user: CurrentUser, db: DbSession, settings
     """Conflictos, validación de vistas y sentencias aplicadas de una ``migrate_apply`` (también si falló)."""
     access = service.get_access(db, user, run_id)
     if access.run.operation != "migrate_apply":
-        raise ArtifactNotFoundError("Esta ejecución no es una aplicación de migración.")
+        raise ArtifactNotFoundError(Msg("api.runs.not_migration_apply"))
     _, path = service.get_artifact_by_path(db, access.run, migrations.REPORT_PATH, settings)
     return MigrationReportOut.model_validate_json(path.read_text(encoding="utf-8"))
 
@@ -631,7 +643,7 @@ def download_archive(
     paths = [a.path for a in run.artifacts if archive_format is None or a.kind == archive_format]
     if run.workspace_path is None or not paths:
         raise ArtifactNotFoundError(
-            "La ejecución no tiene artefactos." if archive_format is None else "La ejecución no tiene ese formato."
+            Msg("api.runs.no_artifacts") if archive_format is None else Msg("api.runs.no_artifacts_of_format")
         )
     directory = run_dir(settings.workspace_dir, run.workspace_path)
     prefix = directory.name

@@ -76,7 +76,7 @@ def test_cancellation_is_recognized_and_becomes_a_cancelled_job() -> None:
         assert is_cancellation(wrapped)
     assert not is_cancellation(RuntimeError("otra cosa"))
     error = _job_error(OperationCancelledError("x"))
-    assert (error.code, error.message) == ("cancelled", "Cancelada por un usuario.")
+    assert (error.code, error.message.render("es")) == ("cancelled", "Cancelada por un usuario.")
 
 
 def test_documentation_stops_between_tables_when_cancelled(tmp_path: Path) -> None:

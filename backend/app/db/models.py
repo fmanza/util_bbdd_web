@@ -321,6 +321,8 @@ class Run(Base):
     progress_pct: Mapped[int | None] = mapped_column(default=None)
     error_code: Mapped[str | None] = mapped_column(String(32), default=None)
     error_message: Mapped[str | None] = mapped_column(String(500), default=None)
+    #: Clave y parámetros del fallo (``Msg.to_dict()``, ADR-015): la API lo compone en el idioma de quien consulta.
+    error_detail: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
     cancel_requested: Mapped[bool] = mapped_column(default=False)
     worker_id: Mapped[str | None] = mapped_column(String(64), default=None)
     heartbeat_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), default=None)

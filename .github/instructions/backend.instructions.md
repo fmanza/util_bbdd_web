@@ -13,7 +13,10 @@ applyTo: "backend/**/*.py"
 
 ## Routers
 - Prefijo `/api/v1/<recurso-plural>`; `response_model` siempre; `summary` en español.
-- Errores con `HTTPException` o excepciones de dominio mapeadas a *problem details* (`app/core/errors.py`).
+- Errores con excepciones de dominio (`AppError`, `app/core/errors.py`) mapeadas a *problem details*, nunca
+  `HTTPException`. Sin texto: un `Msg("<área>.<situación>", **params)` con su entrada en `ES` y `EN` de
+  `app/i18n/catalog/`; el título de una clase nueva es `title.<code>`. Igual en `JobError`, en los errores por campo
+  (`field_error`) y en las excepciones de la capa de integración (`LocalizedError`) (ADR-015).
 - Endpoints que tardan más de ~1 s o tocan una BD destino de forma masiva → encolan un job y devuelven `202` con el
   recurso `run`.
 

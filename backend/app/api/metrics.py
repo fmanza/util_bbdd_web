@@ -21,9 +21,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app import __version__
 from app.core.config import get_settings
-from app.core.errors import problem
+from app.core.errors import http_title, problem
 from app.db.models import Run, Worker, utcnow
 from app.db.session import new_session
+from app.i18n import Msg
 from app.integrations.util_bbdd import library_version
 
 logger = logging.getLogger(__name__)
@@ -69,10 +70,10 @@ def metrics(request: Request) -> Response:
     """Métricas en formato de texto de Prometheus."""
     token = get_settings().metrics_token
     if token is None:
-        return problem(404, "Not Found")
+        return problem(404, http_title(404), code="http_404")
     expected = f"Bearer {token.get_secret_value()}".encode()
     if not hmac.compare_digest(request.headers.get("Authorization", "").encode(), expected):
-        response = problem(401, "No autenticado")
+        response = problem(401, Msg("title.not_authenticated").render(), code="not_authenticated")
         response.headers["WWW-Authenticate"] = "Bearer"
         return response
     registry: CollectorRegistry = request.app.state.http_metrics.registry

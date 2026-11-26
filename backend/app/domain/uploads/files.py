@@ -22,6 +22,7 @@ from pathlib import Path, PurePath
 from typing import Any, Final, Literal
 
 from app.domain.uploads.errors import NoColumnsError, UploadContentError, UploadTypeError
+from app.i18n import Msg
 
 Kind = Literal["csv", "xlsx"]
 KINDS: Final[dict[str, Kind]] = {".csv": "csv", ".xlsx": "xlsx"}
@@ -63,18 +64,18 @@ def check_content(path: Path, kind: Kind, *, max_uncompressed: int) -> None:
         with path.open("rb") as handle:
             head = handle.read(_SNIFF_BYTES)
         if b"\x00" in head:
-            raise UploadContentError("El CSV contiene bytes nulos: no parece un fichero de texto.")
+            raise UploadContentError(Msg("uploads.csv_null_bytes"))
         return
     if not zipfile.is_zipfile(path):
-        raise UploadContentError("El .xlsx no es un libro de Excel (no es un ZIP).")
+        raise UploadContentError(Msg("uploads.xlsx_not_zip"))
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         if "xl/workbook.xml" not in names:
-            raise UploadContentError("El .xlsx no es un libro de Excel.")
+            raise UploadContentError(Msg("uploads.xlsx_not_workbook"))
         if any(name.lower().endswith("vbaproject.bin") for name in names):
-            raise UploadContentError("No se admiten libros con macros.")
+            raise UploadContentError(Msg("uploads.xlsx_macros"))
         if sum(info.file_size for info in archive.infolist()) > max_uncompressed:
-            raise UploadContentError("El .xlsx descomprimido es demasiado grande.")
+            raise UploadContentError(Msg("uploads.xlsx_uncompressed_too_large"))
 
 
 @dataclass(frozen=True)
@@ -108,7 +109,11 @@ def _csv_format(path: Path, options: ReadOptions) -> tuple[str, str]:
     candidates = (options.encoding,) if options.encoding else ENCODINGS
     encoding = next((c for c in candidates if _decodes(path, c)), None)
     if encoding is None:
-        raise UploadContentError(f"El CSV no está en {options.encoding or 'UTF-8, Windows-1252 ni Latin-1'}.")
+        raise UploadContentError(
+            Msg("uploads.csv_encoding", encoding=options.encoding)
+            if options.encoding
+            else Msg("uploads.csv_encoding_default")
+        )
     if options.delimiter:
         return encoding, options.delimiter
     with path.open(encoding=_codec(encoding), newline="") as handle:
@@ -127,7 +132,7 @@ def _reading() -> Iterator[None]:
     except UploadContentError:
         raise
     except Exception as exc:
-        raise UploadContentError(f"No se pudo leer el fichero ({type(exc).__name__}).") from None
+        raise UploadContentError(Msg("uploads.unreadable", exc_type=type(exc).__name__)) from None
 
 
 def _read_csv(path: Path, csv_format: tuple[str, str], **kwargs: Any) -> Any:
@@ -140,7 +145,7 @@ def _read_csv(path: Path, csv_format: tuple[str, str], **kwargs: Any) -> Any:
 def _columns(frame: Any) -> Any:
     """``frame`` con los nombres de columna limpios; sin columnas (p. ej. una hoja vacía), ``NoColumnsError``."""
     if len(frame.columns) == 0:
-        raise NoColumnsError("El fichero no tiene columnas.")
+        raise NoColumnsError(Msg("uploads.no_columns"))
     frame.columns = [str(c).strip() for c in frame.columns]
     return frame
 
@@ -152,7 +157,7 @@ def sheet_names(path: Path) -> list[str]:
     try:
         workbook = load_workbook(path, read_only=True, data_only=True)
     except Exception:
-        raise UploadContentError("No se pudo abrir el libro de Excel.") from None
+        raise UploadContentError(Msg("uploads.workbook_unreadable")) from None
     try:
         return list(workbook.sheetnames)
     finally:
@@ -178,11 +183,11 @@ def read_frame(path: Path, kind: Kind, options: ReadOptions, *, max_rows: int, n
             sheets = sheet_names(path)
             sheet = options.sheet or sheets[0]
             if sheet not in sheets:
-                raise UploadContentError(f"El libro no tiene la hoja «{sheet}».")
+                raise UploadContentError(Msg("uploads.missing_sheet", sheet=sheet))
             frame = pd.read_excel(path, sheet_name=sheet, engine="openpyxl", nrows=limit)
     frame = _columns(frame)
     if nrows is None and len(frame) > max_rows:
-        raise UploadContentError(f"El fichero tiene más de {max_rows} filas.")
+        raise UploadContentError(Msg("uploads.too_many_rows", max_rows=max_rows))
     return frame
 
 
@@ -213,7 +218,7 @@ def iter_frames(
                 break
             rows, chunks = rows + len(frame), chunks + 1
             if rows > max_rows:
-                raise UploadContentError(f"El fichero tiene más de {max_rows} filas.")
+                raise UploadContentError(Msg("uploads.too_many_rows", max_rows=max_rows))
             yield _columns(frame)
     if not chunks:
         yield header

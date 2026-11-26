@@ -23,12 +23,13 @@ from typing import Any, Final
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.errors import AppError
+from app.core.errors import AppError, field_error
 from app.db.models import Run, User, utcnow
 from app.domain.projects.service import Membership, get_project_connection
 from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError, RunStateError
 from app.domain.runs.service import get_artifact_by_path
 from app.domain.runs.targets import active_write
+from app.i18n import Msg
 from app.integrations.util_bbdd.catalog import migration_engines
 
 PLAN_PATH: Final = "outputs/plan/plan.json"
@@ -41,21 +42,18 @@ DRY_RUN_MAX_AGE: Final = timedelta(minutes=60)
 
 class MigrationForbiddenError(AppError):
     status = 403
-    title = "No puedes aplicar migraciones en este proyecto"
 
 
 class PlanNotAvailableError(AppError):
     status = 404
-    title = "Esta ejecución no tiene un plan de migración"
 
 
 class PlanTooLargeError(AppError):
     status = 413
-    title = "El plan es demasiado grande para el visor; descarga el script"
 
 
-def _params_error(field: str, message: str) -> RunParamsError:
-    return RunParamsError(message, errors=[{"loc": ["body", "params", field], "msg": message, "type": "value_error"}])
+def _params_error(field: str, message: Msg) -> RunParamsError:
+    return RunParamsError(message, errors=[field_error(["body", "params", field], message)])
 
 
 def load_plan(db: Session, run: Run, settings: Settings) -> dict[str, Any]:
@@ -102,9 +100,9 @@ def check_plan(db: Session, membership: Membership, params: dict[str, Any]) -> N
     link = get_project_connection(db, membership.project, params["source_connection"])
     db_type = link.connection.db_type
     if db_type not in migration_engines()[0]:
-        raise _params_error("source_connection", f"util_bbdd no migra desde {db_type}.")
+        raise _params_error("source_connection", Msg("runs.migrate.source_unsupported", engine=db_type))
     if db_type == params["target_engine"]:
-        raise _params_error("target_engine", "El motor destino debe ser distinto del origen.")
+        raise _params_error("target_engine", Msg("runs.migrate.same_engine"))
 
 
 def check_apply(db: Session, user: User, membership: Membership, params: dict[str, Any], settings: Settings) -> None:
@@ -116,32 +114,34 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunStateError: Plan con errores u otra aplicación en curso sobre el destino (409).
     """
     if not user.can("ddl.apply"):
-        raise MigrationForbiddenError("Tu rol no tiene el permiso «Aplicar DDL»; pídeselo a un administrador.")
+        raise MigrationForbiddenError(Msg("runs.missing_permission", permission=Msg("runs.permission.ddl_apply")))
     if membership.role != "owner":
-        raise MigrationForbiddenError("Solo el propietario del proyecto puede aplicar migraciones.")
+        raise MigrationForbiddenError(Msg("runs.migrate.owner_only"))
     plan_run = db.get(Run, params["plan_run"])
     if plan_run is None or plan_run.project_id != membership.project.id:
-        raise _params_error("plan_run", "El plan no existe en este proyecto.")
+        raise _params_error("plan_run", Msg("runs.migrate.plan_missing"))
     try:
         plan = load_plan(db, plan_run, settings)
     except AppError:
-        raise _params_error("plan_run", "La ejecución indicada no es un plan de migración correcto.") from None
+        raise _params_error("plan_run", Msg("runs.migrate.plan_invalid")) from None
     if plan.get("error_count"):
-        raise RunStateError("El plan tiene avisos de severidad ERROR: corrígelos y vuelve a planificar.")
+        raise RunStateError(Msg("runs.migrate.plan_errors"))
     if plan.get("fk_blocking"):
-        raise RunStateError("El plan tiene claves foráneas entre tipos distintos que el destino rechazará (G28).")
+        raise RunStateError(Msg("runs.migrate.fk_blocking"))
     alias = params["target_connection"]
     link = get_project_connection(db, membership.project, alias)
     if link.connection.read_only:
-        raise _params_error("target_connection", "La conexión destino es de solo lectura.")
+        raise _params_error("target_connection", Msg("runs.target_read_only"))
     if link.connection.db_type != plan.get("target_engine"):
-        raise _params_error("target_connection", f"El plan es para {plan.get('target_engine')}.")
+        raise _params_error(
+            "target_connection", Msg("runs.migrate.plan_other_engine", engine=str(plan.get("target_engine")))
+        )
     if params["mode"] == "apply":
         _check_dry_run(db, membership, params)
         if params.get("confirm") != alias:
-            raise _params_error("confirm", "Escribe el alias de la conexión destino para confirmar.")
+            raise _params_error("confirm", Msg("runs.confirm_alias"))
     if active_write(db, membership.project.id, alias):
-        raise RunStateError("Ya hay una migración o un volcado en curso sobre esa conexión destino.")
+        raise RunStateError(Msg("runs.migrate.write_in_progress"))
 
 
 def _check_dry_run(db: Session, membership: Membership, params: dict[str, Any]) -> None:
@@ -157,6 +157,6 @@ def _check_dry_run(db: Session, membership: Membership, params: dict[str, Any]) 
         and dry.params.get("target_connection") == params["target_connection"]
     )
     if not valid or dry is None:
-        raise _params_error("dry_run_run", "Aplicar exige un modo seco correcto del mismo plan y destino.")
+        raise _params_error("dry_run_run", Msg("runs.migrate.dry_run_required"))
     if dry.finished_at is None or utcnow() - dry.finished_at > DRY_RUN_MAX_AGE:
-        raise _params_error("dry_run_run", "El modo seco tiene más de 60 minutos: repítelo.")
+        raise _params_error("dry_run_run", Msg("runs.migrate.dry_run_expired"))

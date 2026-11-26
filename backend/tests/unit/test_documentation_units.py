@@ -278,8 +278,8 @@ def test_job_errors_never_echo_driver_text() -> None:
     error = _job_error(DriverError("password=secreto host=10.0.0.1"))
 
     assert isinstance(error, JobError)
-    assert "secreto" not in error.message and "10.0.0.1" not in error.message
-    assert _job_error(GraphvizMissingError("x")).code == "graphviz_missing"
+    assert "secreto" not in error.message.render("es") and "10.0.0.1" not in error.message.render("es")
+    assert _job_error(GraphvizMissingError()).code == "graphviz_missing"
 
 
 def test_job_error_graphviz_crash_inside_render_error() -> None:
@@ -297,7 +297,7 @@ def test_job_error_graphviz_crash_inside_render_error() -> None:
         error = _job_error(exc)
 
     assert error.code == "graphviz_failed"
-    assert "Trapezoid" not in error.message
+    assert "Trapezoid" not in error.message.render("es")
     assert _job_error(DocumentationRenderError("x", operation="DOCUMENTATION")).code == "unknown"
 
 

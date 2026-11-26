@@ -329,7 +329,7 @@ def test_apply_job_ends_cancelled(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     if cancel_before:
         assert calls == [] and not (tmp_path / "outputs").exists()
     else:
-        assert "1 de 2 tablas cargadas" in raised.value.message
+        assert "1 de 2 tablas cargadas" in raised.value.message.render("es")
         assert isinstance(calls[0]["progress"], DumpProgress)
         result = json.loads((tmp_path / "outputs" / "dump" / "result.json").read_text(encoding="utf-8"))
         assert result["cancelled"] is True and result["completed_tables"] == ["a"]

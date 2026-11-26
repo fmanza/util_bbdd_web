@@ -27,12 +27,13 @@ from app.domain.projects.service import Membership
 from app.domain.storage.settings import effective_settings, quota_bytes
 from app.domain.uploads.errors import UploadInUseError, UploadNotFoundError, UploadQuotaError, UploadTooLargeError
 from app.domain.uploads.files import check_content, display_name, kind_for
+from app.i18n import Msg
 from app.workspace.layout import safe_path
 
 logger = logging.getLogger(__name__)
 
 _CHUNK: Final = 1024 * 1024
-_QUOTA_HINT: Final = "Purga ejecuciones o ficheros antiguos para liberar espacio."
+_QUOTA_HINT: Final = Msg("uploads.quota_hint")
 #: Operaciones que leen un fichero subido (no se borra mientras estén en cola o en curso).
 BULK_OPERATIONS: Final = ("bulk_preview", "bulk_apply")
 
@@ -97,7 +98,7 @@ def save_upload(
             while chunk := stream.read(_CHUNK):
                 size += len(chunk)
                 if size > limit:
-                    raise UploadTooLargeError(f"El máximo es {effective.upload_max_mb} MB.")
+                    raise UploadTooLargeError(Msg("uploads.max_size", max_mb=effective.upload_max_mb))
                 if quota and not effective.quota_purge and used_bytes + size > quota:
                     raise UploadQuotaError(_QUOTA_HINT)
                 digest.update(chunk)

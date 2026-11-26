@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.errors import field_error
 from app.core.ulid import new_ulid
 from app.db.models import TERMINAL_STATUSES, DocumentTemplate, Project, Run, User
 from app.domain.identity import audit
@@ -47,6 +48,7 @@ from app.domain.templates.files import (
     stored_suffix,
     untemplate,
 )
+from app.i18n import Msg
 from app.integrations.util_bbdd.documentation import trace_map_error
 from app.workspace.layout import safe_path
 
@@ -55,7 +57,6 @@ logger = logging.getLogger(__name__)
 _CHUNK: Final = 1024 * 1024
 #: Parámetros de ``documentation`` que apuntan a una plantilla, y su tipo.
 RUN_PARAMS: Final[dict[str, Kind]] = {"word_template": "word", "excel_template": "excel", "trace_map": "trace"}
-_KIND_LABEL: Final[dict[str, str]] = {"word": "Word", "excel": "Excel", "trace": "de trazabilidad"}
 _UNIQUE_NAME: Final = "uq_document_templates_scope_kind_name"
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -97,7 +98,7 @@ def _check_name(db: Session, project_id: int | None, kind: str, name: str, exclu
 
 
 def _name_taken(kind: str, name: str) -> TemplateConflictError:
-    return TemplateConflictError(f"Ya hay una plantilla {_KIND_LABEL[kind]} llamada «{name}».")
+    return TemplateConflictError(Msg("templates.name_taken", kind=Msg(f"templates.kind.{kind}"), name=name))
 
 
 def _is_name_clash(exc: IntegrityError) -> bool:
@@ -109,7 +110,7 @@ def _check_limit(db: Session, project_id: int | None, settings: Settings, *, pen
     """Máximo de plantillas del ámbito; ``pending`` = las que se van a añadir (0 si ya está insertada)."""
     scope = DocumentTemplate.project_id.is_(None) if project_id is None else DocumentTemplate.project_id == project_id
     if (db.scalar(select(func.count()).where(scope)) or 0) + pending > settings.templates_per_scope:
-        raise TemplateConflictError(f"Se ha llegado al máximo de {settings.templates_per_scope} plantillas.")
+        raise TemplateConflictError(Msg("templates.limit_reached", limit=settings.templates_per_scope))
 
 
 def list_templates(
@@ -147,7 +148,7 @@ def _store(stream: BinaryIO, tmp: Path, limit: int, max_mb: int) -> None:
         while chunk := stream.read(_CHUNK):
             size += len(chunk)
             if size > limit:
-                raise TemplateTooLargeError(f"El máximo es {max_mb} MB.")
+                raise TemplateTooLargeError(Msg("templates.max_size", max_mb=max_mb))
             out.write(chunk)
 
 
@@ -189,7 +190,10 @@ def save_template(
             tmp, kind, max_uncompressed=effective_settings(db, settings).upload_max_uncompressed_mb * 1024 * 1024
         )
         if kind == "trace" and (error := trace_map_error(tmp, shown)) is not None:
-            raise TemplateContentError(error)  # esquema del mapa (G49): todos los errores, sin conectar
+            # Esquema del mapa (G49): todos los errores, sin conectar; el texto es de util_bbdd (en español, G58).
+            raise TemplateContentError(
+                error if isinstance(error, Msg) else Msg("templates.trace_map_invalid", reason=error)
+            )
         final = folder / f"{template_id}.{suffix}"
         tmp.replace(final)
     except BaseException:
@@ -247,7 +251,7 @@ def update_template(
         changes["table_style"] = template.table_style = None
     elif table_style is not None and table_style != template.table_style:
         if table_style not in template.table_styles:
-            raise TemplateContentError(f"La plantilla no tiene el estilo de tabla «{table_style}».")
+            raise TemplateContentError(Msg("templates.no_table_style", style=table_style))
         changes["table_style"] = template.table_style = table_style
     if changes:
         audit.record(
@@ -312,7 +316,5 @@ def check_run_templates(db: Session, project: Project, params: dict[str, Any]) -
     for key, kind in RUN_PARAMS.items():
         template_id = params.get(key)
         if template_id and resolve_for_run(db, project, str(template_id), kind) is None:
-            message = f"La plantilla {_KIND_LABEL[kind]} no existe en el proyecto ni en el catálogo global."
-            raise RunParamsError(
-                message, errors=[{"loc": ["body", "params", key], "msg": message, "type": "value_error"}]
-            )
+            message = Msg("templates.run_template_missing", kind=Msg(f"templates.kind.{kind}"))
+            raise RunParamsError(message, errors=[field_error(["body", "params", key], message)])

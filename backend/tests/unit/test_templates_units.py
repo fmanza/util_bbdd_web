@@ -4,9 +4,11 @@ del Excel y detección de fallos de la plantilla Word. Los constructores de plan
 from __future__ import annotations
 
 import io
+import re
 import subprocess
 import zipfile
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import docx
@@ -15,6 +17,7 @@ from docx.opc.exceptions import PackageNotFoundError
 from openpyxl import Workbook
 from openpyxl.writer.theme import theme_xml
 
+from app.core.errors import AppError
 from app.domain.templates.errors import TemplateContentError, TemplateTypeError
 from app.domain.templates.files import base_template, check_template, display_name, kind_for, untemplate
 from app.integrations.util_bbdd.documentation import (
@@ -34,6 +37,19 @@ EXTERNAL_LINK = (
     '<Relationship Id="rIdY" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" '
     'Target="https://empresa.example" TargetMode="External"/>'
 )
+
+
+def _text(exc: AppError) -> str:
+    """Detalle en español (ADR-015: el error lleva un ``Msg``; ``str(exc)`` es la clave)."""
+    return exc.detail.render("es") if exc.detail else ""
+
+
+@contextmanager
+def _raises(cls: type[AppError], match: str) -> Iterator[None]:
+    """``pytest.raises(cls, match=...)`` sobre el detalle en español."""
+    with pytest.raises(cls) as error:
+        yield
+    assert re.search(match, _text(error.value)), _text(error.value)
 
 
 # --- constructores -----------------------------------------------------------------------------------------------
@@ -136,7 +152,7 @@ def test_kind_and_display_name() -> None:
     assert kind_for("Corporativa.DOCX") == ("word", False)
     assert kind_for("a.dotx") == ("word", True)
     assert kind_for("a.xltx") == ("excel", True)
-    with pytest.raises(TemplateTypeError, match="macros"):
+    with _raises(TemplateTypeError, match="macros"):
         kind_for("a.docm")
     with pytest.raises(TemplateTypeError):
         kind_for("a.pdf")
@@ -160,12 +176,12 @@ def test_word_template_without_required_styles_is_rejected(tmp_path: Path) -> No
         check_template(path, "word", max_uncompressed=50 * MB)
 
     assert error.value.extra["missing_styles"] == ["Heading 1", "No Spacing"]
-    assert "plantilla base" in str(error.value)
+    assert "plantilla base" in _text(error.value)
 
 
 def test_dotx_is_converted_to_docx(tmp_path: Path) -> None:
     path = _write(tmp_path, "t.dotx", as_office_template(word_template(), "word"))
-    with pytest.raises(TemplateContentError, match="python-docx"):
+    with _raises(TemplateContentError, match="python-docx"):
         check_template(path, "word", max_uncompressed=50 * MB)
 
     untemplate(path, "word")
@@ -202,7 +218,7 @@ def test_unsafe_word_templates_are_rejected(
 ) -> None:
     path = _write(tmp_path, "t.docx", patch_zip(word_template(), parts))
 
-    with pytest.raises(TemplateContentError, match=message):
+    with _raises(TemplateContentError, match=message):
         check_template(path, "word", max_uncompressed=50 * MB)
 
 
@@ -237,11 +253,11 @@ def test_only_the_field_type_counts(tmp_path: Path, pieces: tuple[str, ...]) -> 
 
 
 def test_packages_that_are_not_what_they_say(tmp_path: Path) -> None:
-    with pytest.raises(TemplateContentError, match="no es un ZIP"):
+    with _raises(TemplateContentError, match="no es un ZIP"):
         check_template(_write(tmp_path, "a.docx", b"texto"), "word", max_uncompressed=MB)
-    with pytest.raises(TemplateContentError, match="no es un Word"):
+    with _raises(TemplateContentError, match="no es un Word"):
         check_template(_write(tmp_path, "b.docx", excel_template()), "word", max_uncompressed=50 * MB)
-    with pytest.raises(TemplateContentError, match="demasiado grande"):
+    with _raises(TemplateContentError, match="demasiado grande"):
         check_template(_write(tmp_path, "c.docx", word_template()), "word", max_uncompressed=1024)
 
 
@@ -262,10 +278,10 @@ def test_valid_excel_template_and_xltx(tmp_path: Path) -> None:
 def test_unsafe_excel_templates_are_rejected(tmp_path: Path) -> None:
     with_image = custom_theme().replace(b"<a:fillStyleLst>", b'<a:fillStyleLst><a:blipFill><a:blip r:embed="rId1"/>'
                                         b"</a:blipFill>", 1)  # fmt: skip
-    with pytest.raises(TemplateContentError, match="tema"):
+    with _raises(TemplateContentError, match="tema"):
         check_template(_write(tmp_path, "a.xlsx", excel_template(theme=with_image)), "excel", max_uncompressed=50 * MB)
     linked = patch_zip(excel_template(), {"xl/externalLinks/externalLink1.xml": b"<externalLink/>"})
-    with pytest.raises(TemplateContentError, match="vínculos"):
+    with _raises(TemplateContentError, match="vínculos"):
         check_template(_write(tmp_path, "b.xlsx", linked), "excel", max_uncompressed=50 * MB)
 
 

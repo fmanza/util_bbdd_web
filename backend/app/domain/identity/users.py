@@ -40,6 +40,7 @@ from app.domain.identity.passwords import check_policy, hash_password
 from app.domain.identity.roles import check_grant
 from app.domain.identity.sessions import revoke_user_sessions
 from app.domain.sorting import SortOrder, like_pattern, order_by
+from app.i18n import Msg
 from app.workspace.layout import remove_tree, safe_path
 
 logger = logging.getLogger(__name__)
@@ -440,9 +441,7 @@ def delete_user(db: Session, user: User, *, actor: User, settings: Settings, ctx
             raise SelfDeletionError()
         if "last_admin" in check.reasons:
             raise LastAdminError()
-        raise UserInUseError(
-            "Es miembro o creador de proyectos, o tiene conexiones compartidas o en uso.", **check.as_extra()
-        )
+        raise UserInUseError(Msg("identity.user_in_use"), **check.as_extra())
     user_id, was_admin = user.id, user.is_admin
     private = db.scalar(select(func.count()).where(Connection.owner_id == user_id)) or 0
     audit.record(

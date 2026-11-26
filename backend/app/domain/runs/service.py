@@ -15,6 +15,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.errors import field_error
 from app.core.ulid import new_ulid
 from app.db.models import TERMINAL_STATUSES, Artifact, Project, ProjectMember, ProjectRole, Run, User, utcnow
 from app.domain.identity import audit
@@ -33,6 +34,7 @@ from app.domain.runs.operations import get_operation, validate_params
 from app.domain.sorting import SortOrder, like_pattern, order_by
 from app.domain.storage.settings import effective_settings, quota_bytes
 from app.domain.templates.service import check_run_templates
+from app.i18n import Msg
 from app.workspace.layout import UnsafePathError, remove_tree, run_dir, run_relative_path, safe_path
 
 logger = logging.getLogger(__name__)
@@ -237,7 +239,7 @@ def _check_quota(db: Session, user: User, settings: Settings, ctx: RequestContex
         return
     purge_for_quota(db, user, effective, ctx=ctx)
     if usage_bytes(db, user.id) >= quota:
-        raise QuotaExceededError("Purga ejecuciones antiguas para liberar espacio.")
+        raise QuotaExceededError(Msg("runs.quota_purge_hint"))
 
 
 def enqueue(
@@ -272,8 +274,8 @@ def enqueue(
             get_project_connection(db, membership.project, alias)
         except Exception:
             raise RunParamsError(
-                f"El proyecto no tiene ninguna conexión con el alias «{alias}».",
-                errors=[{"loc": ["body", "params"], "msg": f"Alias desconocido: {alias}", "type": "value_error"}],
+                Msg("runs.unknown_alias", alias=alias),
+                errors=[field_error(["body", "params"], Msg("runs.unknown_alias_short", alias=alias))],
             ) from None
     if spec.name == "migrate_plan":
         migrations.check_plan(db, membership, clean)
@@ -292,7 +294,7 @@ def enqueue(
         documentations.check_launch(db, membership.project, clean, settings)
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
-        raise TooManyRunsError(f"Tienes {active} ejecuciones en cola o en curso; espera a que terminen.")
+        raise TooManyRunsError(Msg("runs.too_many_active", active=active))
     _check_quota(db, user, settings, ctx)
     now = utcnow()
     run_id = new_ulid()
@@ -352,7 +354,7 @@ def relaunch(db: Session, user: User, access: RunAccess, *, settings: Settings, 
     """
     run = access.run
     if not get_operation(run.operation).form:
-        raise RunStateError("Esta ejecución no se puede relanzar: lánzala de nuevo desde su origen.")
+        raise RunStateError(Msg("runs.not_relaunchable"))
     return enqueue(
         db, user, access.membership, operation=run.operation, params=dict(run.params), settings=settings, ctx=ctx,
         relaunched_from=run.id,
@@ -382,7 +384,7 @@ def cancel(db: Session, user: User, access: RunAccess, *, ctx: RequestContext) -
         result = db.execute(update(Run).where(Run.id == run.id, Run.status == "running").values(cancel_requested=True))
         if not getattr(result, "rowcount", 0):
             db.rollback()
-            raise RunStateError("La ejecución ya ha terminado.")
+            raise RunStateError(Msg("runs.already_finished"))
     audit.record(db, action=AuditAction.RUN_CANCEL, ctx=ctx, actor_id=user.id, target_type="run", target_id=run.id)
     db.commit()
     db.refresh(run)
@@ -411,9 +413,9 @@ def purge(db: Session, user: User, access: RunAccess, *, settings: Settings, ctx
     if not access.membership.can("editor"):
         raise ProjectForbiddenError()
     if access.run.status not in TERMINAL_STATUSES:
-        raise RunStateError("Solo se purgan ejecuciones terminadas.")
+        raise RunStateError(Msg("runs.purge_only_finished"))
     if dump_journal(access.run, settings) is not None:
-        raise RunStateError("Este volcado dejó constraints sin restaurar en el destino: restáuralas antes de purgarlo.")
+        raise RunStateError(Msg("runs.purge_pending_constraints"))
     purge_run(db, access.run, settings)
     audit.record(
         db, action=AuditAction.RUN_PURGE, ctx=ctx, actor_id=user.id, target_type="run", target_id=access.run.id

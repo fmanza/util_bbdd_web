@@ -40,6 +40,7 @@ from app.db.models import (
 from app.domain.identity import audit
 from app.domain.identity.audit import AuditAction, RequestContext
 from app.domain.identity.errors import TransferBlockedError
+from app.i18n import Msg
 from app.workspace.layout import project_prefix, safe_path
 
 logger = logging.getLogger(__name__)
@@ -244,7 +245,7 @@ def transfer_user(
     plan = transfer_preview(db, origin, target)
     if not plan.can_transfer:
         db.rollback()
-        raise TransferBlockedError("Revisa los motivos antes de transferir.", **plan.as_extra())
+        raise TransferBlockedError(Msg("identity.transfer_blocked"), **plan.as_extra())
 
     moves: list[dict[str, object]] = []
     for item in plan.created_projects:

@@ -38,6 +38,7 @@ from app.domain.projects.errors import (
     ProjectNotFoundError,
 )
 from app.domain.sorting import SortOrder, like_pattern, order_by
+from app.i18n import Msg
 from app.workspace.layout import remove_tree, safe_path
 
 _RANK: Final[dict[str, int]] = {"viewer": 1, "editor": 2, "owner": 3}
@@ -171,7 +172,7 @@ def delete_project(db: Session, user: User, membership: Membership, *, settings:
     project = membership.project
     busy = db.scalar(select(func.count()).where(Run.project_id == project.id, Run.status.in_(("queued", "running"))))
     if busy:
-        raise ProjectBusyError("Cancela o espera a que terminen antes de borrar el proyecto.")
+        raise ProjectBusyError(Msg("projects.busy"))
     folder = project_folder(settings.workspace_dir, project)
     audit.record(
         db, action=AuditAction.PROJECT_DELETE, ctx=ctx, actor_id=user.id, target_type="project",
@@ -246,7 +247,7 @@ def add_member(
     """
     user = get_by_username(db, username)
     if user is None or not user.is_active:
-        raise MemberNotFoundError("No hay ningún usuario activo con ese nombre.")
+        raise MemberNotFoundError(Msg("projects.no_active_user"))
     if db.get(ProjectMember, (project.id, user.id)) is not None:
         raise MemberExistsError()
     member = ProjectMember(project_id=project.id, user_id=user.id, role=role)
@@ -330,7 +331,7 @@ def get_project_connection(db: Session, project: Project, alias: str) -> Project
         select(ProjectConnection).where(ProjectConnection.project_id == project.id, ProjectConnection.alias == alias)
     )
     if link is None:
-        raise ProjectConnectionNotFoundError(f"El proyecto no tiene ninguna conexión con el alias «{alias}».")
+        raise ProjectConnectionNotFoundError(Msg("projects.alias_not_found", alias=alias))
     return link
 
 

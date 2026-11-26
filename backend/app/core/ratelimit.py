@@ -15,16 +15,16 @@ from dataclasses import dataclass
 from typing import Final
 
 from app.core.errors import AppError
+from app.i18n import Msg
 
 _SWEEP_EVERY: Final = 1000  # comprobaciones entre limpiezas de claves inactivas
 
 
 class RateLimitedError(AppError):
     status = 429
-    title = "Demasiadas peticiones"
 
     def __init__(self, retry_after: int) -> None:
-        super().__init__(f"Espera {retry_after} s antes de reintentar.", code="rate_limited")
+        super().__init__(Msg("core.rate_limited", retry_after=retry_after))
         self.retry_after = retry_after
 
 

@@ -16,9 +16,11 @@ from typing import Any, Final
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.errors import field_error
 from app.db.models import Project, Run
 from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError
 from app.domain.runs.service import get_artifact_by_path
+from app.i18n import Msg
 
 MARKDOWN_ROOT: Final = "outputs/markdown/documentacion/"
 PREVIOUS_CATALOG: Final = MARKDOWN_ROOT + "docs/catalog.json"
@@ -26,8 +28,8 @@ CHANGES_PATH: Final = MARKDOWN_ROOT + "docs/changes.json"
 _FIELD: Final = "markdown_previous_run"
 
 
-def _error(message: str) -> RunParamsError:
-    return RunParamsError(message, errors=[{"loc": ["body", "params", _FIELD], "msg": message, "type": "value_error"}])
+def _error(message: Msg) -> RunParamsError:
+    return RunParamsError(message, errors=[field_error(["body", "params", _FIELD], message)])
 
 
 def _schema(params: dict[str, Any]) -> str:
@@ -46,19 +48,19 @@ def previous_catalog(db: Session, project: Project, params: dict[str, Any], sett
         return None
     previous = db.get(Run, str(run_id))
     if previous is None or previous.project_id != project.id:
-        raise _error("La documentación anterior no existe en el proyecto.")
+        raise _error(Msg("runs.previous_doc_missing"))
     if previous.operation == "documentation" and previous.status == "purged":
-        raise _error("La documentación anterior ya no está disponible: se purgó.")
+        raise _error(Msg("runs.previous_doc_purged"))
     if previous.operation != "documentation" or previous.status != "succeeded":
-        raise _error("La ejecución anterior debe ser una documentación terminada correctamente.")
+        raise _error(Msg("runs.previous_doc_not_succeeded"))
     if previous.params.get("connection") != params.get("connection"):
-        raise _error("La documentación anterior es de otra conexión.")
+        raise _error(Msg("runs.previous_doc_other_connection"))
     if _schema(previous.params) != _schema(params):
-        raise _error("La documentación anterior es de otro schema.")
+        raise _error(Msg("runs.previous_doc_other_schema"))
     try:
         _, path = get_artifact_by_path(db, previous, PREVIOUS_CATALOG, settings)
     except ArtifactNotFoundError:
-        raise _error("La documentación anterior no tiene Markdown o ya no está disponible.") from None
+        raise _error(Msg("runs.previous_doc_no_markdown")) from None
     return path
 
 
