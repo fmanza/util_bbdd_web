@@ -263,8 +263,6 @@ def enqueue(
         MigrationForbiddenError, DumpForbiddenError, RunStateError: Reglas de escritura en la BD destino
             (``migrations.check_apply``, ADR-008; ``dumps.check_apply`` y ``dumps.check_restore``, ADR-009).
     """
-    from app.domain.runs import bulks, documentations, dumps, migrations  # importan este módulo: evita el ciclo
-
     if not membership.can("editor"):
         raise ProjectForbiddenError()
     spec = get_operation(operation)
@@ -277,21 +275,7 @@ def enqueue(
                 Msg("runs.unknown_alias", alias=alias),
                 errors=[field_error(["body", "params"], Msg("runs.unknown_alias_short", alias=alias))],
             ) from None
-    if spec.name == "migrate_plan":
-        migrations.check_plan(db, membership, clean)
-    elif spec.name == "migrate_apply":
-        migrations.check_apply(db, user, membership, clean, settings)
-    elif spec.name == "dump_apply":
-        dumps.check_apply(db, user, membership, clean, settings)
-    elif spec.name == "dump_restore":
-        dumps.check_restore(db, user, membership, clean, settings)
-    elif spec.name == "bulk_preview":
-        bulks.check_preview(db, membership, clean)
-    elif spec.name == "bulk_apply":
-        bulks.check_apply(db, user, membership, clean, settings)
-    elif spec.name == "documentation":
-        check_run_templates(db, membership.project, clean)
-        documentations.check_launch(db, membership.project, clean, settings)
+    _check_operation(db, user, membership, spec.name, clean, settings)
     active = db.scalar(select(func.count()).where(Run.user_id == user.id, Run.status.in_(ACTIVE_STATUSES))) or 0
     if active >= settings.max_queued_per_user:
         raise TooManyRunsError(Msg("runs.too_many_active", active=active))
@@ -326,6 +310,30 @@ def enqueue(
     )  # fmt: skip
     db.commit()
     return run
+
+
+def _check_operation(
+    db: Session, user: User, membership: Membership, operation: str, params: dict[str, Any], settings: Settings
+) -> None:
+    """Reglas propias de cada operación al encolar (escrituras en destino: ADR-008/009/010; documentación: plantillas
+    y salidas)."""
+    from app.domain.runs import bulks, documentations, dumps, migrations  # importan este módulo: evita el ciclo
+
+    if operation == "migrate_plan":
+        migrations.check_plan(db, membership, params)
+    elif operation == "migrate_apply":
+        migrations.check_apply(db, user, membership, params, settings)
+    elif operation == "dump_apply":
+        dumps.check_apply(db, user, membership, params, settings)
+    elif operation == "dump_restore":
+        dumps.check_restore(db, user, membership, params, settings)
+    elif operation == "bulk_preview":
+        bulks.check_preview(db, membership, params)
+    elif operation == "bulk_apply":
+        bulks.check_apply(db, user, membership, params, settings)
+    elif operation == "documentation":
+        check_run_templates(db, membership.project, params)
+        documentations.check_launch(db, membership.project, params, settings)
 
 
 def _dump_audit(db: Session, params: dict[str, Any]) -> dict[str, Any]:

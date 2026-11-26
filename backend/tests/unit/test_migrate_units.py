@@ -24,7 +24,6 @@ from app.integrations.util_bbdd.migrate import (
     create_plan,
     fk_mismatches,
     plan_to_dict,
-    replan,
     restore_plan,
     statements_hash,
 )
@@ -219,17 +218,6 @@ def test_restore_plan_rejects_another_hash_or_unreadable_data() -> None:
         restore_plan({**stored, "statements_sha256": "0" * 64}, stored["statements_sha256"])
     with pytest.raises(PlanOutdatedError):
         restore_plan({**stored, "format_version": 99}, stored["statements_sha256"])
-
-
-def test_plans_before_1_3_0_are_planned_again(monkeypatch: pytest.MonkeyPatch) -> None:
-    expected = _oracle_plan().statements_sha256()
-    _managers(monkeypatch, oracle=oracle_int_pk_and_fk())
-
-    plan = replan(("oracle", {}), "mariadb", schema="S", options=PlannerOptions(), expected_hash=expected)
-
-    assert plan.statements_sha256() == expected
-    with pytest.raises(PlanChangedError):
-        replan(("oracle", {}), "mariadb", schema="S", options=PlannerOptions(), expected_hash="0" * 64)
 
 
 def test_dry_run_reports_existing_tables_and_views_without_writing(

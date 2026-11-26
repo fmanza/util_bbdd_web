@@ -136,16 +136,19 @@ Las salidas largas de validación (`.txt`, informes) van a `build/logs/`.
 - Backend: `tests/unit` (lógica pura), `tests/api` (TestClient con SQLite temporal), `tests/integration`
   (`@pytest.mark.integration`, BD reales, fuera del CI).
 - Frontend: Vitest + Testing Library (consultas por rol/texto), `fetch` sustituido con `vi.stubGlobal`.
-- E2E: Playwright contra `docker compose up`; el CI la ejecuta sin el bench (`scripts/e2e_prepare.sh`).
-- Ninguna prueba del CI depende de motores externos.
+- E2E: Playwright contra `docker compose up` (`scripts/e2e_prepare.sh`); el CI levanta en el job un bench
+  PostgreSQL + MySQL para la migración (`docker/compose.e2e.yml`).
+- Ninguna prueba del CI depende de motores externos al job.
 
 ### Dependencias
 
 - Python: `uv.lock` con `exclude-newer` (solo versiones de ≥ 2 semanas; excepciones justificadas en `pyproject.toml`).
 - npm: `package-lock.json`, versiones exactas, instalación con `--before=<fecha>`.
 - Imágenes base con versión exacta en `docker/Dockerfile`.
-- Auditoría en el CI (job `audit`, también semanal): `pip-audit` y `npm audit --omit=dev` bloquean; excepciones con
-  motivo y fecha de revisión en `docs/guides/onboarding_dev.md` › Auditoría de dependencias.
+- Auditoría en el CI (también semanal): `pip-audit` y `npm audit --omit=dev` (job `audit`) y Trivy sobre la imagen
+  (job `image`) bloquean; excepciones con motivo y fecha de revisión en `docs/guides/onboarding_dev.md` › Auditoría
+  de dependencias.
+- Complejidad (ruff): C901 con máximo 12 y PLR0915 en `app/`; si una función los supera, se divide en fases.
 
 ### Formato de commits
 

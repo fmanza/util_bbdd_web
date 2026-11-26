@@ -23,6 +23,9 @@ applyTo: "backend/**/*.py"
 ## Persistencia
 - SQLAlchemy 2 estilo 2.0 (`select()`, `Mapped[...]`), modelos en `app/db/`.
 - Toda alteración de esquema con revisión Alembic (`render_as_batch` para SQLite); `downgrade` implementado.
+- `alembic/env.py` migra con `foreign_keys=OFF` y exige `foreign_key_check` vacío al terminar: recrear una tabla
+  (`DROP TABLE` + `RENAME`, p. ej. la 0017 con `users`) no borra en cascada sus filas hijas. Aun así, prefiere
+  `ADD`/`DROP COLUMN` nativos y prueba la migración contando las filas hijas (`test_cli_and_migrations.py`).
 - Transacciones cortas: SQLite admite un único escritor (WAL + `busy_timeout`).
 
 ## util_bbdd

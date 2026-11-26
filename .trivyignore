@@ -1,0 +1,9 @@
+# Excepciones del escaneo de la imagen (job `image` del CI, Trivy). Cada una con su motivo y fecha de revisión en
+# docs/guides/onboarding_dev.md › Auditoría de dependencias. Se quitan al subir a una imagen base que las corrija.
+
+# openssl/libssl3: revelación de información en la retransmisión del handshake DTLS. La aplicación no usa DTLS.
+# Revisar: 2026-12-26.
+CVE-2026-84782
+
+# apt/libapt-pkg6.0: solo se usa al construir la imagen, no con la aplicación en marcha. Revisar: 2026-12-26.
+CVE-2026-109518

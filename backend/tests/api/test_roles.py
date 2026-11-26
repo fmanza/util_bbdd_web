@@ -156,29 +156,17 @@ def test_user_manager_cannot_act_on_someone_with_more_permissions(
     assert gestor.patch(f"/api/v1/users/{peer.id}", json={"display_name": "Par"}).status_code == 200
 
 
-def test_removing_permissions_closes_sessions_and_syncs_legacy_columns(
-    admin_client: TestClient, db: Session, user: User
-) -> None:
+def test_removing_permissions_closes_sessions(admin_client: TestClient, db: Session, user: User) -> None:
     role = admin_client.post("/api/v1/roles", json={"name": "Datos", "permissions": ["data.write", "sql.run"]}).json()
     admin_client.patch(f"/api/v1/users/{user.id}", json={"role_id": role["id"]})
     ana = TestClient(admin_client.app, base_url="https://testserver")
     do_login(ana, "ana", USER_PASSWORD)
-    db.expire_all()
-    legacy = db.execute(
-        text("SELECT role, can_run_sql, can_apply_ddl, can_write_data FROM users WHERE id = :i"), {"i": user.id}
-    )
-    assert tuple(legacy.one()) == ("user", 1, 0, 1)
 
     # Añadir no cierra sesiones; quitar, sí.
     admin_client.patch(f"/api/v1/roles/{role['id']}", json={"permissions": ["data.write", "ddl.apply", "sql.run"]})
     assert ana.get("/api/v1/auth/me").status_code == 200
     admin_client.patch(f"/api/v1/roles/{role['id']}", json={"permissions": ["ddl.apply"]})
     assert ana.get("/api/v1/auth/me").status_code == 401
-
-    legacy = db.execute(
-        text("SELECT can_run_sql, can_apply_ddl, can_write_data FROM users WHERE id = :i"), {"i": user.id}
-    )
-    assert tuple(legacy.one()) == (0, 1, 0)
 
 
 def test_last_admin_rule_uses_the_admin_role(
@@ -260,9 +248,9 @@ def test_migration_0014_downgrade_restores_columns(settings: Settings) -> None:
         db.flush()
         db.execute(
             text(
-                "INSERT INTO users (username, display_name, password_hash, role, role_id, is_active, failed_attempts, "
+                "INSERT INTO users (username, display_name, password_hash, role_id, is_active, failed_attempts, "
                 "password_changed_at, created_at, updated_at) "
-                "VALUES ('eva', 'Eva', 'x', 'user', :r, 1, 0, '2026-11-01', '2026-11-01', '2026-11-01')"
+                "VALUES ('eva', 'Eva', 'x', :r, 1, 0, '2026-11-01', '2026-11-01', '2026-11-01')"
             ),
             {"r": role.id},
         )

@@ -1,4 +1,4 @@
-"""Prueba de carga básica contra una instancia en marcha (Fase 10). Sin dependencias nuevas: httpx + asyncio.
+"""Prueba de carga básica contra una instancia en marcha (Fase 10). Sin dependencias nuevas: httpx2 + asyncio.
 
 Cada usuario virtual inicia su propia sesión (con la cuenta indicada) y repite lecturas habituales de la SPA
 (usuario, proyectos, motores, ejecuciones del proyecto y detalle de una ejecución); de vez en cuando lanza una
@@ -24,7 +24,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
-import httpx
+import httpx2 as httpx
 
 READ_ROUTES = ("/api/v1/auth/me", "/api/v1/projects", "/api/v1/engines", "/api/v1/projects/{pid}/runs")
 

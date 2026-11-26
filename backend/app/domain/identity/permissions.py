@@ -53,14 +53,6 @@ BuiltinRole = Literal["admin", "user"]
 #: al catálogo en el futuro); «Usuario», ninguno.
 BUILTIN_ROLES: Final[dict[BuiltinRole, str]] = {"admin": "Administrador", "user": "Usuario"}
 
-#: Permisos que sustituyen a los antiguos ``users.can_*`` (la migración 0014 los convierte y se mantienen en sincronía
-#: para poder volver a una imagen anterior).
-LEGACY_FLAGS: Final[dict[str, Permission]] = {
-    "can_run_sql": "sql.run",
-    "can_apply_ddl": "ddl.apply",
-    "can_write_data": "data.write",
-}
-
 
 def normalize(permissions: list[str] | tuple[str, ...] | frozenset[str] | set[str]) -> list[Permission]:
     """Permisos válidos de ``permissions`` en el orden del catálogo (los desconocidos se descartan)."""

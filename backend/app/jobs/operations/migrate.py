@@ -23,7 +23,6 @@ from app.integrations.util_bbdd.migrate import (
     TargetConflictError,
     apply_plan,
     create_plan,
-    replan,
     restore_plan,
 )
 from app.integrations.util_bbdd.progress import RunProgress
@@ -77,11 +76,11 @@ def run_plan(ctx: JobContext) -> None:
     )  # fmt: skip
 
 
-def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any], dict[str, Any], Any | None]:
+def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any], dict[str, Any], Any]:
     """Vuelve a comprobar en el worker permiso, rol owner, plan y destino (pudieron cambiar desde que se encoló).
 
     Returns:
-        ``(parámetros del plan, plan.json, migration_plan.json o None si el plan es anterior a la 1.3.0)``.
+        ``(parámetros del plan, plan.json, migration_plan.json)``.
     """
     with new_session() as db:
         run = db.get(Run, ctx.run_id)
@@ -102,6 +101,8 @@ def _recheck(ctx: JobContext, params: MigrateApplyParams) -> tuple[dict[str, Any
             stored = load_stored_plan(db, plan_run, ctx.settings)
         except AppError:
             raise JobError("invalid_params", Msg("jobs.migrate.plan_unavailable")) from None
+        if stored is None:  # plan anterior a la 1.3.0
+            raise JobError("invalid_params", Msg("jobs.migrate.plan_too_old"))
         try:
             link = get_project_connection(db, run.project, params.target_connection)
         except AppError:
@@ -124,22 +125,12 @@ def _write_report(ctx: JobContext, report: dict[str, Any]) -> None:
 def run_apply(ctx: JobContext) -> None:
     params = MigrateApplyParams.model_validate(ctx.params)
     ctx.progress("preparing", "Comprobando permiso, plan y destino")
-    plan_params, plan, stored = _recheck(ctx, params)
-    plan_model = MigratePlanParams.model_validate(plan_params)
+    _, plan, stored = _recheck(ctx, params)
     target = ctx.connection_params(params.target_connection)
     verb = "Validando (modo seco)" if params.mode == "dry_run" else "Aplicando"
     ctx.progress("running", f"{verb} {len(plan['statements'])} sentencias en «{params.target_connection}»")
     try:
-        if stored is not None:
-            migration = restore_plan(stored, plan["statements_hash"])
-        else:  # plan anterior a la 1.3.0: se replanifica contra el origen (ADR-008)
-            migration = replan(
-                ctx.connection_params(plan_model.source_connection),
-                plan["target_engine"],
-                schema=plan["source_schema"],
-                options=_options(plan_model),
-                expected_hash=plan["statements_hash"],
-            )
+        migration = restore_plan(stored, plan["statements_hash"])
         progress = (
             RunProgress(
                 lambda message, pct: ctx.progress("running", message, pct),
@@ -154,8 +145,7 @@ def run_apply(ctx: JobContext) -> None:
     except PlanOutdatedError:
         raise JobError("plan_changed", Msg("jobs.migrate.plan_outdated")) from None
     except PlanChangedError:
-        key = "jobs.migrate.source_changed" if stored is None else "jobs.migrate.plan_not_reviewed"
-        raise JobError("plan_changed", Msg(key)) from None
+        raise JobError("plan_changed", Msg("jobs.migrate.plan_not_reviewed")) from None
     except PlanBlockedError:
         raise JobError("plan_blocked", Msg("jobs.migrate.plan_blocked")) from None
     except FkTypeMismatchError:

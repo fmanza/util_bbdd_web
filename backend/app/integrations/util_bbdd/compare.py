@@ -26,9 +26,6 @@ from typing import Any, Final, Literal
 from app.i18n import LocalizedError, Msg
 from app.integrations.util_bbdd.progress import RunProgress
 
-#: Formato 1 propio de la web (hasta 1.1.0): ``dataclasses.asdict`` del ``SchemaDiff`` + ``format`` y contadores.
-#: Desde 1.2.0 ``outputs/diff/schema_diff.json`` es ``SchemaDiff.to_dict()``; el formato 1 solo se lee.
-LEGACY_DIFF_FORMAT: Final = 1
 DIFF_FILE: Final = "schema_diff.json"
 REPORT_FORMATS: Final = ("html", "excel", "word", "markdown", "sql")
 _EXTENSIONS: Final[dict[str, str]] = {
@@ -134,16 +131,14 @@ def read_diff(data: Mapping[str, Any]) -> dict[str, Any]:
     """Diff guardado → campos del ``SchemaDiff`` más ``has_differences``, ``total_differences`` y
     ``total_leaf_differences``, que es lo que leen el visor y la evolución.
 
-    Acepta ``SchemaDiff.to_dict()`` de util_bbdd (runs desde la 1.2.0) y el formato 1 propio (runs anteriores), así la
-    evolución funciona entre runs de las dos épocas.
+    Acepta ``SchemaDiff.to_dict()`` de util_bbdd (runs desde la 1.2.0). El formato 1 propio de los runs anteriores
+    ya no se lee (2.2.0).
 
     Raises:
-        ValueError: Ni uno ni otro (fichero dañado o de una versión de util_bbdd que esta no lee).
+        ValueError: Fichero dañado, del formato 1 o de una versión de util_bbdd que esta no lee.
     """
     if not isinstance(data, Mapping):
         raise ValueError(f"El diff guardado no es un objeto JSON: {type(data).__name__}")
-    if data.get("format") == LEGACY_DIFF_FORMAT:
-        return dict(data)
     from util_bbdd.comparar import SchemaDiff
     from util_bbdd.exceptions import SchemaDiffValidationError
 

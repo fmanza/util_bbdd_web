@@ -10,8 +10,8 @@ Escribir en una BD destino exige, **al encolar**:
    ``DRY_RUN_MAX_AGE``, y ``confirm`` igual al alias del destino.
 5. Ninguna otra escritura (migración o volcado) activa sobre ese destino en el proyecto.
 
-El job reconstruye el plan revisado (``migration_plan.json``, util_bbdd 4.3.0) o, si es anterior a la 1.3.0, vuelve a
-planificar, y en los dos casos compara el hash de las sentencias antes de tocar el destino.
+El job reconstruye el plan revisado (``migration_plan.json``, util_bbdd 4.3.0) y compara el hash de las sentencias
+antes de tocar el destino. Los planes anteriores a la 1.3.0 no lo tienen: se rechazan y hay que volver a planificar.
 """
 
 from __future__ import annotations
@@ -72,7 +72,8 @@ def load_plan(db: Session, run: Run, settings: Settings) -> dict[str, Any]:
 
 
 def load_stored_plan(db: Session, run: Run, settings: Settings) -> Any | None:
-    """``MigrationPlan.to_dict()`` guardado por la ``migrate_plan``; ``None`` si el plan es anterior a la 1.3.0.
+    """``MigrationPlan.to_dict()`` guardado por la ``migrate_plan``; ``None`` si el plan es anterior a la 1.3.0
+    (ya no se pueden aplicar).
 
     Raises:
         PlanTooLargeError: El JSON supera ``PLAN_MAX_BYTES``.
@@ -127,6 +128,8 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         raise RunStateError(Msg("runs.migrate.plan_errors"))
     if plan.get("fk_blocking"):
         raise RunStateError(Msg("runs.migrate.fk_blocking"))
+    if load_stored_plan(db, plan_run, settings) is None:
+        raise params_error("plan_run", Msg("runs.migrate.plan_too_old"))
     alias = params["target_connection"]
     check_target(
         get_project_connection(db, membership.project, alias),

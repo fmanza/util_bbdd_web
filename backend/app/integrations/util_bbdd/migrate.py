@@ -5,7 +5,7 @@
   ``migration_plan.json`` (``MigrationPlan.to_dict()``, util_bbdd 4.3.0, GAPS G26). Al aplicar, ``restore_plan``
   reconstruye el plan revisado con ``from_dict()`` y exige que ``statements_sha256()`` sea el ``statements_hash`` del
   visor: se ejecuta exactamente lo revisado sin volver a leer el origen. Los planes anteriores a la 1.3.0 (sin
-  ``migration_plan.json``) se replanifican y se comparan igual (``replan``); los dos hashes usan el mismo algoritmo.
+  ``migration_plan.json``) ya no se aplican (2.2.0).
 - ``MigrationPlan.execute`` aplica sentencia a sentencia con ``commit`` y **no es atómico** (G27): si una falla, las
   anteriores quedan y ``MigrationStatementError`` dice cuál. El modo seco comprueba el destino con ``check_target``
   (tablas y vistas que ya existen; vistas validadas: transacción deshecha en PostgreSQL/SQL Server, solo sintaxis en
@@ -299,30 +299,6 @@ def restore_plan(data: Any, expected_hash: str) -> Any:
     return plan
 
 
-def replan(
-    source: tuple[str, dict[str, Any]],
-    target_engine: str,
-    *,
-    schema: str,
-    options: PlannerOptions,
-    expected_hash: str,
-) -> Any:
-    """Vuelve a planificar un plan anterior a la 1.3.0 (sin ``migration_plan.json``) y comprueba el hash.
-
-    Raises:
-        PlanChangedError: El origen cambió desde el plan revisado.
-    """
-    from util_bbdd import SyncDatabaseManager
-
-    source_type, source_params = source
-    with SyncDatabaseManager(source_type, source_params, use_pool=False) as source_manager:
-        plan = _plan(source_type, target_engine, source_manager, schema, options)
-    current = statements_hash(list(plan.emit_statements()))
-    if current != expected_hash:
-        raise PlanChangedError(current)
-    return plan
-
-
 def _check_target(plan: Any, manager: Any, *, validate_views: bool) -> tuple[list[str], list[dict[str, Any]]]:
     """Tablas y vistas del plan que ya existen en el destino y, si se pide, la validación de las vistas.
 
@@ -355,7 +331,7 @@ def apply_plan(
 ) -> ApplyReport:
     """Según ``mode``, comprueba el destino sin cambios (modo seco) o aplica el plan ya verificado.
 
-    ``plan`` sale de ``restore_plan`` o ``replan`` (hash ya comprobado). ``progress`` (``RunProgress``, solo al aplicar)
+    ``plan`` sale de ``restore_plan`` (hash ya comprobado). ``progress`` (``RunProgress``, solo al aplicar)
     recibe un evento por sentencia; si se cancela su token, la aplicación para antes de la siguiente sentencia y el
     informe vuelve con ``cancelled`` y las aplicadas.
 

@@ -118,7 +118,6 @@ def grant(db: Session, user: User, *permissions: str) -> User:
         db.flush()
     db.refresh(user)
     user.role = role
-    user.sync_legacy_columns()
     db.commit()
     return user
 

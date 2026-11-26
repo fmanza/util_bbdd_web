@@ -4,13 +4,11 @@ Fase 1: identidad (``users``, ``sessions``, ``audit_log``).
 Fase 2: conexiones (``connections``) y allowlist de destinos (``allowlist_entries``).
 Fase 3: proyectos (``projects``, ``project_members``, ``project_connections``), ejecuciones (``runs``,
 ``artifacts``) y latido del worker (``workers``).
-Fase 4: caché de metadatos (``metadata_cache``), queries nombradas (``named_queries``) y ``users.can_run_sql``.
-Fase 7: ``users.can_apply_ddl`` (aplicar migraciones DDL en una BD destino, ADR-008).
-Fase 8: ``users.can_write_data`` (volcar datos en una BD destino, ADR-009).
+Fase 4: caché de metadatos (``metadata_cache``) y queries nombradas (``named_queries``).
 Fase 9: ``uploads`` (ficheros CSV/Excel de la carga bulk, ADR-010).
 Plantillas de documento: ``document_templates`` (Word y Excel de la documentación, ADR-011).
 Almacenamiento administrable: ``app_settings`` y ``users.storage_quota_mb`` (ADR-012).
-Roles y permisos: ``roles`` y ``users.role_id`` (ADR-014); ``users.role`` y ``users.can_*`` quedan sin uso.
+Roles y permisos: ``roles`` y ``users.role_id`` (ADR-014); la 0017 quita ``users.role`` y ``users.can_*``.
 """
 
 from __future__ import annotations
@@ -37,8 +35,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
-#: Valor de la columna antigua ``users.role`` (sin uso desde ADR-014; se mantiene en sincronía con el rol).
-LegacyRole = Literal["admin", "user"]
 ColorScheme = Literal["light", "dark", "auto"]
 Visibility = Literal["private", "shared"]
 ProjectRole = Literal["owner", "editor", "viewer"]
@@ -86,13 +82,7 @@ class User(Base):
     #: Rol con sus permisos (ADR-014). En la BD la columna admite ``NULL`` (se añadió con ``ALTER TABLE``), pero
     #: siempre tiene valor.
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), index=True)
-    #: Columnas anteriores a ADR-014: sin uso, se escriben en sincronía con el rol (``sync_legacy_columns``) para poder
-    #: volver a una imagen anterior sin perder permisos.
-    legacy_role: Mapped[str] = mapped_column("role", String(16))
     is_active: Mapped[bool] = mapped_column(default=True)
-    legacy_can_run_sql: Mapped[bool] = mapped_column("can_run_sql", default=False)
-    legacy_can_apply_ddl: Mapped[bool] = mapped_column("can_apply_ddl", default=False)
-    legacy_can_write_data: Mapped[bool] = mapped_column("can_write_data", default=False)
     #: Cuota propia en MB (ADR-012): ``None`` = la global, ``0`` = sin límite.
     storage_quota_mb: Mapped[int | None] = mapped_column(default=None)
     #: Tema de la interfaz (``light``, ``dark`` o ``auto`` = el del sistema); viaja con la cuenta.
@@ -121,15 +111,6 @@ class User(Base):
     def can(self, permission: str) -> bool:
         """Su rol tiene ``permission``."""
         return permission in self.role.permission_list
-
-    def sync_legacy_columns(self) -> None:
-        """Escribe ``role`` y ``can_*`` (sin uso) a partir del rol, para que una imagen anterior a ADR-014 vea los mismos
-        permisos."""
-        from app.domain.identity.permissions import LEGACY_FLAGS
-
-        self.legacy_role = "admin" if self.is_admin else "user"
-        for column, permission in LEGACY_FLAGS.items():
-            setattr(self, f"legacy_{column}", self.can(permission))
 
 
 class Role(Base):

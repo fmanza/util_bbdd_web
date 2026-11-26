@@ -83,7 +83,7 @@ ES: Final[dict[str, str]] = {
     "jobs.migrate.plan_outdated": (
         "El plan se generó con otra versión de util_bbdd o está dañado: vuelve a planificar."
     ),
-    "jobs.migrate.source_changed": "El origen ha cambiado desde el plan: vuelve a planificar.",
+    "jobs.migrate.plan_too_old": "El plan es anterior a la 1.3.0 y ya no se puede aplicar: vuelve a planificar.",
     "jobs.migrate.plan_not_reviewed": "El plan guardado no es el revisado: vuelve a planificar.",
     "jobs.migrate.plan_blocked": "El plan tiene avisos de severidad ERROR.",
     "jobs.migrate.fk_type_mismatch": "El plan tiene claves foráneas entre tipos distintos.",
@@ -193,7 +193,7 @@ EN: Final[dict[str, str]] = {
     "jobs.migrate.plan_gone": "The plan no longer exists.",
     "jobs.migrate.plan_unavailable": "The plan is no longer available (purged?).",
     "jobs.migrate.plan_outdated": "The plan was generated with another version of util_bbdd or is damaged: plan again.",
-    "jobs.migrate.source_changed": "The source has changed since the plan: plan again.",
+    "jobs.migrate.plan_too_old": "The plan predates 1.3.0 and can no longer be applied: plan again.",
     "jobs.migrate.plan_not_reviewed": "The stored plan is not the reviewed one: plan again.",
     "jobs.migrate.plan_blocked": "The plan has ERROR severity warnings.",
     "jobs.migrate.fk_type_mismatch": "The plan has foreign keys between different types.",

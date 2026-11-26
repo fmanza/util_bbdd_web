@@ -192,7 +192,6 @@ def create_user(
         storage_quota_mb=storage_quota_mb,
         failed_attempts=0,
     )
-    user.sync_legacy_columns()
     db.add(user)
     db.flush()
     audit.record(
@@ -250,7 +249,6 @@ def update_user(
     previous_role = user.role.name
     if new_role is not None:
         user.role = new_role
-        user.sync_legacy_columns()
         revoke_user_sessions(db, user.id)
         changed.append("role")
     quota = None if changes.global_storage_quota else changes.storage_quota_mb
