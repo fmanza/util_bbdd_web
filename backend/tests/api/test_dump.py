@@ -19,7 +19,8 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.db.models import AuditEntry, Run, User, utcnow
+from app.core.ulid import new_ulid
+from app.db.models import AuditEntry, Connection, Run, User, utcnow
 from app.jobs.worker import Worker
 from app.workspace.layout import run_dir
 from tests.api.test_projects import login_as, new_project
@@ -295,6 +296,36 @@ def test_apply_rules(
     db.commit()
     cancel = user_client.post(f"/api/v1/runs/{first.json()['id']}/cancel")  # entre lotes (util_bbdd 4.4.0, G1)
     assert cancel.status_code == 202 and cancel.json()["cancel_requested"] is True
+
+
+def test_apply_rule_codes(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    allowed: User,
+) -> None:
+    """``code`` de cada regla al encolar, también vista previa inexistente, ilegible y motor del destino cambiado."""
+    preview_id = preview(user_client, project, worker, db)
+    noop = launch(user_client, project["id"], "noop").json()["id"]  # una ejecución sin vista previa de volcado
+
+    def code(response: Any) -> str:
+        assert response.status_code in (403, 409, 422), response.text
+        return str(response.json()["code"])
+
+    assert code(apply(user_client, project, new_ulid())) == "runs.preview_missing"
+    assert code(apply(user_client, project, noop)) == "runs.preview_invalid"
+    assert code(apply(user_client, project, preview_id, confirm="Destino")) == "runs.confirm_alias"
+    target = db.scalars(select(Connection).where(Connection.name == "destino")).one()
+    target.db_type = "postgresql"
+    db.commit()
+    changed = apply(user_client, project, preview_id)
+    assert code(changed) == "runs.target_engine_changed" and changed.json()["errors"][0]["loc"][-1] == "preview_run"
+    target.db_type = "sqlite"
+    db.commit()
+    first = apply(user_client, project, preview_id)
+    assert first.status_code == 202, first.text
+    assert code(apply(user_client, project, preview_id)) == "runs.dump.write_in_progress"
 
 
 def test_catalog_and_permission(
