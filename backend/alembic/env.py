@@ -29,10 +29,24 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    """Migra con ``foreign_keys=OFF``: recrear una tabla (``DROP TABLE`` + ``RENAME``) no debe borrar en cascada ni
+    poner a ``NULL`` las filas que apuntan a ella. SQLite ignora el PRAGMA dentro de una transacción, así que se fija
+    antes de abrirla; al final ``foreign_key_check`` debe salir vacío (si no, se deshace todo) y la conexión vuelve
+    al pool con ``foreign_keys=ON``."""
     with get_engine().connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
-        with context.begin_transaction():
-            context.run_migrations()
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        connection.commit()
+        try:
+            context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+            with context.begin_transaction():
+                context.run_migrations()
+                violations = connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+                if violations:
+                    raise RuntimeError(f"Claves foráneas rotas tras migrar (tabla, fila, padre): {violations[:10]}")
+        finally:
+            connection.rollback()
+            connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+            connection.commit()
 
 
 if context.is_offline_mode():

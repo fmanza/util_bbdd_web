@@ -72,7 +72,7 @@ raíz del proyecto (donde está `docker-compose.yml`; si no, `no configuration f
    del usuario `app` (uid 10001). El volumen se llama `<proyecto>_data` (`docker volume ls`):
 
     ```bash
-    docker run --rm -v util_bbdd_web_data:/data -v "$PWD:/in:ro" python:3.12.14-slim-bookworm sh -c \
+    docker run --rm -v util_bbdd_web_data:/data -v "$PWD:/in:ro" python:3.12.15-slim-bookworm sh -c \
       'apt-get update -qq && apt-get install -y -qq unzip &&
         unzip -q /in/instantclient-basic-linux.x64-19.32.0.0.0dbru.zip -d /data/files &&
         chown -R 10001:10001 /data/files/instantclient_19_32'
@@ -347,6 +347,7 @@ anterior).
 | 1.22.0 – 1.24.0 | `0013` | `audit_log.actor_name` (nombre del actor en la auditoría, rellenado en los eventos existentes; ADR-013) |
 | 2.0.0 | `0015` | Roles con permisos (`0014`, ADR-014) y `users.language` (`0015`) |
 | 2.1.0 – 2.1.1 | `0016` | `runs.error_detail` (motivo del fallo como clave y parámetros; ADR-015) |
+| 2.2.0 | `0017` | Quita `users.role` y `users.can_*` (sin uso desde ADR-014); recrea `users` sin tocar sus filas hijas |
 
 Los `downgrade` de `0016`, `0015`, `0014`, `0013`, `0012` y, desde la 1.21.1, de `0010`, `0007`, `0006` y `0005` usan
 `ALTER TABLE … DROP COLUMN`, que necesita SQLite 3.35 o posterior; la imagen de la 1.21.0 trae la 3.40.1. Si cambias
@@ -354,6 +355,11 @@ la imagen base, comprueba la versión con `docker compose exec web python -c "im
 
 > **Bajar por debajo de la `0010`**: hazlo con una imagen 1.21.1 o posterior. En las anteriores, esos `downgrade`
 > recreaban la tabla `users` y su `DROP TABLE` borraba en cascada las sesiones, conexiones y proyectos de cada usuario.
+
+> **Volver de la 2.2.0 a una anterior**: primero `alembic downgrade 0016` con la imagen **2.2.0** (la anterior no
+> conoce la `0017`). La bajada repone `users.role` y `users.can_*` desde el rol de cada usuario: un administrador
+> queda con los tres permisos, como en la bajada de la `0014`. Desde la 2.2.0 las migraciones se ejecutan con
+> `foreign_keys=OFF` y comprueban `foreign_key_check` al terminar.
 
 **De 0.x a 1.0.0**: las cookies pasan a llamarse `__Host-ubw_session`/`__Host-ubw_csrf`, así que todos los usuarios
 vuelven a iniciar sesión; las contraseñas nuevas o cambiadas se comprueban contra la lista de contraseñas comunes; el

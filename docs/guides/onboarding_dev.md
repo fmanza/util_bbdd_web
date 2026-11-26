@@ -77,9 +77,10 @@ Los comandos de [SHARED_INSTRUCTIONS.md § «Comandos de desarrollo»][comandos]
 
 ## E2E completa (Fase 10)
 
-El CI la ejecuta en cada push, en cada PR y los lunes (job `e2e`), sin el bench de motores reales. En local, con la
-imagen levantada, `scripts/e2e_prepare.sh` crea el admin E2E y copia a `/data/files` las BD SQLite de
-`e2e/fixtures/` (se puede repetir):
+El CI la ejecuta en cada push, en cada PR y los lunes (job `e2e`), con un bench PostgreSQL 17 + MySQL 8.4 en el
+propio job (puertos 55432 y 53306 del runner; `docker/compose.e2e.yml` lleva `host.docker.internal` al host). En
+local, con la imagen levantada, `scripts/e2e_prepare.sh` crea el admin E2E y copia a `/data/files` las BD SQLite
+de `e2e/fixtures/` (se puede repetir):
 
 ```bash
 export UBW_E2E_ADMIN_USER=e2e-admin UBW_E2E_ADMIN_PASSWORD="$(openssl rand -base64 24)" UBW_E2E_SQLITE=1
@@ -93,6 +94,11 @@ UBW_PORT=8082` en el `docker compose up` y en el script, y `UBW_E2E_URL=http://1
 - Credenciales en `UBW_E2E_ADMIN_USER`/`UBW_E2E_ADMIN_PASSWORD`; `UBW_E2E_SQLITE=1` para bulk, compare, documentación,
   dump, explorador y plantillas (BD en `/data/files`, ver la cabecera de cada spec); `UBW_E2E_MIGRATE=1` y el bench para
   la migración.
+- Bench en local, como el CI: `docker run` de `postgres:17.11` y `mysql:8.4.11` (usuario y BD `bench`, contraseña en
+  `UTIL_BBDD_BENCH_PASSWORD`), `COMPOSE_FILE` con `docker/compose.e2e.yml` (en Windows separado por `;`) y, desde
+  `backend/`, `uv run python -m tests.integration.e2e_migrate_fixture setup`. En Windows Hyper-V suele reservar 55432:
+  publica otros puertos y pásalos en `UTIL_BBDD_BENCH_POSTGRES_PORT`/`UTIL_BBDD_BENCH_MYSQL_PORT` (al fixture y a
+  Playwright); `netsh interface ipv4 show excludedportrange protocol=tcp` lista los reservados.
 - Todos los specs importan `test` de `e2e/fixtures.ts`, que falla ante una violación de la CSP de la SPA.
 - La suite hace muchos inicios de sesión desde la misma IP: arranca el compose con límites altos,
   `UBW_RATE_LIMIT_ANONYMOUS_PER_MINUTE=2000 UBW_RATE_LIMIT_LOGIN_PER_MINUTE=300 UBW_RATE_LIMIT_LOGIN_FAILURES=100
@@ -109,14 +115,18 @@ El job `audit` del CI (en cada push, en cada PR y los lunes) ejecuta:
 | Python (`backend/uv.lock`) | `pip-audit` sobre `uv export` | Falla |
 | npm de producción | `npm audit --omit=dev` | Falla |
 | npm de desarrollo (eslint, Vitest, Playwright…) | `npm audit` | Solo avisa |
+| Imagen runtime (paquetes de Debian y de Python) | Trivy 0.76.1 en el job `image`, HIGH/CRITICAL con arreglo | Falla |
 
 Si falla, actualiza el paquete respetando la regla de las dos semanas (`uv lock --upgrade-package <paquete>`;
 `npm update <paquete> --before=<fecha>`). Si no hay versión corregida, añade una excepción con `--ignore-vuln <id>`
-en `.github/workflows/ci.yml`, su motivo en los riesgos aceptados de
+en `.github/workflows/ci.yml` (o el id en `.trivyignore`, para la imagen), su motivo en los riesgos aceptados de
 [ASVS_L2.md](../security/ASVS_L2.md#riesgos-aceptados) y una fecha de revisión en esta tabla:
 
 | Excepción | Paquete | Motivo | Revisar |
 |---|---|---|---|
 | `PYSEC-2026-217` (CVE-2026-44172) | `mariadb` 1.1.14, vía util_bbdd | Sin versión corregida; afecta al escape manual con `big5`. util_bbdd no pasa `charset` al conector y la web usa parámetros enlazados | 2027-02-26 |
+| `CVE-2026-84782` (imagen) | `openssl`/`libssl3` de Debian 12 | Revelación de información en el handshake DTLS: la aplicación no usa DTLS. Corregido después de `python:3.12.15-slim-bookworm` | 2026-12-26 |
+| `CVE-2026-109518` (imagen) | `apt`/`libapt-pkg6.0` de Debian 12 | Solo se usa al construir la imagen, no con la aplicación en marcha | 2026-12-26 |
 
-`pip-audit` no revisa util_bbdd (se instala por URL) ni los paquetes del sistema de la imagen (`libmariadb`…).
+`pip-audit` no revisa util_bbdd (se instala por URL); los paquetes del sistema los revisa Trivy. Las excepciones de
+la imagen se quitan al subir `PYTHON_IMAGE` (`docker/Dockerfile`) a una versión que las corrija y tenga dos semanas.

@@ -119,7 +119,7 @@
 | Control | Estado | Evidencia |
 |---|---|---|
 | 14.1.x build reproducible | Cumple | Imagen multi-stage con versiones fijas; contenedor `read_only`, sin capacidades, usuario sin privilegios |
-| 14.2.1 componentes sin vulnerabilidades conocidas | **Corregido** | opentelemetry-api 1.45.1 (CVE-2026-114603) y Vite 8.3.4; ver riesgos para mariadb. Desde la 2.1.1, job `audit` del CI (`pip-audit` y `npm audit`, también semanal; [guía](../guides/onboarding_dev.md#auditoría-de-dependencias)) |
+| 14.2.1 componentes sin vulnerabilidades conocidas | **Corregido** | opentelemetry-api 1.45.1 (CVE-2026-114603) y Vite 8.3.4; ver riesgos para mariadb. Desde la 2.1.1, job `audit` del CI (`pip-audit` y `npm audit`, también semanal; [guía](../guides/onboarding_dev.md#auditoría-de-dependencias)); desde la 2.2.0, Trivy sobre la imagen (paquetes de Debian) |
 | 14.3.2 sin modo depuración ni cabecera `Server` | Cumple | `--no-server-header`, `/api/docs` fuera de producción |
 | 14.4.x cabeceras | **Corregido** | CSP de la SPA (`script-src 'self'` y el hash del puente del visor Markdown, `MARKDOWN_BRIDGE_SHA256` en `core/middleware.py`; sin `'unsafe-inline'`), `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP/CORP, `frame-ancestors 'none'`; la E2E falla ante una violación de CSP |
 | 14.5.x | Cumple | Sin CORS; `X-Request-ID` validado |

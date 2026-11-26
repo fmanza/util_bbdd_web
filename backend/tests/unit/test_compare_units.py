@@ -237,23 +237,10 @@ _LEGACY_DIFF: dict[str, Any] = {
 }
 
 
-def test_read_diff_keeps_the_legacy_format() -> None:
-    """GAPS G24 / W-C2: los runs de la 1.1.0 se siguen leyendo, y su evolución con uno nuevo es la misma."""
-    from util_bbdd.comparar import ColumnDiff, SchemaDiff, TableDiff
-
-    legacy = read_diff(_LEGACY_DIFF)
-    current = SchemaDiff(
-        source_label="origen (sqlite)",
-        target_label="destino (sqlite)",
-        table_diffs=(
-            TableDiff("clientes", "modified", column_diffs=(ColumnDiff("nombre", "nullable", "False", "True"),)),
-        ),
-    )
-    result = evolution(read_diff(diff_to_dict(current)), legacy)
-
-    assert legacy == _LEGACY_DIFF
-    assert result.labels_match and [i.name for i in result.persisting] == ["nombre"]
-    assert not result.new and not result.resolved
+def test_read_diff_rejects_the_legacy_format() -> None:
+    """Desde la 2.2.0 el formato 1 propio de la web (runs de la 1.1.0) ya no se lee (D8)."""
+    with pytest.raises(ValueError):
+        read_diff(_LEGACY_DIFF)
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,7 @@
 """Diff de una ejecución ``compare`` (Fase 6): lectura del JSON guardado y evolución entre dos comparaciones.
 
-El JSON (``outputs/diff/schema_diff.json``) lo escribe la capa de integración (``SchemaDiff.to_dict()`` desde la 1.2.0,
-formato 1 propio antes) y lo lee ``read_diff``, que admite los dos. La evolución compara las **diferencias hoja** de dos comparaciones: cada una se identifica por su tipo, la
+El JSON (``outputs/diff/schema_diff.json``) lo escribe la capa de integración (``SchemaDiff.to_dict()`` desde la 1.2.0)
+y lo lee ``read_diff``; el formato 1 de los runs anteriores ya no se lee (2.2.0). La evolución compara las **diferencias hoja** de dos comparaciones: cada una se identifica por su tipo, la
 tabla, el objeto y el atributo, de modo que «la columna ``x.y`` difiere en el tipo» es la misma diferencia en las dos
 fechas aunque cambien sus valores.
 

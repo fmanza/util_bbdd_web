@@ -151,11 +151,22 @@ def seed_run(
     return run_id
 
 
-def seed_plan(db: Session, settings: Settings, project: dict[str, object], user: User, **changes: Any) -> str:
+#: ``MigrationPlan.to_dict()`` mínimo: al encolar solo se comprueba que exista.
+STORED_PLAN = {"format": "util_bbdd.migration_plan", "format_version": 1}
+
+
+def seed_plan(
+    db: Session, settings: Settings, project: dict[str, object], user: User, *, stored: bool = True,
+    **changes: Any,
+) -> str:  # fmt: skip
+    """Plan ``migrate_plan`` correcto; ``stored=False`` imita uno anterior a la 1.3.0 (sin ``migration_plan.json``)."""
+    files = {"outputs/plan/plan.json": json.dumps({**PLAN, **changes})}
+    if stored:
+        files["outputs/plan/migration_plan.json"] = json.dumps(STORED_PLAN)
     return seed_run(
         db, settings, project_id=int(str(project["id"])), user_id=user.id, operation="migrate_plan",
         params={"source_connection": "origen", "source_schema": None, "target_engine": "mysql"},
-        files={"outputs/plan/plan.json": json.dumps({**PLAN, **changes})},
+        files=files,
     )  # fmt: skip
 
 
@@ -401,20 +412,24 @@ def _recheck(db: Session, settings: Settings, project: dict[str, object], run_id
     return recheck(ctx, MigrateApplyParams.model_validate(run.params))
 
 
-def test_worker_uses_the_util_bbdd_plan_when_it_exists(
-    project: dict[str, object], db: Session, settings: Settings, allowed: User
+def test_plans_before_1_3_0_are_rejected(
+    user_client: TestClient, project: dict[str, object], db: Session, settings: Settings, allowed: User
 ) -> None:
-    """Desde la 1.3.0 el job reconstruye ``migration_plan.json``; los planes anteriores (sin él) se replanifican."""
-    stored = {"format": "util_bbdd.migration_plan", "format_version": 1}
-    new_plan = seed_run(
-        db, settings, project_id=int(str(project["id"])), user_id=allowed.id, operation="migrate_plan",
-        params={"source_connection": "origen", "source_schema": None, "target_engine": "mysql"},
-        files={"outputs/plan/plan.json": json.dumps(PLAN), "outputs/plan/migration_plan.json": json.dumps(stored)},
-    )  # fmt: skip
-    old_plan = seed_plan(db, settings, project, allowed)
+    """Desde la 2.2.0 un plan sin ``migration_plan.json`` (anterior a la 1.3.0) no se aplica: ni al encolar ni en el
+    worker, que ya no vuelve a planificar contra el origen."""
+    from app.jobs.context import JobError
 
-    assert _recheck(db, settings, project, seed_dry_run(db, settings, project, allowed, new_plan))[2] == stored
-    assert _recheck(db, settings, project, seed_dry_run(db, settings, project, allowed, old_plan))[2] is None
+    new_plan = seed_plan(db, settings, project, allowed)
+    old_plan = seed_plan(db, settings, project, allowed, stored=False)
+
+    assert _recheck(db, settings, project, seed_dry_run(db, settings, project, allowed, new_plan))[2] == STORED_PLAN
+    with pytest.raises(JobError) as info:
+        _recheck(db, settings, project, seed_dry_run(db, settings, project, allowed, old_plan))
+    assert info.value.message.key == "jobs.migrate.plan_too_old"
+    rejected = launch(
+        user_client, project["id"], "migrate_apply", plan_run=old_plan, target_connection="destino", mode="dry_run"
+    )
+    assert rejected.status_code == 422 and rejected.json()["code"] == "runs.migrate.plan_too_old"
 
 
 def test_worker_rechecks_permission_owner_target_and_engine(

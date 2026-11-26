@@ -1,6 +1,6 @@
 [project]
 name = "util_bbdd_web"
-version = "2.1.1"
+version = "2.2.0"
 description = "Aplicación web multiusuario sobre util_bbdd: conexiones, proyectos y ejecuciones agrupadas."
 readme = "../README.md"
 requires-python = ">=3.12,<3.13"
@@ -37,7 +37,7 @@ odbc = ["pyodbc>=5.2", "aioodbc>=0.5"]
 dev = [
     "pytest>=8.4",
     "pytest-cov>=6.2",
-    "httpx>=0.28",
+    "httpx2>=2.16.0",
     "ruff>=0.12",
     "mypy>=1.17",
 ]
@@ -64,11 +64,16 @@ line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "C4", "UP", "S", "ASYNC"]
+# C901 y PLR0915: la complejidad no crece (D10); el máximo es el de las funciones más complejas de hoy.
+select = ["E", "W", "F", "I", "B", "C4", "UP", "S", "ASYNC", "C901", "PLR0915"]
 ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106", "S608"]  # S608: SQL de prueba construido con constantes
+"tests/**" = ["S101", "S105", "S106", "S608", "C901", "PLR0915"]  # S608: SQL de prueba construido con constantes
+"alembic/versions/**" = ["C901", "PLR0915"]  # migraciones: se escriben una vez y no se tocan
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

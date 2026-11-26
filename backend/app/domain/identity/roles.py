@@ -150,8 +150,6 @@ def update_role(
             changes["permissions"] = [current, granted]
             role.permissions = granted
             holders = list(db.scalars(select(User).where(User.role_id == role.id)))
-            for holder in holders:
-                holder.sync_legacy_columns()
             if set(current) - set(granted):
                 for holder in holders:
                     revoke_user_sessions(db, holder.id)

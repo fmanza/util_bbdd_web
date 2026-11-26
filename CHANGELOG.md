@@ -5,13 +5,36 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-26
+
+### Added
+
+- CI: **escaneo de la imagen** runtime con Trivy 0.76.1 en el job `image` (paquetes de Debian y de Python): falla ante
+  vulnerabilidades HIGH/CRITICAL con arreglo publicado. Excepciones en `.trivyignore`, con motivo y fecha de revisión en
+  la guía de desarrolladores.
+- CI: la E2E incluye la **migración real PostgreSQL → MySQL** y la prueba de conexión contra PostgreSQL, con un bench
+  PostgreSQL 17.11 + MySQL 8.4.11 dentro del job (`docker/compose.e2e.yml`, contraseña de un solo uso).
+- ruff vigila la complejidad (C901 con máximo 12 y PLR0915) en `backend/app`.
+
 ### Changed
 
+- **Migración `0017`**: quita `users.role`, `can_run_sql`, `can_apply_ddl` y `can_write_data`, sin uso desde los roles
+  (2.0.0). Recrea `users` sin tocar sus filas hijas (sesiones, conexiones, proyectos, auditoría). Para volver a una
+  versión anterior, primero `alembic downgrade 0016` con la imagen 2.2.0 (ver *Despliegue › Actualizar*).
+- Las migraciones de Alembic se ejecutan con `foreign_keys=OFF` y comprueban `foreign_key_check` al terminar: recrear
+  una tabla ya no puede borrar en cascada.
+- **Se retira la compatibilidad con ejecuciones anteriores a la 1.3.0**: un plan de migración sin
+  `migration_plan.json` ya no se aplica (422 `runs.migrate.plan_too_old` al encolar: hay que volver a planificar) y un
+  diff de comparación anterior a la 1.2.0 ya no se abre ni entra en la evolución. Con la retención por defecto (30 días)
+  esas ejecuciones ya no existen.
+- Imagen base `python:3.12.15-slim-bookworm` (antes 3.12.14): corrige 8 vulnerabilidades HIGH/CRITICAL de Debian.
 - Backend (interno, sin cambios de comportamiento): las comprobaciones antes de escribir en una BD destino (permiso y
   propietario, vista previa reciente, destino escribible y del mismo motor, confirmación del alias, una escritura por
   destino) se comparten en `app/domain/runs/targets.py` en lugar de repetirse en la migración, el volcado, la
   restauración de constraints y la carga. Nuevas pruebas fijan el `code` de cada regla al encolar un volcado o una
-  carga.
+  carga. `runs.service.enqueue` y `run_bulk` se dividen en fases.
+- Pruebas: `TestClient` usa `httpx2` (dependencia de desarrollo, en lugar de `httpx`); la suite ya no muestra avisos.
+  `scripts/load_test.py` también usa `httpx2`.
 
 ## [2.1.1] - 2026-11-26
 

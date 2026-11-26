@@ -485,10 +485,6 @@ def run_bulk(
         StructureChangedError: La tabla o el mapeo cambiaron. ``MatchesChangedError``: en update/delete, las filas
             afectadas ya no son ``expected_matches`` (las confirmadas). ``FileInvalidError``: el fichero ya no valida.
     """
-    import pandas as pd
-    from util_bbdd.audit import JsonLinesAuditSink
-    from util_bbdd.bulk import AuditOptions, BatchOptions, BulkCrud, RejectOptions
-
     frames = _frames(source)
     prepared = _prepare(target, _first(frames), options)
     try:
@@ -502,43 +498,12 @@ def run_bulk(
         if options.operation != "insert" and expected_matches is not None and matches != expected_matches:
             raise MatchesChangedError(f"{matches}")
         before = _count(engine, table)
-        rejects = outputs_dir / "rejects" / REJECTS_FILE
-        audit_path = outputs_dir / "audit" / AUDIT_FILE
-        for folder in (rejects.parent, audit_path.parent):
-            folder.mkdir(parents=True, exist_ok=True)
-        sink = JsonLinesAuditSink(audit_path)
-        crud = BulkCrud(
-            engine,
-            batch=BatchOptions(chunk_size=options.chunk_size),
-            audit=AuditOptions(sink=sink, warn_if_disabled=False),
-            rejects=RejectOptions(
-                on_error=options.on_error,
-                csv_path=rejects if options.on_error == "isolate" else None,
-                max_rejects=options.max_rejects if options.on_error == "isolate" else None,
-            ),
-            parallel=_parallel(options),
-        )
-        table_name = _qualified(prepared["schema"], options.table)
-        tracking = {"on_progress": progress, "cancel_token": progress.token if progress is not None else None}
-        rows = [0]
-        error: str | None = None
-        cancelled = False
+        crud, sink = _bulk_crud(engine, options, outputs_dir)
         try:
-            if options.parallel:  # el reparto en hilos necesita el DataFrame entero (acotado por bulk_max_rows)
-                with closing(_mapped_chunks(frames, prepared, options, rows)) as chunks:
-                    whole = pd.concat(list(chunks), ignore_index=True)
-                _call(crud, options, whole, table_name, dry_run=False, **tracking)
-            else:
-                with closing(_mapped_chunks(frames, prepared, options, rows)) as chunks:
-                    _stream(crud, options, chunks, table_name, **tracking)
-        except Exception as exc:  # fallo o cancelación: el resultado lo cuenta (filas antes/después)
-            if is_cancellation(exc):
-                cancelled = True
-            else:
-                error = _clean(str(exc.__cause__ or exc))
+            rows, error, cancelled = _load(crud, frames, prepared, options, progress)
         finally:
             sink.close()
-        plan = crud.parallel_plan(options.operation, rows[0])
+        plan = crud.parallel_plan(options.operation, rows)
         # La carga ya está confirmada: si el recuento falla (p. ej. read_timeout de 30 s de MariaDB/MySQL en una
         # tabla grande), el resultado queda sin verificar (None) en lugar de dar la ejecución por fallida.
         after: int | None
@@ -562,7 +527,7 @@ def run_bulk(
         return {
             "operation": options.operation,
             "table": options.table,
-            "rows": rows[0],
+            "rows": rows,
             "committed": committed,
             "matches": matches,
             "target_rows_before": before,
@@ -579,6 +544,62 @@ def run_bulk(
         }
     finally:
         prepared["manager"].close()
+
+
+def _bulk_crud(engine: Any, options: BulkOptions, outputs_dir: Path) -> tuple[Any, Any]:
+    """``BulkCrud`` de la carga y su auditoría: rechazos y auditoría JSON Lines en ``outputs_dir``.
+
+    Returns:
+        ``(crud, sink)``; quien llama cierra ``sink`` al terminar la carga.
+    """
+    from util_bbdd.audit import JsonLinesAuditSink
+    from util_bbdd.bulk import AuditOptions, BatchOptions, BulkCrud, RejectOptions
+
+    rejects = outputs_dir / "rejects" / REJECTS_FILE
+    audit_path = outputs_dir / "audit" / AUDIT_FILE
+    for folder in (rejects.parent, audit_path.parent):
+        folder.mkdir(parents=True, exist_ok=True)
+    sink = JsonLinesAuditSink(audit_path)
+    crud = BulkCrud(
+        engine,
+        batch=BatchOptions(chunk_size=options.chunk_size),
+        audit=AuditOptions(sink=sink, warn_if_disabled=False),
+        rejects=RejectOptions(
+            on_error=options.on_error,
+            csv_path=rejects if options.on_error == "isolate" else None,
+            max_rejects=options.max_rejects if options.on_error == "isolate" else None,
+        ),
+        parallel=_parallel(options),
+    )
+    return crud, sink
+
+
+def _load(
+    crud: Any, frames: Any, prepared: dict[str, Any], options: BulkOptions, progress: RunProgress | None
+) -> tuple[int, str | None, bool]:
+    """Ejecuta la carga. Un fallo o una cancelación no se propagan: el resultado los cuenta.
+
+    Returns:
+        ``(filas leídas del fichero, error saneado o None, cancelada)``.
+    """
+    import pandas as pd
+
+    table_name = _qualified(prepared["schema"], options.table)
+    tracking = {"on_progress": progress, "cancel_token": progress.token if progress is not None else None}
+    rows = [0]
+    try:
+        if options.parallel:  # el reparto en hilos necesita el DataFrame entero (acotado por bulk_max_rows)
+            with closing(_mapped_chunks(frames, prepared, options, rows)) as chunks:
+                whole = pd.concat(list(chunks), ignore_index=True)
+            _call(crud, options, whole, table_name, dry_run=False, **tracking)
+        else:
+            with closing(_mapped_chunks(frames, prepared, options, rows)) as chunks:
+                _stream(crud, options, chunks, table_name, **tracking)
+    except Exception as exc:  # fallo o cancelación: el resultado lo cuenta (filas antes/después)
+        if is_cancellation(exc):
+            return rows[0], None, True
+        return rows[0], _clean(str(exc.__cause__ or exc)), False
+    return rows[0], None, False
 
 
 def verify(operation: Operation, before: int, after: int, committed: int, matches: int | None) -> bool | None:

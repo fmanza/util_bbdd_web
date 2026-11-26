@@ -15,12 +15,10 @@ import pytest
 
 from app.integrations.util_bbdd import migrate
 from app.integrations.util_bbdd.migrate import (
-    PlanChangedError,
     PlannerOptions,
     TargetConflictError,
     apply_plan,
     create_plan,
-    replan,
     restore_plan,
 )
 from tests.integration.test_bench_engines import PASSWORD
@@ -121,20 +119,13 @@ def test_oracle_int_foreign_key_gets_the_primary_key_type(source_tables: None, t
         _drop(source)
 
 
-def test_changed_source_invalidates_only_plans_before_1_3_0(source_tables: None, tmp_path: Path) -> None:
+def test_applies_the_reviewed_plan_even_if_the_source_changed(source_tables: None, tmp_path: Path) -> None:
     source, target = "postgresql", "mysql"
     _prepare(source, target)
     try:
         plan = _plan(source, target, tmp_path / "plan")
         _execute(source, [f"ALTER TABLE {PARENT} ADD COLUMN email VARCHAR(50)"])
-
-        # Plan anterior a la 1.3.0: se replanifica y el hash ya no coincide (ADR-008).
-        with pytest.raises(PlanChangedError):
-            replan(
-                (source, _params(source)), target, schema=plan["source_schema"], options=PlannerOptions(),
-                expected_hash=plan["statements_hash"],
-            )  # fmt: skip
-        # Desde la 1.3.0 se aplica lo revisado, aunque el origen cambie después (G26).
+        # Se aplica lo revisado, aunque el origen cambie después (G26).
         assert _apply(target, plan, "dry_run", tmp_path / "dry").conflicts == []
     finally:
         _drop(target)

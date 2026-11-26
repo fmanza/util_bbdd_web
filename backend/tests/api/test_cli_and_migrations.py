@@ -226,7 +226,7 @@ def test_downgrade_to_0004_and_0003_preserves_related_rows(settings: Settings) -
     from tests.conftest import BACKEND_DIR
 
     config = Config(str(BACKEND_DIR / "alembic.ini"))
-    run_migrations()
+    run_migrations("0016")  # _seed_related_rows escribe users.role, que la 0017 quita
     _seed_related_rows()
 
     command.downgrade(config, "0004")
@@ -270,3 +270,51 @@ def test_migration_0016_adds_and_drops_run_error_detail(settings: Settings) -> N
 
     run_migrations()
     assert "error_detail" in {c["name"] for c in inspect(get_engine()).get_columns("runs")}
+
+
+def test_migration_0017_drops_legacy_columns_and_keeps_related_rows(settings: Settings) -> None:
+    """La 0017 recrea ``users`` sin ``role`` ni ``can_*``. Desde la 1.24.0 (0013) la subida pasa antes por la 0014, que
+    escribe datos: aun así ``env.py`` migra con ``foreign_keys=OFF`` y el ``DROP TABLE users`` no borra en cascada
+    sesiones, conexiones ni proyectos, ni deja la auditoría sin autor. La bajada repone las columnas desde el rol."""
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    from tests.conftest import BACKEND_DIR
+
+    run_migrations("0013")
+    _seed_related_rows()
+    engine = get_engine()
+
+    run_migrations()
+    assert _related_rows() == RELATED_INTACT
+    columns = {c["name"] for c in inspect(engine).get_columns("users")}
+    assert not columns & {"role", "can_run_sql", "can_apply_ddl", "can_write_data"}
+    assert {"role_id", "language", "color_scheme", "storage_quota_mb"} <= columns
+    assert "ix_users_role_id" in {i["name"] for i in inspect(engine).get_indexes("users")}
+    with engine.connect() as connection:
+        assert connection.execute(text("PRAGMA foreign_keys")).scalar() == 1  # el pool recupera las claves foráneas
+        builtin = connection.execute(
+            text("SELECT r.builtin FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = 1")
+        ).scalar_one()
+        assert builtin == "admin"
+    with pytest.raises(IntegrityError, match="UNIQUE"), engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO users (username, display_name, password_hash, is_active, failed_attempts, "
+                "password_changed_at, created_at, updated_at, role_id) "
+                "VALUES ('jefa', 'x', 'x', 1, 0, '2026-11-26', '2026-11-26', '2026-11-26', 1)"
+            )
+        )
+
+    command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0016")
+    with engine.connect() as connection:
+        legacy = connection.execute(text("SELECT role, can_run_sql, can_apply_ddl, can_write_data FROM users"))
+        assert tuple(legacy.one()) == ("admin", 1, 1, 1)
+    assert _related_rows() == RELATED_INTACT
+
+    command.downgrade(Config(str(BACKEND_DIR / "alembic.ini")), "0013")
+    assert _related_rows() == RELATED_INTACT
+    run_migrations()
+    assert _related_rows() == RELATED_INTACT

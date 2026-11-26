@@ -207,23 +207,15 @@ def test_unknown_alias_is_rejected_on_enqueue(user_client: TestClient, project: 
     assert "otra" in response.text
 
 
-@pytest.mark.parametrize("legacy_baseline", [False, True], ids=["mismo_formato", "base_de_la_1_1_0"])
 def test_evolution_between_two_comparisons(
     user_client: TestClient,
     project: dict[str, object],
     worker: Worker,  # noqa: F811
     db: Session,
     settings: Settings,
-    legacy_baseline: bool,
 ) -> None:
     before = compare(user_client, project["id"], html=False, excel=False, sql=False, markdown=False)
-    run = wait_for(worker, db, before, timeout=120)
-    if legacy_baseline:  # W-C2: la base es un run de la 1.1.0, con el formato 1 propio de la web
-        diff_file = run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs/diff/schema_diff.json"
-        data = json.loads(diff_file.read_text(encoding="utf-8"))
-        assert (data.pop("format"), data.pop("format_version")) == ("util_bbdd.schema_diff", 1)
-        data |= {"format": 1, "has_differences": True, "total_differences": 0, "total_leaf_differences": 0}
-        diff_file.write_text(json.dumps(data), encoding="utf-8")
+    wait_for(worker, db, before, timeout=120)
     # Se crea ``facturas`` en el destino (resuelta) y se borra ``pedidos.total`` (nueva diferencia).
     con = sqlite3.connect(settings.files_dir / "destino.db")
     con.executescript(
@@ -244,6 +236,25 @@ def test_evolution_between_two_comparisons(
     assert ("table", "facturas") in resolved
     assert ("column", "pedidos", "total") in new
     assert ("table", "auditoria") in persisting and ("view", "v_clientes") in persisting
+
+
+def test_diff_before_1_2_0_is_no_longer_read(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    settings: Settings,
+) -> None:
+    """Desde la 2.2.0 el formato 1 propio de la web (runs anteriores a la 1.2.0) no se lee: el visor responde como con
+    un diff dañado."""
+    run_id = compare(user_client, project["id"], html=False, excel=False, sql=False, markdown=False)
+    run = wait_for(worker, db, run_id, timeout=120)
+    diff_file = run_dir(settings.workspace_dir, str(run.workspace_path)) / "outputs/diff/schema_diff.json"
+    data = json.loads(diff_file.read_text(encoding="utf-8"))
+    data |= {"format": 1, "has_differences": True, "total_differences": 0, "total_leaf_differences": 0}
+    diff_file.write_text(json.dumps(data), encoding="utf-8")
+
+    assert user_client.get(f"/api/v1/runs/{run_id}/diff").status_code == 404
 
 
 def test_diff_endpoints_reject_other_runs_and_outsiders(

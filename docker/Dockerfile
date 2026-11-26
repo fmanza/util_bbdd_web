@@ -5,7 +5,7 @@
 #            --build-arg WITH_ORACLE_THICK=true (libaio1; el Instant Client lo copia el admin a UBW_FILES_DIR y se
 #            indica en UBW_ORACLE_CLIENT_DIR)
 
-ARG PYTHON_IMAGE=python:3.12.14-slim-bookworm
+ARG PYTHON_IMAGE=python:3.12.15-slim-bookworm
 ARG NODE_IMAGE=node:24.21.0-alpine
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.12.22
 

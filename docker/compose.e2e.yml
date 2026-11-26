@@ -1,0 +1,9 @@
+# Solo para la E2E con el bench (CI: COMPOSE_FILE=docker-compose.yml:docker/compose.e2e.yml). En Linux no existe
+# host.docker.internal: se apunta al host, donde el job publica PostgreSQL (55432) y MySQL (53306).
+services:
+  web:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  worker:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
