@@ -22,12 +22,19 @@ from typing import Any, Final
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.errors import AppError, field_error
-from app.db.models import Project, Run, Upload, User, utcnow
+from app.core.errors import AppError
+from app.db.models import Project, Run, Upload, User
 from app.domain.projects.service import Membership, get_project_connection
-from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError, RunStateError
+from app.domain.runs.errors import ArtifactNotFoundError, RunStateError
 from app.domain.runs.service import get_artifact_by_path
-from app.domain.runs.targets import active_write
+from app.domain.runs.targets import (
+    check_confirm,
+    check_no_write,
+    check_target,
+    check_writer,
+    load_fresh_preview,
+    params_error,
+)
 from app.i18n import Msg
 
 PREVIEW_PATH: Final = "outputs/bulk/preview.json"
@@ -42,10 +49,6 @@ class BulkForbiddenError(AppError):
 
 class BulkNotAvailableError(AppError):
     status = 404
-
-
-def _params_error(field: str, message: Msg) -> RunParamsError:
-    return RunParamsError(message, errors=[field_error(["body", "params", field], message)])
 
 
 def _load(db: Session, run: Run, path: str, settings: Settings) -> dict[str, Any]:
@@ -82,7 +85,7 @@ def project_upload(db: Session, project: Project, upload_id: str) -> Upload | No
 def check_preview(db: Session, membership: Membership, params: dict[str, Any]) -> None:
     """``bulk_preview``: el fichero es de este proyecto."""
     if project_upload(db, membership.project, params["upload"]) is None:
-        raise _params_error("upload", Msg("runs.bulk.upload_missing"))
+        raise params_error("upload", Msg("runs.bulk.upload_missing"))
 
 
 def target_changed(
@@ -110,38 +113,30 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunParamsError: Vista previa, destino, fichero o confirmaciones no válidos (422).
         RunStateError: La vista previa tiene errores u otra escritura está en curso sobre el destino (409).
     """
-    if not user.can("data.write"):
-        raise BulkForbiddenError(Msg("runs.missing_permission", permission=Msg("runs.permission.data_write")))
-    if membership.role != "owner":
-        raise BulkForbiddenError(Msg("runs.bulk.owner_only"))
-    preview_run = db.get(Run, params["preview_run"])
-    if preview_run is None or preview_run.project_id != membership.project.id:
-        raise _params_error("preview_run", Msg("runs.preview_missing"))
-    try:
-        preview = load_preview(db, preview_run, settings)
-    except AppError:
-        raise _params_error("preview_run", Msg("runs.preview_invalid")) from None
-    if preview_run.finished_at is None or utcnow() - preview_run.finished_at > PREVIEW_MAX_AGE:
-        raise _params_error("preview_run", Msg("runs.preview_expired"))
+    check_writer(
+        user, membership, permission="data.write", error=BulkForbiddenError, owner_only=Msg("runs.bulk.owner_only")
+    )
+    preview_run, preview = load_fresh_preview(
+        db, membership, params, settings, load=load_preview, max_age=PREVIEW_MAX_AGE
+    )
     if preview.get("errors"):
         raise RunStateError(Msg("runs.bulk.preview_has_errors"))
     changed = target_changed(db, membership.project, preview_run.params, preview)
     if changed:
-        raise _params_error("preview_run", changed)
+        raise params_error("preview_run", changed)
     alias = str(preview_run.params["target_connection"])
-    link = get_project_connection(db, membership.project, alias)
-    if link.connection.read_only:
-        raise _params_error("preview_run", Msg("runs.target_read_only"))
-    if link.connection.db_type != preview.get("target_engine"):
-        raise _params_error("preview_run", Msg("runs.target_engine_changed", engine=str(preview.get("target_engine"))))
-    if params.get("confirm") != alias:
-        raise _params_error("confirm", Msg("runs.confirm_alias"))
+    check_target(
+        get_project_connection(db, membership.project, alias),
+        preview.get("target_engine"),
+        field="preview_run",
+        engine_msg=Msg("runs.target_engine_changed", engine=str(preview.get("target_engine"))),
+    )
+    check_confirm(params, alias)
     if preview.get("operation") in {"update", "delete"} and params.get("confirm_rows") != preview.get("matches"):
-        raise _params_error("confirm_rows", Msg("runs.bulk.confirm_rows"))
+        raise params_error("confirm_rows", Msg("runs.bulk.confirm_rows"))
     if not plan_atomic(preview) and not params.get("accept_non_atomic"):
-        raise _params_error("accept_non_atomic", Msg("runs.bulk.accept_non_atomic"))
-    if active_write(db, membership.project.id, alias):
-        raise RunStateError(Msg("runs.write_in_progress"))
+        raise params_error("accept_non_atomic", Msg("runs.bulk.accept_non_atomic"))
+    check_no_write(db, membership.project.id, alias, Msg("runs.write_in_progress"))
 
 
 def plan_atomic(preview: dict[str, Any]) -> bool:

@@ -23,12 +23,12 @@ from typing import Any, Final
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.errors import AppError, field_error
+from app.core.errors import AppError
 from app.db.models import Run, User, utcnow
 from app.domain.projects.service import Membership, get_project_connection
-from app.domain.runs.errors import ArtifactNotFoundError, RunParamsError, RunStateError
+from app.domain.runs.errors import ArtifactNotFoundError, RunStateError
 from app.domain.runs.service import get_artifact_by_path
-from app.domain.runs.targets import active_write
+from app.domain.runs.targets import check_confirm, check_no_write, check_target, check_writer, params_error
 from app.i18n import Msg
 from app.integrations.util_bbdd.catalog import migration_engines
 
@@ -50,10 +50,6 @@ class PlanNotAvailableError(AppError):
 
 class PlanTooLargeError(AppError):
     status = 413
-
-
-def _params_error(field: str, message: Msg) -> RunParamsError:
-    return RunParamsError(message, errors=[field_error(["body", "params", field], message)])
 
 
 def load_plan(db: Session, run: Run, settings: Settings) -> dict[str, Any]:
@@ -100,9 +96,9 @@ def check_plan(db: Session, membership: Membership, params: dict[str, Any]) -> N
     link = get_project_connection(db, membership.project, params["source_connection"])
     db_type = link.connection.db_type
     if db_type not in migration_engines()[0]:
-        raise _params_error("source_connection", Msg("runs.migrate.source_unsupported", engine=db_type))
+        raise params_error("source_connection", Msg("runs.migrate.source_unsupported", engine=db_type))
     if db_type == params["target_engine"]:
-        raise _params_error("target_engine", Msg("runs.migrate.same_engine"))
+        raise params_error("target_engine", Msg("runs.migrate.same_engine"))
 
 
 def check_apply(db: Session, user: User, membership: Membership, params: dict[str, Any], settings: Settings) -> None:
@@ -113,35 +109,35 @@ def check_apply(db: Session, user: User, membership: Membership, params: dict[st
         RunParamsError: Plan, destino, modo seco o confirmación no válidos (422).
         RunStateError: Plan con errores u otra aplicación en curso sobre el destino (409).
     """
-    if not user.can("ddl.apply"):
-        raise MigrationForbiddenError(Msg("runs.missing_permission", permission=Msg("runs.permission.ddl_apply")))
-    if membership.role != "owner":
-        raise MigrationForbiddenError(Msg("runs.migrate.owner_only"))
+    check_writer(
+        user,
+        membership,
+        permission="ddl.apply",
+        error=MigrationForbiddenError,
+        owner_only=Msg("runs.migrate.owner_only"),
+    )
     plan_run = db.get(Run, params["plan_run"])
     if plan_run is None or plan_run.project_id != membership.project.id:
-        raise _params_error("plan_run", Msg("runs.migrate.plan_missing"))
+        raise params_error("plan_run", Msg("runs.migrate.plan_missing"))
     try:
         plan = load_plan(db, plan_run, settings)
     except AppError:
-        raise _params_error("plan_run", Msg("runs.migrate.plan_invalid")) from None
+        raise params_error("plan_run", Msg("runs.migrate.plan_invalid")) from None
     if plan.get("error_count"):
         raise RunStateError(Msg("runs.migrate.plan_errors"))
     if plan.get("fk_blocking"):
         raise RunStateError(Msg("runs.migrate.fk_blocking"))
     alias = params["target_connection"]
-    link = get_project_connection(db, membership.project, alias)
-    if link.connection.read_only:
-        raise _params_error("target_connection", Msg("runs.target_read_only"))
-    if link.connection.db_type != plan.get("target_engine"):
-        raise _params_error(
-            "target_connection", Msg("runs.migrate.plan_other_engine", engine=str(plan.get("target_engine")))
-        )
+    check_target(
+        get_project_connection(db, membership.project, alias),
+        plan.get("target_engine"),
+        field="target_connection",
+        engine_msg=Msg("runs.migrate.plan_other_engine", engine=str(plan.get("target_engine"))),
+    )
     if params["mode"] == "apply":
         _check_dry_run(db, membership, params)
-        if params.get("confirm") != alias:
-            raise _params_error("confirm", Msg("runs.confirm_alias"))
-    if active_write(db, membership.project.id, alias):
-        raise RunStateError(Msg("runs.migrate.write_in_progress"))
+        check_confirm(params, alias)
+    check_no_write(db, membership.project.id, alias, Msg("runs.migrate.write_in_progress"))
 
 
 def _check_dry_run(db: Session, membership: Membership, params: dict[str, Any]) -> None:
@@ -157,6 +153,6 @@ def _check_dry_run(db: Session, membership: Membership, params: dict[str, Any]) 
         and dry.params.get("target_connection") == params["target_connection"]
     )
     if not valid or dry is None:
-        raise _params_error("dry_run_run", Msg("runs.migrate.dry_run_required"))
+        raise params_error("dry_run_run", Msg("runs.migrate.dry_run_required"))
     if dry.finished_at is None or utcnow() - dry.finished_at > DRY_RUN_MAX_AGE:
-        raise _params_error("dry_run_run", Msg("runs.migrate.dry_run_expired"))
+        raise params_error("dry_run_run", Msg("runs.migrate.dry_run_expired"))
