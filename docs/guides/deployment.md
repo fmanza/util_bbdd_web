@@ -346,7 +346,7 @@ anterior).
 | 1.21.0 – 1.21.1 | `0012` | `users.color_scheme` (tema de cada usuario; `auto` en las cuentas existentes) |
 | 1.22.0 – 1.24.0 | `0013` | `audit_log.actor_name` (nombre del actor en la auditoría, rellenado en los eventos existentes; ADR-013) |
 | 2.0.0 | `0015` | Roles con permisos (`0014`, ADR-014) y `users.language` (`0015`) |
-| 2.1.0 | `0016` | `runs.error_detail` (motivo del fallo como clave y parámetros; ADR-015) |
+| 2.1.0 – 2.1.1 | `0016` | `runs.error_detail` (motivo del fallo como clave y parámetros; ADR-015) |
 
 Los `downgrade` de `0016`, `0015`, `0014`, `0013`, `0012` y, desde la 1.21.1, de `0010`, `0007`, `0006` y `0005` usan
 `ALTER TABLE … DROP COLUMN`, que necesita SQLite 3.35 o posterior; la imagen de la 1.21.0 trae la 3.40.1. Si cambias

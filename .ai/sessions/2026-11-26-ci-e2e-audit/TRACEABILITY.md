@@ -5,8 +5,8 @@
 - fecha: 2026-11-26
 - rama: feat/ci-e2e-audit (sobre `73a15c1`, release 2.1.0)
 - versión: 2.1.1
-- skill: new_feature
-- fase: PLAN + AUDIT_PLAN + IMPLEMENT + AUDIT_CODE
+- skill: new_feature + version_closure
+- fase: PLAN + AUDIT_PLAN + IMPLEMENT + AUDIT_CODE + VERSION
 
 ## Prompt issued
 `/new-feature D4+D5, todo lo queremos en una unica versión` (deuda del inventario de `2026-11-26-errores-idioma`) →
@@ -42,12 +42,18 @@ versión 2.1.1 → «sí, adelante con IMPLEMENT».
   0,9 GB libres; esos dos ficheros pasan solos, 15/15); `zensical build --strict` sin avisos; YAML del CI válido.
   E2E local contra la imagen 2.1.0 en una instancia aparte (`ubw-e2e`, puerto 8082): suite completa con 1 worker
   21 passed, 2 skipped (bench), 1 fallo de `compare` por un plazo de 5 s con pytest en paralelo (pasó en la pasada
-  anterior); los dos specs corregidos pasan. No se ha visto aún el CI con los jobs nuevos.
+  anterior); los dos specs corregidos pasan.
+
+- AUDIT_CODE: sin hallazgos bloqueantes. Riesgo aceptado: el artefacto de un `e2e` fallido incluye trazas con la
+  contraseña del admin E2E, válida solo en el contenedor efímero del job.
+- CI: PR #29 (run 45856307950) y `develop` tras el merge `7b555ea` (run 45863439272, 9 min 35 s) en verde, con
+  `audit` (Python sin hallazgos, 1 ignorado; npm de producción 0; dev 9 moderadas, aviso) y `e2e` (22 passed,
+  2 skipped en 1,1 min, sin reintentos). Rama `feat/ci-e2e-audit` borrada.
 
 ## Artefactos generados
 | Artefacto | Ruta | Estado |
 |---|---|---|
-| CI | .github/workflows/ci.yml | completado (sin ejecutar en GitHub) |
+| CI | .github/workflows/ci.yml | completado (CI en verde) |
 | Script | scripts/e2e_prepare.sh | completado |
 | E2E | frontend/playwright.config.ts · frontend/e2e/members.spec.ts · frontend/e2e/documentation.spec.ts | completado |
 | Locks | backend/uv.lock · frontend/package-lock.json | completado |
@@ -64,4 +70,9 @@ versión 2.1.1 → «sí, adelante con IMPLEMENT».
 - **[auditoría]**: `pip-audit` no cubre util_bbdd (dependencia por URL) ni los paquetes del sistema de la imagen.
 
 ## Veredicto final
-Veredicto: pendiente de AUDIT_CODE y del primer CI con los jobs nuevos.
+Veredicto: CLOSED (2.1.1) — AUDIT_PLAN `GO_CONDICIONAL` → `GO` con el CI en verde.
+Pendientes al cierre:
+- Commit `release: v2.1.1 - E2E y auditoría de dependencias en el CI` propuesto, no ejecutado.
+- Publicación de la 2.1.1 (pasos 6-8 de `docs/guides/publicar_version.md`; sin migraciones desde la 2.1.0).
+- Revisar la excepción `PYSEC-2026-217` el 2027-02-26; eslint/typescript-eslint con el PR mensual de Dependabot.
+- Fuera de alcance: escaneo de la imagen (paquetes del sistema) y el bench en el CI.
