@@ -20,7 +20,8 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.db.models import AuditEntry, Run, Upload, User, utcnow
+from app.core.ulid import new_ulid
+from app.db.models import AuditEntry, Connection, Run, Upload, User, utcnow
 from app.jobs.worker import Worker
 from app.workspace.layout import run_dir
 from tests.api.test_projects import login_as, new_project
@@ -365,6 +366,37 @@ def test_apply_rules(
     db.commit()
     cancel = user_client.post(f"/api/v1/runs/{first.json()['id']}/cancel")  # entre lotes (util_bbdd 4.5.0, G1)
     assert cancel.status_code == 202 and cancel.json()["cancel_requested"] is True
+
+
+def test_apply_rule_codes(
+    user_client: TestClient,
+    project: dict[str, object],
+    worker: Worker,  # noqa: F811
+    db: Session,
+    allowed: User,
+) -> None:
+    """``code`` de cada regla al encolar, también vista previa inexistente, ilegible y motor del destino cambiado."""
+    upload_id = upload(user_client, project["id"], "c.csv", INSERT_CSV).json()["id"]
+    run = preview(user_client, project, worker, db, upload_id, on_error="isolate")
+    noop = user_client.post(f"/api/v1/projects/{project['id']}/runs", json={"operation": "noop", "params": {}})
+
+    def code(response: Any) -> str:
+        assert response.status_code in (403, 409, 422), response.text
+        return str(response.json()["code"])
+
+    assert code(apply(user_client, project, new_ulid())) == "runs.preview_missing"
+    assert code(apply(user_client, project, noop.json()["id"])) == "runs.preview_invalid"
+    assert code(apply(user_client, project, run.id, confirm="Destino")) == "runs.confirm_alias"
+    target = db.scalars(select(Connection).where(Connection.name == "destino")).one()
+    target.db_type = "postgresql"
+    db.commit()
+    changed = apply(user_client, project, run.id)
+    assert code(changed) == "runs.target_engine_changed" and changed.json()["errors"][0]["loc"][-1] == "preview_run"
+    target.db_type = "sqlite"
+    db.commit()
+    first = apply(user_client, project, run.id)
+    assert first.status_code == 202, first.text
+    assert code(apply(user_client, project, run.id)) == "runs.write_in_progress"
 
 
 def test_changed_file_or_connection_invalidates_the_preview(

@@ -5,6 +5,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Changed
+
+- Backend (interno, sin cambios de comportamiento): las comprobaciones antes de escribir en una BD destino (permiso y
+  propietario, vista previa reciente, destino escribible y del mismo motor, confirmación del alias, una escritura por
+  destino) se comparten en `app/domain/runs/targets.py` en lugar de repetirse en la migración, el volcado, la
+  restauración de constraints y la carga. Nuevas pruebas fijan el `code` de cada regla al encolar un volcado o una
+  carga.
+
 ## [2.1.1] - 2026-11-26
 
 ### Added
