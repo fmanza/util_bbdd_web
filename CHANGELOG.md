@@ -5,6 +5,24 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-11-27
+
+### Changed
+
+- Frontend: 23 dependencias al día (PR de Dependabot #26), entre ellas Mantine 9.8, React 19.3.1, React Router 8.5,
+  TanStack Query 5.107, i18next 27, react-i18next 18, Vite 8.3.8, Vitest 5.1, Playwright 1.65 y jsdom 31. Sin cambios
+  visibles.
+- CI: actions al día (Dependabot #32): `checkout` 7, `setup-uv` 7, `setup-node` 7, `setup-buildx-action` 4,
+  `build-push-action` 7 y `upload-artifact` 7.
+
+### Fixed
+
+- Usuarios › Transferir: el destino elegido se lee sin suponer que Mantine siempre pasa la opción (tipos de Mantine
+  9.8).
+- Pruebas: con jsdom 31, que evalúa los `@media`, las clases `hiddenFrom`/`visibleFrom` de Mantine ocultaban los
+  controles de móvil; los helpers de render las desactivan (`Providers` acepta `withGlobalClasses`, `true` por
+  defecto).
+
 ## [2.2.0] - 2026-11-26
 
 ### Added
