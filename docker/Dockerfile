@@ -55,7 +55,9 @@ FROM ${PYTHON_IMAGE} AS runtime
 ARG WITH_HSQLDB=false
 ARG WITH_ODBC=false
 ARG WITH_ORACLE_THICK=false
+# `upgrade`: parches de seguridad de Debian publicados después de la imagen base (Trivy los exige si tienen arreglo).
 RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
  && apt-get install -y --no-install-recommends libmariadb3 graphviz \
  && if [ "$WITH_HSQLDB" = "true" ]; then apt-get install -y --no-install-recommends default-jre-headless; fi \
  && if [ "$WITH_ORACLE_THICK" = "true" ]; then apt-get install -y --no-install-recommends libaio1; fi \

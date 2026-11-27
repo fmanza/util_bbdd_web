@@ -21,6 +21,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   línea, sin ensanchar la tabla.
 - Destinos permitidos: el buscador dice «Buscar por destino o descripción».
 
+### Security
+
+- Imagen: la etapa `runtime` aplica al construirse los parches de seguridad de Debian (`apt-get upgrade`); corrige
+  CVE-2025-6020 (linux-pam, HIGH) de la imagen base.
+
 ## [2.2.1] - 2026-11-27
 
 ### Changed
