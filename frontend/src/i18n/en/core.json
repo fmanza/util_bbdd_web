@@ -41,6 +41,8 @@
     "myStorage": "My storage",
     "openMenu": "Open the menu",
     "closeMenu": "Close the menu",
+    "collapseMenu": "Collapse the menu",
+    "expandMenu": "Expand the menu",
     "sections": {
       "work": "Work",
       "data": "Data",

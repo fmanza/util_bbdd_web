@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { DataTable } from '../../components/DataTable';
 import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { InlineAction } from '../../components/InlineAction';
 import { formatBytes, formatDateTime } from '../../components/format';
 import {
   baseTemplateUrl,
@@ -41,7 +42,7 @@ function UploadForm({ scope }: { scope: TemplateScope }) {
       <Stack>
         <Title order={3}>{t('templates.upload')}</Title>
         {upload.isError && <ErrorAlert error={upload.error} />}
-        <Group align="flex-end">
+        <Group align="flex-start">
           <FileInput
             label={t('templates.file')}
             accept=".docx,.dotx,.xlsx,.xltx,.toml,.json"
@@ -58,24 +59,26 @@ function UploadForm({ scope }: { scope: TemplateScope }) {
             maxLength={100}
             w={240}
           />
-          <Button
-            disabled={!file}
-            loading={upload.isPending}
-            onClick={() =>
-              file &&
-              upload.mutate(
-                { file, name },
-                {
-                  onSuccess: () => {
-                    setFile(null);
-                    setName('');
+          <InlineAction>
+            <Button
+              disabled={!file}
+              loading={upload.isPending}
+              onClick={() =>
+                file &&
+                upload.mutate(
+                  { file, name },
+                  {
+                    onSuccess: () => {
+                      setFile(null);
+                      setName('');
+                    },
                   },
-                },
-              )
-            }
-          >
-            {t('templates.send')}
-          </Button>
+                )
+              }
+            >
+              {t('templates.send')}
+            </Button>
+          </InlineAction>
         </Group>
       </Stack>
     </Card>

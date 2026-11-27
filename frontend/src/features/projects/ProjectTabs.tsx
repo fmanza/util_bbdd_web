@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router';
 import { DataTable } from '../../components/DataTable';
 import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { InlineAction } from '../../components/InlineAction';
 import { FIRST_PAGE, useListState } from '../../components/useListState';
 import { useMe } from '../auth/useAuth';
 import { OPTIONS_PAGE_SIZE, useConnections } from '../connections/useConnections';
@@ -181,7 +182,7 @@ export function ConnectionsTab({ project }: { project: Project }) {
     <Stack>
       <Text c="dimmed">{t('projects.connectionsIntro')}</Text>
       {editor && (
-        <Group align="flex-end">
+        <Group align="flex-start">
           <NativeSelect
             label={t('projects.connection')}
             data={[
@@ -202,9 +203,11 @@ export function ConnectionsTab({ project }: { project: Project }) {
             onChange={(event) => setAlias(event.currentTarget.value)}
             w={220}
           />
-          <Button onClick={onAdd} loading={add.isPending} disabled={!connectionId || !alias.trim()}>
-            {t('projects.addConnection')}
-          </Button>
+          <InlineAction>
+            <Button onClick={onAdd} loading={add.isPending} disabled={!connectionId || !alias.trim()}>
+              {t('projects.addConnection')}
+            </Button>
+          </InlineAction>
         </Group>
       )}
       {add.isError && <ErrorAlert error={add.error} />}
@@ -314,7 +317,7 @@ export function MembersTab({ project }: { project: Project }) {
   return (
     <Stack>
       {owner && (
-        <Group align="flex-end">
+        <Group align="flex-start">
           <Autocomplete
             label={t('auth.username')}
             description={
@@ -353,15 +356,17 @@ export function MembersTab({ project }: { project: Project }) {
             allowDeselect={false}
             w={180}
           />
-          <Button
-            disabled={!username.trim()}
-            loading={add.isPending}
-            onClick={() =>
-              add.mutate({ username: username.trim(), role }, { onSuccess: () => setUsername('') })
-            }
-          >
-            {t('projects.addMember')}
-          </Button>
+          <InlineAction>
+            <Button
+              disabled={!username.trim()}
+              loading={add.isPending}
+              onClick={() =>
+                add.mutate({ username: username.trim(), role }, { onSuccess: () => setUsername('') })
+              }
+            >
+              {t('projects.addMember')}
+            </Button>
+          </InlineAction>
         </Group>
       )}
       {[add, update, remove].map((m, i) => (m.isError ? <ErrorAlert key={i} error={m.error} /> : null))}

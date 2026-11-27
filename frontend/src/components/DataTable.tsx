@@ -15,6 +15,12 @@ import { useTranslation } from 'react-i18next';
 import { type Column, PAGE_SIZE, type SortState, clientRows, nextSort } from './tableState';
 
 const SEARCH_DELAY_MS = 300;
+const NOWRAP = { whiteSpace: 'nowrap' } as const;
+
+/** Estilo de las celdas de una columna (`nowrap`). */
+function cellStyle<T>(column: Column<T>) {
+  return column.nowrap ? { style: NOWRAP } : {};
+}
 
 interface CommonProps<T> {
   columns: Column<T>[];
@@ -71,9 +77,9 @@ function SortHeader<T>({
       </Table.Th>
     );
   }
-  if (!column.sortable) return <Table.Th>{column.header}</Table.Th>;
+  if (!column.sortable) return <Table.Th {...cellStyle(column)}>{column.header}</Table.Th>;
   return (
-    <Table.Th aria-sort={ariaSort}>
+    <Table.Th aria-sort={ariaSort} {...cellStyle(column)}>
       <UnstyledButton
         onClick={() => onSort(nextSort(sort, column.key))}
         aria-label={t('table.sortBy', { column: column.header })}
@@ -173,11 +179,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 <Table.Tr key={rowKey(row)}>
                   {columns.map((column) =>
                     column.rowHeader ? (
-                      <Table.Th key={column.key} scope="row" fw={400}>
+                      <Table.Th key={column.key} scope="row" fw={400} {...cellStyle(column)}>
                         {column.cell(row)}
                       </Table.Th>
                     ) : (
-                      <Table.Td key={column.key}>{column.cell(row)}</Table.Td>
+                      <Table.Td key={column.key} {...cellStyle(column)}>
+                        {column.cell(row)}
+                      </Table.Td>
                     ),
                   )}
                 </Table.Tr>

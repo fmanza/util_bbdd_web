@@ -1,4 +1,4 @@
-import { Badge, Center, Code, Loader, SegmentedControl, Stack, Text, Title } from '@mantine/core';
+import { Badge, Box, Center, Loader, SegmentedControl, Stack, Text, Title } from '@mantine/core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,13 +23,36 @@ const ACTION_FILTERS = [
   { value: 'query.', key: 'query' },
 ] as const;
 
+/** Detalles de un evento, completos: una línea `clave: valor` por campo, que salta de línea si no cabe. */
+function AuditDetails({ details }: { details: Record<string, unknown> }) {
+  return (
+    <Box miw={220} style={{ overflowWrap: 'anywhere' }}>
+      {Object.entries(details).map(([key, value]) => (
+        <Text key={key} size="xs" ff="monospace">
+          <Text span inherit fw={700}>
+            {key}
+          </Text>
+          {': '}
+          {typeof value === 'string' ? value : JSON.stringify(value)}
+        </Text>
+      ))}
+    </Box>
+  );
+}
+
 export function AuditPage() {
   const { t } = useTranslation();
   const [action, setAction] = useState('');
   const list = useListState();
   const { data, isPending, isError, error } = useAudit(action, list.state);
   const columns: Column<AuditEntry>[] = [
-    { key: 'ts', header: t('admin.audit.ts'), sortable: true, cell: (e) => formatDateTime(e.ts) },
+    {
+      key: 'ts',
+      header: t('admin.audit.ts'),
+      sortable: true,
+      nowrap: true,
+      cell: (e) => formatDateTime(e.ts),
+    },
     {
       key: 'action',
       header: t('admin.audit.action'),
@@ -40,6 +63,7 @@ export function AuditPage() {
       key: 'outcome',
       header: t('admin.audit.outcome'),
       sortable: true,
+      nowrap: true,
       cell: (e) => (
         <Badge color={e.outcome === 'success' ? 'green' : 'red'} variant="light">
           {t(`admin.audit.outcomes.${e.outcome}`, { defaultValue: e.outcome })}
@@ -50,6 +74,7 @@ export function AuditPage() {
       key: 'actor',
       header: t('admin.audit.actor'),
       sortable: true,
+      nowrap: true,
       cell: (e) => e.actor_username ?? t('admin.audit.system'),
     },
     {
@@ -58,11 +83,11 @@ export function AuditPage() {
       sortable: true,
       cell: (e) => (e.target_type ? `${e.target_type} #${e.target_id ?? ''}` : '—'),
     },
-    { key: 'ip', header: t('admin.sessions.ip'), cell: (e) => e.ip ?? '—' },
+    { key: 'ip', header: t('admin.sessions.ip'), nowrap: true, cell: (e) => e.ip ?? '—' },
     {
       key: 'details',
       header: t('admin.audit.details'),
-      cell: (e) => (e.details ? <Code>{JSON.stringify(e.details)}</Code> : '—'),
+      cell: (e) => (e.details ? <AuditDetails details={e.details} /> : '—'),
     },
   ];
 

@@ -1,14 +1,10 @@
-import { MantineProvider, createTheme } from '@mantine/core';
+import { MantineProvider } from '@mantine/core';
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 
 import { colorSchemeManager } from './colorScheme';
 import { createQueryClient } from './queryClient';
-
-const theme = createTheme({
-  primaryColor: 'blue',
-  defaultRadius: 'md',
-});
+import { theme } from './theme';
 
 interface ProvidersProps {
   children: ReactNode;

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -71,6 +71,62 @@ describe('menú lateral', () => {
     const nav = await navigation();
 
     expect(within(nav).getByRole('link', { name: 'Usuarios' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('las secciones se pliegan, se recuerdan y la de la página actual no se pliega', async () => {
+    stubApi({ ...session(USER), ...HEALTH, 'GET /api/v1/projects': { body: { items: [], total: 0 } } });
+    const user = userEvent.setup();
+    renderRoute('/');
+    const nav = await navigation();
+
+    const toggle = within(nav).getByRole('button', { name: 'Datos' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(within(nav).queryByRole('link', { name: 'Conexiones' })).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('ubw.nav.folded') ?? '{}')).toEqual({
+      'nav.sections.data': true,
+    });
+
+    // En una de sus páginas, «Trabajo» no ofrece plegarse.
+    await user.click(within(nav).getByRole('link', { name: 'Proyectos' }));
+    await waitFor(() =>
+      expect(within(nav).getByRole('link', { name: 'Proyectos' })).toHaveAttribute('aria-current', 'page'),
+    );
+    expect(within(nav).queryByRole('button', { name: 'Trabajo' })).not.toBeInTheDocument();
+  });
+
+  it('respeta la administración plegada que guardó la versión anterior', async () => {
+    window.localStorage.setItem('ubw.nav.adminOpened', 'false');
+    stubApi({ ...session(ADMIN), ...HEALTH });
+    renderRoute('/');
+    const nav = await navigation();
+
+    expect(within(nav).getByText('Administración')).toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument();
+  });
+
+  it('el menú entero se contrae a iconos con nombre accesible y se recuerda', async () => {
+    stubApi({ ...session(ADMIN), ...HEALTH });
+    const user = userEvent.setup();
+    renderRoute('/');
+    const nav = await navigation();
+
+    const collapse = screen.getByRole('button', { name: 'Contraer el menú' });
+    expect(collapse).toHaveAttribute('aria-expanded', 'true');
+    await user.click(collapse);
+
+    expect(screen.getByRole('button', { name: 'Expandir el menú' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    const home = within(nav).getByRole('link', { name: 'Inicio' });
+    expect(home).toHaveAttribute('aria-current', 'page');
+    expect(home).not.toHaveTextContent('Inicio');
+    // Sin secciones plegables: todas las entradas, administración incluida.
+    expect(within(nav).queryByRole('button', { name: 'Datos' })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: 'Usuarios' })).toHaveAttribute('href', '/admin/users');
+    expect(window.localStorage.getItem('ubw.nav.collapsed')).toBe('true');
   });
 
   it('la hamburguesa abre y cierra el menú en móvil', async () => {

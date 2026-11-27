@@ -36,8 +36,10 @@ credenciales por defecto.
 *Administración → Roles* (permiso *Gestionar roles*). La lista muestra cada rol con sus permisos y cuántos usuarios
 lo tienen.
 
-- **Nuevo rol**: nombre y permisos, agrupados en *Administración* y *Conexiones y bases de datos*. Los permisos que tú
-  no tienes salen desactivados: nadie da ni quita un permiso que no tiene.
+- **Nuevo rol**: nombre y permisos, agrupados como el menú de *Administración* (*Acceso y seguridad*, *Contenido
+  compartido*, *Operación*) más *Conexiones y bases de datos*. La casilla *Todos* de cada grupo marca o desmarca los
+  suyos. Los permisos que tú no tienes salen desactivados (tampoco los marca *Todos*): nadie da ni quita un permiso
+  que no tiene.
 - **Editar**: cambia el nombre o los permisos. **Quitar permisos cierra las sesiones** de los usuarios con ese rol
   (dejan de valer al momento); añadirlos no.
 - **Borrar**: solo un rol sin usuarios (asígnales otro antes).

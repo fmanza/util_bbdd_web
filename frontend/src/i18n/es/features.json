@@ -98,6 +98,8 @@
       "editTitle": "Rol {{name}}",
       "builtinHint": "Es un rol base: no se puede cambiar ni borrar.",
       "notYours": "(No lo tienes: no puedes darlo ni quitarlo.)",
+      "selectAll": "Todos",
+      "selectAllLabel": "Todos los permisos de «{{group}}»",
       "groups": {
         "admin": "Administración",
         "databases": "Conexiones y bases de datos"
@@ -304,7 +306,7 @@
       "removeLabel": "Quitar {{pattern}}",
       "removeTitle": "Quitar destino",
       "removeBody": "Las conexiones a «{{pattern}}» dejarán de poder usarse.",
-      "search": "Buscar por patrón o descripción"
+      "search": "Buscar por destino o descripción"
     },
     "queries": {
       "title": "Queries nombradas",

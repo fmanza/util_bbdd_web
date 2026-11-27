@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { DataTable } from '../../components/DataTable';
+import { InlineAction } from '../../components/InlineAction';
 import type { Column } from '../../components/tableState';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { formatDateTime } from '../../components/format';
@@ -112,9 +113,11 @@ export function AllowlistPage() {
             name="description"
             render={({ field }) => <TextInput {...field} label={t('admin.allowlist.description')} w={260} />}
           />
-          <Button type="submit" mt={50} loading={add.isPending}>
-            {t('admin.allowlist.add')}
-          </Button>
+          <InlineAction>
+            <Button type="submit" loading={add.isPending}>
+              {t('admin.allowlist.add')}
+            </Button>
+          </InlineAction>
         </Group>
       </form>
       {add.isError && <ErrorAlert error={add.error} />}
