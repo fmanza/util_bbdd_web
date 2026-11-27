@@ -23,10 +23,10 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Dependencias nativas (MariaDB Connector/C y Graphviz para los grafos)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmariadb-dev graphviz
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.12.22"
           python-version: "3.12"
@@ -44,8 +44,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "24.21.0"
           cache: npm
@@ -62,8 +62,8 @@ jobs:
   docs:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.12.22"
           python-version: "3.12"
@@ -74,10 +74,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [backend, frontend]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
       - name: Build de la imagen runtime
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
@@ -112,8 +112,8 @@ jobs:
   audit:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.12.22"
           python-version: "3.12"
@@ -126,7 +126,7 @@ jobs:
           uvx --from pip-audit==2.10.1 pip-audit --disable-pip --no-deps --progress-spinner off \
             -r "$RUNNER_TEMP/requirements.txt" \
             --ignore-vuln PYSEC-2026-217
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24.21.0"
       - name: npm de producción
@@ -155,7 +155,7 @@ jobs:
       # host.docker.internal → el host del runner, donde se publica el bench.
       COMPOSE_FILE: docker-compose.yml:docker/compose.e2e.yml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Mismas imágenes que el bench de util_bbdd (docker-compose.bench.yml), con versión exacta. Arrancan mientras
       # se construye la imagen; la contraseña es de un solo uso.
       - name: Bench (PostgreSQL y MySQL)
@@ -165,9 +165,9 @@ jobs:
           echo "UTIL_BBDD_BENCH_PASSWORD=$password" >> "$GITHUB_ENV"
           docker run -d --name bench-postgres -p 55432:5432             -e POSTGRES_USER=bench -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=bench postgres:17.11
           docker run -d --name bench-mysql -p 53306:3306 -e MYSQL_ROOT_PASSWORD="$password"             -e MYSQL_DATABASE=bench -e MYSQL_USER=bench -e MYSQL_PASSWORD="$password" mysql:8.4.11
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build de la imagen runtime
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
@@ -190,7 +190,7 @@ jobs:
           UBW_E2E_ADMIN_PASSWORD="$password" bash scripts/e2e_prepare.sh
       - name: Dependencias nativas del backend (MariaDB Connector/C)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmariadb-dev
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           version: "0.12.22"
           python-version: "3.12"
@@ -203,7 +203,7 @@ jobs:
           done
           uv sync --frozen
           uv run --frozen python -m tests.integration.e2e_migrate_fixture setup
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24.21.0"
           cache: npm
@@ -221,7 +221,7 @@ jobs:
           docker compose logs --no-color > frontend/playwright-report/compose.log 2>&1 || true
           docker logs bench-postgres > frontend/playwright-report/bench-postgres.log 2>&1 || true
           docker logs bench-mysql > frontend/playwright-report/bench-mysql.log 2>&1 || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
