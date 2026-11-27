@@ -40,6 +40,10 @@ describe('EngineDetailPage', () => {
     expect(screen.getByText('pip install psycopg')).toBeInTheDocument();
     expect(screen.getByText('sslmode')).toBeInTheDocument();
     expect(screen.getByText('secreto')).toBeInTheDocument();
+    // Nombre (con sus etiquetas), tipo y «Por defecto» completos, sin partir.
+    expect(screen.getByRole('columnheader', { name: 'Tipo' })).toHaveStyle({ whiteSpace: 'nowrap' });
+    expect(screen.getByText('sslmode').closest('td')).toHaveStyle({ whiteSpace: 'nowrap' });
+    expect(screen.getByRole('columnheader', { name: 'Por defecto' })).toHaveStyle({ whiteSpace: 'nowrap' });
     expect(screen.getByRole('link', { name: 'Nueva conexión con este motor' })).toHaveAttribute(
       'href',
       '/connections/new?db_type=postgresql',

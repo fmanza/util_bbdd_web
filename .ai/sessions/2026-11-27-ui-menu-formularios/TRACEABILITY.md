@@ -40,6 +40,10 @@ AUDIT_PLAN».
   ficheros pasan con `--maxWorkers=3` (173/173) y bulk aislado 12/12. Revisión visual en la imagen local
   `util_bbdd_web:ui-menu` (8081): corregido `InlineAction` (el botón quedaba en la línea de la etiqueta).
 - Sin cambios de backend ni de contrato OpenAPI.
+- PR #33 fusionado (`c9d45c4`) tras arreglar Trivy (CVE-2025-6020, `apt-get upgrade` en `runtime`) y relanzar
+  `backend` (403 externo de packages.microsoft.com en el runner).
+- Añadido después: *Motores* › ficha › *Parámetros de conexión* a todo el ancho (fuera del `maw={1000}` de la ficha),
+  con parámetro y *Por defecto* sin partir; verificado en Oracle en la imagen local.
 
 ## Artefactos generados
 | Artefacto | Ruta | Estado |
