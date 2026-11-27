@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-11-27
+
 ### Added
 
 - Menú lateral: se contrae entero a una barra de iconos (con su nombre al pasar por encima) y cada grupo se pliega;

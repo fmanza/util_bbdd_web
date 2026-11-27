@@ -43,7 +43,9 @@ AUDIT_PLAN».
 - PR #33 fusionado (`c9d45c4`) tras arreglar Trivy (CVE-2025-6020, `apt-get upgrade` en `runtime`) y relanzar
   `backend` (403 externo de packages.microsoft.com en el runner).
 - Añadido después: *Motores* › ficha › *Parámetros de conexión* a todo el ancho (fuera del `maw={1000}` de la ficha),
-  con parámetro y *Por defecto* sin partir; verificado en Oracle en la imagen local.
+  con parámetro y *Por defecto* sin partir; verificado en Oracle en la imagen local. PR #34 (también *Tipo* sin
+  partir) y PR #35 (etiquetas recortadas en MariaDB por `preventGrowOverflow` de `Group`), fusionados.
+- VERSION: release 2.3.0 (`/version-closure`).
 
 ## Artefactos generados
 | Artefacto | Ruta | Estado |
@@ -64,8 +66,14 @@ AUDIT_PLAN».
   `admin.roles.groups.<group de la API>`. Un permiso nuevo con página de administración se agrupa solo al añadir su
   entrada al menú.
 
+- **[frontend/Mantine]**: `Group wrap="nowrap"` limita el ancho de cada hijo (`preventGrowOverflow`, por defecto
+  `true`) y recorta badges y código en celdas `nowrap`; en esas celdas, `preventGrowOverflow={false}` y
+  `flexShrink: 0`.
+- **[ci/image]**: Trivy (`--ignore-unfixed`) falla en cuanto Debian publica el arreglo de un CVE de la imagen base; la
+  etapa `runtime` hace `apt-get upgrade` para recogerlo sin cambiar la etiqueta de `PYTHON_IMAGE`.
+- **[ci/backend]**: un 403 de `packages.microsoft.com` en `apt-get update` del runner es externo; se relanza el job.
+
 ## Veredicto final
-Veredicto: GO (AUDIT_CODE)
+Veredicto: CLOSED (v2.3.0)
 Pendientes al cierre:
-- VERSION: commit y, si se publica, versión 2.3.0 (a petición del usuario).
-- E2E no ejecutado en esta sesión.
+- Desplegar 2.3.0 en el servidor (paso 8 de `docs/guides/publicar_version.md`).
