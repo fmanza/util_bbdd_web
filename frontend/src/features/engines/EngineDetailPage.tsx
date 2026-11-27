@@ -157,15 +157,16 @@ export function EngineDetailPage() {
               {engine.params.map((param) => (
                 <Table.Tr key={param.name}>
                   <Table.Td style={NOWRAP}>
-                    <Group gap={4} wrap="nowrap">
-                      <Code>{param.name}</Code>
+                    {/* Sin `preventGrowOverflow`: Group limita el ancho de cada hijo y recortaba las etiquetas. */}
+                    <Group gap={4} wrap="nowrap" preventGrowOverflow={false}>
+                      <Code style={{ flexShrink: 0 }}>{param.name}</Code>
                       {param.required && (
-                        <Badge size="xs" color="red" variant="light">
+                        <Badge size="xs" color="red" variant="light" style={{ flexShrink: 0 }}>
                           {t('engines.required')}
                         </Badge>
                       )}
                       {param.kind !== 'plain' && (
-                        <Badge size="xs" variant="outline">
+                        <Badge size="xs" variant="outline" style={{ flexShrink: 0 }}>
                           {t(`engines.kinds.${param.kind}`)}
                         </Badge>
                       )}
