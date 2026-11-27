@@ -138,7 +138,7 @@ export function TransferUserModal({ user, onClose, onDone }: TransferUserModalPr
           searchValue={search}
           onSearchChange={setSearch}
           value={target?.value ?? null}
-          onChange={(value, option) => setTarget(value ? { value, label: option.label } : null)}
+          onChange={(value, option) => setTarget(value && option ? { value, label: option.label } : null)}
           nothingFoundMessage={t('admin.users.empty')}
           rightSection={options.isFetching ? <Loader size="xs" aria-label={t('common.loading')} /> : null}
         />
