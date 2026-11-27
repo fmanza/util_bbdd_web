@@ -35,7 +35,7 @@ const CAPABILITIES: { key: keyof Engine['capabilities']; label: string }[] = [
   { key: 'async_supported', label: 'engines.async' },
 ];
 
-/** Parámetro y valor por defecto completos, sin partir. */
+/** Parámetro, tipo y valor por defecto completos, sin partir. */
 const NOWRAP = { whiteSpace: 'nowrap' } as const;
 
 export function EngineDetailPage() {
@@ -148,7 +148,7 @@ export function EngineDetailPage() {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th style={NOWRAP}>{t('engines.paramName')}</Table.Th>
-                <Table.Th>{t('engines.paramType')}</Table.Th>
+                <Table.Th style={NOWRAP}>{t('engines.paramType')}</Table.Th>
                 <Table.Th style={NOWRAP}>{t('engines.paramDefault')}</Table.Th>
                 <Table.Th>{t('engines.paramDescription')}</Table.Th>
               </Table.Tr>
@@ -171,7 +171,7 @@ export function EngineDetailPage() {
                       )}
                     </Group>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td style={NOWRAP}>
                     {param.type}
                     {param.options && ` (${param.options.filter(Boolean).join(', ')})`}
                   </Table.Td>

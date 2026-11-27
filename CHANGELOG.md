@@ -20,8 +20,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - Auditoría: *Fecha*, *Resultado*, *Quién* e *IP* no se parten, y *Detalles* muestra todos los campos, uno por
   línea, sin ensanchar la tabla.
 - Destinos permitidos: el buscador dice «Buscar por destino o descripción».
-- Motores: la tabla *Parámetros de conexión* usa todo el ancho; el parámetro (con sus etiquetas) y *Por defecto* no
-  se parten y la descripción ocupa el resto.
+- Motores: la tabla *Parámetros de conexión* usa todo el ancho; el parámetro (con sus etiquetas), el *Tipo* y
+  *Por defecto* no se parten y la descripción ocupa el resto.
 
 ### Security
 
