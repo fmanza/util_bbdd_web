@@ -3,6 +3,7 @@ import {
   Button,
   Center,
   Checkbox,
+  Fieldset,
   Group,
   Loader,
   Modal,
@@ -19,6 +20,7 @@ import { DataTable } from '../../components/DataTable';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import type { Column } from '../../components/tableState';
 import { useMe } from '../auth/useAuth';
+import { permissionGroups } from './permissionGroups';
 import { grantable, roleLabel } from './roleLabel';
 import {
   type PermissionInfo,
@@ -30,9 +32,7 @@ import {
   useUpdateRole,
 } from './useAdmin';
 
-const GROUPS = ['admin', 'databases'] as const;
-
-/** Alta y edición de un rol: nombre y permisos agrupados. Los que no tienes salen desactivados (ADR-014). */
+/** Alta y edición de un rol: nombre y permisos agrupados como el menú. Los que no tienes salen desactivados (ADR-014). */
 function RoleFormModal({
   role,
   catalog,
@@ -92,32 +92,57 @@ function RoleFormModal({
             error={nameError}
             data-autofocus
           />
-          {GROUPS.map((group) => (
-            <Checkbox.Group
-              key={group}
-              label={t(`admin.roles.groups.${group}`)}
-              value={permissions}
-              onChange={setPermissions}
-            >
-              <Stack gap="xs" mt="xs">
-                {catalog
-                  .filter((p) => p.group === group)
-                  .map((p) => (
-                    <Checkbox
-                      key={p.name}
-                      value={p.name}
-                      label={t(`admin.permissions.${p.name}.label`)}
-                      description={
-                        mine.includes(p.name)
-                          ? t(`admin.permissions.${p.name}.hint`)
-                          : `${t(`admin.permissions.${p.name}.hint`)} ${t('admin.roles.notYours')}`
-                      }
-                      disabled={builtin || !mine.includes(p.name)}
-                    />
-                  ))}
-              </Stack>
-            </Checkbox.Group>
-          ))}
+          {permissionGroups(catalog).map((group) => {
+            const title = t(group.title);
+            const names = group.permissions.map((p) => p.info.name);
+            // «Todos» solo marca o desmarca los que puedes dar (ADR-014).
+            const selectable: string[] = builtin ? [] : names.filter((n) => mine.includes(n));
+            const chosen = selectable.filter((n) => permissions.includes(n));
+            return (
+              <Fieldset key={group.title} legend={title} variant="filled">
+                <Stack gap="xs">
+                  <Checkbox
+                    label={t('admin.roles.selectAll')}
+                    aria-label={t('admin.roles.selectAllLabel', { group: title })}
+                    checked={selectable.length > 0 && chosen.length === selectable.length}
+                    indeterminate={chosen.length > 0 && chosen.length < selectable.length}
+                    disabled={selectable.length === 0}
+                    onChange={(event) => {
+                      const on = event.currentTarget.checked;
+                      setPermissions((prev) =>
+                        on
+                          ? [...prev, ...selectable.filter((n) => !prev.includes(n))]
+                          : prev.filter((n) => !selectable.includes(n)),
+                      );
+                    }}
+                    fw={500}
+                  />
+                  <Checkbox.Group value={permissions} onChange={setPermissions}>
+                    <Stack gap="xs" pl="md">
+                      {group.permissions.map(({ info: p, icon: PermissionIcon }) => (
+                        <Group key={p.name} gap="xs" wrap="nowrap" align="flex-start">
+                          <Checkbox
+                            value={p.name}
+                            label={t(`admin.permissions.${p.name}.label`)}
+                            description={
+                              mine.includes(p.name)
+                                ? t(`admin.permissions.${p.name}.hint`)
+                                : `${t(`admin.permissions.${p.name}.hint`)} ${t('admin.roles.notYours')}`
+                            }
+                            disabled={builtin || !mine.includes(p.name)}
+                            style={{ flex: 1 }}
+                          />
+                          {PermissionIcon && (
+                            <PermissionIcon size={18} stroke={1.6} aria-hidden style={{ flexShrink: 0 }} />
+                          )}
+                        </Group>
+                      ))}
+                    </Stack>
+                  </Checkbox.Group>
+                </Stack>
+              </Fieldset>
+            );
+          })}
           <Group justify="flex-end">
             <Button variant="default" onClick={onClose}>
               {t('common.cancel')}

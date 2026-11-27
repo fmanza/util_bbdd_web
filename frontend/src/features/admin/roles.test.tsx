@@ -67,6 +67,46 @@ describe('RolesPage', () => {
     });
   }, 15_000);
 
+  it('agrupa los permisos como el menú y «Todos» solo marca los que se tienen', async () => {
+    const fetchMock = stubApi({
+      ...routes(without(ADMIN, 'data.write')),
+      'POST /api/v1/roles': { status: 201, body: { ...ROLES[2], id: 9 } },
+    });
+    const user = userEvent.setup();
+
+    renderRoute('/admin/roles');
+    await user.click(await screen.findByRole('button', { name: 'Nuevo rol' }));
+    const dialog = await screen.findByRole('dialog');
+    // «Todos» más los permisos de cada grupo.
+    const boxes = (group: string) =>
+      within(within(dialog).getByRole('group', { name: group })).getAllByRole('checkbox');
+    expect(boxes('Acceso y seguridad')).toHaveLength(6);
+    expect(
+      within(within(dialog).getByRole('group', { name: 'Contenido compartido' })).getByRole('checkbox', {
+        name: 'Gestionar plantillas globales',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(within(dialog).getByRole('group', { name: 'Operación' })).getByRole('checkbox', {
+        name: 'Administrar ejecuciones',
+      }),
+    ).toBeInTheDocument();
+    expect(boxes('Conexiones y bases de datos')).toHaveLength(5);
+
+    await user.type(within(dialog).getByRole('textbox', { name: /Nombre/ }), 'Datos');
+    await user.click(
+      within(dialog).getByRole('checkbox', { name: 'Todos los permisos de «Conexiones y bases de datos»' }),
+    );
+    expect(within(dialog).getByRole('checkbox', { name: 'Escribir datos' })).not.toBeChecked();
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(callsTo(fetchMock, 'POST', '/api/v1/roles')).toHaveLength(1));
+    expect(await callsTo(fetchMock, 'POST', '/api/v1/roles')[0]?.json()).toEqual({
+      name: 'Datos',
+      permissions: ['connections.share', 'sql.run', 'ddl.apply'],
+    });
+  }, 15_000);
+
   it('un rol base se ve sin poder cambiarlo', async () => {
     stubApi(routes(ADMIN));
     const user = userEvent.setup();

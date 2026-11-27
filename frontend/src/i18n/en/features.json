@@ -98,6 +98,8 @@
       "editTitle": "Role {{name}}",
       "builtinHint": "This is a built-in role: it cannot be changed or deleted.",
       "notYours": "(You do not have it: you cannot grant or remove it.)",
+      "selectAll": "All",
+      "selectAllLabel": "All permissions in “{{group}}”",
       "groups": {
         "admin": "Administration",
         "databases": "Connections and databases"
@@ -304,7 +306,7 @@
       "removeLabel": "Remove {{pattern}}",
       "removeTitle": "Remove target",
       "removeBody": "Connections to “{{pattern}}” will no longer be usable.",
-      "search": "Search by pattern or description"
+      "search": "Search by target or description"
     },
     "queries": {
       "title": "Named queries",

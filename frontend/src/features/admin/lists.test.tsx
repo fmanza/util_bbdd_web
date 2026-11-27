@@ -60,7 +60,7 @@ describe('listas con orden, paginación de 25 y búsqueda', () => {
     expect(first()).toContain('db.a.local'); // orden inicial por patrón
     await ui.click(screen.getByRole('button', { name: 'Ordenar por Destino' }));
     expect(first()).toContain('otro.example');
-    await ui.type(screen.getByRole('textbox', { name: 'Buscar por patrón o descripción' }), 'externo');
+    await ui.type(screen.getByRole('textbox', { name: 'Buscar por destino o descripción' }), 'externo');
     expect(within(table).getAllByRole('row')).toHaveLength(2);
     expect(callsTo(fetchMock, 'GET', '/api/v1/admin/allowlist')).toHaveLength(1);
   });

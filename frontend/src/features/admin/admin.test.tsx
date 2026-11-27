@@ -484,6 +484,12 @@ describe('AuditPage', () => {
     expect(await screen.findByText('Inicio de sesión')).toBeInTheDocument();
     expect(screen.getByText('Fallido')).toBeInTheDocument();
     expect(screen.getByText('Sistema')).toBeInTheDocument();
+    // Detalles completos, un campo por línea.
+    const line = (text: string) => (_: string, el: Element | null) =>
+      el?.tagName === 'P' && el.textContent === text;
+    expect(screen.getByText(line('username: nadie'))).toBeInTheDocument();
+    expect(screen.getByText(line('reason: unknown_user'))).toBeInTheDocument();
+    expect(screen.getByText('Fallido').closest('td')).toHaveStyle({ whiteSpace: 'nowrap' });
 
     await user.click(screen.getByRole('radio', { name: 'Autenticación' }));
 

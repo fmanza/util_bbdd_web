@@ -16,6 +16,16 @@ describe('AllowlistPage', () => {
     expect(await screen.findByText(/ninguna conexión de red puede probarse/)).toBeInTheDocument();
   });
 
+  it('busca por destino o descripción', async () => {
+    stubApi({ ...session(ADMIN), 'GET /api/v1/admin/allowlist': { body: [ENTRY] } });
+
+    renderRoute('/admin/allowlist');
+
+    expect(
+      await screen.findByRole('textbox', { name: 'Buscar por destino o descripción' }),
+    ).toBeInTheDocument();
+  });
+
   it('añade un destino y valida el campo', async () => {
     const fetchMock = stubApi({
       ...session(ADMIN),

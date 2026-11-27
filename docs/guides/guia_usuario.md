@@ -63,8 +63,10 @@ Ninguna operación escribe en una conexión marcada como «Solo lectura».
 ## 4. Primeros pasos
 
 El **menú de la izquierda** agrupa las secciones por uso: *Inicio*; *Trabajo* (Proyectos y Ejecuciones); *Datos*
-(Conexiones y Motores) y *Mi cuenta* (Mi espacio). Los administradores ven además *Administración*, plegable. En el
-móvil, el menú se abre con el botón de la cabecera y se cierra al elegir una sección. En el menú con tu nombre
+(Conexiones y Motores) y *Mi cuenta* (Mi espacio). Los administradores ven además *Administración*. Cada grupo se
+pliega pulsando su título (el de la página en la que estás queda siempre abierto), y el botón junto al título de la
+aplicación contrae el menú entero a una barra de iconos (al pasar por encima se ve el nombre); el navegador recuerda
+ambas cosas. En el móvil, el menú se abre con el botón de la cabecera y se cierra al elegir una sección. En el menú con tu nombre
 eliges el **tema** (claro, oscuro o el del sistema), que se guarda en tu cuenta.
 
 1. **Inicia sesión** con la cuenta que te dio el administrador y cambia la contraseña en el menú con tu nombre →

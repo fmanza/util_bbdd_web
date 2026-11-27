@@ -18,7 +18,12 @@ applyTo: "frontend/**/*.{ts,tsx}"
 - Progreso de ejecuciones por SSE (Fase 3) con *fallback* a `refetchInterval`.
 
 ## UI y accesibilidad
-- Mantine; tema en `app/Providers.tsx`; modo oscuro automático.
+- Mantine; tema en `app/theme.ts` (lo aplica `app/Providers.tsx`); modo oscuro automático.
+- **Formularios con ayuda y varias columnas** (regla del proyecto): la ayuda (`description`) va **debajo** del campo
+  (orden `label → input → description → error`, fijado en el tema; no se cambia con `inputWrapperOrder`). Las filas de
+  campos usan `align="flex-start"` (o `alignItems: 'start'` en rejilla) y etiquetas de una línea, así todos los
+  campos empiezan a la misma altura. El botón de un formulario en línea va dentro de `components/InlineAction.tsx`,
+  nunca con márgenes fijos (`mt={50}`). Lo comprueba `components/formRule.test.tsx`.
 - Cada vista con estados de carga, vacío, error y sin permiso.
 - Formularios: React Hook Form + Zod; errores asociados al campo; formularios de conexión generados desde los
   `connection_params` del catálogo de motores.

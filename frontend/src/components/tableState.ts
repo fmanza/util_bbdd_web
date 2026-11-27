@@ -26,6 +26,8 @@ export interface Column<T> {
   hiddenHeader?: boolean;
   /** La celda identifica la fila (`<th scope="row">`): nombre o id. */
   rowHeader?: boolean;
+  /** La celda no parte líneas: la columna se ensancha hasta su contenido más largo (fechas, estados, nombres). */
+  nowrap?: boolean;
 }
 
 /** asc → desc → sin orden (el de la lista). */

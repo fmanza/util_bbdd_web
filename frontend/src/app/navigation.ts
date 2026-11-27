@@ -105,6 +105,29 @@ export function allowedAdminNav(allowed: (permission: Permission) => boolean): N
   })).filter((s) => s.items.length > 0);
 }
 
+/** La entrada corresponde a la página `pathname` (ella o una de sus subpáginas). */
+export function isActive(item: NavItem, pathname: string): boolean {
+  if (item.end) return pathname === item.to;
+  return pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
+
+/** Clave de la sección de administración en las secciones plegadas del menú. */
+export const ADMIN_SECTION_KEY = 'nav.admin';
+
+/**
+ * Secciones plegadas al empezar: ninguna, salvo que la versión anterior guardara la administración plegada
+ * (`ubw.nav.adminOpened`, sustituida por `ubw.nav.folded`).
+ */
+export function initialFoldedSections(): Record<string, boolean> {
+  try {
+    return window.localStorage.getItem('ubw.nav.adminOpened') === 'false'
+      ? { [ADMIN_SECTION_KEY]: true }
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 /** Permiso que exige una ruta de administración (`undefined` si no es una de ellas). */
 export function adminPermission(pathname: string): Permission | undefined {
   const item = ADMIN_NAV.flatMap((s) => s.items).find(

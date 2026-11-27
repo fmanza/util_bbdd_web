@@ -5,6 +5,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Unreleased]
 
+### Added
+
+- Menú lateral: se contrae entero a una barra de iconos (con su nombre al pasar por encima) y cada grupo se pliega;
+  el navegador lo recuerda y el grupo de la página actual queda siempre abierto.
+- Roles: los permisos se agrupan como el menú de *Administración* (más *Conexiones y bases de datos*), con una
+  casilla *Todos* por grupo que solo marca los permisos que tienes.
+
+### Changed
+
+- Regla de formularios: la ayuda de los campos va debajo del campo, para alinear las filas de varias columnas; los
+  botones de los formularios en línea se alinean con `InlineAction` (Destinos permitidos, conexiones y miembros de
+  un proyecto, plantillas, carga bulk).
+- Auditoría: *Fecha*, *Resultado*, *Quién* e *IP* no se parten, y *Detalles* muestra todos los campos, uno por
+  línea, sin ensanchar la tabla.
+- Destinos permitidos: el buscador dice «Buscar por destino o descripción».
+
+### Security
+
+- Imagen: la etapa `runtime` aplica al construirse los parches de seguridad de Debian (`apt-get upgrade`); corrige
+  CVE-2025-6020 (linux-pam, HIGH) de la imagen base.
+
 ## [2.2.1] - 2026-11-27
 
 ### Changed

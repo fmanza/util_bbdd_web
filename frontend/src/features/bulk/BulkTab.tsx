@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { ErrorAlert } from '../../components/ErrorAlert';
+import { InlineAction } from '../../components/InlineAction';
 import { formatBytes, formatDateTime } from '../../components/format';
 import { useSchemas, useSchemaTree, useTable } from '../explorer/useExplorer';
 import { type Project, useProjectConnections } from '../projects/useProjects';
@@ -217,7 +218,7 @@ export function BulkTab({ project }: { project: Project }) {
               {t('bulk.uploads.tooBig', { size: formatBytes(file?.size ?? 0), max: maxMb })}
             </Alert>
           )}
-          <Group align="flex-end">
+          <Group align="flex-start">
             <FileInput
               label={t('bulk.uploads.choose')}
               description={maxMb ? t('bulk.uploads.max', { max: maxMb }) : undefined}
@@ -228,26 +229,30 @@ export function BulkTab({ project }: { project: Project }) {
               disabled={send.isPending}
               w={320}
             />
-            <Button
-              disabled={!file || tooBig}
-              loading={send.isPending}
-              onClick={() =>
-                file &&
-                send.mutate(file, {
-                  onSuccess: (created) => {
-                    setFile(null);
-                    setUploadId(created.id);
-                  },
-                })
-              }
-            >
-              {t('bulk.uploads.send')}
-            </Button>
-            {send.isPending && (
-              <Button variant="default" onClick={send.cancel}>
-                {t('bulk.uploads.cancel')}
-              </Button>
-            )}
+            <InlineAction>
+              <Group gap="sm">
+                <Button
+                  disabled={!file || tooBig}
+                  loading={send.isPending}
+                  onClick={() =>
+                    file &&
+                    send.mutate(file, {
+                      onSuccess: (created) => {
+                        setFile(null);
+                        setUploadId(created.id);
+                      },
+                    })
+                  }
+                >
+                  {t('bulk.uploads.send')}
+                </Button>
+                {send.isPending && (
+                  <Button variant="default" onClick={send.cancel}>
+                    {t('bulk.uploads.cancel')}
+                  </Button>
+                )}
+              </Group>
+            </InlineAction>
           </Group>
           {send.progress && (
             <Stack gap={4}>
